@@ -165,18 +165,21 @@
   border: 1.5px solid var(--glass-w-20);
   color: var(--fixed-white);
   font-family: var(--font-display);
-  font-size: var(--fs-sm);
+  /* [แก้ตามที่ระบุ] ตัวอักษร HUD (INTJ Lv.1 / เหรียญ / streak) เล็กไป ขยายจาก --fs-sm (13px)
+     เป็น --fs-lg (18px) — ยังใช้ design token เดิมตามที่เคยระบุห้ามใส่ค่า px มั่ว */
+  font-size: var(--fs-lg);
   box-shadow: var(--sh-card);
 }
-.hud-icon { font-size: 16px; line-height: 1; }
+.hud-icon { font-size: 20px; line-height: 1; }
 .hud-bar-container { display: flex; align-items: center; gap: 6px; }
 .hud-bar-bg {
   width: 60px; height: 8px; border-radius: var(--r-pill);
   background: var(--glass-b-50); overflow: hidden;
 }
 .hud-bar-fill { height: 100%; background: linear-gradient(90deg, var(--exp), var(--coin)); border-radius: var(--r-pill); }
+/* [แก้ตามที่ระบุ] เลข "99/100" ก็ขยายตาม — จาก --fs-xs (11.5px) เป็น --fs-sm (13px) */
 .hud-bar-text {
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   --lc-text-3: #E2E8F0;
   color: var(--lc-text-3);
   font-family: var(--font-body);
@@ -184,7 +187,8 @@
 
 @media (max-width: 768px) {
   .game-top-hud { top: 68px; gap: 6px; }
-  .hud-pill { padding: 5px 10px; font-size: var(--fs-xs); }
+  .hud-pill { padding: 5px 10px; font-size: var(--fs-md); }
+  .hud-icon { font-size: 18px; }
 }
 
 /* ═══════════════════════════════════════════
@@ -211,33 +215,31 @@
   flex-shrink: 0;
 }
 
+/* [แก้ตามที่ระบุ — เปลี่ยนจากวงกลม 3cm เป็นขนาดตามรูป 2cm] เอา background/border/
+   box-shadow/border-radius วงกลมออกทั้งหมด ให้ปุ่มมีขนาดเท่ารูป/ไอคอนจริงตรงๆ (2cm) แทน —
+   .icon-img (1.1em ใน index.css) overrride เป็น 2cm ตรงๆ ในนี้ ส่วน emoji ล้วน (🌳/🔊/📖)
+   ที่ยังไม่มีไฟล์รูปจริงก็ใช้ font-size 2cm ให้ขนาดสายตาใกล้เคียงกันในกลุ่มปุ่มเดียวกัน */
 .game-icon-btn {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--bg-card);
-  border: 3px solid var(--g200);
-  box-shadow: var(--sh-card);
+  width: 2cm;
+  height: 2cm;
   cursor: pointer;
+  background: none;
+  border: none;
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
-  transition: transform var(--dur-fast) var(--ease-spring), border-color var(--dur-fast) ease;
+  font-size: 2cm;
+  transition: transform var(--dur-fast) var(--ease-spring);
 }
-.game-icon-btn:hover { transform: scale(1.08); border-color: var(--g500); }
+.game-icon-btn .icon-img { width: 2cm; height: 2cm; }
+.game-icon-btn:hover { transform: scale(1.08); }
 .game-icon-btn:active { transform: scale(.94); }
-.game-icon-btn.mood-btn {
-  --lc-bg-1: #E0FBFC;
-  background: var(--lc-bg-1);
-  --lc-border-2: #90E0EF;
-  border-color: var(--lc-border-2);
-}
-.game-icon-btn.sound-btn { background: var(--g100); border-color: var(--g400); }
 
 @media (max-width: 768px) {
   .dashboard__right-cluster { top: 80px; right: 8px; gap: 8px; }
-  .game-icon-btn { width: 46px; height: 46px; font-size: 20px; }
+  .game-icon-btn { width: 1.6cm; height: 1.6cm; font-size: 1.6cm; }
+  .game-icon-btn .icon-img { width: 1.6cm; height: 1.6cm; }
 }
 
 /* ═══════════════════════════════════════════
@@ -260,7 +262,7 @@
   .dashboard__corner-actions { bottom: 15px; gap: 8px; }
   .dashboard__corner-actions--left { left: 8px; }
   .dashboard__corner-actions--right { right: 8px; }
-  .dashboard__corner-actions .game-icon-btn { width: 46px; height: 46px; font-size: 20px; }
+  /* ขนาดปุ่ม .game-icon-btn ย่อเหลือ 1.6cm บนจอเล็กแล้วที่ media query ของ .game-icon-btn เอง */
 }
 
 /* ═══════════════════════════════════════════

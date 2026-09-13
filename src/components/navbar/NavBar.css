@@ -14,6 +14,13 @@
   box-shadow: 0 2px 10px var(--glass-b-15);
   z-index: 999;
 }
+/* [แก้ตามที่ระบุ] --g800/--g700 (โทเคนตระกูล "g" สีแบรนด์) ไม่ถูก redefine ใน
+   [data-theme="dark"] เลย (ดู index.css) navbar เลยเขียวเหมือนกันเป๊ะทั้ง 2 โหมด — ตอนนี้
+   เข้มขึ้นอีกระดับเฉพาะ dark mode เท่านั้น (เลื่อนไปใช้ --g900/--g800 แทน) โหมดปกติ/Light Mode
+   ไม่แตะ ยังใช้ค่าเดิมด้านบนทุกประการ */
+[data-theme="dark"] .top-navbar {
+  background: linear-gradient(180deg, var(--g900), var(--g800));
+}
 
 .navbar-logo {
   display: flex;
@@ -52,27 +59,27 @@
 .navbar-settings-btn:hover { transform: scale(1.08) rotate(20deg); background: var(--glass-w-18); }
 .navbar-settings-btn:active { transform: scale(.96); }
 
+/* [แก้ตามที่ระบุ] เอาวงกลม (background ไล่สี/border/box-shadow วงกลม) ออก — ให้ปุ่มมีขนาด
+   เท่ารูปจริงตรงๆ (2cm) แทน ไม่มีกรอบ/พื้นหลังของตัวเองอีกต่อไป */
 .profile-btn {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  --lc-border-1: rgba(244, 196, 48, .6);
-  border: 2px solid var(--lc-border-1);
-  box-shadow: 0 4px 10px var(--glass-b-20);
+  width: 2cm;
+  height: 2cm;
   cursor: pointer;
-  background: linear-gradient(135deg, var(--g500), var(--g700));
-  color: var(--fixed-white);
-  font-family: var(--font-display);
-  font-size: 18px;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: transform var(--dur-fast) var(--ease-out-soft);
 }
+.profile-btn img { width: 100%; height: 100%; object-fit: contain; }
 .profile-btn:hover { transform: scale(1.08); }
 .profile-btn:active { transform: scale(.96); }
-.profile-btn--login { font-size: 20px; }
 
 @media (max-width: 768px) {
   .top-navbar { height: 56px; padding: 0 16px; }
   .navbar-logo { font-size: 18px; }
   .navbar-right-cluster { gap: 8px; }
-  .profile-btn, .navbar-settings-btn { width: 44px; height: 44px; font-size: 16px; }
+  .navbar-settings-btn { width: 44px; height: 44px; font-size: 16px; }
+  .profile-btn { width: 1.5cm; height: 1.5cm; }
 }

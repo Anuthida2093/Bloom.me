@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import CinematicBackground from '../layout/CinematicBackground'
 import { useAppContext } from '../../context/AppContext'
 import SoundToggleButton from '../layout/SoundToggleButton'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 const C_1 = 'rgba(10,30,25,.35)'
 const C_2 = 'rgba(10,30,25,.15)'
@@ -98,7 +99,11 @@ export default function WelcomeModal() {
           <h2 style={{ fontFamily: 'Fredoka One', fontSize: 24, color: 'var(--g800)', marginBottom: 8 }}>
             คุณมีต้นไม้ประจำตัวแล้วหรือยัง?
           </h2>
-          <p style={{ fontSize: 14, color: 'var(--n500)', lineHeight: 1.65, marginBottom: 28 }}>
+          {/* [แก้บั๊ก — พบจากรีวิวโค้ด] เดิม --n500 กลับด้านเป็นสีอ่อนตอน dark mode (#7EAD8C บน
+              การ์ดพื้นขาว --glass-w-90 ที่ไม่เปลี่ยนตามธีมเลย) คอนทราสต์ต่ำกว่ามาตรฐาน อ่านยาก
+              ในโหมดมืด — เปลี่ยนไปใช้ --g800 แทน (สีเดียวกับหัวข้อด้านบนในการ์ดนี้เอง ไม่กลับด้าน
+              ตามธีม อ่านออกชัดทั้ง 2 โหมดเสมอ) */}
+          <p style={{ fontSize: 14, color: 'var(--g800)', lineHeight: 1.65, marginBottom: 28, opacity: .8 }}>
             ต้นไม้ของคุณจะเติบโตไปตามพฤติกรรมของคุณ<br />ทำเควสทุกวัน พัฒนาตัวเองใน 3 ด้าน
           </p>
 
@@ -145,7 +150,7 @@ export default function WelcomeModal() {
               onMouseEnter={(e) => { e.currentTarget.style.background = BG_6 }}
               onMouseLeave={(e) => { e.currentTarget.style.background = BG_7 }}
             >
-              🌱 สมัครสมาชิก
+              <img src={BADGE_ICONS.seed} className="icon-img" alt="" /> สมัครสมาชิก
             </button>
           </div>
 

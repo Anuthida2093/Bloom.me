@@ -37,6 +37,7 @@
 import React, { useState } from 'react'
 
 import { MOOD_GATED_QUEST_CODES, type QuestDef, type QuestTabId } from '../../config/questCatalog'
+import { QUEST_ICONS } from '../../config/iconAssets'
 import type { UserData, TreeStats, PlacedItem, DecorationPositionMap, MoodEntryData, QuestCategory } from '../../types'
 import type { QuestPlayPayload } from '../../types.mental'
 import { useAppContext } from '../../context/AppContext'
@@ -222,7 +223,7 @@ export default function GameplayFrame({
         todaysMoodEntry ? (
           <OracleCardsPage moodEntry={todaysMoodEntry} onComplete={onCompleteSpecial} onClose={onCloseSpecial} />
         ) : (
-          <MoodGateScreen title="ไพ่ทิพย์กระตุ้นพลัง" icon="🔮" accent={accent} onRequestMoodCheckin={onRequestMoodCheckin} onClose={onCloseSpecial} />
+          <MoodGateScreen title="ไพ่ทิพย์กระตุ้นพลัง" icon="🔮" iconImg={QUEST_ICONS[ORACLE_QUEST_CODE]} accent={accent} onRequestMoodCheckin={onRequestMoodCheckin} onClose={onCloseSpecial} />
         )
       )}
 
@@ -235,7 +236,7 @@ export default function GameplayFrame({
             onClose={onCloseSpecial}
           />
         ) : (
-          <MoodGateScreen title="สมุดบันทึกรากไม้เรืองแสง" icon="📖" accent={accent} onRequestMoodCheckin={onRequestMoodCheckin} onClose={onCloseSpecial} />
+          <MoodGateScreen title="สมุดบันทึกรากไม้เรืองแสง" icon="📖" iconImg={QUEST_ICONS[JOURNAL_QUEST_CODE]} accent={accent} onRequestMoodCheckin={onRequestMoodCheckin} onClose={onCloseSpecial} />
         )
       )}
 

@@ -125,6 +125,16 @@ export default function CameraCapture({ hint, onConfirm, onSkip, skipLabel = '�
           ✕
         </button>
       )}
+      {/* [แก้ตามที่ระบุ] ย้ายข้อความคำอธิบายภารกิจขึ้นไปบนสุดของ .camera-capture แทน — เดิม
+          อยู่ใน .bottom-bar ร่วมกับปุ่มควบคุม ตอนนี้ปุ่มควบคุม (shutter/side/review) เป็น
+          position:absolute ลอยทับใกล้ขอบล่างทั้งหมดแล้ว ทำให้ข้อความ (ซึ่งยังอยู่ใน normal
+          flow ด้านบนของ .bottom-bar ที่สั้นลงมากเพราะลูกอื่นกลายเป็น absolute หมด) ไปตกอยู่
+          ใกล้ขอบล่างจอเหมือนกัน จนซ้อนทับปุ่มพอดี — ย้ายมาไว้บนสุด (ใต้ navbar ในพื้นที่ที่
+          top:90px/66px เว้นไว้อยู่แล้ว) ไม่มีทางชนปุ่มด้านล่างได้อีกต่อไปเพราะอยู่คนละฝั่ง */}
+      <p className="camera-capture__hint">
+        {cameraError ? cameraError : hint}
+      </p>
+
       <div className="camera-capture__viewfinder">
         {capturedImage ? (
           <img src={capturedImage} alt="ภาพที่ถ่าย" className="camera-capture__captured-img" />
@@ -138,10 +148,6 @@ export default function CameraCapture({ hint, onConfirm, onSkip, skipLabel = '�
       </div>
 
       <div className="camera-capture__bottom-bar">
-        <p className="qg-hint camera-capture__hint">
-          {cameraError ? cameraError : hint}
-        </p>
-
         {!cameraError && !capturedImage && (
           <div className="camera-capture__controls">
             {onSkip && <button className="camera-capture__side-btn" onClick={onSkip} title={skipLabel}>✕</button>}

@@ -3,8 +3,11 @@
   --nav-cutout-color: var(--lc-c-4);
   --nav-bg: var(--g700);
   --nav-indicator: var(--fixed-white);
-  --nav-height: 70px;
-  --btn-width: 80px;
+  /* [แก้ตามที่ระบุ — รอบนี้] ผู้ใช้บอกว่ายังใหญ่ไป ลดจาก 2.5cm → 1.5cm ปรับ nav-height/
+     btn-width ลงตามสัดส่วนเดิม (เผื่อ padding รอบไอคอนไว้ที่ประมาณ 35px เท่ารอบก่อน) */
+  --nav-icon-size: 1.5cm;
+  --nav-height: 90px;
+  --btn-width: 90px;
 }
 
 .action-menu-container {
@@ -46,7 +49,16 @@
   font-family: var(--font-body);
   font-weight: 700;
   font-size: var(--fs-sm);
+  display: flex;
+  align-items: center;
+  gap: 10px;
   transition: background .18s ease, transform .18s ease;
+}
+/* [แก้ตามที่ระบุ] ไอคอนหมวดเควสในเมนูลอย — ใช้ขนาดเดียวกับแถบเมนูล่างหลัก (--nav-icon-size) */
+.quest-floating-menu .icon-img {
+  width: var(--nav-icon-size);
+  height: var(--nav-icon-size);
+  flex-shrink: 0;
 }
 .quest-floating-menu button:hover {
   background: var(--ae-glow);
@@ -73,11 +85,27 @@
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   width: 100%; height: 100%; cursor: pointer;
 }
+/* [แก้บั๊ก — ตามที่ระบุ] ไอคอนกลายเป็นสีขาวโล่งดูเหมือนรูปพัง — ตรวจแล้วไม่ใช่ 404 (เช็ค
+   DevTools Network เห็น status 200 ทุกไฟล์ทั้ง 4 ปุ่ม + เช็ค naturalWidth/Height ของ <img>
+   จริงในเบราว์เซอร์ ได้ค่ามาถูกต้องไม่ใช่ 0x0) ต้นเหตุจริงคือ filter: grayscale(1)
+   brightness(1.5) ด้านล่าง ซึ่งเดิมออกแบบไว้ตอนไอคอนยังเป็น emoji/font glyph สีเดียว
+   (ใช้กลบสีให้ดูเข้ากับพื้นหลังเข้มตอนไม่ active) — พอเปลี่ยนเป็นรูปภาพจริงที่มีสีสัน/แสงเงา
+   หลายเฉด grayscale+brightness(1.5) จะกดสีทุกอย่างให้ล้นสว่างจนแทบขาวโล่งดูเหมือนรูปพัง
+   (โดยเฉพาะไอคอนที่พื้นแหล่งเป็นโทนอ่อนอยู่แล้วอย่าง Store.png/profile.png) ตัดออกทั้งคู่
+   เหลือแค่ opacity ลดหน่อยตอนไม่ active พอ (ตำแหน่ง/วงกลมยกขึ้นก็บอกสถานะ active ชัดอยู่แล้ว) */
 .liquid-nav-bar ul li a .nav-icon {
-  font-size: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--fixed-white);
-  filter: grayscale(1) brightness(1.5);
+  opacity: .82;
   transition: .5s var(--ease-spring);
+}
+.liquid-nav-bar ul li.active a .nav-icon { opacity: 1; }
+/* [แก้ตามที่ระบุ] ไอคอนแถบเมนูล่าง — ใช้ --nav-icon-size (เดิม font-size:26px ตอนยังเป็น emoji) */
+.liquid-nav-bar ul li a .nav-icon .icon-img {
+  width: var(--nav-icon-size);
+  height: var(--nav-icon-size);
 }
 .liquid-nav-bar ul li a .nav-text {
   position: absolute;
@@ -89,7 +117,9 @@
   transform: translateY(20px);
   transition: .5s var(--ease-spring);
 }
-.liquid-nav-bar ul li.active a .nav-icon { transform: translateY(-34px); filter: none; }
+/* [แก้ตามที่ระบุ] คำนวณจาก --nav-height แทนเลขคงที่ เพราะ nav-height เปลี่ยนตามขนาดไอคอนใหม่
+   (เดิม -34px คำนวณจาก nav-height:70px เดิม ผูกตายตัวไว้จะพังทันทีที่ nav-height เปลี่ยน) */
+.liquid-nav-bar ul li.active a .nav-icon { transform: translateY(calc(var(--nav-height) / -2)); }
 .liquid-nav-bar ul li.active a .nav-text { opacity: 1; transform: translateY(14px); }
 
 .nav-badge {
@@ -135,11 +165,11 @@
 @keyframes popUp { from { opacity: 0; transform: translateY(15px) scale(.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 @media (max-width: 768px) {
-  :root { --nav-height: 54px; --btn-width: 68px; }
+  /* [แก้ตามที่ระบุ] เดสก์ท็อปลดลงเหลือ 1.5cm แล้ว บนจอเล็กก็ลดตามสัดส่วนด้วย (เดิม 1.6cm
+     ใหญ่กว่าเดสก์ท็อป 1.5cm ใหม่ไปแล้ว กลับตาลปัตร) */
+  :root { --nav-icon-size: 1.2cm; --nav-height: 74px; --btn-width: 74px; }
   .action-menu-container { bottom: 15px; }
-  .liquid-nav-bar ul li a .nav-icon { font-size: 22px; }
   .liquid-nav-bar ul li a .nav-text { font-size: 11px; }
-  .liquid-nav-bar ul li.active a .nav-icon { transform: translateY(-26px); }
   .liquid-nav-bar ul li.active a .nav-text { transform: translateY(11px); }
 }
 

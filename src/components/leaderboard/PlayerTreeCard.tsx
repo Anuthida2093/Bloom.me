@@ -1,5 +1,6 @@
 import { STACK_PER_VISUAL_LEVEL } from '../../types'
 import type { LeaderboardPlayer } from '../../config/leaderboardData'
+import { QUEST_TAB_ICONS } from '../../config/iconAssets'
 
 interface PlayerTreeCardProps {
   player: LeaderboardPlayer
@@ -14,10 +15,12 @@ const toBarPct = (stack: number): number => Math.min(100, (stack / (STACK_PER_VI
  * (ไม่มี exp/coins/streak ของผู้เล่นคนอื่น) จึงไม่ใส่ตัวเลขปลอมๆ ลงไป
  */
 export default function PlayerTreeCard({ player }: PlayerTreeCardProps) {
+  // [แก้ตามที่ระบุ — grep 📚/💪/🌸 พบจุดนี้] 3 หมวดตรงกับ QUEST_TAB_ICONS เป๊ะทั้ง 3 ตัว
+  // (knowledge/physical/mental) มีไฟล์รูปจริงครบ จึงแทนได้ทั้งแถวโดยไม่ปนอีโมจิ/รูปในแถวเดียวกัน
   const stats = [
-    { icon: '📚', label: 'ด้านการเรียนรู้', val: toBarPct(player.knowledgeStack), color: 'var(--b500)' },
-    { icon: '💪', label: 'ด้านสุขภาพกาย', val: toBarPct(player.healthStack), color: 'var(--g600)' },
-    { icon: '🌸', label: 'ด้านสุขภาพจิต', val: toBarPct(player.emotionStack), color: 'var(--purple)' },
+    { img: QUEST_TAB_ICONS.knowledge, icon: '📚', label: 'ด้านการเรียนรู้', val: toBarPct(player.knowledgeStack), color: 'var(--b500)' },
+    { img: QUEST_TAB_ICONS.physical, icon: '💪', label: 'ด้านสุขภาพกาย', val: toBarPct(player.healthStack), color: 'var(--g600)' },
+    { img: QUEST_TAB_ICONS.mental, icon: '🌸', label: 'ด้านสุขภาพจิต', val: toBarPct(player.emotionStack), color: 'var(--purple)' },
   ]
 
   return (
@@ -37,7 +40,7 @@ export default function PlayerTreeCard({ player }: PlayerTreeCardProps) {
           <div key={s.label} style={{ marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
               <div>
-                <span style={{ fontSize: 13 }}>{s.icon}</span>
+                <span style={{ fontSize: 13 }}>{s.img ? <img src={s.img} className="icon-img" alt="" /> : s.icon}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', marginLeft: 4 }}>{s.label}</span>
               </div>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: s.color }}>{Math.round(s.val)}%</span>

@@ -3,6 +3,7 @@ import { type InventoryItem } from '../../types'
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useAudio } from '../../context/AudioContext'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 const C_1 = 'rgba(0,0,0,.75)'
 const C_2 = 'rgba(244,196,48,.4)'
@@ -135,7 +136,7 @@ export default function StreakCelebration({ days, inventoryData = [], onClaim = 
 
         {/* Streak badge */}
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: BG_3, border: `1.5px solid ${BORDER_4}`, borderRadius: 99, padding: '6px 18px', marginBottom: 20 }}>
-          <span style={{ fontSize: 20 }}>🔥</span>
+          <img src={BADGE_ICONS.streak} className="icon-img" style={{ fontSize: 20 }} alt="" />
           <span style={{ fontFamily: 'Fredoka One', fontSize: 16, color: 'var(--coin)' }}>{days} วัน Streak!</span>
         </div>
 

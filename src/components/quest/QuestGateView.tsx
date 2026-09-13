@@ -1,5 +1,6 @@
-import type { QuestDef } from '../../config/questCatalog'
+import { isQuestFullyDoneToday, type QuestDef } from '../../config/questCatalog'
 import { SAFETY_NET_CONTACTS } from '../../config/screening'
+import { QUEST_ICONS } from '../../config/iconAssets'
 
 const C_4 = '#9b59d0'
 const BORDER_5 = '#b785f5'
@@ -61,25 +62,20 @@ export default function QuestGateView({
   return (
     <div className="quest-gate-view" style={{ background: theme.bg }}>
       <div className="quest-gate-view__list">
-        {/* [แก้ตามที่ระบุ] เดิมคำคม + ลิงก์นี้อยู่ในกล่อง .quest-gate-view__center ที่ลอย
-            กึ่งกลางจอ (height:100%) เหลือเป็นช่องว่างค้างหลังไอคอนนกฮูก/ใบไม้ถูกลบไปแล้ว —
-            ตัดคำคมทิ้งทั้งสองหมวด และย้ายลิงก์ทางลัดนี้มาไว้บนสุดของลิสต์แทน (ไม่ใช่ล็อกจริง
-            แค่ทางลัด — การเข้าถึงกล่องพยาบาลเต็มรูปแบบยังอยู่ที่แถบท้ายลิสต์เหมือนเดิม) */}
-        {category === 'mental' && onOpenSafetyNet && (
-          <button type="button" className="quest-gate-view__safety-link" onClick={onOpenSafetyNet}>
-            ต้องการความช่วยเหลือด่วน?
-          </button>
-        )}
-
         {quests.map((q) => {
           const locked = isLocked(q)
-          const done = isCompleted(q.code)
+          // [แก้บั๊ก — ตามที่ระบุ] เดิม done = isCompleted(q.code) ตรงๆ — สำหรับเควสทั่วไปถูกต้อง
+          // แต่เควสที่มี maxPerDay (เช่น phys-pure-water เล่นได้ 10 ครั้ง/วัน) quest.api.ts
+          // (isRepeatable branch) เพิ่ม log ใหม่สถานะ COMPLETED ทุกครั้งที่เล่นสำเร็จ — isCompleted
+          // เช็คแค่ "มี log ไหนสถานะ COMPLETED บ้างไหม" จึงเป็นจริงตั้งแต่เล่นรอบแรก ทำให้ขึ้น
+          // "✓ สำเร็จแล้ว" ทันทีทั้งที่เพิ่งเล่นไป 1/10 — ย้ายตรรกะไปรวมไว้ที่
+          // isQuestFullyDoneToday() ใน questCatalog.ts จุดเดียว (เดิมเขียนซ้ำแยกไว้ที่นี่ ทำให้
+          // LearningQuestMap.tsx อีกจุดยังมีบั๊กเดียวกันหลงเหลืออยู่ — ดู comment ที่ฟังก์ชันนั้น)
+          const playsToday = q.isRepeatable ? getTodayCompletionCount(q.code) : 0
+          const done = isQuestFullyDoneToday(q, isCompleted, getTodayCompletionCount)
           // ต้องเช็คอินอารมณ์ก่อน — ไม่ใช่ "ล็อกจริง" (ยังกดเข้าไปได้ แค่จะเจอหน้าชวนไป
           // เช็คอินก่อนหน้าเควสจริง) จึงไม่ disable ปุ่ม แค่โชว์ป้ายบอกแยกจาก lock
           const moodGated = !done && !locked && needsMoodCheckin(q.code)
-          // [ใหม่] ป้าย "เล่นซ้ำได้" — แยกจาก status chip (done/locked/moodGated) เพราะเควส
-          // isRepeatable ยัง "สำเร็จแล้ว" ของครั้งล่าสุดได้พร้อมกับเล่นซ้ำได้อีกในวันเดียวกัน
-          const playsToday = q.isRepeatable ? getTodayCompletionCount(q.code) : 0
           return (
             <button
               key={q.code}
@@ -88,11 +84,19 @@ export default function QuestGateView({
               title={moodGated ? 'เช็คอินอารมณ์ก่อนถึงจะเล่นได้' : q.titleTh}
               onClick={() => onSelectQuest(q)}
             >
-              <span
-                className="quest-gate-view__row-icon"
-                style={{ background: `linear-gradient(135deg, ${theme.fabFrom}, ${theme.fabTo})` }}
-              >
-                {q.icon}
+              <span className="quest-gate-view__row-icon">
+                {/* [แก้ตามที่ระบุ — ตัวเลือก B] ใช้ไฟล์ภาพจริงถ้ามี (จับคู่ตาม quest.code) แบบ
+                    "เปล่าๆ ไม่มีขอบ/พื้นหลัง" — ตัดวงกลมไล่สี (theme.fabFrom/fabTo) ที่เคยอยู่
+                    หลังไอคอนออกทั้งหมด เพราะไฟล์ภาพจริงเป็นป้ายตราสัญลักษณ์แนวนอน (~845x461,
+                    พื้นหลังโปร่งใสจริง ตรวจแล้วด้วย colorType=6/RGBA) ถ้าครอบด้วย object-fit:
+                    cover ในวงกลมจะครอปริบบิ้น/ข้อความในภาพทิ้งไปเยอะ ดูไม่สวย ทั้ง 2 หมวด
+                    (กาย/ใจ) พื้นหลังลิสต์เป็นสีเข้มอยู่แล้ว ไอคอนพื้นโปร่งใสจึงกลมกลืนดีโดยไม่ต้อง
+                    มีกรอบวงกลมมาช่วย — เควสที่ไม่มีไฟล์ (know-guardian-of-rest,
+                    know-ten-year-forest — ไม่อยู่ในหมวดกาย/ใจอยู่แล้ว แต่กันไว้เผื่ออนาคต) ยัง
+                    fallback เป็น q.icon (emoji เดิม) */}
+                {QUEST_ICONS[q.code]
+                  ? <img src={QUEST_ICONS[q.code]} className="quest-gate-view__row-icon-img" alt={q.titleTh} />
+                  : q.icon}
               </span>
               <span className="quest-gate-view__row-title">{q.titleTh}</span>
               {q.isRepeatable && (
@@ -142,32 +146,24 @@ export default function QuestGateView({
         .quest-gate-view {
           position: absolute; inset: 0; z-index: 10; overflow: hidden;
         }
-        /* [แก้ตามที่ระบุ] ลิงก์ทางลัดกล่องพยาบาล — ย้ายมาอยู่บนสุดของลิสต์ (จากเดิมอยู่ใน
-           กล่อง .quest-gate-view__center ที่ลอยกึ่งกลางจอ) จัดกึ่งกลางแนวนอนในตัวเองแทน */
-        .quest-gate-view__safety-link {
-  align-self: center;
-  margin-bottom: 2px;
-  border: none;
-  background: transparent;
-  --lc-text-1: #ffb3c6;
-  color: var(--lc-text-1);
-  font-size: var(--fs-xs);
-  text-decoration: underline;
-  cursor: pointer;
-}
+        /* [แก้ตามที่ระบุ — ลบลิงก์ "ต้องการความช่วยเหลือด่วน?"] ซ้ำซ้อนกับแถบศูนย์ฉุกเฉิน
+           (.quest-gate-view__safety-banner) ที่อยู่ท้ายลิสต์อยู่แล้ว (เบอร์ 1323 เดียวกัน)
+           ตัด element/ปุ่มนี้ออกจาก JSX ทั้งหมดแล้ว (ดูด้านบน) — ลบ CSS ที่ไม่มีใครใช้ทิ้งด้วย
 
-        /* [แก้ตามที่ระบุ] ลิสต์แนวตั้งเต็มความกว้างจอ ปักชิดขอบล่างเสมอ แทนเมนู FAB ที่ต้องกดเปิด
-           เดิม — ใช้ --gpf-safe-bottom (ประกาศที่ .gameplay-frame) กันไม่ให้ ActionMenuBar บัง
-           เหมือนที่ทุกป๊อปอัพชิดขอบล่างในระบบนี้ทำอยู่แล้ว
-           [แก้ตามที่ระบุ — ข้อ 3] เดิมมีกล่อง .quest-gate-view__center ลอยกึ่งกลางจอด้านบน
-           (คำคม + ที่เว้นว่างของไอคอนนกฮูก/ใบไม้เดิม) กินพื้นที่เหนือลิสต์ไปมาก ตอนนี้ตัดกล่อง
-           นั้นทิ้งทั้งหมด ลิสต์จึงเริ่มต้นทันทีใต้ป้ายชื่อโซนที่ QuestSection.tsx (ไม่มีช่องว่าง
-           คั่นกลาง) — เพิ่ม max-height และลด padding-top ลงเพื่อให้กรอบเควสยืดสูงขึ้นอีกเล็กน้อย */
+           [แก้ตามที่ระบุ — ข้อ 3] เดิม .quest-gate-view__list ยึด "bottom:0" อย่างเดียว
+           (ไม่มี top) แล้วจำกัดสูงสุดด้วย max-height:72% — พอเนื้อหาสั้นกว่าที่ max-height
+           อนุญาต (เช่น หมวดกายมีแค่ 4 เควส) กล่องจะหด "สูงเท่าเนื้อหา" แล้วลอยขึ้นจากขอบล่าง
+           เหลือพื้นที่ว่างเปล่าด้านบนระหว่างป้ายหัวข้อโซนกับปุ่มเควสตัวแรกเยอะมาก — เปลี่ยนมา
+           ยึด "top:95px" ตรงๆ แทน (ค่าเดียวกับระยะเว้น navbar มาตรฐานที่ใช้ทั่วระบบ เช่น
+           SettingsModal Overlay/SubModalTemplate) ปุ่มเควสตัวแรกจึงอยู่ห่างจากขอบบนจอ (ใต้
+           ป้ายหัวข้อโซนที่ลอยอยู่ top:12px ของ QuestSection.tsx) คงที่เสมอไม่ว่าจะมีกี่เควส
+           ไม่ต้องพึ่ง max-height เป็นเปอร์เซ็นต์อีกต่อไป (ลบ media query mobile ที่เคยปรับ
+           max-height แยกทิ้งด้วย เพราะ top+bottom กำหนดความสูงที่เหลือให้เองอัตโนมัติ) */
         .quest-gate-view__list {
-          position: absolute; left: 0; right: 0; bottom: 0; z-index: 20;
+          position: absolute; top: 95px; left: 0; right: 0; bottom: 0; z-index: 20;
           display: flex; flex-direction: column; gap: 10px;
-          max-height: 72%; overflow-y: auto;
-          padding: 18px 16px calc(var(--gpf-safe-bottom, 0px) + 20px);
+          overflow-y: auto;
+          padding: 4px 16px calc(var(--gpf-safe-bottom, 0px) + 20px);
           background: linear-gradient(180deg, transparent 0%, var(--glass-b-30) 35%, var(--glass-b-55) 100%);
         }
         .quest-gate-view__row {
@@ -180,10 +176,14 @@ export default function QuestGateView({
         }
         .quest-gate-view__row:hover:not(:disabled) { transform: translateX(4px); filter: brightness(1.12); }
         .quest-gate-view__row:disabled { cursor: not-allowed; opacity: .55; }
+        /* [แก้ตามที่ระบุ — ตัวเลือก B] เอาวงกลมไล่สี/เงาออก เหลือแค่กล่องขนาดคงที่ 2.5cm ไว้
+           จัดตำแหน่งไอคอน ไม่มีพื้นหลัง/ขอบ/เงาอีกต่อไป */
         .quest-gate-view__row-icon {
-          flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%;
+          flex-shrink: 0; width: 2.5cm; height: 2.5cm;
           display: flex; align-items: center; justify-content: center; font-size: 22px;
-          box-shadow: 0 4px 10px var(--glass-b-35);
+        }
+        .quest-gate-view__row-icon-img {
+          width: 100%; height: 100%; object-fit: contain;
         }
         .quest-gate-view__row-title {
           flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-sm);
@@ -230,10 +230,6 @@ export default function QuestGateView({
           .quest-gate-view__list { align-items: center; }
           .quest-gate-view__row,
           .quest-gate-view__safety-banner { max-width: 302px; }
-        }
-
-        @media (max-width: 480px) {
-          .quest-gate-view__list { max-height: 66%; }
         }
 
         @media (prefers-reduced-motion: reduce) {

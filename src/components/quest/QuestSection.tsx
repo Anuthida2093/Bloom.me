@@ -7,6 +7,7 @@ import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { QUEST_TABS, QUEST_CATALOG_BY_TAB, SPECIAL_QUEST_CODES, findQuestByCode, type QuestTabId, type QuestDef } from '../../config/questCatalog'
 import { Z_INDEX } from '../../config/zIndex'
+import { QUEST_TAB_ICONS } from '../../config/iconAssets'
 import { useAppContext, DAILY_FOCUS_QUOTA_MINUTES } from '../../context/AppContext'
 import QuestRewardCelebration, { type QuestCelebrationData } from './QuestRewardCelebration'
 import { playSfx } from '../../utils/audioPlayer'
@@ -268,7 +269,12 @@ export default function QuestSection({
       {/* [แก้] แยกป้ายชื่อโซน (กึ่งกลางจอ) กับปุ่มปิด (มุมขวาบน) ออกจากกันเป็นคนละ element
           เดิมรวมกันเป็นก้อนเดียวชิดขวา ย้ายแค่ป้ายไปกึ่งกลางจะลากปุ่มปิดตามไปด้วยโดยไม่ตั้งใจ */}
       <div className="quest-section-title-pill">
-        <span>{tab.emoji} {ZONE_TITLES[activeTab]}</span>
+        {/* [อัปเดตรอบนี้] ทั้ง 3 หมวดมีไฟล์รูปจริงครบแล้ว (ดู iconAssets.ts) */}
+        <span>
+          {QUEST_TAB_ICONS[tab.id]
+            ? <img src={QUEST_TAB_ICONS[tab.id]} className="icon-img" alt="" />
+            : tab.emoji} {ZONE_TITLES[activeTab]}
+        </span>
       </div>
       <button onClick={onClose} title="ปิด" className="quest-section-close-btn">✕</button>
 

@@ -5,6 +5,7 @@ import { Z_INDEX } from '../../config/zIndex'
 import { uiSounds } from '../../utils/uiSounds'
 import { playSfx } from '../../utils/audioPlayer'
 import { useAppContext } from '../../context/AppContext'
+import { BADGE_ICONS, QUEST_ICONS } from '../../config/iconAssets'
 
 const C_1 = 'rgba(10,25,20,.55)'
 const C_2 = '#FFF9C4'
@@ -111,7 +112,12 @@ export default function QuestConfirmModal({ quest, stageLabel, accent, accentBg,
                     animate={{ y: [0, -6, 0], rotate: [0, -4, 4, 0] }}
                     transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                   >
-                    {quest.icon}
+                    {/* [แก้ตามที่ระบุ] ใช้รูปจริงตามชื่อเควส (QUEST_ICONS[quest.code]) แทน
+                        emoji เดิม — เควสที่ยังไม่มีไฟล์จริง (know-guardian-of-rest,
+                        know-ten-year-forest) ยัง fallback เป็น quest.icon (emoji) เหมือนเดิม */}
+                    {QUEST_ICONS[quest.code]
+                      ? <img src={QUEST_ICONS[quest.code]} alt={quest.titleTh} style={{ width: 72, height: 72, objectFit: 'contain' }} />
+                      : quest.icon}
                   </motion.span>
                 </div>
 
@@ -125,8 +131,8 @@ export default function QuestConfirmModal({ quest, stageLabel, accent, accentBg,
               <p style={{ fontSize: 13, color: 'var(--n500)', lineHeight: 1.65, marginBottom: 16, textAlign: 'center' }}>{quest.desc}</p>
 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 20 }}>
-                <span className="tag" style={{ background: BG_2, color: TEXT_3, border: '1px solid var(--coin)' }}>🪙 +{quest.coinReward}</span>
-                <span className="tag" style={{ background: accentBg, color: accent, border: `1px solid ${accent}55` }}>⭐ +{quest.expReward} EXP</span>
+                <span className="tag" style={{ background: BG_2, color: TEXT_3, border: '1px solid var(--coin)' }}><img src={BADGE_ICONS.coins} className="icon-img" alt="" /> +{quest.coinReward}</span>
+                <span className="tag" style={{ background: accentBg, color: accent, border: `1px solid ${accent}55` }}><img src={BADGE_ICONS.exp} className="icon-img" alt="" /> +{quest.expReward} EXP</span>
               </div>
 
               {locked ? (

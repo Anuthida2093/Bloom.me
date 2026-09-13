@@ -6,6 +6,7 @@ import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import MiniTree from '../tree/MiniTree'
 import GameAlert from '../ui/GameAlert'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 const C_1 = 'rgba(116,198,157,.35)'
 const C_2 = 'rgba(116,198,157,.2)'
@@ -183,7 +184,7 @@ export default function SettingsModal({
         <Section label="👤 บัญชี" index={5} accent={theme.accent} full>
           <div className="settings-account-grid">
             <SettingBtn icon="👤" label="ตั้งค่าโปรไฟล์" onClick={() => setActiveSubModal('profile')} accent={theme.accent} />
-            <SettingBtn icon="🔔" label="การแจ้งเตือน" onClick={() => setActiveSubModal('notifications')} accent={theme.accent} />
+            <SettingBtn icon={<img src={BADGE_ICONS.notification} className="icon-img" alt="" />} label="การแจ้งเตือน" onClick={() => setActiveSubModal('notifications')} accent={theme.accent} />
             <SettingBtn icon="🔒" label="ความเป็นส่วนตัว" onClick={() => setActiveSubModal('privacy')} accent={theme.accent} />
             <SettingBtn icon="📤" label="ส่งออกข้อมูล (Export)" onClick={handleExportData} accent={theme.accent} />
           </div>
@@ -397,7 +398,7 @@ function VolumeSlider({ value, onChange, accent }: VolumeSliderProps) {
   )
 }
 
-interface SettingBtnProps { icon: string; label: string; onClick: () => void; accent: string }
+interface SettingBtnProps { icon: ReactNode; label: string; onClick: () => void; accent: string }
 function SettingBtn({ icon, label, onClick, accent }: SettingBtnProps) {
   return (
     <button

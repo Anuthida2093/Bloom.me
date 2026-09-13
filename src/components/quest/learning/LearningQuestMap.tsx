@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useLayoutEffect } from 'react'
-import type { QuestDef } from '../../../config/questCatalog'
+import { isQuestFullyDoneToday, type QuestDef } from '../../../config/questCatalog'
+import { QUEST_ICONS } from '../../../config/iconAssets'
 import OwlAvatar from '../OwlAvatar'
 import { useAppContext } from '../../../context/AppContext'
 import { playSfx } from '../../../utils/audioPlayer'
@@ -349,7 +350,12 @@ export default function LearningQuestMap({
 
       {nodes.map((node, i) => {
         const locked = isLocked(node.quest)
-        const completed = isCompleted(node.quest.code)
+        // [แก้บั๊ก — พบจากรีวิวโค้ด] เดิม isCompleted(node.quest.code) ตรงๆ — ถ้าอนาคตมีเควส
+        // maxPerDay ในหมวดความรู้ (isRepeatable/maxPerDay เป็น field ทั่วไป ไม่ได้ผูกกับหมวด
+        // ใดหมวดหนึ่ง) จะขึ้น "สำเร็จแล้ว" ทันทีตั้งแต่เล่นรอบแรกเหมือนบั๊กเดิมของ
+        // QuestGateView.tsx ที่เพิ่งแก้ไป — ใช้ตัวช่วยกลางตัวเดียวกันแทนกันไม่ให้บั๊กเดิมโผล่
+        // ที่นี่อีก (ตอนนี้ยังไม่มีเควสความรู้ตัวไหนติด maxPerDay จริง แต่กันไว้ก่อน)
+        const completed = isQuestFullyDoneToday(node.quest, isCompleted, getTodayCompletionCount)
         const isSelected = selectedQuestCode === node.quest.code
         const status = completed ? 'completed' : locked ? 'locked' : 'active'
 
@@ -400,7 +406,7 @@ export default function LearningQuestMap({
           <div className="learning-quest-map__fab-menu">
             {sideQuests.map((q) => {
               const locked = isLocked(q)
-              const done = isCompleted(q.code)
+              const done = isQuestFullyDoneToday(q, isCompleted, getTodayCompletionCount)
               return (
                 <button
                   key={q.code}
@@ -410,7 +416,15 @@ export default function LearningQuestMap({
                   disabled={locked}
                   onClick={() => handlePickSideQuest(q)}
                 >
-                  <span>{q.icon}</span>
+                  {/* [แก้ตามที่ระบุ — ตัวเลือก B ให้ตรงกับ QuestGateView.tsx] ไอคอนเควสเปล่าๆ
+                      ไม่มีขอบ/พื้นหลังเพิ่ม ปุ่มวงกลมเดิม (.learning-quest-map__fab-item) ยังคง
+                      พื้นหลัง/ขอบไว้เป็นปุ่มกดจริง (ไม่ใช่แค่กรอบตกแต่งไอคอนเฉยๆ แบบ
+                      QuestGateView) แต่ตัวไอคอนข้างในไม่ครอบด้วยวงกลม/เงาซ้อนอีกชั้น */}
+                  <span className="learning-quest-map__fab-item-icon">
+                    {QUEST_ICONS[q.code]
+                      ? <img src={QUEST_ICONS[q.code]} className="learning-quest-map__fab-item-img" alt={q.titleTh} />
+                      : q.icon}
+                  </span>
                   {done && <span className="learning-quest-map__fab-badge learning-quest-map__fab-badge--done">✓</span>}
                   {locked && <span className="learning-quest-map__fab-badge learning-quest-map__fab-badge--lock">🔒</span>}
                   {q.isRepeatable && (
@@ -591,8 +605,11 @@ export default function LearningQuestMap({
           display: flex; flex-direction: column-reverse; gap: 12px; pointer-events: none;
         }
         .learning-quest-map__fab.open .learning-quest-map__fab-menu { pointer-events: auto; }
+        /* [แก้ตามที่ระบุ] ขยายปุ่มให้พอดีกับไอคอน 2.5cm ใหม่ (เดิม 48px เล็กกว่า 2.5cm/~94.5px
+           มาก) — ปุ่มนี้ยังเป็นปุ่มกดจริง (ไม่ใช่แค่กรอบตกแต่งไอคอนแบบ QuestGateView) จึงคง
+           พื้นหลัง/ขอบวงกลมไว้เป็นพื้นที่กดที่มองเห็นได้ */
         .learning-quest-map__fab-item {
-          position: relative; width: 48px; height: 48px; border-radius: 50%;
+          position: relative; width: calc(2.5cm + 16px); height: calc(2.5cm + 16px); border-radius: 50%;
           background: var(--g800); border: 2px solid var(--g400); color: var(--fixed-white); font-size: 20px;
           display: flex; align-items: center; justify-content: center;
           box-shadow: 0 4px 12px var(--glass-b-35); cursor: pointer;
@@ -602,6 +619,11 @@ export default function LearningQuestMap({
         .learning-quest-map__fab-item:disabled { cursor: not-allowed; }
         .learning-quest-map__fab-item:hover:not(:disabled) { background: var(--g700); }
         .learning-quest-map__fab.open .learning-quest-map__fab-item { transform: scale(1) translateY(0); opacity: 1; }
+        /* [แก้ตามที่ระบุ — ตัวเลือก B] ตัวไอคอนเองไม่มีวงกลม/พื้นหลังซ้อนอีกชั้นข้างในปุ่ม */
+        .learning-quest-map__fab-item-icon {
+          display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;
+        }
+        .learning-quest-map__fab-item-img { width: 2.5cm; height: 2.5cm; object-fit: contain; }
         .learning-quest-map__fab-badge {
           position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; border-radius: 50%;
           font-size: 9px; display: flex; align-items: center; justify-content: center;

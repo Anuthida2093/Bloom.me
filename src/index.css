@@ -256,6 +256,22 @@ input, select, textarea { font-family: var(--font-body); }
 .no-scroll::-webkit-scrollbar { display: none; }
 .no-scroll { scrollbar-width: none; }
 
+/* [ใหม่] ไอคอนรูปจริงแทนอีโมจิ (ดู src/config/iconAssets.ts) — .icon-img สำหรับใช้แทรกกลาง
+   ข้อความแบบเดียวกับที่ emoji เคยทำ (ขนาดอิง em ให้สเกลตามฟอนต์รอบข้างอัตโนมัติ, เลื่อนลง
+   เล็กน้อยด้วย vertical-align ให้จัดแนวกับข้อความพอดีเหมือน emoji) ส่วน .icon-img--lg สำหรับ
+   ไอคอนขนาดคงที่ในปุ่ม/ป้ายที่ไม่ได้อยู่ในบรรทัดข้อความ (เช่น ไอคอนเควสบนปุ่มใหญ่) */
+.icon-img {
+  width: 1.1em;
+  height: 1.1em;
+  object-fit: contain;
+  vertical-align: -0.15em;
+  display: inline-block;
+}
+.icon-img--lg {
+  width: 28px;
+  height: 28px;
+}
+
 .card {
   background: var(--bg-card);
   border-radius: var(--r-lg);

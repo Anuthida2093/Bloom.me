@@ -1,8 +1,12 @@
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 interface MoodGateScreenProps {
   title: string
   icon: string
+  /** [เพิ่มรอบนี้ — grep 🔮/📖 พบจุดนี้] ไอคอนเควสจริงจาก QUEST_ICONS ถ้ามี ใช้แทน `icon`
+   *  (emoji) เดิม — ไม่ใส่ก็ fallback เป็น emoji ต่อไปตามปกติ */
+  iconImg?: string
   accent: string
   onRequestMoodCheckin: () => void
   onClose: () => void
@@ -16,7 +20,7 @@ interface MoodGateScreenProps {
  *
  * [3-Pane layout] position: 'absolute' ครอบแค่ GameplayFrame ("กรอบเขียว") ที่เป็นพ่อ
  */
-export default function MoodGateScreen({ title, icon, accent, onRequestMoodCheckin, onClose }: MoodGateScreenProps) {
+export default function MoodGateScreen({ title, icon, iconImg, accent, onRequestMoodCheckin, onClose }: MoodGateScreenProps) {
   useEscapeKey(onClose)
 
   return (
@@ -39,7 +43,9 @@ export default function MoodGateScreen({ title, icon, accent, onRequestMoodCheck
       </button>
 
       <div className="mood-gate-card" style={{ textAlign: 'center', maxWidth: 420, background: 'var(--glass-w-96)', borderRadius: 28, padding: '40px 32px', boxShadow: '0 28px 70px var(--glass-b-40)' }}>
-        <div className="mood-gate-icon" style={{ fontSize: 56, marginBottom: 8 }}>{icon}</div>
+        <div className="mood-gate-icon" style={{ fontSize: 56, marginBottom: 8 }}>
+          {iconImg ? <img src={iconImg} style={{ width: 56, height: 56, objectFit: 'contain' }} alt="" /> : icon}
+        </div>
         <div style={{ fontFamily: 'Fredoka One', fontSize: 22, color: 'var(--n900)', marginBottom: 8 }}>ก่อนเข้า {title}</div>
         <p style={{ fontSize: 13.5, color: 'var(--n500)', lineHeight: 1.7, marginBottom: 24 }}>
           ทุกวันต้องเช็คอินอารมณ์ก่อนนะ — ความรู้สึกวันนี้ของคุณคือกุญแจสำคัญที่ทำให้ไพ่ทิพย์และสมุดบันทึกเข้าใจคุณได้ตรงจุด
@@ -52,7 +58,7 @@ export default function MoodGateScreen({ title, icon, accent, onRequestMoodCheck
             fontFamily: 'Fredoka One', fontSize: 16, cursor: 'pointer', boxShadow: `0 10px 24px ${accent}55`,
           }}
         >
-          🌤️ ไปเช็คอินอารมณ์
+          <img src={BADGE_ICONS.checkin} className="icon-img" alt="" /> ไปเช็คอินอารมณ์
         </button>
       </div>
 

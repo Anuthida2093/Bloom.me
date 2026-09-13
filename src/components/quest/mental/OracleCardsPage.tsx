@@ -8,6 +8,7 @@ import { useAppContext } from '../../../context/AppContext'
 import { playSfx, stopSfx } from '../../../utils/audioPlayer'
 import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import CameraCapture from '../shared/CameraCapture'
+import { BADGE_ICONS } from '../../../config/iconAssets'
 import './OracleCardsPage.css'
 
 type Stage = 'intro' | 'spread' | 'reading' | 'camera' | 'done'
@@ -235,7 +236,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
                         ข้ามภารกิจ
                       </button>
                       <button className="oracle-btn oracle-btn--primary" onClick={handleStartCamera}>
-                        📸 ทำภารกิจ (รับ 💧 +{WATER_DROP_REWARD})
+                        📸 ทำภารกิจ (รับ <img src={BADGE_ICONS.water} className="icon-img" alt="" /> +{WATER_DROP_REWARD})
                       </button>
                     </motion.div>
                   )}
@@ -279,7 +280,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
 
             <p className="oracle-page__desc">
               {cameraPhase === 'scanning' && 'กำลังสแกนยืนยัน...'}
-              {cameraPhase === 'success' && 'ยืนยันสำเร็จ! ได้รับ 💧 หยดน้ำรดต้นไม้'}
+              {cameraPhase === 'success' && <>ยืนยันสำเร็จ! ได้รับ <img src={BADGE_ICONS.water} className="icon-img" alt="" /> หยดน้ำรดต้นไม้</>}
             </p>
           </div>
         )}
@@ -289,7 +290,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
             <div style={{ fontSize: 52, marginBottom: 8 }}>🌟</div>
             <h2 className="oracle-page__summary-title">รับพลังใจเรียบร้อย!</h2>
             {gotWaterDrop ? (
-              <div className="oracle-page__water-badge">💧 +{WATER_DROP_REWARD} หยดน้ำแห่งชีวิต</div>
+              <div className="oracle-page__water-badge"><img src={BADGE_ICONS.water} className="icon-img" alt="" /> +{WATER_DROP_REWARD} หยดน้ำแห่งชีวิต</div>
             ) : (
               // [เพิ่มรอบนี้] กดข้ามภารกิจ → ไม่ได้หยดน้ำโบนัส แต่เควสไพ่ทิพย์โดยรวมยังสำเร็จปกติ
               // (ปุ่ม "เสร็จสิ้น" ด้านล่างเรียก onComplete() เหมือนกันทั้งสองเส้นทาง)

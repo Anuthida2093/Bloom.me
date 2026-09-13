@@ -4,6 +4,7 @@ import MiniTree from '../tree/MiniTree';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { RANK_CATEGORIES, MOCK_LEADERBOARD_PLAYERS, type LeaderboardPlayer, type RankCategory } from '../../config/leaderboardData';
+import { BADGE_ICONS, RANK_CATEGORY_ICONS } from '../../config/iconAssets';
 import './leaderboardRow.css';
 
 const C_1 = '#FFF9C4'
@@ -14,6 +15,7 @@ const C_5 = '#FFF4EE'
 const C_6 = '#FFE8DA'
 
 const MEDALS = ['🥇', '🥈', '🥉'];
+const RANK_ICONS = [BADGE_ICONS.rank1, BADGE_ICONS.rank2, BADGE_ICONS.rank3];
 
 interface LeaderboardProps {
   onClose?: () => void
@@ -94,7 +96,7 @@ export default function Leaderboard({ onClose = () => {}, myMbti = 'INFP', myNam
                 color: 'var(--fixed-white)',
               }}
             >
-              🏆 กระดานจัดอันดับ
+              <img src={BADGE_ICONS.trophy} className="icon-img" alt="" /> กระดานจัดอันดับ
             </div>
 
             <div
@@ -165,7 +167,7 @@ export default function Leaderboard({ onClose = () => {}, myMbti = 'INFP', myNam
                 gap: 5,
               }}
             >
-              {c.icon} {c.label}
+              {RANK_CATEGORY_ICONS[c.id] ? <img src={RANK_CATEGORY_ICONS[c.id]} className="icon-img" alt="" /> : c.icon} {c.label}
             </button>
           ))}
         </div>
@@ -222,7 +224,9 @@ export default function Leaderboard({ onClose = () => {}, myMbti = 'INFP', myNam
                     textAlign: 'center',
                   }}
                 >
-                  {i < 3 ? MEDALS[i] : `#${i + 1}`}
+                  {i < 3
+                    ? <img src={RANK_ICONS[i]} alt={MEDALS[i]} className="icon-img--lg" style={{ objectFit: 'contain' }} />
+                    : `#${i + 1}`}
                 </div>
 
                 <MiniTree theme={ptheme} size={36} />

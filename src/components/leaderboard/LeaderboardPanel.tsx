@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MBTI_TREE_THEME, type MbtiType } from '../../types';
 import MiniTree from '../tree/MiniTree';
 import { RANK_CATEGORIES, MOCK_LEADERBOARD_PLAYERS, type LeaderboardPlayer, type RankCategory } from '../../config/leaderboardData';
+import { BADGE_ICONS, RANK_CATEGORY_ICONS } from '../../config/iconAssets';
 import './leaderboardRow.css';
 
 const C_1 = '#ccc'
@@ -16,6 +17,9 @@ const TEXT_2 = C_2
 export type PanelPlayer = LeaderboardPlayer
 
 const MEDALS = ['🥇', '🥈', '🥉'];
+// [แก้ตามที่ระบุ] แทนเหรียญอันดับ 1-3 ด้วยไฟล์รูปจริง — MEDALS (emoji) ยังเก็บไว้ใช้เป็น
+// alt text เท่านั้น ไม่ได้ลบทิ้ง
+const RANK_ICONS = [BADGE_ICONS.rank1, BADGE_ICONS.rank2, BADGE_ICONS.rank3];
 
 interface LeaderboardPanelProps {
   collapsed?: boolean
@@ -112,7 +116,7 @@ export default function LeaderboardPanel({
               gap: 6,
             }}
           >
-            🏆 จัดอันดับ
+            <img src={BADGE_ICONS.trophy} className="icon-img" alt="" /> จัดอันดับ
           </div>
         </div>
 
@@ -143,7 +147,7 @@ export default function LeaderboardPanel({
                 transition: 'all .15s',
               }}
             >
-              {c.icon}
+              {RANK_CATEGORY_ICONS[c.id] ? <img src={RANK_CATEGORY_ICONS[c.id]} className="icon-img" alt={c.label} /> : c.icon}
             </button>
           ))}
         </div>
@@ -190,7 +194,9 @@ export default function LeaderboardPanel({
                     flexShrink: 0,
                   }}
                 >
-                  {i < 3 ? MEDALS[i] : `${i + 1}`}
+                  {i < 3
+                    ? <img src={RANK_ICONS[i]} alt={MEDALS[i]} style={{ width: 18, height: 18, objectFit: 'contain' }} />
+                    : `${i + 1}`}
                 </span>
 
                 <MiniTree theme={pt} size={28} />

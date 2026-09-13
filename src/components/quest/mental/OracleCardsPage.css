@@ -334,11 +334,26 @@
   align-items: center;
 }
 
+/* [แก้บั๊ก — ตามที่ระบุ] เดิม 200x200px ตายตัว — เล็กกว่าตอนพรีวิวกล้องสดใน CameraCapture.tsx
+   (ซึ่งเป็นกรอบ 4:3 ขนาด clamp(280px, calc(100% - 440px), 480px) ชัดเจน) มาก ผู้ใช้ถ่ายรูป
+   เสร็จแล้วเห็นภาพหดเล็กลงทันทีตอนเข้าสู่ช่วงสแกน/สำเร็จ ใช้ขนาด/สัดส่วนชุดเดียวกับ
+   CameraCapture.css เป๊ะ เพื่อให้ภาพต่อเนื่องไม่กระตุกขนาดระหว่าง 2 stage
+   [แก้เพิ่ม — พบจากการทดสอบจริงในเบราว์เซอร์] ใช้ calc(100% - 440px) ตรงๆ ก่อน วัดจริงได้
+   280x373px เท่านั้น (ชนขอบล่าง clamp พอดี) ไม่เท่ากับ CameraCapture ที่วัดได้ 480x640px จริง
+   ทั้งที่สูตรเดียวกัน — เพราะ "100%" ตรงนี้อ้างอิงความกว้างของ .oracle-page__content (flex
+   column ที่มี padding 24px และไม่เต็มจอเท่า .camera-capture ซึ่งเป็นเวทีเต็มจอโดยตรง)
+   ไม่ใช่ความกว้างจอจริง — เปลี่ยนไปอ้างอิง 100vw ตรงๆ แทน (จอจริงเสมอ ไม่ขึ้นกับ container
+   ที่ห่ออยู่กี่ชั้น) ยืนยันด้วยการวัดจริงหลังแก้แล้วว่าได้ 480x640px เท่ากับ CameraCapture เป๊ะ */
+/* [แก้บั๊ก — พบจากรีวิวโค้ด] เดิมไม่มี max-height กันไว้เลย ต่างจาก .camera-capture__viewfinder
+   (ที่มี max-height:calc(100% - 24px) กันกรอบสูงล้นจอเตี้ย เช่น มือถือแนวนอน) — ที่นี่ใช้ 100vh
+   ตรงๆ แทน 100% ด้วยเหตุผลเดียวกับ width ด้านบน (ancestor เป็น auto-height ทำให้ % ใช้ไม่ได้)
+   90px + 24px คือค่าเดียวกับ .camera-capture (top:90px เว้น navbar + buffer 24px) */
 .oracle-page__viewfinder {
   position: relative;
-  width: 200px;
-  height: 200px;
-  border-radius: 10px;
+  width: clamp(280px, calc(100vw - 440px), 480px);
+  max-height: calc(100vh - 114px);
+  aspect-ratio: 3 / 4;
+  border-radius: 20px;
   --lc-bg-5: #000;
   background: var(--lc-bg-5);
   border: 3px solid var(--g500);
@@ -367,7 +382,7 @@
 .oracle-page__scan-ring {
   position: absolute;
   inset: -8px;
-  border-radius: 10px; /* ขอบเหลี่ยมคือ 0 */
+  border-radius: 20px;
   border: 2px solid var(--g500);
   animation: oracleScanRing 1s ease-in-out infinite;
 }
@@ -381,7 +396,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 7px;
+  border-radius: 17px;
 }
 .oracle-page__capture-success-overlay {
   position: absolute;
@@ -390,7 +405,7 @@
   align-items: center;
   justify-content: center;
   background: var(--glass-b-35);
-  border-radius: 7px;
+  border-radius: 17px;
 }
 
 

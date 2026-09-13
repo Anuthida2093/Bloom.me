@@ -3,6 +3,7 @@ import type { InventoryItem } from '../../types'
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useAudio } from '../../context/AudioContext'
+import { BADGE_ICONS, ITEM_ICONS } from '../../config/iconAssets'
 
 const C_1 = '#F0FBF4'
 const C_2 = '#F0FBF4'
@@ -58,30 +59,60 @@ interface ShopItem {
   rarityColor: string
 }
 
+/* [แก้รอบนี้ — เทียบราคา/หมวดกับตาราง 23 รายการในเอกสาร docx จริงทีละแถว ไม่ใช่จำมา]
+   ราคา/หมวดของไอเทมเดิม 3 ตัวที่เอกสารระบุไว้ต่างจากของเดิมในระบบ ปรับให้ตรงเอกสาร:
+     - lucky-clover (Clover) 300→200
+     - fox-statue (สุนัขจิ้งจอก) 200→800
+     - frog-guard (กบวิเศษ) 350→500
+     - moon-charm (รูปเสี้ยวพระจันทร์) 150→100
+     - magic-wand (ไม้เท้าเวทมนตร์) 550→150
+     - calm-butterfly (ผีเสื้อ) ย้ายหมวด statues→postits, ราคา 600→800
+     - crystal-ball (ลูกแก้ว) ย้ายหมวด hangings→postits, ราคา 700→1000
+     - diamond-gem (เพชร) ย้ายหมวด hangings→postits, ราคา 1500→500
+   ไอเทมที่เอกสารไม่ได้ระบุราคา/หมวด (jade-dragon, scholar-koala, gold-star, circus-bell,
+   rainbow-swirl, butterfly-pat, flame-pattern, ocean-wave) คงราคา/หมวด/rarity เดิมไว้ทั้งหมด
+   ไม่แตะ — ไม่ใช่ 1 ใน 23 รายการของเอกสารรอบนี้ rarity ของไอเทมใหม่ (🟡/🟣/⚪) เป็นการอนุมาน
+   จากป้าย "หายาก"/ราคาในเอกสารเทียบกับ tier ที่ระบบมีอยู่แล้ว เอกสารเองไม่มีคอลัมน์ rarity ตรงๆ */
 const ITEMS: Record<string, ShopItem[]> = {
   statues: [
-    { id: 'frog-guard', emoji: '🐸', nameTh: 'กบผู้พิทักษ์', name: 'Frog Guard', price: 350, rarity: '⚪ ธรรมดา', rarityBg: C_1, rarityColor: 'var(--g600)' },
-    { id: 'fox-statue', emoji: '🦊', nameTh: 'รูปปั้นจิ้งจอก', name: 'Fox Statue', price: 200, rarity: '⚪ ธรรมดา', rarityBg: C_2, rarityColor: 'var(--g600)' },
+    { id: 'frog-guard', emoji: '🐸', nameTh: 'กบผู้พิทักษ์', name: 'Frog Guard', price: 500, rarity: '⚪ ธรรมดา', rarityBg: C_1, rarityColor: 'var(--g600)' },
+    { id: 'fox-statue', emoji: '🦊', nameTh: 'รูปปั้นจิ้งจอก', name: 'Fox Statue', price: 800, rarity: '⚪ ธรรมดา', rarityBg: C_2, rarityColor: 'var(--g600)' },
     { id: 'jade-dragon', emoji: '🐉', nameTh: 'มังกรหยก', name: 'Jade Dragon', price: 1200, rarity: '🟡 พิเศษ', rarityBg: C_3, rarityColor: C_4 },
-    { id: 'calm-butterfly', emoji: '🦋', nameTh: 'ผีเสื้อสงบ', name: 'Calm Butterfly', price: 600, rarity: '🟣 หายาก', rarityBg: C_5, rarityColor: C_6 },
     { id: 'scholar-koala', emoji: '🐨', nameTh: 'โคอาล่านักวิชาการ', name: 'Scholar Koala', price: 480, rarity: '⚪ ธรรมดา', rarityBg: C_7, rarityColor: 'var(--g600)' },
     { id: 'forest-unicorn', emoji: '🦄', nameTh: 'ยูนิคอร์นป่า', name: 'Forest Unicorn', price: 900, rarity: '🟣 หายาก', rarityBg: C_8, rarityColor: C_9 },
+    // ── ใหม่จากเอกสาร (หมวด "รูปปั้นกระถาง") ──
+    { id: 'fire-dragon', emoji: '🐲', nameTh: 'มังกรไฟ', name: 'Fire Dragon', price: 2500, rarity: '🟡 พิเศษ', rarityBg: C_3, rarityColor: C_4 },
+    { id: 'cat-statue', emoji: '🐱', nameTh: 'แมว', name: 'Cat Statue', price: 500, rarity: '⚪ ธรรมดา', rarityBg: C_1, rarityColor: 'var(--g600)' },
+    { id: 'rabbit-statue', emoji: '🐰', nameTh: 'กระต่าย', name: 'Rabbit Statue', price: 350, rarity: '⚪ ธรรมดา', rarityBg: C_2, rarityColor: 'var(--g600)' },
+    { id: 'seedling-pot', emoji: '🪴', nameTh: 'กระถางต้นกล้า', name: 'Seedling Pot', price: 700, rarity: '⚪ ธรรมดา', rarityBg: C_7, rarityColor: 'var(--g600)' },
+    { id: 'stone-statue', emoji: '🪨', nameTh: 'ก้อนหิน', name: 'Stone', price: 300, rarity: '⚪ ธรรมดา', rarityBg: C_1, rarityColor: 'var(--g600)' },
   ],
   hangings: [
     { id: 'gold-star', emoji: '⭐', nameTh: 'ดาวทอง', name: 'Gold Star', price: 250, rarity: '⚪ ธรรมดา', rarityBg: C_10, rarityColor: 'var(--g600)' },
-    { id: 'moon-charm', emoji: '🌙', nameTh: 'จี้พระจันทร์', name: 'Moon Charm', price: 150, rarity: '⚪ ธรรมดา', rarityBg: C_11, rarityColor: 'var(--g600)' },
-    { id: 'crystal-ball', emoji: '🔮', nameTh: 'ลูกแก้วคริสตัล', name: 'Crystal Ball', price: 700, rarity: '🟣 หายาก', rarityBg: C_12, rarityColor: C_13 },
-    { id: 'magic-wand', emoji: '🪄', nameTh: 'ไม้กายสิทธิ์', name: 'Magic Wand', price: 550, rarity: '🟣 หายาก', rarityBg: C_14, rarityColor: C_15 },
+    { id: 'moon-charm', emoji: '🌙', nameTh: 'จี้พระจันทร์', name: 'Moon Charm', price: 100, rarity: '⚪ ธรรมดา', rarityBg: C_11, rarityColor: 'var(--g600)' },
+    { id: 'magic-wand', emoji: '🪄', nameTh: 'ไม้กายสิทธิ์', name: 'Magic Wand', price: 150, rarity: '🟣 หายาก', rarityBg: C_14, rarityColor: C_15 },
     { id: 'circus-bell', emoji: '🔔', nameTh: 'ระฆังวิเศษ', name: 'Magic Bell', price: 320, rarity: '⚪ ธรรมดา', rarityBg: C_16, rarityColor: 'var(--g600)' },
-    { id: 'diamond-gem', emoji: '💎', nameTh: 'เพชรพลอย', name: 'Diamond Gem', price: 1500, rarity: '🟡 พิเศษ', rarityBg: C_17, rarityColor: C_18 },
+    // ── ใหม่จากเอกสาร (หมวด "ของแขวนกิ่งไม้") ──
+    { id: 'pendant-charm', emoji: '📿', nameTh: 'จี้', name: 'Pendant Charm', price: 100, rarity: '⚪ ธรรมดา', rarityBg: C_10, rarityColor: 'var(--g600)' },
   ],
   postits: [
     { id: 'cherry-blossom', emoji: '🌸', nameTh: 'ซากุระ', name: 'Cherry Blossom', price: 100, rarity: '⚪ ธรรมดา', rarityBg: C_19, rarityColor: 'var(--g600)' },
     { id: 'rainbow-swirl', emoji: '🌈', nameTh: 'หมุนวนสายรุ้ง', name: 'Rainbow Swirl', price: 180, rarity: '⚪ ธรรมดา', rarityBg: C_20, rarityColor: 'var(--g600)' },
-    { id: 'lucky-clover', emoji: '🍀', nameTh: 'ใบโคลเวอร์โชค', name: 'Lucky Clover', price: 300, rarity: '🟣 หายาก', rarityBg: C_21, rarityColor: C_22 },
+    { id: 'lucky-clover', emoji: '🍀', nameTh: 'ใบโคลเวอร์โชค', name: 'Lucky Clover', price: 200, rarity: '🟣 หายาก', rarityBg: C_21, rarityColor: C_22 },
     { id: 'butterfly-pat', emoji: '🦋', nameTh: 'ลายผีเสื้อ', name: 'Butterfly Pattern', price: 400, rarity: '🟣 หายาก', rarityBg: C_23, rarityColor: C_24 },
     { id: 'flame-pattern', emoji: '🔥', nameTh: 'ลายเปลวไฟ', name: 'Flame Pattern', price: 800, rarity: '🟡 พิเศษ', rarityBg: C_25, rarityColor: C_26 },
     { id: 'ocean-wave', emoji: '🌊', nameTh: 'คลื่นสมุทร', name: 'Ocean Wave', price: 220, rarity: '⚪ ธรรมดา', rarityBg: C_27, rarityColor: 'var(--g600)' },
+    { id: 'calm-butterfly', emoji: '🦋', nameTh: 'ผีเสื้อสงบ', name: 'Calm Butterfly', price: 800, rarity: '🟣 หายาก', rarityBg: C_5, rarityColor: C_6 },
+    { id: 'crystal-ball', emoji: '🔮', nameTh: 'ลูกแก้วคริสตัล', name: 'Crystal Ball', price: 1000, rarity: '🟣 หายาก', rarityBg: C_12, rarityColor: C_13 },
+    { id: 'diamond-gem', emoji: '💎', nameTh: 'เพชรพลอย', name: 'Diamond Gem', price: 500, rarity: '⚪ ธรรมดา', rarityBg: C_19, rarityColor: 'var(--g600)' },
+    // ── ใหม่จากเอกสาร (หมวด "ลายโพสอิทสะสม") ──
+    { id: 'magic-parrot', emoji: '🦜', nameTh: 'นกแก้ววิเศษ', name: 'Magic Parrot', price: 2000, rarity: '🟡 พิเศษ', rarityBg: C_25, rarityColor: C_26 },
+    { id: 'parrot', emoji: '🦜', nameTh: 'นกแก้ว', name: 'Parrot', price: 1000, rarity: '⚪ ธรรมดา', rarityBg: C_20, rarityColor: 'var(--g600)' },
+    { id: 'white-dragon', emoji: '🐉', nameTh: 'มังกรขาว', name: 'White Dragon', price: 3000, rarity: '🟡 พิเศษ', rarityBg: C_17, rarityColor: C_18 },
+    { id: 'glass-orb', emoji: '🥛', nameTh: 'แก้ว', name: 'Glass Orb', price: 550, rarity: '⚪ ธรรมดา', rarityBg: C_27, rarityColor: 'var(--g600)' },
+    { id: 'magic-flame', emoji: '🔥', nameTh: 'ไฟวิเศษ', name: 'Magic Flame', price: 400, rarity: '⚪ ธรรมดา', rarityBg: C_19, rarityColor: 'var(--g600)' },
+    { id: 'cherry-fruit', emoji: '🍒', nameTh: 'เชอรี่', name: 'Cherry', price: 150, rarity: '⚪ ธรรมดา', rarityBg: C_20, rarityColor: 'var(--g600)' },
+    { id: 'ribbon-knot', emoji: '🎀', nameTh: 'โบว์', name: 'Ribbon Bow', price: 100, rarity: '⚪ ธรรมดา', rarityBg: C_23, rarityColor: 'var(--g600)' },
   ],
 }
 
@@ -120,10 +151,10 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <h2 style={{ fontFamily: 'Fredoka One', fontSize: 34, color: 'var(--b700)' }}>🏪 ร้านตกแต่งต้นไม้</h2>
+          <h2 style={{ fontFamily: 'Fredoka One', fontSize: 34, color: 'var(--b700)' }}><img src={BADGE_ICONS.store} className="icon-img" alt="" /> ร้านตกแต่งต้นไม้</h2>
           <p style={{ color: 'var(--b500)', fontSize: 15, marginTop: 4 }}>ใช้เหรียญจากเควสเสริมมาตกแต่งต้นไม้ให้สวยงาม</p>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: `linear-gradient(135deg, ${BG_28}, ${BG_29})`, borderRadius: 99, padding: '8px 22px', marginTop: 12, boxShadow: 'var(--sh-coin)', border: '1.5px solid var(--coin)' }}>
-            <span style={{ fontSize: 22 }}>🪙</span>
+            <img src={BADGE_ICONS.coins} className="icon-img" style={{ fontSize: 22 }} alt="" />
             <span style={{ fontFamily: 'Fredoka One', fontSize: 22, color: 'var(--b700)' }}>{coins.toLocaleString()} เหรียญ</span>
           </div>
         </div>
@@ -169,9 +200,12 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
                 <span className="tag" style={{ position: 'absolute', top: 10, right: 10, background: item.rarityBg, color: item.rarityColor, fontSize: 9 }}>{item.rarity}</span>
                 {equipped && <span style={{ position: 'absolute', top: 10, left: 10, fontSize: 9, fontWeight: 700, background: 'var(--g600)', color: 'var(--fixed-white)', borderRadius: 99, padding: '2px 7px' }}>ใช้อยู่</span>}
 
-                {/* Emoji with pseudo-3D shadow */}
+                {/* [แก้ตามที่ระบุ] ใช้ไฟล์ภาพจริงถ้ามี (จับคู่ตาม item.id ใน ITEM_ICONS) ไม่มี
+                    ก็ fallback เป็น emoji เดิม — ดู src/config/iconAssets.ts สำหรับที่มาการจับคู่ */}
                 <div style={{ fontSize: 50, marginBottom: 10, filter: 'drop-shadow(0 5px 10px var(--glass-b-18)) drop-shadow(0 2px 4px var(--glass-b-12))', lineHeight: 1.1 }}>
-                  {item.emoji}
+                  {ITEM_ICONS[item.id]
+                    ? <img src={ITEM_ICONS[item.id]} alt={item.nameTh} style={{ width: 50, height: 50, objectFit: 'contain', margin: '0 auto' }} />
+                    : item.emoji}
                 </div>
 
                 <div style={{ fontFamily: 'Fredoka One', fontSize: 14, color: 'var(--n900)', marginBottom: 2 }}>{item.nameTh}</div>
@@ -196,7 +230,7 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
                       fontFamily: 'Fredoka One', fontSize: 13,
                       boxShadow: canAfford ? 'var(--sh-coin)' : 'none',
                     }}>
-                    🪙 {item.price.toLocaleString()}
+                    <img src={BADGE_ICONS.coins} className="icon-img" alt="" /> {item.price.toLocaleString()}
                   </button>
                 )}
               </div>

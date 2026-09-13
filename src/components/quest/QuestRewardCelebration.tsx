@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import type { QuestDef } from '../../config/questCatalog'
 import { Z_INDEX } from '../../config/zIndex'
+import { BADGE_ICONS } from '../../config/iconAssets'
 import './QuestRewardCelebration.css'
 
 /*============================================================================*\
@@ -58,8 +59,8 @@ export default function QuestRewardCelebration({ data, onDone }: QuestRewardCele
             {skipped ? `${quest.titleTh} สำเร็จ (ข้ามตัวจับเวลา)` : `${quest.titleTh} สำเร็จ!`}
           </div>
           <div className="quest-celebration__rewards">
-            <span>🪙 +{coin}</span>
-            <span>⭐ +{exp} EXP</span>
+            <span><img src={BADGE_ICONS.coins} className="icon-img" alt="" /> +{coin}</span>
+            <span><img src={BADGE_ICONS.exp} className="icon-img" alt="" /> +{exp} EXP</span>
           </div>
         </div>
       </div>

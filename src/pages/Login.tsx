@@ -32,10 +32,16 @@ const SHADOW_11 = 'rgba(45,106,79,.4)'
 const FOCUS_GLOW= `0 0 0 4px ${C_1}, 0 0 18px ${C_2}`
 const BLUR_SHADOW = 'none'
 
+// [แก้บั๊ก — ตามที่ระบุ] เดิม color: var(--n900, ...) — --n900 ถูกนิยามให้ "สลับกลับด้าน"
+// ตอน dark mode (เกือบดำ → เกือบขาว ดู [data-theme="dark"] ใน index.css) แต่ background
+// ของฟิลด์นี้เป็น --glass-w-85/96 (rgba(255,255,255,X) ตายตัว ไม่มีเวอร์ชัน dark mode เลย
+// ยังคงเป็นพื้นขาวเสมอทั้งสองโหมด) พอสลับ dark mode ตัวอักษรเลยกลายเป็นขาวบนพื้นขาว มองไม่เห็น
+// เลย — ล็อก color เป็นสีเข้มคงที่ (TEXT_3) ไม่ผูกกับตัวแปรธีมอีกต่อไป เพื่อให้อ่านออกทั้ง
+// 2 โหมดเสมอ (background ของฟอร์มนี้ไม่เปลี่ยนตามธีมอยู่แล้ว จึงไม่จำเป็นต้องให้ตัวอักษรเปลี่ยนตาม)
 const fieldStyle: CSSProperties = {
   width: '100%', marginTop: 6, padding: '13px 16px', borderRadius: 16,
   border: '2px solid var(--glass-w-50)', fontSize: 14, fontFamily: 'Nunito',
-  outline: 'none', background: 'var(--glass-w-85)', color: `var(--n900, ${TEXT_3})`,
+  outline: 'none', background: 'var(--glass-w-85)', color: TEXT_3,
   boxShadow: BLUR_SHADOW, transition: 'all .3s ease',
 }
 const labelStyle: CSSProperties = { fontSize: 13, fontWeight: 800, color: 'var(--fixed-white)', textShadow: '0 1px 4px var(--glass-b-40)' }

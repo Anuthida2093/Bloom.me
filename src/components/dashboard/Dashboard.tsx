@@ -20,6 +20,7 @@ import { sceneEnter } from '../../config/motion'
 import { EXP_PER_LEVEL, STACK_PER_VISUAL_LEVEL, type MbtiType } from '../../types'
 import type { LeaderboardPlayer } from '../../config/leaderboardData'
 import type { QuestTabId } from '../../config/questCatalog'
+import { BADGE_ICONS } from '../../config/iconAssets'
 import './Dashboard.css'
 
 // โมดัลหนัก — โหลดเฉพาะตอนผู้ใช้เปิดจริง (คงไว้ตาม V2 ทุกจุด)
@@ -273,19 +274,19 @@ export default function Dashboard() {
         userData={userData}
         isLoggedIn={isLoggedIn}
         isGuest={isGuest}
-        onLogout={() => setLoggedIn(false, false)}
         onOpenSettings={() => { setSettingsInitialSubModal(null); openMainPanel('settings') }}
+        onOpenProfileSettings={() => { setSettingsInitialSubModal('profile'); openMainPanel('settings') }}
       />
 
       {/* ═══ HUD แคปซูลกลางจอ ใต้ Navbar (แบบ V1) ═══ */}
       {!viewingPlayer && (isLoggedIn || isGuest) && (
         <div className="game-top-hud">
           <div className="hud-pill">
-            <span className="hud-icon">🌱</span>
+            <img src={BADGE_ICONS.seed} className="icon-img hud-icon" alt="" />
             <span>{userData.mbtiType} Lv.{userData.level}</span>
           </div>
           <div className="hud-pill">
-            <span className="hud-icon">⭐</span>
+            <img src={BADGE_ICONS.exp} className="icon-img hud-icon" alt="" />
             <div className="hud-bar-container">
               <div className="hud-bar-bg">
                 <div className="hud-bar-fill" style={{ width: `${(expIntoLevel / EXP_PER_LEVEL) * 100}%` }} />
@@ -294,11 +295,11 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="hud-pill">
-            <span className="hud-icon">🪙</span>
+            <img src={BADGE_ICONS.coins} className="icon-img hud-icon" alt="" />
             <span>{userData.coins.toLocaleString()}</span>
           </div>
           <div className="hud-pill">
-            <span className="hud-icon">🔥</span>
+            <img src={BADGE_ICONS.streak} className="icon-img hud-icon" alt="" />
             <span>{userData.streak}d</span>
           </div>
         </div>
@@ -400,7 +401,7 @@ export default function Dashboard() {
                 🌳
               </button>
           <button className="game-icon-btn mood-btn" onClick={() => openModal('moodCheckin')} title="เช็คอินอารมณ์">
-                🌤️
+                <img src={BADGE_ICONS.checkin} className="icon-img" alt="" />
               </button>
               <button className="game-icon-btn sound-btn" onClick={toggleMute} title={isMuted ? 'เปิดเสียง' : 'ปิดเสียง'}>
                 {isMuted ? '🔇' : '🔊'}
@@ -416,14 +417,14 @@ export default function Dashboard() {
       {!viewingPlayer && (
         <div className="dashboard__corner-actions dashboard__corner-actions--right">
           <button className="game-icon-btn" onClick={handleShare} title="แชร์">
-            🔗
+            <img src={BADGE_ICONS.share} className="icon-img" alt="" />
           </button>
           <button
             className="game-icon-btn"
             onClick={() => openMainPanel('friends')}
             title="เพื่อน"
           >
-            👥
+            <img src={BADGE_ICONS.friends} className="icon-img" alt="" />
           </button>
         </div>
       )}

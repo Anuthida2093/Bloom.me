@@ -257,6 +257,28 @@ export function findQuestByCode(code: string): QuestDef | undefined {
   return ALL_QUESTS.find((q) => q.code === code)
 }
 
+/** [เพิ่มรอบนี้ — รวมจุดคำนวณ "สำเร็จเต็มรูปแบบของวันนี้" ที่เคย copy-paste กระจาย 3 จุด]
+ *  เดิม QuestGateView.tsx แก้บั๊กนี้ไปจุดเดียว (เควสที่มี maxPerDay เช่น phys-pure-water
+ *  เคยขึ้น "สำเร็จแล้ว" ทันทีตั้งแต่เล่นรอบแรก เพราะ isCompleted() เช็คแค่ "มี log สำเร็จ
+ *  บ้างไหม" ไม่สนใจว่าเควสนั้นเล่นซ้ำได้กี่ครั้ง) แต่ LearningQuestMap.tsx ยังมี isCompleted()
+ *  ตรงๆ อีก 2 จุด (โหนดเส้นทางหลัก + FAB เควสเสริม) เก็บบั๊กเดิมไว้ครบ — ตอนนี้รวมตรรกะไว้
+ *  จุดเดียวตรงนี้ ทุกที่ที่ต้องเช็ค "เควสนี้สำเร็จเต็มรูปแบบของวันนี้หรือยัง" เรียกฟังก์ชันนี้
+ *  แทน isCompleted() ตรงๆ เพื่อไม่ให้พลาดจุดใดจุดหนึ่งอีกในอนาคต (แก้ที่เดียว ใช้ที่ไหนก็ตรงกัน)
+ *
+ *  [แก้เพิ่ม] เดิมเช็คแค่ q.maxPerDay อย่างเดียวเป็นตัวตัดสินว่าต้องนับรอบวันนี้ไหม — ถ้ามีเควส
+ *  ในอนาคตตั้ง maxPerDay ไว้แต่ลืมติด isRepeatable (สองฟิลด์นี้เป็น optional อิสระต่อกันตาม
+ *  type ไม่มีอะไรบังคับให้มาคู่กันเสมอ) getTodayCompletionCount จะไม่ถูกเรียกเลยเพราะเงื่อนไข
+ *  เดิมผูกกับ isRepeatable ทำให้ playsToday ค้างที่ 0 ตลอดไป (0 >= maxPerDay เป็นเท็จเสมอ)
+ *  แก้โดยเช็ค "q.maxPerDay ไหม" ตรงๆ เป็นตัวตัดสินแทน ไม่อิง isRepeatable อีกต่อไป */
+export function isQuestFullyDoneToday(
+  quest: QuestDef,
+  isCompleted: (questCode: string) => boolean,
+  getTodayCompletionCount: (questCode: string) => number,
+): boolean {
+  if (quest.maxPerDay) return getTodayCompletionCount(quest.code) >= quest.maxPerDay
+  return isCompleted(quest.code)
+}
+
 /** เควสที่ระบบจะ "บังคับ" ให้ทำแทน เมื่อความเสี่ยงอยู่ระดับปานกลางขึ้นไป
  * [แก้] ตัด 'phys-mindful-breeze' ออก — เควสนี้ถูกลบทั้งระบบแล้ว (ซ้ำกับเควสฝึกหายใจ
  * ในหมวดสุขภาพจิต) เหลือแค่ 2 เควสสงบใจที่ยังอยู่จริง */

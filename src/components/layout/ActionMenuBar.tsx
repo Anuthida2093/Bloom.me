@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { QUEST_TABS, type QuestTabId } from '../../config/questCatalog'
+import { BADGE_ICONS, QUEST_TAB_ICONS } from '../../config/iconAssets'
 import './ActionMenuBar.css'
 
 /** [แก้ตามที่ระบุ] เอา 'inventory' (ย้ายไปอยู่ในหน้าโปรไฟล์) และ 'settings' (ย้ายไปเป็นปุ่ม
@@ -27,6 +28,15 @@ const NAV_ITEMS: { key: NavKey; icon: string; label: string }[] = [
   { key: 'home', icon: '🏠', label: 'หน้าแรก' },
   { key: 'profile', icon: '👤', label: 'โปรไฟล์' },
 ]
+
+/** [แก้ตามที่ระบุ] แทนอีโมจิของปุ่มลอยล่างจอด้วยรูปจริง — คงฟิลด์ icon (emoji) ไว้ใน
+ *  NAV_ITEMS เป็น alt text/fallback เฉยๆ ไม่ได้ลบทิ้ง */
+const NAV_ICON_IMAGES: Record<NavKey, string> = {
+  quests: BADGE_ICONS.questTab,
+  shop: BADGE_ICONS.store,
+  home: BADGE_ICONS.home,
+  profile: BADGE_ICONS.profile,
+}
 
 /** ActionMenuBar — Liquid Navigation Bar แบบ V1
  *  [แก้ตามที่ระบุ] เอา active ออกจาก local state — รับมาจาก Dashboard โดยตรงแทน
@@ -70,11 +80,16 @@ export default function ActionMenuBar({
     <div className="action-menu-container">
       {showQuestMenu && (
         <div className="quest-floating-menu">
-          {QUEST_TABS.map((tab) => (
-            <button key={tab.id} onClick={() => handlePickCategory(tab.id)}>
-              {tab.emoji} {tab.label}
-            </button>
-          ))}
+          {QUEST_TABS.map((tab) => {
+            // [อัปเดตรอบนี้] ทั้ง 3 หมวดมีไฟล์รูปจริงครบแล้ว (ดู iconAssets.ts) — tab.emoji
+            // เหลือไว้เป็น fallback เฉยๆ เผื่ออนาคตมีหมวดใหม่ที่ยังไม่มีไฟล์
+            const tabIcon = QUEST_TAB_ICONS[tab.id]
+            return (
+              <button key={tab.id} onClick={() => handlePickCategory(tab.id)}>
+                {tabIcon ? <img src={tabIcon} className="icon-img" alt="" /> : tab.emoji} {tab.label}
+              </button>
+            )
+          })}
         </div>
       )}
 
@@ -84,7 +99,7 @@ export default function ActionMenuBar({
           {NAV_ITEMS.map((item) => (
             <li key={item.key} className={active === item.key ? 'active' : ''}>
               <a onClick={() => handleClick(item.key)}>
-                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-icon"><img src={NAV_ICON_IMAGES[item.key]} className="icon-img" alt={item.label} /></span>
                 {item.key === 'quests' && activeQuestCount > 0 && (
                   <span className="nav-badge">{activeQuestCount}</span>
                 )}

@@ -2,6 +2,7 @@ import { useState, type FormEvent, type CSSProperties } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAppContext } from '../context/AppContext'
 import SoundToggleButton from '../components/layout/SoundToggleButton'
+import { BADGE_ICONS } from '../config/iconAssets'
 
 /**
  * Register — หน้าสมัครสมาชิก (route "/register")
@@ -13,11 +14,19 @@ import SoundToggleButton from '../components/layout/SoundToggleButton'
  * เพราะสมาชิกใหม่ยังไม่มี MBTI ต้องเลือกก่อนถึงจะสร้างต้นไม้ได้
  */
 
+// [แก้บั๊ก — พบจากรีวิวโค้ด เหมือนกับที่แก้ใน Login.tsx] การ์ดฟอร์มนี้เป็น var(--fixed-white)
+// ตายตัว (ไม่เปลี่ยนตามธีมเลย) แต่ label/ลิงก์ด้านล่างเดิมใช้ --n700/--n500/--n300 ซึ่งกลับด้าน
+// เป็นสีอ่อนตอน dark mode ([data-theme="dark"] ใน index.css) ทำให้อ่านยาก/มองไม่เห็นบนพื้น
+// ขาวตายตัวนี้ — ล็อกเป็นสีเข้มคงที่แทนทั้งชุด (input เองก็ไม่เคยตั้ง color มาก่อน เดิมรับสีมา
+// จาก label ที่ห่ออยู่ผ่านการ inherit เฉยๆ จึงติดปัญหาเดียวกันไปด้วย — ใส่ background/color
+// ให้ input ตรงๆ ไม่ต้องพึ่ง inherit อีกต่อไป)
+const FIELD_TEXT = '#1a2e22'
 const fieldStyle: CSSProperties = {
   width: '100%', marginTop: 6, padding: '12px 14px', borderRadius: 14,
   border: '2px solid var(--n100)', fontSize: 14, fontFamily: 'Nunito', outline: 'none',
+  background: 'var(--fixed-white)', color: FIELD_TEXT,
 }
-const labelStyle: CSSProperties = { fontSize: 13, fontWeight: 700, color: 'var(--n700)' }
+const labelStyle: CSSProperties = { fontSize: 13, fontWeight: 700, color: FIELD_TEXT }
 
 export default function Register() {
   const navigate = useNavigate()
@@ -117,14 +126,14 @@ export default function Register() {
               boxShadow: 'var(--sh-btn)', marginTop: 4,
             }}
           >
-            🌱 สมัครสมาชิก
+            <img src={BADGE_ICONS.seed} className="icon-img" alt="" /> สมัครสมาชิก
           </button>
 
-          <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--n500)' }}>
+          <div style={{ textAlign: 'center', fontSize: 13, color: FIELD_TEXT }}>
             มีบัญชีอยู่แล้ว? <Link to="/login" style={{ color: 'var(--g700)', fontWeight: 700 }}>เข้าสู่ระบบ</Link>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <Link to="/" style={{ fontSize: 12, color: 'var(--n300)' }}>← กลับหน้าหลัก</Link>
+            <Link to="/" style={{ fontSize: 12, color: FIELD_TEXT }}>← กลับหน้าหลัก</Link>
           </div>
         </form>
       </div>

@@ -9,6 +9,7 @@ import {
   type MbtiType,
 } from '../../types'
 import MiniTree from './MiniTree'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 const C_3 = '#8B6000'
 const C_4 = 'rgba(255,133,161,.08)'
@@ -50,11 +51,13 @@ export default function TreeStatsPanel({
 
   // [ตัวแปรตรง backend] เดิมโชว์ learningHours/stepsTotal ซึ่งไม่มี field แบบนี้ใน backend
   // เลย (ไม่มีใน docs/VARIABLE_DICTIONARY.md) — เปลี่ยนมาโชว์ค่าที่มาจาก backend จริงแทน
+  // [แก้ตามที่ระบุ] เพิ่ม field img ให้ 3 ตัวที่มีไฟล์รูปจริง (เลเวล/Streak/Coins) — "ต้นไม้"
+  // (🌳) ไม่อยู่ในตารางแทนอีโมจิรอบนี้ (ไม่มีแถวระบุไว้ชัดเจน) ยังคง emoji เดิมไว้ก่อน
   const quickStats = [
-    { icon: '⭐', label: 'เลเวล', val: `Lv.${userData.level}`, color: 'var(--b500)' },
-    { icon: '🌳', label: 'ต้นไม้', val: `Lv.${treeStats.level}`, color: theme.accent },
-    { icon: '🔥', label: 'Streak', val: `${userData.streak}d`, color: 'var(--orange)' },
-    { icon: '🪙', label: 'Coins', val: userData.coins.toLocaleString(), color: TEXT_1 },
+    { icon: '⭐', img: BADGE_ICONS.exp, label: 'เลเวล', val: `Lv.${userData.level}`, color: 'var(--b500)' },
+    { icon: '🌳', img: undefined as string | undefined, label: 'ต้นไม้', val: `Lv.${treeStats.level}`, color: theme.accent },
+    { icon: '🔥', img: BADGE_ICONS.streak, label: 'Streak', val: `${userData.streak}d`, color: 'var(--orange)' },
+    { icon: '🪙', img: BADGE_ICONS.coins, label: 'Coins', val: userData.coins.toLocaleString(), color: TEXT_1 },
   ]
 
   return (
@@ -107,7 +110,7 @@ export default function TreeStatsPanel({
       <div className="tree-stats-panel__section grid grid-cols-4 md:grid-cols-2 gap-1.5" style={{ animationDelay: '180ms' }}>
         {quickStats.map(s => (
           <div key={s.label} className="tree-stats-panel__quick-stat" style={{ background: 'var(--bg)', borderRadius: 10, padding: '6px 4px', textAlign: 'center', border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 15 }}>{s.icon}</div>
+            <div style={{ fontSize: 15 }}>{s.img ? <img src={s.img} className="icon-img" alt="" /> : s.icon}</div>
             <div style={{ fontFamily: 'Fredoka One', fontSize: 12, color: s.color, wordBreak: 'break-word' }}>{s.val}</div>
             <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
           </div>
@@ -119,7 +122,7 @@ export default function TreeStatsPanel({
         onClick={onOpenMoodCheckin}
         className="tree-stats-panel__section tree-stats-panel__mood-btn"
         style={{ animationDelay: '240ms', width: '100%', padding: '11px', border: '2px solid var(--pink)', borderRadius: 'var(--r-md)', background: BG_2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <span style={{ fontSize: 22 }}>🌤️</span>
+        <img src={BADGE_ICONS.checkin} className="icon-img" style={{ fontSize: 22 }} alt="" />
         <div style={{ textAlign: 'left' }}>
           <div style={{ fontFamily: 'Fredoka One', fontSize: 13, color: TEXT_3 }}>เช็คอินอารมณ์</div>
           <div style={{ fontSize: 10, color: TEXT_4, fontWeight: 600 }}>รดน้ำต้นไม้ประจำวัน</div>

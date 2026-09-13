@@ -135,10 +135,29 @@
   background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.35) 60%, rgba(0,0,0,.55) 100%);
 }
 
+/* [แก้ตามที่ระบุ] ย้ายจากอยู่ในโฟลว์ปกติของ .bottom-bar (เคยไปทับซ้อนกับปุ่มควบคุมด้านล่าง
+   ตั้งแต่ปุ่มพวกนั้นกลายเป็น position:absolute) ขึ้นมาเป็นป้ายลอยที่บนสุดของ .camera-capture
+   แทน — จัดกึ่งกลางแนวนอนด้วย left:50%+translateX(-50%) ตามที่ระบุ พื้นหลังกึ่งโปร่งแสงให้
+   อ่านชัดบนพื้นวิดีโอไม่ว่าฉากหลังจะเป็นสีอะไร
+   [แก้บั๊ก — พบจากรีวิวโค้ด] เดิม top:12px ชนกับ .camera-capture__exit-btn (top:12px;
+   left:16px; กว้าง 40px คือ x:16-56) พอดี เพราะ hint ที่นี่กึ่งกลางด้วย max-width:calc(100%
+   - 32px) (เกือบเต็มความกว้าง) ถ้าข้อความยาวจนขึ้น 2 บรรทัดบนจอแคบ กล่อง hint จะกินพื้นที่
+   ตั้งแต่ริมซ้ายเกือบสุดจอ ทับปุ่มออกจากเควสพอดี (เช่น hint ยาวของ PhotosynthesisGame) —
+   เลื่อนลงมาอยู่ใต้แถวปุ่มออกจากเควสแทน (12+40+10 = 62px) กันชนแน่นอนไม่ว่าข้อความจะยาวแค่ไหน */
 .camera-capture__hint {
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
   text-align: center;
   color: var(--fixed-white);
-  max-width: 420px;
+  max-width: calc(100% - 32px);
+  padding: 8px 16px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--glass-b-45, rgba(0, 0, 0, .45));
+  font-size: var(--fs-xs);
+  line-height: 1.5;
 }
 
 .camera-capture__controls {

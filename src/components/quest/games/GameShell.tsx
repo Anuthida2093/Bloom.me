@@ -5,6 +5,7 @@ import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
 import { useAppContext } from '../../../context/AppContext'
 import { playSfx } from '../../../utils/audioPlayer'
+import { BADGE_ICONS } from '../../../config/iconAssets'
 import './GameShell.css'
 
 /*============================================================================*\
@@ -145,8 +146,8 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
               : 'ต้นไม้ของคุณเพิ่งได้รับพลังจากสิ่งที่คุณทำเมื่อครู่'}
           </p>
           <div className="game-shell__reward-cards">
-            <div><span>🪙</span><strong>+{awardedSkipped ? Math.round(quest.coinReward / 2) : quest.coinReward}</strong>เหรียญละอองดาว</div>
-            <div><span>⭐</span><strong>+{awardedSkipped ? Math.round(quest.expReward / 2) : quest.expReward}</strong>EXP</div>
+            <div><span><img src={BADGE_ICONS.coins} className="icon-img" alt="" /></span><strong>+{awardedSkipped ? Math.round(quest.coinReward / 2) : quest.coinReward}</strong>เหรียญละอองดาว</div>
+            <div><span><img src={BADGE_ICONS.exp} className="icon-img" alt="" /></span><strong>+{awardedSkipped ? Math.round(quest.expReward / 2) : quest.expReward}</strong>EXP</div>
           </div>
           <button className="game-shell__claim" onClick={claim}>รับรางวัล</button>
         </div>
