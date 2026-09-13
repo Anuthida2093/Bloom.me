@@ -1,0 +1,451 @@
+/* ═══════════════════════════════════════════════════════════════
+   MindfulAnchorPage.css — เควสทอดสมอใจ (The Mindful Anchor)
+   ───────────────────────────────────────────────────────────────
+   [สำคัญ] ทั้งหน้าใช้ position:absolute; inset:0 — ครอบเฉพาะ "กรอบเขียว"
+   (.gameplay-frame ที่เป็น position:relative) ไม่ทะลุออกไปทั้งจอ
+   ═══════════════════════════════════════════════════════════════ */
+
+.mindful-anchor {
+  position: absolute;
+  inset: 0;
+  z-index: 800;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  --lc-bg-28: #16414A;
+  --lc-bg-29: #0C2A33;
+  --lc-bg-30: #06171D;
+  background: radial-gradient(120% 90% at 50% 8%, var(--lc-bg-28) 0%, var(--lc-bg-29) 45%, var(--lc-bg-30) 100%);
+  --lc-text-31: #EAF6F4;
+  color: var(--lc-text-31);
+  font-family: 'Nunito', 'Mali', sans-serif;
+  --lc-c-32: #7FE7D9;
+  --anchor-accent: var(--lc-c-32);
+  --lc-c-33: rgba(127, 231, 217, 0.55);
+  --anchor-glow: var(--lc-c-33);
+}
+
+/* ── แสงเรืองใต้น้ำที่เปลี่ยนสีตามเฟสลมหายใจ ── */
+.mindful-anchor__aurora {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(45% 40% at 30% 25%, var(--anchor-glow), transparent 70%),
+    radial-gradient(50% 45% at 72% 70%, var(--anchor-glow), transparent 72%);
+  opacity: 0.5;
+  filter: blur(40px);
+  transition: background 2.4s ease, opacity 2.4s ease;
+  pointer-events: none;
+}
+
+/* ── ละอองแสงลอยขึ้น ── */
+.mindful-anchor__motes { position: absolute; inset: 0; pointer-events: none; }
+.mindful-anchor__motes span {
+  position: absolute;
+  bottom: -12px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--glass-w-75);
+  filter: blur(0.6px);
+  animation-name: anchorMoteRise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes anchorMoteRise {
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  12%  { opacity: 0.7; }
+  88%  { opacity: 0.5; }
+  100% { transform: translateY(-105%) translateX(24px); opacity: 0; }
+}
+
+.mindful-anchor__close {
+  /* [แก้] มาตรฐานปุ่มปิดทั้งระบบ: วงกลม ลอยมุมขวาบน อย่างน้อย 44x44px */
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 30;
+  width: 44px;
+  height: 44px;
+  border-radius: 99px;
+  border: none;
+  background: var(--glass-w-16);
+  color: var(--fixed-white);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+.mindful-anchor__close:hover { background: var(--glass-w-30); transform: scale(1.08); }
+.mindful-anchor__close:focus-visible { outline: 2px solid var(--anchor-accent); outline-offset: 2px; }
+
+/* ── การ์ดเนื้อหา (ฉากเกริ่นนำ / ฉากจบ) ── */
+.mindful-anchor__panel {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  max-width: 460px;
+  max-height: 100%;
+  overflow-y: auto;
+  text-align: center;
+  padding: 30px 26px 26px;
+  border-radius: 26px;
+  --lc-bg-27: rgba(9, 32, 39, 0.72);
+  background: var(--lc-bg-27);
+  border: 1px solid var(--glass-w-14);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 26px 70px var(--glass-b-45);
+  animation: anchorPanelIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes anchorPanelIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.mindful-anchor__anchor-icon {
+  font-size: 46px;
+  filter: drop-shadow(0 6px 18px var(--anchor-glow));
+  animation: anchorSway 5.5s ease-in-out infinite;
+}
+@keyframes anchorSway {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-7px) rotate(3deg); }
+}
+
+.mindful-anchor__title {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 27px;
+  margin: 6px 0 2px;
+  color: var(--fixed-white);
+  letter-spacing: 0.4px;
+}
+.mindful-anchor__subtitle {
+  font-size: 12.5px;
+  --lc-text-26: rgba(234, 246, 244, 0.6);
+  color: var(--lc-text-26);
+  margin-bottom: 20px;
+}
+
+/* ── แถบจังหวะ 4-7-8 ── */
+.mindful-anchor__rhythm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.mindful-anchor__rhythm-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  --lc-text-25: rgba(234, 246, 244, 0.7);
+  color: var(--lc-text-25);
+}
+.mindful-anchor__rhythm-item span {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 26px;
+  color: var(--anchor-accent);
+  text-shadow: 0 0 14px var(--anchor-glow);
+}
+.mindful-anchor__rhythm-sep {
+  width: 22px;
+  height: 1px;
+  background: var(--glass-w-25);
+  margin-top: 12px;
+}
+
+.mindful-anchor__lead {
+  font-size: 13.5px;
+  line-height: 1.85;
+  --lc-text-24: rgba(234, 246, 244, 0.86);
+  color: var(--lc-text-24);
+  margin-bottom: 18px;
+}
+
+/* ── สลับโหมดภาพนำสายตา ── */
+.mindful-anchor__mode-switch {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.mindful-anchor__mode-switch button {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 14px;
+  border: 1.5px solid var(--glass-w-20);
+  background: var(--glass-w-6);
+  --lc-text-23: rgba(234, 246, 244, 0.75);
+  color: var(--lc-text-23);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.mindful-anchor__mode-switch button.is-active {
+  border-color: var(--anchor-accent);
+  background: var(--anchor-glow);
+  --lc-text-22: #06171D;
+  color: var(--lc-text-22);
+}
+
+.mindful-anchor__forced-note {
+  border-radius: 14px;
+  --lc-border-19: rgba(255, 214, 150, 0.4);
+  border: 1px solid var(--lc-border-19);
+  --lc-bg-20: rgba(255, 196, 100, 0.12);
+  background: var(--lc-bg-20);
+  --lc-text-21: #FFD9A8;
+  color: var(--lc-text-21);
+  font-size: 12.5px;
+  line-height: 1.7;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.mindful-anchor__cta {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 99px;
+  --lc-bg-17: #D8FBF5;
+  background: linear-gradient(135deg, var(--fixed-white), var(--lc-bg-17));
+  --lc-text-18: #08262D;
+  color: var(--lc-text-18);
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 12px 30px var(--glass-b-35), 0 0 0 1px var(--glass-w-25) inset;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+.mindful-anchor__cta:hover {
+  transform: translateY(-2px);
+  --lc-shadow-16: rgba(0, 0, 0, 0.42);
+  box-shadow: 0 16px 38px var(--lc-shadow-16);
+}
+.mindful-anchor__cta:active { transform: translateY(1px) scale(0.99); }
+
+.mindful-anchor__theory {
+  margin-top: 14px;
+  font-size: 10.5px;
+  line-height: 1.6;
+  --lc-text-15: rgba(234, 246, 244, 0.42);
+  color: var(--lc-text-15);
+}
+
+/* ── ฉากนับถอยหลัง ── */
+.mindful-anchor__prepare { position: relative; z-index: 5; text-align: center; }
+.mindful-anchor__prepare p {
+  margin-top: 14px;
+  font-size: 13.5px;
+  --lc-text-14: rgba(234, 246, 244, 0.75);
+  color: var(--lc-text-14);
+}
+.mindful-anchor__prepare-count {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: clamp(64px, 18vw, 108px);
+  color: var(--fixed-white);
+  text-shadow: 0 0 40px var(--anchor-glow);
+  animation: anchorCountPop 1s ease-out both;
+}
+@keyframes anchorCountPop {
+  0%   { opacity: 0; transform: scale(1.5); }
+  30%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.25; transform: scale(0.9); }
+}
+
+/* ── ฉากฝึกหายใจ ── */
+.mindful-anchor__stage {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.mindful-anchor__timer { display: flex; align-items: baseline; gap: 8px; }
+.mindful-anchor__timer-value {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 22px;
+  color: var(--fixed-white);
+  letter-spacing: 1px;
+}
+.mindful-anchor__timer-label {
+  font-size: 11.5px;
+  --lc-text-13: rgba(234, 246, 244, 0.55);
+  color: var(--lc-text-13);
+}
+
+.mindful-anchor__phase { text-align: center; }
+.mindful-anchor__phase-name {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 21px;
+  color: var(--anchor-accent);
+  text-shadow: 0 0 18px var(--anchor-glow);
+  transition: color 0.6s ease;
+}
+.mindful-anchor__phase-caption {
+  font-size: 12.5px;
+  --lc-text-12: rgba(234, 246, 244, 0.68);
+  color: var(--lc-text-12);
+  margin-top: 2px;
+}
+
+.mindful-anchor__meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-size: 12px;
+  --lc-text-11: rgba(234, 246, 244, 0.6);
+  color: var(--lc-text-11);
+}
+.mindful-anchor__mode-toggle {
+  border: 1px solid var(--glass-w-22);
+  background: var(--glass-w-7);
+  --lc-text-10: rgba(234, 246, 244, 0.8);
+  color: var(--lc-text-10);
+  border-radius: 99px;
+  padding: 7px 14px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+.mindful-anchor__mode-toggle:hover { background: var(--glass-w-16); }
+
+.mindful-anchor__paused {
+  font-size: 12.5px;
+  font-weight: 700;
+  --lc-text-7: #FFD9A8;
+  color: var(--lc-text-7);
+  --lc-bg-8: rgba(255, 196, 100, 0.12);
+  background: var(--lc-bg-8);
+  --lc-border-9: rgba(255, 214, 150, 0.35);
+  border: 1px solid var(--lc-border-9);
+  border-radius: 99px;
+  padding: 8px 16px;
+}
+
+/* ── ฉากจบ ── */
+.mindful-anchor__panel--done { overflow: visible; }
+.mindful-anchor__done-glow {
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--anchor-glow), transparent 65%);
+  opacity: 0.45;
+  filter: blur(30px);
+  pointer-events: none;
+  animation: anchorDoneBloom 3.5s ease-in-out infinite;
+}
+@keyframes anchorDoneBloom {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50%      { transform: scale(1.08); opacity: 0.55; }
+}
+.mindful-anchor__stats {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.mindful-anchor__stats div {
+  flex: 1;
+  border-radius: 16px;
+  background: var(--glass-w-8);
+  border: 1px solid var(--glass-w-14);
+  padding: 12px 6px;
+  font-size: 10.5px;
+  --lc-text-6: rgba(234, 246, 244, 0.65);
+  color: var(--lc-text-6);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mindful-anchor__stats strong {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 19px;
+  font-weight: 400;
+  color: var(--fixed-white);
+}
+
+/* ── ยืนยันออกกลางคัน ── */
+.mindful-anchor__confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  --lc-bg-5: rgba(4, 16, 20, 0.75);
+  background: var(--lc-bg-5);
+  backdrop-filter: blur(8px);
+}
+.mindful-anchor__confirm-card {
+  width: 100%;
+  max-width: 330px;
+  border-radius: 22px;
+  --lc-bg-4: #0E2C34;
+  background: var(--lc-bg-4);
+  border: 1px solid var(--glass-w-16);
+  padding: 26px 22px;
+  text-align: center;
+  box-shadow: 0 24px 60px var(--glass-b-50);
+}
+.mindful-anchor__confirm-icon { font-size: 34px; margin-bottom: 8px; }
+.mindful-anchor__confirm-card p {
+  font-size: 13px;
+  line-height: 1.75;
+  --lc-text-3: rgba(234, 246, 244, 0.82);
+  color: var(--lc-text-3);
+  margin-bottom: 18px;
+}
+.mindful-anchor__confirm-actions { display: flex; gap: 8px; }
+.mindful-anchor__confirm-actions button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-w-20);
+  background: var(--glass-w-7);
+  --lc-text-2: rgba(234, 246, 244, 0.8);
+  color: var(--lc-text-2);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.mindful-anchor__confirm-actions .is-primary {
+  background: var(--anchor-accent);
+  border-color: var(--anchor-accent);
+  --lc-text-1: #06171D;
+  color: var(--lc-text-1);
+}
+
+/* ── จอเล็ก ── */
+@media (max-width: 520px) {
+  .mindful-anchor { padding: 16px 14px; }
+  .mindful-anchor__panel { padding: 24px 18px 20px; border-radius: 22px; }
+  .mindful-anchor__rhythm-item span { font-size: 22px; }
+  .mindful-anchor__stage { gap: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mindful-anchor__aurora,
+  .mindful-anchor__motes span,
+  .mindful-anchor__anchor-icon,
+  .mindful-anchor__done-glow,
+  .mindful-anchor__panel,
+  .mindful-anchor__prepare-count { animation: none; transition: none; }
+}

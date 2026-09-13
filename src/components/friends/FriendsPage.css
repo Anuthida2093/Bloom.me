@@ -1,0 +1,168 @@
+/* FriendsPage — [ไฟล์ใหม่ — ข้อ B] ใช้ token สีเดียวกับ Story.css (--bg/--text-sub/--g800/--n50)
+   ให้กลืนกับหน้าอื่นในแอป แต่เป็นไฟล์ CSS อิสระของตัวเอง ไม่ import จาก Story */
+
+.friends-page {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: 80px;
+}
+@media (max-width: 768px) {
+  .friends-page { padding-top: 56px; }
+}
+
+.friends-page__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+}
+.friends-page__back {
+  min-width: 44px;
+  min-height: 44px;
+  background: none;
+  border: none;
+  font-size: var(--fs-lg);
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.friends-page__title {
+  font-family: var(--font-display);
+  font-size: clamp(var(--fs-md), 4vw, var(--fs-lg));
+  color: var(--g800);
+  margin: 0 auto 0 0;
+}
+
+.friends-page__controls {
+  padding: 0 18px 14px;
+}
+.friends-page__search {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--n100, var(--n50));
+  background: var(--n50);
+  font-size: var(--fs-sm);
+  color: var(--g800);
+}
+
+/* [แก้ตามที่ระบุ] ตัวกรองใหม่สุด/เก่าสุด — เดิมเป็นปุ่มเต็มแถวคู่กับ 2 ปุ่มขนาดใหญ่ใต้ช่อง
+   ค้นหา แย่งความสำคัญกับหัวข้อ ตอนนี้ย่อเป็นดรอปดาวน์เล็กชิดมุมขวาบนแทน */
+.friends-page__sort {
+  position: relative;
+  flex-shrink: 0;
+}
+.friends-page__sort-toggle {
+  min-height: 32px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--r-sm, 8px);
+  border: 1px solid var(--n100, var(--n50));
+  background: var(--n50);
+  color: var(--text-sub);
+  font-size: var(--fs-xs, 12px);
+  cursor: pointer;
+}
+.friends-page__sort-caret {
+  font-size: 10px;
+}
+.friends-page__sort-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 96px;
+  padding: 4px;
+  border-radius: var(--r-md);
+  background: var(--bg);
+  border: 1px solid var(--n100, var(--n50));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+}
+.friends-page__sort-option {
+  min-height: 36px;
+  padding: 0 10px;
+  text-align: left;
+  border: none;
+  border-radius: var(--r-sm, 8px);
+  background: none;
+  color: var(--text-sub);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.friends-page__sort-option--active {
+  background: var(--g600, var(--g800));
+  color: var(--fixed-white);
+}
+
+.friends-page__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 18px 24px;
+}
+
+.friends-page__empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  padding: 40px 0;
+}
+
+.friends-page__row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: var(--r-md);
+  background: var(--n50);
+  border: none;
+  min-height: 44px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.friends-page__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--g600, var(--g800));
+  color: var(--fixed-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.friends-page__row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.friends-page__row-name {
+  color: var(--g800);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.friends-page__row-status {
+  font-size: var(--fs-xs, 12px);
+  color: var(--text-muted);
+}
+.friends-page__row-status--mutual {
+  color: var(--g600, var(--g800));
+  font-weight: 600;
+}

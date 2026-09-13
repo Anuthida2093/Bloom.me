@@ -1,0 +1,54 @@
+/* บัวรดน้ำของเควส Daily Learning Check-in */
+.checkin-can { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
+
+.checkin-can__body {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+  --lc-border-3: rgba(255, 255, 255, 0.24);
+  border: 1.5px solid var(--lc-border-3);
+  background: var(--glass-w-7);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.checkin-can__water {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  --lc-bg-1: rgba(127, 199, 255, 0.85);
+  --lc-bg-2: rgba(64, 145, 108, 0.75);
+  background: linear-gradient(180deg, var(--lc-bg-1), var(--lc-bg-2));
+  transition: height 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.checkin-can__emoji { position: relative; font-size: 40px; filter: drop-shadow(0 4px 8px var(--glass-b-30)); }
+.checkin-can__meta { font-size: 11.5px; color: var(--glass-w-60); font-weight: 800; }
+
+.checkin-can--pouring .checkin-can__body { animation: canTilt 1.4s ease-in-out; }
+@keyframes canTilt {
+  0%   { transform: rotate(0); }
+  25%  { transform: rotate(-38deg); }
+  75%  { transform: rotate(-38deg); }
+  100% { transform: rotate(0); }
+}
+
+.checkin-can__stream { position: absolute; inset: 0; pointer-events: none; }
+.checkin-can__stream span {
+  position: absolute;
+  top: 60px;
+  font-size: 15px;
+  animation: canDrop 1s ease-in both;
+}
+@keyframes canDrop {
+  0%   { transform: translateY(0); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translateY(90px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkin-can--pouring .checkin-can__body,
+  .checkin-can__stream span { animation: none; }
+}

@@ -1,0 +1,228 @@
+{
+  "app": {
+    "name": "Bloom.me",
+    "type": "Gamified Self-Improvement Web Application",
+    "language": "Thai",
+    "design_system": {
+      "visual_and_aesthetic_style": {
+        "art_style": "2D Vector style with soft highlights, gradients, and cell-shading to give a pseudo-3D pop-out appearance, heavily inspired by Cookie Run Kingdom and Angry Birds",
+        "color_palette": {
+          "primary_green": ["Forest Green", "Soft Sage"],
+          "clean_white": "Clean White",
+          "background": "Light Soft Gray",
+          "typography": "Charcoal Black",
+          "wood_accents": "Warm Timber Brown"
+        },
+        "components": [
+          "Neumorphic/Soft-shaded buttons",
+          "Cute progress bars",
+          "Rounded card containers with clean drop shadows",
+          "Illustrative icon sets for navigation"
+        ],
+        "target_devices": "Fully responsive layout adaptive for Mobile, Tablet, and Desktop viewports"
+      }
+    },
+    "dashboard_layout": {
+      "section_1_header_and_hero_zone": {
+        "top_bar": [
+          "Bloom.me logo",
+          "User Profile with chosen MBTI badge",
+          "Tree Level Indicator",
+          "Cute glowing EXP bar showing current progress",
+          "Right corner button: 'ลงชื่อเข้าใช้ / สมัครสมาชิก' (Sign in/Register)",
+          "Right corner button: 'แชร์ต้นไม้' (Share)"
+        ],
+        "hero_center": {
+          "tree": {
+            "style": "Large, beautifully shaded 2D pseudo-3D Tree planted in a customizable pot",
+            "elements": [
+              "Thick Trunk (Knowledge/Learning)",
+              "Lush green Leaves (Physical Health)",
+              "Blooming colorful Flowers (Mental Health)"
+            ],
+            "decorations": "Small pastel-colored 'Post-it' memory notes clipped onto tree branches"
+          },
+          "floating_buttons": [
+            "จัดอันดับ (Leaderboard)",
+            "เปลี่ยนกระถาง/ตกแต่ง"
+          ]
+        }
+      },
+      "section_2_quest_system_and_tasks": {
+        "tabs": ["ด้านการเรียนรู้", "ด้านสุขภาพกาย", "ด้านสุขภาพจิต"],
+        "sub_lists": ["เควสประจำวัน (Daily Quests)", "เควสเสริม (Side Quests)"],
+        "quest_card_features": [
+          "Progress toggles",
+          "Timer components (Deep Focus / Fasting)",
+          "Action triggers (Microphone icon, Camera upload shortcut)",
+          "Clear rewards displaying Coins and EXP"
+        ]
+      },
+      "section_3_decoration_and_coin_shop": {
+        "layout": "Cute grid-based shop using earned Coins",
+        "categories": [
+          "รูปปั้นวางบนกระถาง (Pot Statues)",
+          "ของแขวนบนกิ่งไม้ (Branch Hangings)",
+          "ลายโพสอิทสะสม (Collectible Post-it Designs)"
+        ],
+        "visual_style": "Soft shading and shadow depth mimicking Cookie Run style"
+      },
+      "section_4_about_us_footer": {
+        "style": "Minimalist footer with clean gray and dark green typography",
+        "content": "Vision of Bloom.me as a scientific, research-backed habit building platform"
+      }
+    },
+    "quest_details": {
+      "knowledge": {
+        "category": "ด้านความรู้",
+        "impact": "พัฒนา 'ลำต้น' (Trunk Growth)",
+        "daily_quests": [
+          {
+            "title": "Active Focus (เพ่งสมาธิ)",
+            "description": "Card with text input for setting specific learning goals.",
+            "scientific_basis": "Deliberate Practice Theory"
+          },
+          {
+            "title": "The Deep Root (โหมดจดจ่อ)",
+            "description": "Includes a visual 90-minute countdown timer with a 15-20 minute forced rest state selector.",
+            "scientific_basis": "Ultradian Rhythms"
+          },
+          {
+            "title": "Brain Dump - Voice Edition",
+            "description": "Includes a microphone button to record verbal explanations, converting speech-to-text.",
+            "scientific_basis": "The Testing & Production Effect"
+          },
+          {
+            "title": "Cross-Pollination (ผสมเกสรข้ามศาสตร์)",
+            "description": "A scheduling toggle UI to switch study topics every hour.",
+            "scientific_basis": "Interleaved Practice"
+          },
+          {
+            "title": "Daily Learning Check-in",
+            "description": "A locked grayed-out item that unlocks when 1-2 daily tasks are completed. Clicking it opens a 'Watering Can' (บัวรดน้ำ) popup.",
+            "status": "Locked initially"
+          }
+        ],
+        "side_quests_and_achievements": [
+          {
+            "title": "Time Capsule Watering (รดน้ำข้ามเวลา)",
+            "description": "Notification bell card for reviewing old topics based on Spacing Effect."
+          },
+          {
+            "title": "Strategic Delay",
+            "description": "Long-term monthly planning calendar view."
+          },
+          {
+            "title": "Mirror of Truth",
+            "description": "Instant feedback action button that unlocks the 'กิ่งก้านแห่งปัญญา' item."
+          },
+          {
+            "title": "The Guardian of Rest",
+            "description": "Multi-hour tracking bar. If work exceeds 4-5 hours, it warns the user with a withered tree preview to prevent burnout."
+          },
+          {
+            "title": "Ten-Year Forest",
+            "description": "A continuous login streak calendar tracker."
+          }
+        ]
+      },
+      "physical_health": {
+        "category": "ด้านสุขภาพกาย",
+        "impact": "พัฒนา 'ใบไม้' (Leaves Growth)",
+        "daily_quests": [
+          {
+            "title": "Calorie Tracking (นับแคลอรี่)",
+            "description": "A split visual gauge bar comparing Calories In (food photo upload/caloric entry) vs Calories Out (Smartwatch integration data tracking steps and distance)."
+          },
+          {
+            "title": "IF System (คุมเวลากิน)",
+            "description": "A fasting clock UI showing fasting schedules (e.g., 16:8) synchronized with circadian rhythms."
+          },
+          {
+            "title": "Sleep Guard (การนอน)",
+            "description": "Time picker log for sleep/wake hours. Meeting a 7-8 hour target unlocks a glowing blue shield icon labeled 'Cortisol Shield'."
+          },
+          {
+            "title": "Active Recovery & NEAT",
+            "description": "A micro-timer that prompts a 5-minute stretching/walking alert automatically after a Deep Focus session ends."
+          }
+        ],
+        "reward_effect": "Glowing 'ละอองแดด (Sunlight Aura)' icon overlay that makes the 2D tree leaves glossily reflective."
+      },
+      "mental_health": {
+        "category": "ด้านสุขภาพจิต",
+        "impact": "พัฒนา 'ดอกไม้' (Flowers Growth)",
+        "daily_quests": [
+          {
+            "title": "Daily Mood Check-in",
+            "description": "Pop-up window appearing upon entering the game. Includes a text input box for journaling and an AI indicator showing 3 emotion levels: ดี (Good), เฉยๆ (Neutral), ไม่ดี (Bad). Bad emotional patterns trigger a gentle advice overlay. The written text dynamically converts into a Post-it note attached to the center tree."
+          },
+          {
+            "title": "Adaptive Guidance (ปรับสมดุลใจ)",
+            "description": "Contextual activity cards based on mood (e.g., 1-minute deep breathing animation, Sound Therapy audio player, or a Gratitude Journal text field)."
+          }
+        ],
+        "reward_effect": "Completing the Gratitude Journal triggers an animated 'ผีเสื้อแห่งความสงบ (Calm Butterfly)' asset that flies gently around the blooming flowers on the tree."
+      }
+    },
+    "user_profile_and_analytics": {
+      "registration_and_initial_setup": {
+        "fields": ["Username", "Email", "Password", "ส่วนสูง (ซม.)", "น้ำหนัก (กก.)"],
+        "mbti_selection": "Interactive grid for selecting the user's MBTI type (16 personalities), where each selection previews a uniquely styled and colored starting tree variant."
+      },
+      "health_and_analytics_metrics": {
+        "bmi_card": "User's Body Mass Index calculated dynamically using standard metric formulas.",
+        "user_silhouette": "Dynamic 2D pseudo-3D User Silhouette illustration transforming into a fitter shape based on workout frequency and active step counts.",
+        "counters": [
+          "ชั่วโมงเรียนรู้สะสม (Accumulated Learning Hours)",
+          "ก้าวเดินสะสม (Accumulated Steps/Distance synced via Smartwatch)"
+        ]
+      },
+      "interactive_progress_and_mood_calendar": {
+        "monthly_calendar": "Interactive colored micro-indicators or dots showing how many quests were completed across the 3 categories.",
+        "mood_indicator": "Cell color or emoji shifts dynamically based on mood history (ดี, เฉยๆ, ไม่ดี).",
+        "day_click_modal": "Expands a modal showing past Post-it text memories and specific quest achievements."
+      }
+    },
+    "daily_learning_checkin_modal": {
+      "visual_structure": {
+        "main_illustration": "Beautifully shaded 2D watering can (บัวรดน้ำ)",
+        "questions": [
+          {
+            "id": 1,
+            "topic": "Goal Clarity",
+            "question": "วันนี้คุณเริ่มต้นการเรียน/ทำงานด้วยเป้าหมายที่ชัดเจนมากแค่ไหน?"
+          },
+          {
+            "id": 2,
+            "topic": "Deep Focus & Flow",
+            "question": "คุณสามารถจดจ่ออยู่กับสิ่งที่ทำโดยไม่ถูกรบกวนได้ดีเพียงใด?"
+          },
+          {
+            "id": 3,
+            "topic": "Active Recall",
+            "question": "วันนี้คุณได้พยายามนึก ทบทวน หรือสรุปสิ่งที่เรียนรู้ด้วยตัวเองมากน้อยแค่ไหน?"
+          },
+          {
+            "id": 4,
+            "topic": "Quality Rest",
+            "question": "คุณได้หยุดพักผ่อนสมองอย่างแท้จริงระหว่างช่วงเรียนหรือทำงานหรือไม่?"
+          },
+          {
+            "id": 5,
+            "topic": "Overall Satisfaction",
+            "question": "โดยรวมแล้ว วันนี้คุณพึงพอใจกับการพัฒนาตัวเองมากแค่ไหน?"
+          }
+        ],
+        "bonus_field": {
+          "label": "มีอะไรที่อยากปรับปรุงให้ดีขึ้นในวันพรุ่งนี้?",
+          "behavior": "Converts into a persistent mini Post-it note on the user interface screen."
+        }
+      },
+      "micro_interaction_design": {
+        "slider_animation": "As the user slides or gives high star ratings, the water level inside the 2D watering can illustration dynamically fills up with a fluid blue color animation.",
+        "completion_action": "Upon filling out all 5 questions, the primary action button glows. Clicking it plays a visual animation of the watering can tilting and pouring water directly onto the tree's Trunk element, accompanied by a glittering light effect (แสงวิบวับ)."
+      }
+    }
+  }
+}

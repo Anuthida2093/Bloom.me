@@ -1,0 +1,302 @@
+/*============================================================================*\
+  MentalHealthDashboard.css
+  แดชบอร์ดสุขภาพใจ — เต็มพื้นที่กรอบเขียวเท่านั้น (absolute inset:0)
+  ห้ามล้นออกนอกจอ: scroll อยู่ภายใน .mh-dash__scroll
+\*============================================================================*/
+
+.mh-dash {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  --lc-bg-35: rgba(96, 165, 250, 0.16);
+  --lc-bg-36: #0d1f1a;
+  --lc-bg-37: #08150f;
+  background: radial-gradient(120% 80% at 50% 0%, var(--lc-bg-35), transparent 60%),
+    linear-gradient(180deg, var(--lc-bg-36) 0%, var(--lc-bg-37) 100%);
+  color: var(--ae-text);
+  font-family: 'Noto Sans Thai', 'Prompt', system-ui, sans-serif;
+}
+
+.mh-dash--moderate {
+  --lc-bg-32: rgba(251, 191, 36, 0.16);
+  --lc-bg-33: #1c1a10;
+  --lc-bg-34: #0d1208;
+  background: radial-gradient(120% 80% at 50% 0%, var(--lc-bg-32), transparent 60%), linear-gradient(180deg, var(--lc-bg-33) 0%, var(--lc-bg-34) 100%);
+}
+.mh-dash--high     {
+  --lc-bg-29: rgba(248, 113, 113, 0.18);
+  --lc-bg-30: #1f1414;
+  --lc-bg-31: #120b0b;
+  background: radial-gradient(120% 80% at 50% 0%, var(--lc-bg-29), transparent 60%), linear-gradient(180deg, var(--lc-bg-30) 0%, var(--lc-bg-31) 100%);
+}
+
+.mh-dash__scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 18px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+.mh-dash__scroll::-webkit-scrollbar { width: 6px; }
+.mh-dash__scroll::-webkit-scrollbar-thumb { background: var(--glass-w-16); border-radius: 3px; }
+
+/* ── header ── */
+.mh-dash__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.mh-dash__header h1 { margin: 0; font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
+.mh-dash__header p  {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  --lc-text-28: rgba(232,245,238,0.6);
+  color: var(--lc-text-28);
+}
+
+.mh-dash__view-toggle {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-w-18);
+  background: var(--glass-w-6);
+  color: var(--ae-text);
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.mh-dash__view-toggle:hover { background: var(--glass-w-12); border-color: var(--glass-w-30); }
+
+.mh-dash__tree-view { position: absolute; inset: 0; }
+.mh-dash__view-toggle--floating {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  backdrop-filter: blur(8px);
+  --lc-bg-27: rgba(8,21,15,0.7);
+  background: var(--lc-bg-27);
+}
+
+/* ── การ์ดสถานะหลัก ── */
+.mh-dash__status {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--risk-accent) 45%, transparent);
+  --lc-bg-26: rgba(255,255,255,0.03);
+  background: color-mix(in srgb, var(--risk-accent) 12%, var(--lc-bg-26));
+}
+.mh-dash__status-emoji { font-size: 2rem; line-height: 1; }
+.mh-dash__status-text { flex: 1; min-width: 0; }
+.mh-dash__status-badge {
+  display: inline-block;
+  font-size: 0.9rem; font-weight: 700;
+  color: var(--risk-accent);
+}
+.mh-dash__status-tree {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  --lc-text-25: rgba(232,245,238,0.55);
+  color: var(--lc-text-25);
+}
+.mh-dash__status-text p {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  --lc-text-24: rgba(232,245,238,0.85);
+  color: var(--lc-text-24);
+}
+
+.mh-dash__safety-cta {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  --lc-bg-22: #ef4444;
+  background: linear-gradient(135deg, var(--risk-high), var(--lc-bg-22));
+  color: var(--fixed-white);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  --lc-shadow-23: rgba(239,68,68,0.35);
+  box-shadow: 0 6px 20px var(--lc-shadow-23);
+}
+.mh-dash__safety-cta:hover { filter: brightness(1.08); }
+
+/* ── กล่องเตือน ── */
+.mh-dash__alert {
+  padding: 14px 16px;
+  border-radius: 16px;
+  --lc-border-20: rgba(251,191,36,0.35);
+  border: 1px solid var(--lc-border-20);
+  --lc-bg-21: rgba(251,191,36,0.09);
+  background: var(--lc-bg-21);
+}
+.mh-dash__alert--strong {
+  --lc-border-18: rgba(248,113,113,0.45);
+  border-color: var(--lc-border-18);
+  --lc-bg-19: rgba(248,113,113,0.12);
+  background: var(--lc-bg-19);
+}
+.mh-dash__alert strong { font-size: 0.88rem; }
+.mh-dash__alert p {
+  margin: 6px 0 10px;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  --lc-text-17: rgba(232,245,238,0.78);
+  color: var(--lc-text-17);
+}
+.mh-dash__alert-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.mh-dash__alert-actions button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: none;
+  background: var(--risk-moderate);
+  --lc-text-16: #1a1200;
+  color: var(--lc-text-16);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mh-dash__alert-actions button.is-ghost {
+  background: transparent; color: var(--ae-text);
+  border: 1px solid var(--glass-w-22);
+}
+
+/* ── การ์ดทั่วไป ── */
+.mh-dash__card {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--glass-w-9);
+  --lc-bg-15: rgba(255,255,255,0.035);
+  background: var(--lc-bg-15);
+}
+.mh-dash__card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.mh-dash__card-head h2 { margin: 0; font-size: 0.95rem; font-weight: 600; }
+.mh-dash__card-head span {
+  font-size: 0.72rem;
+  --lc-text-14: rgba(232,245,238,0.5);
+  color: var(--lc-text-14);
+}
+
+/* ── แถบสีอารมณ์ ── */
+.mh-dash__strip { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; }
+.mh-dash__strip-cell { aspect-ratio: 1 / 2.2; border-radius: 4px; background: var(--glass-w-5); }
+.mh-dash__strip-cell.is-empty { border: 1px dashed var(--glass-w-12); background: transparent; }
+
+.mh-dash__legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.mh-dash__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  --lc-text-13: rgba(232,245,238,0.72);
+  color: var(--lc-text-13);
+}
+.mh-dash__legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+
+.mh-dash__empty {
+  margin-top: 12px;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  --lc-text-12: rgba(232,245,238,0.6);
+  color: var(--lc-text-12);
+}
+.mh-dash__empty button {
+  display: block;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  --lc-border-9: rgba(110,231,183,0.4);
+  border: 1px solid var(--lc-border-9);
+  --lc-bg-10: rgba(110,231,183,0.12);
+  background: var(--lc-bg-10);
+  --lc-text-11: #a7f3d0;
+  color: var(--lc-text-11);
+  font-family: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+/* ── สถิติ ── */
+.mh-dash__stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.mh-dash__stats > div {
+  padding: 12px 6px;
+  border-radius: 12px;
+  --lc-bg-8: rgba(255,255,255,0.04);
+  background: var(--lc-bg-8);
+  text-align: center;
+}
+.mh-dash__stats strong {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 700;
+  --lc-text-7: #a7f3d0;
+  color: var(--lc-text-7);
+}
+.mh-dash__stats span {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.65rem;
+  line-height: 1.35;
+  --lc-text-6: rgba(232,245,238,0.55);
+  color: var(--lc-text-6);
+}
+
+/* ── เกราะขอบคุณ ── */
+.mh-dash__gratitude { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; }
+.mh-dash__gratitude span { aspect-ratio: 1; border-radius: 50%; background: var(--glass-w-7); }
+.mh-dash__gratitude span.is-on {
+  --lc-bg-4: #fcd34d;
+  background: var(--lc-bg-4);
+  --lc-shadow-5: rgba(252,211,77,0.55);
+  box-shadow: 0 0 8px var(--lc-shadow-5);
+}
+.mh-dash__note {
+  margin: 10px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.6;
+  --lc-text-3: rgba(232,245,238,0.6);
+  color: var(--lc-text-3);
+}
+
+/* ── ผลคัดกรอง ── */
+.mh-dash__screening-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mh-dash__screening-row strong { font-size: 1.15rem; }
+.mh-dash__screening-row span {
+  display: block;
+  font-size: 0.7rem;
+  --lc-text-2: rgba(232,245,238,0.5);
+  color: var(--lc-text-2);
+}
+.mh-dash__screening-risk { font-size: 0.78rem !important; color: var(--risk-accent) !important; font-weight: 600; }
+
+.mh-dash__ghost-btn {
+  width: 100%; margin-top: 12px;
+  padding: 11px; border-radius: 12px;
+  border: 1px solid var(--glass-w-16); background: var(--glass-w-5);
+  color: var(--ae-text); font-family: inherit; font-size: 0.82rem; cursor: pointer;
+}
+.mh-dash__ghost-btn:hover { background: var(--glass-w-10); }
+
+.mh-dash__foot {
+  margin: 4px 0 0;
+  font-size: 0.68rem;
+  line-height: 1.6;
+  text-align: center;
+  --lc-text-1: rgba(232,245,238,0.38);
+  color: var(--lc-text-1);
+}
+
+@media (max-width: 420px) {
+  .mh-dash__scroll { padding: 16px 12px 22px; }
+  .mh-dash__stats { grid-template-columns: repeat(2, 1fr); }
+  .mh-dash__header h1 { font-size: 1.15rem; }
+}

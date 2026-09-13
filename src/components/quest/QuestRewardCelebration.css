@@ -1,0 +1,78 @@
+/* [แก้ตามที่ระบุ] ย้ายจากป้ายลอยมุมบนมาอยู่ "กึ่งกลางจอจริง" ทั้งแนวตั้งและแนวนอน —
+   เดิม top:18px; left:50% (กึ่งกลางแค่แนวนอน ลอยชิดขอบบน) ตอนนี้ใช้ top:50%; left:50%
+   + translate(-50%,-50%) ให้กึ่งกลาง viewport เป๊ะไม่ว่าจอขนาดไหน ยังคง pointer-events:none
+   ไว้เหมือนเดิม (ไม่บล็อกการโต้ตอบกับหน้าจอเดิมที่ยังแสดงอยู่ข้างใต้) */
+.quest-celebration {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quest-celebration__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 22px 30px;
+  border-radius: var(--r-lg);
+  background: var(--bg-card);
+  box-shadow: var(--sh-modal);
+  animation: questCelebrationPop 2.2s cubic-bezier(.22,1,.36,1) both;
+}
+
+@keyframes questCelebrationPop {
+  0% { opacity: 0; transform: scale(.7); }
+  12% { opacity: 1; transform: scale(1.06); }
+  22% { transform: scale(1); }
+  85% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.94); }
+}
+
+.quest-celebration__icon { font-size: 44px; line-height: 1; }
+
+.quest-celebration__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  color: var(--text);
+}
+
+.quest-celebration__rewards {
+  display: flex;
+  gap: 14px;
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--text-sub);
+}
+
+.quest-celebration__sparkles {
+  position: absolute;
+  inset: -60px;
+  pointer-events: none;
+}
+.quest-celebration__sparkles span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 16px;
+  opacity: 0;
+  animation: questCelebrationSparkle 2.2s ease-out both;
+  animation-delay: calc(var(--i) * 0.05s);
+  transform: translate(-50%, -50%) rotate(calc(var(--i) * 36deg)) translateY(0);
+}
+@keyframes questCelebrationSparkle {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--i) * 36deg)) translateY(0) scale(.5); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--i) * 36deg)) translateY(-100px) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quest-celebration__card, .quest-celebration__sparkles span { animation: none; opacity: 1; }
+}

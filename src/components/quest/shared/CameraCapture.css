@@ -1,0 +1,202 @@
+/* CameraCapture — ใช้ var(--game-accent)/var(--game-accent-bg) จาก .game-shell (ดู
+   GameShell.tsx) เมื่ออยู่ใต้ .game-shell จริง (games/*.tsx ทุกไฟล์) — [แก้รอบนี้] OracleCardsPage.tsx
+   เรียกใช้ component นี้ตรงๆ โดยไม่ผ่าน .game-shell (เป็นหน้าเควสพิเศษเต็มจอของตัวเอง ไม่ใช่
+   ผ่าน QuestPlayModal/GameShell) จึงไม่มีตัวแปรสองตัวนี้ให้ใช้ — ทุกจุดที่อ้าง --game-accent*
+   ด้านล่างต้องมี fallback เป็นโทเคนสีของระบบเสมอ ห้ามอ้างเปล่าๆ ไม่งั้นเควสไพ่ทิพย์จะได้
+   ปุ่ม/พื้นหลังที่ไม่มีสี (invalid custom property ไม่มี fallback = ค่านั้นไม่ถูกใช้เลย)
+
+   [แก้รอบนี้ — ตามที่ระบุ] เดิมช่องมองภาพเต็มจอ (edge-to-edge, ไม่มีขอบ) ตอนนี้เปลี่ยนเป็น
+   "กรอบรูป 4:3 ขนาดพอดี" ลอยอยู่กึ่งกลางพื้นที่ใต้ navbar แทน (ไม่เต็มจอสนิทอีกต่อไปโดย
+   ตั้งใจ) — .camera-capture (ชั้นนอก) ยังคงเป็นเวทีเต็มพื้นที่ใต้ navbar เหมือนเดิม (คุมปุ่ม/
+   คำแนะนำ) ส่วน .camera-capture__viewfinder (กรอบรูป) กลายเป็นกล่องขนาดคงที่ตามสัดส่วน 4:3
+   จัดกึ่งกลางในเวทีนั้นแทน */
+
+.camera-capture {
+  position: fixed;
+  top: 90px;      /* เว้นจาก Navbar (80px) + breathing room เล็กน้อย */
+  left: 0;
+  right: 0;
+  bottom: 0;      /* เต็มจอถึงขอบล่างจริง — เป็น "เวที" ให้กรอบรูปลอยอยู่กึ่งกลาง ไม่ใช่ตัวกรอบเอง */
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* [แก้] เดิม background:#000 (สมเหตุสมผลตอนวิดีโอเต็มจอสนิท ไม่มีพื้นที่ว่างให้เห็นสีพื้น
+     หลังเลย) ตอนนี้กรอบรูปเล็กลงมีพื้นที่ว่างรอบๆ ให้เห็นจริง เปลี่ยนเป็นโทนสีธีมหลักของระบบ
+     แทนสีดำ (ตามหลักการที่ระบุไว้ก่อนหน้า: "ไม่ใช่ดำ ใช้สีธีมหลักของระบบ") */
+  background: var(--game-accent-bg, var(--bg));
+}
+@media (max-width: 768px) {
+  /* navbar มือถือสูงแค่ 56px (ดู NavBar.css) — ใช้ 90px เดิมจะเหลือช่องว่างเปล่าๆ อีก 34px
+     ใต้ navbar โดยไม่จำเป็น จึงลดสัดส่วนลงตามจริง (56 + breathing room เดิม 10px) */
+  .camera-capture { top: 66px; }
+}
+
+/* [แก้ตามที่ระบุ — กรอบรูป 4:3 ขนาดพอดี] เดิมเต็ม .camera-capture ทั้งกล่อง (inset:0) ตอนนี้
+   เป็นกล่องขนาดคงที่ตามสัดส่วน 4:3 แนวตั้ง (aspect-ratio: 3/4 คือ กว้าง:สูง = 3:4 — แนวตั้ง
+   แบบเดียวกับโหมด "4:3" ของกล้องมือถือที่ถือตั้งตรง ซึ่งทุกเควสถ่ายรูปในระบบนี้เป็นแบบนี้หมด)
+   กว้างเว้นจากขอบซ้าย-ขวาประมาณ 220px ตามที่ระบุ (คำนวณผ่าน calc(100% - 440px))
+
+   [เหตุผลที่ใช้ clamp() แทนค่า 220px ตรงๆ] ถ้าล็อก margin ซ้าย-ขวาไว้ที่ 220px แบบตายตัว
+   จริงๆ จะพังทั้งสองด้านสุดขั้ว: จอมือถือ (~390px กว้าง) จะเหลือความกว้างติดลบทันที (390 -
+   440 < 0) ส่วนจอกว้างมากๆ (>2000px) จะได้กรอบรูปที่สูงเกินจอ (เพราะ 4:3 แนวตั้งยิ่งกว้าง
+   ยิ่งสูงตาม) ล้นออกไปนอกพื้นที่ที่มองเห็น — clamp(min, ค่าที่ต้องการ, max) แก้ทั้งสองขั้ว
+   พร้อมกัน: ช่วงจอขนาดกลาง (~880-1536px) จะได้ระยะขอบ ~220px ตรงตามที่ระบุเป๊ะ, จอเล็กกว่านั้น
+   จะไม่ต่ำกว่า 280px (ความกว้างกรอบรูปที่ยังถ่ายเห็นชัดบนมือถือ), จอใหญ่กว่านั้นจะไม่เกิน 480px
+   (ขนาดกรอบรูปที่ "พอดี" ตามที่ระบุ ไม่ใช่ลอยเบ้อเริ่มกลางจอกว้างมากๆ) — max-height กันไว้อีกชั้น
+   สำหรับจอเตี้ย (เช่น มือถือแนวนอน) ไม่ให้กรอบสูงล้นพื้นที่ใต้ navbar จนโดนแถบปุ่มด้านล่างบัง */
+.camera-capture__viewfinder {
+  position: relative;
+  width: clamp(280px, calc(100% - 440px), 480px);
+  aspect-ratio: 3 / 4;
+  max-height: calc(100% - 24px);
+  border-radius: 20px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 12px 32px var(--glass-b-35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* [คงเดิม] เต็มพื้นที่ 100% ของกรอบรูป (ซึ่งตอนนี้ตัวกรอบเองสัดส่วน 3/4 แน่นอนแล้ว — ไม่ใช่
+   เต็มจอสนิทเหมือนก่อน) object-fit:cover จึงครอบตัดภาพจากกล้องให้พอดีกรอบ 4:3 เป๊ะจริง
+   (ต่างจากรอบก่อนที่ล็อก width/height:100% ของกล่องเต็มจอ ทำให้ aspect-ratio ไม่มีผลจริง —
+   ตอนนี้ตัวกรอบเองมี aspect-ratio กำหนดรูปทรงไว้แน่นอนแล้ว ไม่ขัดกันอีกต่อไป) */
+.camera-capture__live-video,
+.camera-capture__captured-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* [เพิ่มรอบนี้ — ตามที่ระบุ] เอฟเฟกแฟลชขาววาบสั้นๆ ทันทีที่กดชัตเตอร์ ก่อนภาพนิ่งจะค้างให้รีวิว
+   ให้ความรู้สึก "ถ่ายติดแล้ว" ชัดเจน (ดู justCaptured ใน CameraCapture.tsx) */
+.camera-capture__flash {
+  position: absolute;
+  inset: 0;
+  background: var(--fixed-white);
+  animation: cameraCaptureFlash .4s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes cameraCaptureFlash {
+  from { opacity: .85; }
+  to { opacity: 0; }
+}
+
+/* [เพิ่มรอบนี้] ภาพที่เพิ่งถ่ายเด้งเข้ามาเบาๆ แทนการสลับจากวิดีโอสดแบบไม่มีทรานซิชันเลย */
+.camera-capture__captured-img {
+  animation: cameraCapturedPop .25s ease-out;
+}
+@keyframes cameraCapturedPop {
+  from { opacity: .4; transform: scale(.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.camera-capture__error-icon { font-size: 48px; }
+
+/* [แก้] เดิม top: calc(80px + 12px) เพื่อชดเชยที่ .camera-capture ตอนนั้น inset:0 ทับ navbar
+   ไปเต็มๆ — ตอนนี้ .camera-capture เองเว้นระยะจาก navbar ไว้แล้ว (top:90px/66px ด้านบน)
+   จึงเหลือแค่ระยะห่างเล็กน้อยจากขอบบนของกล่องเอง ไม่ต้องคำนวณความสูง navbar ซ้ำอีกชั้น */
+.camera-capture__exit-btn {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--glass-w-25);
+  color: var(--fixed-white);
+  font-size: var(--fs-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.camera-capture__exit-btn:hover { background: var(--glass-w-40); }
+
+/* [คงเดิม] ลอยทับที่ขอบล่างของ "เวที" ทั้งหมด (.camera-capture) ไม่ใช่แค่ขอบล่างของกรอบรูป
+   เล็กๆ — ปุ่มกดยังต้องกว้างพอกดง่ายเหมือนเดิม ไม่ถูกบีบให้เท่ากรอบรูป 4:3 แคบๆ */
+.camera-capture__bottom-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 20px calc(var(--gpf-safe-bottom, 100px) + 16px);
+  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.35) 60%, rgba(0,0,0,.55) 100%);
+}
+
+.camera-capture__hint {
+  text-align: center;
+  color: var(--fixed-white);
+  max-width: 420px;
+}
+
+.camera-capture__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+
+.camera-capture__shutter-btn {
+  position: absolute;
+  bottom: calc(var(--gpf-safe-bottom, 0px) + 32px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 4px solid var(--fixed-white);
+  background: var(--game-accent, var(--g600));
+  cursor: pointer;
+}
+.camera-capture__shutter-btn:active { transform: translateX(-50%) scale(.92); }
+
+.camera-capture__side-btn {
+  position: absolute;
+  bottom: calc(var(--gpf-safe-bottom, 0px) + 44px);
+  z-index: 10;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--glass-w-40);
+  background: var(--glass-w-8);
+  color: var(--fixed-white);
+  font-size: 17px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.camera-capture__side-btn:hover { background: var(--glass-w-18); }
+.camera-capture__side-btn:first-of-type { left: calc(50% - 112px); }
+.camera-capture__side-btn:last-of-type { right: calc(50% - 112px); }
+
+.camera-capture__review-controls {
+  position: absolute;
+  bottom: calc(var(--gpf-safe-bottom, 0px) + 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  gap: 12px;
+  width: calc(100% - 40px);
+  max-width: 420px;
+}
+.camera-capture__review-controls .qg-btn { flex: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .camera-capture__flash,
+  .camera-capture__captured-img { animation: none; }
+}

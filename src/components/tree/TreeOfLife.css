@@ -1,0 +1,535 @@
+.tree-of-life {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* [ใหม่] containment — บอกเบราว์เซอร์ว่าการเปลี่ยนแปลงข้างในเลเยอร์นี้
+   ไม่กระทบ layout ของส่วนอื่นในหน้า ทำให้ข้ามการคำนวณส่วนที่เหลือได้ทั้งหมด
+   สำคัญมากกับเลเยอร์ที่มีลูกหลายสิบตัว animate พร้อมกันแบบนี้ */
+.tree-of-life__stack {
+  contain: layout paint;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ทั้ง 3 layer วางซ้อนเต็มพื้นที่เดียวกันแบบ absolute — ลำดับ z-index กำหนดที่ inline
+   style (zIndex prop ของ TreeLayer) ตามลำดับภาพจริง: หญ้า(1) < ลำต้น(2) < ใบ/ดอก(3) */
+.tree-of-life__layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+  user-select: none;
+
+  /* [ข้อกำหนดข้อ 5] แอนิเมชันตอน level เปลี่ยน — เล่นทุกครั้งที่ <img> ถูก remount
+     ใหม่ (จาก key={url} ใน TreeOfLife.tsx) ทำให้ดูเหมือนต้นไม้ "โตขึ้น" แบบนุ่มนวล */
+  animation: treeOfLifeLayerGrow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes treeOfLifeLayerGrow {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tree-of-life__layer--placeholder {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8%;
+  font-size: clamp(24px, 8vw, 48px);
+  opacity: 0.4;
+}
+
+/* container เต็มพื้นที่ที่ "ปั๊ม" ใบ/ดอกลงไป — ตัว container เองไม่มีขนาด/รูปร่างอะไร
+   เป็นแค่กรอบอ้างอิง % สำหรับ .tree-of-life__stamp แต่ละจุดข้างใน */
+.tree-of-life__foliage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* จุด "ปั๊ม" เดี่ยวๆ (ใบหรือดอก 1 คลัสเตอร์เล็ก) — ตำแหน่ง (left/top), ขนาด (width),
+   และมุมหมุน (rotate) ทั้งหมดคำนวณมาจาก TreeOfLife.tsx (generateFoliageStamps) แล้ว
+   ส่งมาเป็น inline style ทีละจุด คลาสนี้จึงกำหนดแค่พฤติกรรมร่วมของทุกจุด */
+.tree-of-life__stamp {
+  position: absolute;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  transform-origin: center center;
+
+  /* เล่นแอนิเมชัน "โผล่ขึ้นมา" เดียวกับ layer หลัก แต่ตัว key ของแต่ละจุดผูกกับ level
+     อยู่แล้ว (ดู generateFoliageStamps ใน .tsx) เวลา level เปลี่ยน ทุกจุดจะถูก remount
+     ใหม่หมดพร้อมกัน ดูเหมือนพุ่มทั้งต้น "แตกใบใหม่" เป็นชุดเดียวกัน ไม่ใช่โผล่ทีละใบ */
+  animation: treeOfLifeLayerGrow 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tree-of-life__stamp--flower {
+  filter: drop-shadow(0 1px 3px var(--glass-b-18));
+}
+
+/* ไอเทมตกแต่งที่สวมใส่อยู่ (จาก InventoryModal) */
+.tree-of-life__decorations {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.tree-of-life__decoration-item {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: clamp(20px, 6vw, 34px);
+  filter: drop-shadow(0 3px 6px var(--glass-b-30));
+  animation: treeOfLifeDecorationPop 0.5s cubic-bezier(0.2, 0.8, 0.4, 1) both;
+}
+
+@keyframes treeOfLifeDecorationPop {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Hotspot โชว์ tooltip เลเวล — วางไว้แถวโคนต้น (ล่างกึ่งกลาง) */
+.tree-of-life__hint-hotspot {
+  position: absolute;
+  left: 50%;
+  bottom: 2%;
+  transform: translateX(-50%);
+  width: 38%;
+  height: 10%;
+  min-width: 90px;
+  min-height: 36px;
+  cursor: pointer;
+  z-index: 6;
+}
+
+.tree-of-life__tooltip {
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  --lc-bg-20: rgba(20, 30, 25, 0.88);
+  background: var(--lc-bg-20);
+  color: var(--fixed-white);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 11.5px;
+  font-family: 'Nunito', 'Sarabun', sans-serif;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px var(--glass-b-35);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: treeOfLifeTooltipIn 0.18s ease both;
+}
+
+@keyframes treeOfLifeTooltipIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.tree-of-life__tooltip-title {
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.tree-of-life__tooltip-warn {
+  --lc-text-19: #ffd6a0;
+  color: var(--lc-text-19);
+  font-weight: 700;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GroundScene — หญ้า/ดอกไม้แบบมีมิติ [ข้อกำหนดข้อ 4]
+   ═══════════════════════════════════════════════════════════════ */
+.ground-scene {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2%;
+  height: 18%;
+  z-index: 1; /* เท่ากับ/ทับเบาๆ บนภาพพื้นหญ้า (grass layer z-index 1) */
+  pointer-events: none;
+}
+
+.ground-scene__blade {
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  transform-origin: bottom center;
+  animation-name: groundSceneSway;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  filter: drop-shadow(0 1px 1px var(--glass-b-12));
+}
+
+@keyframes groundSceneSway {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+
+.ground-scene__flower {
+  position: absolute;
+  bottom: 2%;
+  width: 16px;
+  height: 16px;
+  animation: groundSceneFlowerPop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both,
+    groundSceneFlowerBob 3s ease-in-out infinite;
+  filter: drop-shadow(0 2px 3px var(--glass-b-15));
+}
+
+@keyframes groundSceneFlowerPop {
+  from { opacity: 0; transform: scale(0); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes groundSceneFlowerBob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-2px) rotate(4deg); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Draggable decorations [ข้อกำหนดข้อ 3]
+   ═══════════════════════════════════════════════════════════════ */
+.tree-of-life__decoration-item--draggable {
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.tree-of-life__decoration-item--dragging {
+  cursor: grabbing;
+  filter: drop-shadow(0 6px 14px var(--glass-b-45));
+  z-index: 50;
+  transition: none !important;
+}
+
+/* พื้นที่ให้วางไอเทมตกแต่งได้อิสระ — โผล่เป็นกรอบจางๆ ตอนกำลังลากเท่านั้น */
+.tree-of-life__drop-zone-hint {
+  position: absolute;
+  inset: 4%;
+  border: 2px dashed var(--glass-w-50);
+  border-radius: 24px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.tree-of-life__drop-zone-hint--visible {
+  opacity: 1;
+}
+
+/* เคารพ prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .ground-scene__blade,
+  .ground-scene__flower {
+    animation: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Growth Pulse — เควสสำเร็จ ต้นไม้ตอบสนองทันที [ใหม่]
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ต้นไม้เด้งตัวเบาๆ ทั้งต้นตอน pulse (ใช้ผ่าน inline style ของ root div ไม่ใช่ selector
+   นี้ — ประกาศ keyframe ไว้ที่นี่เพื่อให้ทุกไฟล์ที่ import CSS นี้เห็น keyframe เดียวกัน) */
+@keyframes treeOfLifeGrowBounce {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.06); }
+  60% { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
+.tree-of-life__growth-pulse {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* แสงพวยพุ่งออกจากศูนย์กลาง (conic-gradient หมุน + จางหาย) สีเปลี่ยนตามหมวดเควส */
+.tree-of-life__growth-pulse-rays {
+  position: absolute;
+  width: 140%;
+  height: 140%;
+  border-radius: 50%;
+  animation: treeGrowthRaysBurst 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tree-of-life__growth-pulse--knowledge .tree-of-life__growth-pulse-rays {
+  --lc-bg-16: rgba(212, 165, 74, 0.45);
+  --lc-bg-17: rgba(212, 165, 74, 0.45);
+  --lc-bg-18: rgba(212, 165, 74, 0.45);
+  background: conic-gradient(from 0deg, transparent, var(--lc-bg-16), transparent 20%, var(--lc-bg-17) 40%, transparent 60%, var(--lc-bg-18) 80%, transparent);
+}
+.tree-of-life__growth-pulse--emotion .tree-of-life__growth-pulse-rays {
+  --lc-bg-13: rgba(199, 125, 255, 0.45);
+  --lc-bg-14: rgba(255, 133, 161, 0.45);
+  --lc-bg-15: rgba(199, 125, 255, 0.45);
+  background: conic-gradient(from 0deg, transparent, var(--lc-bg-13), transparent 20%, var(--lc-bg-14) 40%, transparent 60%, var(--lc-bg-15) 80%, transparent);
+}
+.tree-of-life__growth-pulse--health .tree-of-life__growth-pulse-rays {
+  --lc-bg-10: rgba(64, 145, 108, 0.5);
+  --lc-bg-11: rgba(116, 198, 157, 0.5);
+  --lc-bg-12: rgba(64, 145, 108, 0.5);
+  background: conic-gradient(from 0deg, transparent, var(--lc-bg-10), transparent 20%, var(--lc-bg-11) 40%, transparent 60%, var(--lc-bg-12) 80%, transparent);
+}
+
+@keyframes treeGrowthRaysBurst {
+  0% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.15) rotate(35deg); }
+}
+
+/* ประกายไฟกระจายออกรอบทิศ (ใช้ --spark-angle ที่ตั้งมาจาก inline style ต่อจุด) */
+.tree-of-life__growth-pulse-spark {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  animation: treeGrowthSparkFly 0.9s ease-out both;
+  transform-origin: center;
+}
+.tree-of-life__growth-pulse--knowledge .tree-of-life__growth-pulse-spark {
+  --lc-bg-8: #d4a54a;
+  background: var(--lc-bg-8);
+  --lc-shadow-9: #d4a54a;
+  box-shadow: 0 0 8px var(--lc-shadow-9);
+}
+.tree-of-life__growth-pulse--emotion .tree-of-life__growth-pulse-spark { background: var(--pink); box-shadow: 0 0 8px var(--pink); }
+.tree-of-life__growth-pulse--health .tree-of-life__growth-pulse-spark { background: var(--g400); box-shadow: 0 0 8px var(--g400); }
+
+@keyframes treeGrowthSparkFly {
+  0% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--spark-angle)) translateX(0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--spark-angle)) translateX(120px) scale(0.3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-of-life__growth-pulse-rays,
+  .tree-of-life__growth-pulse-spark {
+    animation: none;
+    display: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Soot (เตาเผาขยะความคิดยังไม่สำเร็จ) + Falling Petals (ไม่ได้สุ่มไพ่ทิพย์ ≥2 วัน) [ใหม่]
+   ═══════════════════════════════════════════════════════════════ */
+.tree-of-life__soot {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+/* [เปลี่ยน] เดิมเป็น emoji 💨 ที่หน้าตาต่างกันทุก OS — ตอนนี้วาดด้วย CSS ล้วน */
+.tree-of-life__soot-wisp {
+  position: absolute;
+  top: 30%;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  --lc-bg-6: rgba(120, 130, 125, .55);
+  --lc-bg-7: rgba(120, 130, 125, 0);
+  background: radial-gradient(circle at 40% 40%, var(--lc-bg-6), var(--lc-bg-7) 70%);
+  filter: blur(2px);
+  opacity: 0;
+  animation: treeOfLifeSootRise 4.5s ease-in infinite;
+}
+@keyframes treeOfLifeSootRise {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  20% { opacity: 0.5; }
+  80% { opacity: 0.35; }
+  100% { transform: translateY(-70px) scale(1.3); opacity: 0; }
+}
+
+.tree-of-life__falling-petals {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+}
+/* [เปลี่ยน] เดิมเป็น emoji 🍂 / 🌸 — ตอนนี้เป็นกลีบที่วาดด้วย CSS
+   ทรงกลีบเกิดจาก border-radius ที่ไม่เท่ากันสี่มุม สีอ้างอิงโทเคน Aether
+   จึงเข้ากับฉากเสมอ ไม่ว่าธีมจะเปลี่ยนไปทางไหน */
+.tree-of-life__falling-petal {
+  position: absolute;
+  top: -8%;
+  width: 11px;
+  height: 14px;
+  border-radius: 60% 10% 60% 10%;
+  opacity: 0;
+  animation-name: treeOfLifeFalling;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.tree-of-life__falling-petal--leaf {
+  background: linear-gradient(140deg, var(--ae-sun), var(--ae-bark));
+}
+.tree-of-life__falling-petal--bloom {
+  --lc-bg-5: #f6d3e4;
+  background: linear-gradient(140deg, var(--ae-bloom), var(--lc-bg-5));
+  border-radius: 50% 15% 50% 15%;
+}
+@keyframes treeOfLifeFalling {
+  0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+  10% { opacity: .85; }
+  90% { opacity: .6; }
+  100% { transform: translateY(85%) translateX(24px) rotate(200deg); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-of-life__soot-wisp,
+  .tree-of-life__falling-petal {
+    animation: none;
+    display: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Hotline Badge — High Risk เท่านั้น [ใหม่]
+   ═══════════════════════════════════════════════════════════════ */
+/* [ใหม่] ไอคอนเป็น SVG แล้ว ต้องจัดกลางแนวตั้งให้ตรงกับข้อความ */
+.tree-of-life__hotline-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* [ใหม่] ไอเทมตกแต่งที่เป็นภาพจริง — ถ้ายังไม่มีไฟล์จะ fallback เป็น emoji เอง */
+.tree-of-life__decoration-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+.tree-of-life__decoration-emoji {
+  font-size: inherit;
+  line-height: 1;
+}
+
+.tree-of-life__hotline-badge {
+  position: absolute;
+  top: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 99px;
+  --lc-bg-3: #D32F5B;
+  background: linear-gradient(135deg, var(--red), var(--lc-bg-3));
+  color: var(--fixed-white);
+  text-decoration: none;
+  font-family: 'Fredoka One';
+  font-size: 12.5px;
+  --lc-shadow-4: rgba(211, 47, 91, 0.5);
+  box-shadow: 0 8px 24px var(--lc-shadow-4);
+  animation: treeOfLifeHotlinePulse 1.8s ease-in-out infinite;
+  cursor: pointer;
+}
+.tree-of-life__hotline-icon {
+  font-size: 16px;
+}
+@keyframes treeOfLifeHotlinePulse {
+  0%, 100% {
+  --lc-shadow-2: rgba(211, 47, 91, 0.5);
+  box-shadow: 0 8px 24px var(--lc-shadow-2);
+}
+  50% {
+  --lc-shadow-1: rgba(211, 47, 91, 0.85);
+  box-shadow: 0 8px 32px var(--lc-shadow-1);
+}
+}
+
+@media (max-width: 480px) {
+  /* [ใหม่] ไอคอนเป็น SVG แล้ว ต้องจัดกลางแนวตั้งให้ตรงกับข้อความ */
+.tree-of-life__hotline-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* [ใหม่] ไอเทมตกแต่งที่เป็นภาพจริง — ถ้ายังไม่มีไฟล์จะ fallback เป็น emoji เอง */
+.tree-of-life__decoration-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+.tree-of-life__decoration-emoji {
+  font-size: inherit;
+  line-height: 1;
+}
+
+.tree-of-life__hotline-badge {
+    font-size: 10.5px;
+    padding: 8px 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* [ใหม่] ไอคอนเป็น SVG แล้ว ต้องจัดกลางแนวตั้งให้ตรงกับข้อความ */
+.tree-of-life__hotline-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* [ใหม่] ไอเทมตกแต่งที่เป็นภาพจริง — ถ้ายังไม่มีไฟล์จะ fallback เป็น emoji เอง */
+.tree-of-life__decoration-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+.tree-of-life__decoration-emoji {
+  font-size: inherit;
+  line-height: 1;
+}
+
+.tree-of-life__hotline-badge {
+    animation: none;
+  }
+}

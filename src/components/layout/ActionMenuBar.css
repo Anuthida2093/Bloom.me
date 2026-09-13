@@ -1,0 +1,150 @@
+:root {
+  --lc-c-4: rgba(39, 130, 69, .2);
+  --nav-cutout-color: var(--lc-c-4);
+  --nav-bg: var(--g700);
+  --nav-indicator: var(--fixed-white);
+  --nav-height: 70px;
+  --btn-width: 80px;
+}
+
+.action-menu-container {
+  position: fixed;
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;   /* [แก้] ไม่ centered แล้ว — ให้ quest-floating-menu อิงตำแหน่งปุ่มแรก (เควส) */
+  z-index: 1000;
+}
+
+.quest-floating-menu {
+  position: absolute;
+  bottom: calc(var(--nav-height) + 15px);
+  left: 0;                   /* [แก้] ตรงกับปุ่ม "เควส" ซึ่งเป็นปุ่มซ้ายสุดของแถบพอดี */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--r-md);
+  background: var(--ae-surface);
+  backdrop-filter: var(--ae-blur);
+  -webkit-backdrop-filter: var(--ae-blur);
+  border: 1px solid var(--ae-surface-edge);
+  box-shadow: var(--sh-modal);
+  animation: popUp .2s ease-out;
+}
+.quest-floating-menu button {
+  background: var(--glass-w-8);
+  border: none;
+  color: var(--fixed-white);
+  padding: 10px 18px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  transition: background .18s ease, transform .18s ease;
+}
+.quest-floating-menu button:hover {
+  background: var(--ae-glow);
+  --lc-text-3: #0B241B;
+  color: var(--lc-text-3);
+  transform: translateX(4px);
+}
+
+.liquid-nav-bar {
+  position: relative;
+  width: calc(var(--btn-width) * 4);
+  height: var(--nav-height);
+  background: var(--nav-bg);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.liquid-nav-bar ul { display: flex; width: 100%; list-style: none; }
+.liquid-nav-bar ul li { position: relative; width: var(--btn-width); height: var(--nav-height); z-index: 1; }
+.liquid-nav-bar ul li a {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 100%; height: 100%; cursor: pointer;
+}
+.liquid-nav-bar ul li a .nav-icon {
+  font-size: 26px;
+  color: var(--fixed-white);
+  filter: grayscale(1) brightness(1.5);
+  transition: .5s var(--ease-spring);
+}
+.liquid-nav-bar ul li a .nav-text {
+  position: absolute;
+  color: var(--fixed-white);
+  font-weight: 700;
+  font-size: 12px;
+  font-family: var(--font-body);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: .5s var(--ease-spring);
+}
+.liquid-nav-bar ul li.active a .nav-icon { transform: translateY(-34px); filter: none; }
+.liquid-nav-bar ul li.active a .nav-text { opacity: 1; transform: translateY(14px); }
+
+.nav-badge {
+  position: absolute;
+  top: -2px;
+  right: 12px;
+  background: linear-gradient(135deg, var(--exp), var(--coin));
+  --lc-text-1: #4A2C0A;
+  color: var(--lc-text-1);
+  font-size: 10px;
+  font-family: var(--font-body);
+  font-weight: 800;
+  border-radius: var(--r-pill);
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  --lc-shadow-2: rgba(255, 214, 10, .7);
+  box-shadow: 0 0 8px var(--lc-shadow-2);
+}
+
+.nav-indicator {
+  position: absolute;
+  top: calc(var(--nav-height) * -0.5);
+  left: calc((var(--btn-width) - var(--nav-height)) / 2);
+  width: var(--nav-height);
+  height: var(--nav-height);
+  background: var(--nav-indicator);
+  border-radius: 50%;
+  border: 6px solid var(--nav-cutout-color);
+  box-sizing: border-box;
+  transform: translateX(calc(var(--btn-width) * var(--active-index)));
+  transition: .5s var(--ease-spring);
+}
+.nav-indicator::before, .nav-indicator::after {
+  content: ''; position: absolute; top: 50%; width: 20px; height: 20px; background: transparent;
+}
+.nav-indicator::before { left: -22px; border-top-right-radius: 20px; box-shadow: 1px -10px 0 0 var(--nav-cutout-color); }
+.nav-indicator::after { right: -22px; border-top-left-radius: 20px; box-shadow: -1px -10px 0 0 var(--nav-cutout-color); }
+
+@keyframes popUp { from { opacity: 0; transform: translateY(15px) scale(.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+@media (max-width: 768px) {
+  :root { --nav-height: 54px; --btn-width: 68px; }
+  .action-menu-container { bottom: 15px; }
+  .liquid-nav-bar ul li a .nav-icon { font-size: 22px; }
+  .liquid-nav-bar ul li a .nav-text { font-size: 11px; }
+  .liquid-nav-bar ul li.active a .nav-icon { transform: translateY(-26px); }
+  .liquid-nav-bar ul li.active a .nav-text { transform: translateY(11px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquid-nav-bar ul li a .nav-icon,
+  .liquid-nav-bar ul li a .nav-text,
+  .nav-indicator { transition: none; }
+}

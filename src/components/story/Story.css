@@ -1,0 +1,336 @@
+/*============================================================================*\
+  Story.css — สไตล์ของฟีเจอร์ "สตอรี่" (เดิมชื่อ "โพสต์")
+  ────────────────────────────────────────────────────────────────────────────
+  ใช้โทเคนสี/ระยะ/เงาเดิมของแอปทั้งหมด (var(--g600), var(--bg-card), var(--r-lg) ฯลฯ)
+  ไม่มีการเพิ่มสีใหม่ ยึด pattern เดียวกับ ProfilePage.tsx (full-screen overlay,
+  position:fixed inset:0 zIndex:500 ของตัวเองซ้ำอีกชั้นในนี้)
+
+  [แก้รอบนี้ — ข้อ 1] ตัวอักษร/ปุ่มทั้งหน้าเล็กเกินไป — ไล่เปลี่ยนทุก font-size ที่เคยเป็นค่า
+  ตายตัว (11px/12.5px/13px ฯลฯ) ให้ใช้ token var(--fs-xs..lg) ของระบบแทน และปุ่มกดทุกปุ่ม
+  (ไลค์/คอมเมนต์/แชร์/follow/tab ฯลฯ) ขยาย min-height/min-width เป็นอย่างน้อย 44px ตาม
+  มาตรฐานเดิมของระบบ (ดู SettingsModal.css comment "มาตรฐานปุ่ม/แถวตั้งค่า: สูงอย่างน้อย
+  44px") — หัวข้อใหญ่ๆ ใช้ clamp() เพิ่มให้ขยับตามความกว้างจอจริงด้วย
+\*============================================================================*/
+
+/* [แก้บั๊กจากการทดสอบจริง] .top-navbar (z-index:999) กับ ActionMenuBar (z-index:1000) ลอย
+   ทับทุก modal เสมอโดยตั้งใจ (ดู index.css/NavBar.css) — เหมือนที่ ProfilePage.tsx เว้น
+   padding-top 95px กันเนื้อหาเข้าไปซ้อนใต้ NavBar ที่นี่ต้องเว้นระยะบนเท่ากับความสูงจริง
+   ของ .top-navbar (80px/56px มือถือ) ไม่งั้น story-header จะโดน NavBar บังมิดจนกดอะไรไม่ได้ */
+.story-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  padding-top: 80px;
+}
+@media (max-width: 768px) {
+  .story-overlay { padding-top: 56px; }
+  .story-sidebar { top: 56px; }
+}
+
+/* ─── Header ─── */
+.story-header {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
+.story-header__title {
+  font-family: var(--font-display); font-size: clamp(var(--fs-lg), 4vw, var(--fs-xl)); color: var(--g800);
+  margin-right: auto;
+}
+.story-header__search {
+  position: relative; flex: 1; max-width: 360px;
+}
+.story-header__search input {
+  width: 100%; min-height: 44px; padding: 10px 40px 10px 16px; border-radius: var(--r-pill);
+  border: 1.5px solid var(--border-mid); background: var(--input-bg); color: var(--text);
+  font-size: var(--fs-sm);
+}
+.story-header__search input:focus { outline: none; border-color: var(--g500); }
+.story-header__search-icon {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); pointer-events: none; font-size: var(--fs-sm);
+}
+/* กระดิ่ง/แฮมเบอร์เกอร์เป็นปุ่มวงกลมทึบสีเข้ม ขนาดขั้นต่ำ 44x44 ตามมาตรฐานปุ่มกดของระบบ */
+.story-header__icon-btn {
+  width: 44px; height: 44px; border-radius: 50%; border: none;
+  background: var(--n900); color: var(--fixed-white); font-size: var(--fs-md);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.story-header__icon-btn:hover { opacity: .85; }
+/* [แก้ข้อ 4] ปุ่มปิดมาตรฐาน — ทรงเดียวกับปุ่มปิดของ ProfilePage.tsx (วงกลมพื้นการ์ด+เงา
+   สีอ่อน ไม่ใช่วงกลมทึบเข้มแบบกระดิ่ง/แฮมเบอร์เกอร์) แทนที่ปุ่ม Home ลอยกลางจอที่ตัดออกแล้ว —
+   อยู่ในแถวหัวข้อซึ่งอยู่ใต้ Navbar หลักพอดี (เทียบเท่า "ลอยมุมขวาบน ใต้ Navbar" ตามที่ระบุ
+   แต่วางในโครง flex ของ header แทนตำแหน่ง fixed ตรงๆ กัน z-index ชนกับ .top-navbar) */
+.story-header__close-btn {
+  width: 44px; height: 44px; border-radius: 50%; border: none;
+  background: var(--bg-card); color: var(--text); font-size: var(--fs-md);
+  box-shadow: var(--sh-card); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.story-header__close-btn:hover { background: var(--n50); }
+
+/* ─── Body layout ─── */
+.story-body { flex: 1; display: flex; overflow: hidden; position: relative; }
+.story-feed { flex: 1; overflow-y: auto; padding: 18px; }
+/* ฟีดทั้งฟีดอยู่ในกล่องขอบมนใบเดียว (ไม่ใช่การ์ดลอยแยกทีละโพสต์) — แต่ละโพสต์คั่นด้วยเส้น
+   บางๆ ข้างในกล่องเดียวกัน ดู .story-post-card ด้านล่าง */
+.story-feed__list {
+  background: var(--bg-card); border: 1.5px solid var(--border-mid); border-radius: var(--r-xl);
+  overflow: hidden;
+}
+.story-sidebar {
+  width: 300px; flex-shrink: 0; overflow-y: auto;
+  padding: 18px; border-left: 1px solid var(--border); background: var(--bg-sidebar);
+}
+.story-sidebar__scrim { display: none; }
+
+@media (max-width: 900px) {
+  .story-sidebar {
+    position: fixed; top: 80px; right: 0; bottom: 0; width: 280px; z-index: 60;
+    transform: translateX(100%); transition: transform var(--dur-mid) var(--ease-out-soft);
+    box-shadow: var(--sh-modal);
+  }
+  .story-sidebar--open { transform: translateX(0); }
+  .story-sidebar__scrim {
+    display: block; position: fixed; inset: 0; z-index: 55;
+    background: var(--bg-modal);
+  }
+  .story-sidebar__close-mobile {
+    display: flex; margin-bottom: 10px;
+  }
+}
+.story-sidebar__close-mobile { display: none; }
+
+/* ─── Compose trigger bar (แถวบนสุดของกล่องฟีด) — ข้อ 7: หน้าตาต้องต่างจาก post card ชัดเจน
+   และ "คล้ายช่อง input" (กดไม่ได้พิมพ์ตรงนี้ กดทั้งแถวเพื่อเปิด modal สร้างโพสต์แทน) ─── */
+.story-compose-trigger {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; background: var(--bg-card); border: none; border-bottom: 1px solid var(--border);
+  text-align: left; width: 100%; min-height: 44px;
+}
+.story-compose-trigger__fake-input {
+  flex: 1; min-height: 44px; display: flex; align-items: center;
+  padding: 0 16px; border-radius: var(--r-pill);
+  background: var(--n50); border: 1.5px solid var(--border-mid);
+  color: var(--text-muted); font-size: var(--fs-sm);
+}
+
+/* ─── Avatar ─── วงกลมเรียบสีเทา-ฟ้าอ่อน ไม่ใช้สีเขียวแบรนด์ตรงๆ (ในภาพร่างเป็นวงกลมเปล่า
+   สีเดียวหมดทุกคน) ยังคงตัวอักษรย่อไว้เพื่อแยกผู้ใช้ในการใช้งานจริง */
+.story-avatar {
+  position: relative; flex-shrink: 0;
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--n200); color: var(--text-sub); overflow: hidden;
+  font-family: var(--font-display); font-size: var(--fs-md); font-weight: 700;
+}
+.story-avatar--sm { width: 38px; height: 38px; font-size: var(--fs-sm); }
+.story-avatar--lg { width: 72px; height: 72px; font-size: var(--fs-2xl); }
+.story-avatar--anon { background: var(--n300); color: var(--fixed-white); }
+/* วงกลม "+" เป็นทรงเส้นขอบสีเข้มบนพื้นขาว ไม่ใช่วงกลมทึบเขียว — ปุ่มจริงเลยขยายเป็น 24px
+   (ยังเล็กกว่า 44 เพราะเป็น badge ซ้อนมุม avatar ไม่ใช่ปุ่มกดหลักของหน้าจอ) */
+.story-avatar__follow-btn {
+  position: absolute; bottom: -3px; left: -3px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--bg-card); color: var(--n900); border: 1.5px solid var(--n900);
+  display: flex; align-items: center; justify-content: center; font-size: var(--fs-sm); font-weight: 900;
+  line-height: 1; padding: 0;
+}
+.story-avatar__follow-btn:hover { background: var(--n50); }
+.story-activity-row__avatar-wrap { position: relative; flex-shrink: 0; }
+/* ป้ายไอคอนประเภทกิจกรรมทับมุมล่างซ้าย avatar — ทรงเดียวกับ .story-avatar__follow-btn */
+.story-activity-row__badge {
+  position: absolute; bottom: -3px; left: -3px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--bg-card); border: 1.5px solid var(--n900);
+  display: flex; align-items: center; justify-content: center; font-size: 11px; line-height: 1;
+}
+
+/* ─── Post card — แถวธรรมดาไม่มีเงา/ขอบ/มุมมนของตัวเอง คั่นด้วยเส้นบางๆ ด้านล่างแทน
+   (โพสต์สุดท้ายในกล่องไม่มีเส้นคั่น ดู :last-child) ─── */
+.story-post-card {
+  background: transparent; border: none; border-bottom: 1px solid var(--border);
+  border-radius: 0; padding: 16px; box-shadow: none; margin-bottom: 0;
+}
+.story-post-card:last-child { border-bottom: none; }
+.story-post-card__head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.story-post-card__name { font-weight: 700; font-size: var(--fs-md); color: var(--text); }
+.story-post-card__time { font-size: var(--fs-xs); color: var(--text-muted); }
+.story-post-card__content { font-size: var(--fs-sm); color: var(--text); white-space: pre-wrap; margin-bottom: 10px; line-height: var(--lh-body); }
+/* [แก้ข้อ 8] ห้ามครอบ/ตัด aspect ratio ของรูปเด็ดขาด — width:100%; height:auto ให้รูปแสดง
+   เต็มตามสัดส่วนไฟล์จริงเสมอ (แนวตั้ง 9:16 / แนวนอน 16:9 / สัดส่วนอื่นก็ไม่โดนตัด) จำกัดแค่
+   max-height ของ container กันรูปสูงเกินจอเท่านั้น ไม่มี object-fit:cover อีกต่อไป */
+.story-post-card__image {
+  width: 100%; height: auto; max-height: 70vh; border-radius: var(--r-md); margin-bottom: 10px; display: block;
+}
+.story-post-card__image-placeholder {
+  width: 100%; height: 220px; border-radius: var(--r-md); margin-bottom: 10px;
+  background: linear-gradient(160deg, var(--g100), var(--g300));
+  display: flex; align-items: center; justify-content: center; font-size: 34px;
+}
+/* [แก้ข้อ 6] เมนู ⋯ ของเจ้าของโพสต์ — เปิด/ปิดแก้ไขโพสต์ */
+.story-post-card__menu-btn {
+  width: 44px; height: 44px; border-radius: 50%; border: none; background: transparent;
+  color: var(--text-muted); font-size: var(--fs-lg); flex-shrink: 0;
+}
+.story-post-card__menu-btn:hover { background: var(--n50); }
+.story-post-card__menu-scrim { position: fixed; inset: 0; z-index: 90; background: transparent; }
+.story-post-card__menu {
+  position: absolute; top: 44px; right: 0; z-index: 91; min-width: 160px;
+  background: var(--bg-card); border-radius: var(--r-md); box-shadow: var(--sh-modal); overflow: hidden;
+}
+.story-post-card__menu button {
+  display: block; width: 100%; min-height: 44px; padding: 10px 16px; border: none; background: none;
+  text-align: left; font-size: var(--fs-sm); color: var(--text);
+}
+.story-post-card__menu button:hover { background: var(--n50); }
+
+/* [แก้ข้อ 1/12] ไอคอนกระทำ 3 ตัวหลัก (ไลค์/คอมเมนต์/แชร์) — ขยายพื้นที่กดเป็นอย่างน้อย
+   44x44 ต่อปุ่ม เว้นระยะห่างกันชัดเจนกันกดโดนผิด ตัดปุ่มรีโพสต์ออกตามที่ตกลง */
+.story-post-card__actions { display: flex; align-items: center; gap: 8px; }
+.story-action-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px; background: none; border: none;
+  min-width: 44px; min-height: 44px; padding: 8px 14px; border-radius: var(--r-pill);
+  color: var(--text-sub); font-size: var(--fs-md); font-weight: 600;
+}
+.story-action-btn:hover { background: var(--n50); }
+.story-action-btn--active.story-action-btn--like { color: var(--red); }
+/* [ข้อ 10] ตัวเลขไลค์แยกจากไอคอนหัวใจ กดแยกกันได้คนละหน้าที่ */
+.story-action-btn--count { min-width: 32px; padding: 8px 6px; font-weight: 700; }
+.story-action-btn--count:disabled { opacity: .5; cursor: default; }
+.story-action-btn--count:disabled:hover { background: none; }
+
+/* ─── Popup รายชื่อ (คอมเมนต์/คนกดไลค์/เพื่อนให้เลือกแชร์) ─── */
+.story-comments-list { max-height: 320px; overflow-y: auto; margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+.story-comment-popup-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 8px 6px;
+  background: none; border: none; border-radius: var(--r-md); text-align: left;
+}
+.story-comment-popup-row:hover { background: var(--n50); }
+.story-comment-popup-row__name { font-weight: 700; font-size: var(--fs-sm); color: var(--text); }
+.story-comment-popup-row__content { font-size: var(--fs-sm); color: var(--text-sub); }
+
+.story-comment-form { display: flex; gap: 8px; }
+.story-comment-form input {
+  flex: 1; min-height: 44px; padding: 10px 16px; border-radius: var(--r-pill); border: 1.5px solid var(--border-mid);
+  background: var(--input-bg); color: var(--text); font-size: var(--fs-sm);
+}
+.story-comment-form button {
+  min-height: 44px; padding: 10px 20px; border-radius: var(--r-pill); border: none; background: var(--g600);
+  color: var(--fixed-white); font-weight: 700; font-size: var(--fs-sm);
+}
+.story-comment-form button:disabled { opacity: .5; }
+
+/* ─── Sidebar profile card + grid — แบนราบ ไม่มีเงา/เส้นขอบ สีพื้นเทาอ่อนเรียบ ─── */
+.story-sidebar__profile-card {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: var(--r-pill);
+  background: var(--n100); border: none; margin-bottom: 18px; width: 100%; text-align: left; min-height: 44px;
+}
+.story-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* ไอคอน+ข้อความเรียงแนวนอนในบรรทัดเดียว (ไม่ใช่ไอคอนอยู่บนข้อความ) */
+.story-grid-btn {
+  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px;
+  padding: 20px 10px; border-radius: var(--r-lg); border: none; background: var(--n100); color: var(--text);
+  font-size: var(--fs-sm); font-weight: 700; min-height: 58px;
+}
+.story-grid-btn:hover { background: var(--n200); }
+.story-grid-btn__icon { font-size: var(--fs-lg); line-height: 1; }
+
+/* ─── Search ─── */
+.story-search__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.story-search__head-label { font-weight: 800; font-size: var(--fs-sm); color: var(--text-sub); }
+.story-search__edit-link { min-height: 44px; padding: 0 6px; background: none; border: none; color: var(--g600); font-weight: 700; font-size: var(--fs-sm); }
+.story-search-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: var(--r-md); margin-bottom: 6px;
+  background: var(--n50); min-height: 44px;
+}
+.story-search-row__name { flex: 1; font-size: var(--fs-sm); font-weight: 600; }
+.story-search-row__remove { min-width: 44px; min-height: 44px; background: none; border: none; color: var(--text-muted); font-size: var(--fs-md); }
+.story-search-empty { text-align: center; color: var(--text-muted); font-size: var(--fs-sm); padding: 24px 0; }
+
+/* ─── Floating "+" compose — [แก้ข้อ 4] ตัดปุ่ม Home ลอยกลางจอออกทั้งหมดแล้ว (ปิดผ่านปุ่ม ✕
+   มาตรฐานใน header แทน กลับหน้าแรกใช้ปุ่มหน้าแรกของ ActionMenuBar หลักที่ลอยทับอยู่แล้ว)
+   เหลือแค่ปุ่ม + เป็นวงกลมขาวขอบเข้ม (ไม่ใช่วงกลมทึบเขียว) ─── */
+.story-compose-fab {
+  position: absolute; right: 22px; bottom: 22px;
+  width: 56px; height: 56px; border-radius: 50%; border: 1.5px solid var(--n900);
+  background: var(--bg-card); color: var(--n900); font-size: var(--fs-2xl); font-weight: 700;
+  box-shadow: var(--sh-btn); z-index: 40; display: flex; align-items: center; justify-content: center;
+}
+.story-compose-fab:hover { background: var(--n50); }
+
+/* ─── Generic sub-page (list pages / friends / content settings / profile / activity) ─── */
+.story-subpage { flex: 1; overflow-y: auto; padding: 18px; }
+.story-subpage__head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.story-subpage__back { min-width: 44px; min-height: 44px; background: none; border: none; font-size: var(--fs-lg); color: var(--text-sub); }
+.story-subpage__title { font-family: var(--font-display); font-size: clamp(var(--fs-md), 4vw, var(--fs-lg)); color: var(--g800); }
+.story-empty-state { text-align: center; color: var(--text-muted); font-size: var(--fs-sm); padding: 40px 0; }
+
+.story-friend-row, .story-list-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-md);
+  background: var(--n50); border: none; margin-bottom: 8px; min-height: 44px;
+}
+.story-friend-row__clickable {
+  display: flex; align-items: center; gap: 12px; flex: 1; min-height: 44px;
+  background: none; border: none; text-align: left;
+}
+.story-friend-row__name { flex: 1; font-weight: 700; font-size: var(--fs-sm); }
+.story-follow-btn {
+  min-height: 44px; padding: 10px 18px; border-radius: var(--r-pill); border: 1.5px solid var(--g600);
+  background: transparent; color: var(--g700); font-weight: 700; font-size: var(--fs-sm);
+}
+.story-follow-btn--following { background: var(--g100); }
+
+/* ─── Activity list (หน้าเต็มจอตอนนี้ ไม่ใช่ popup — ใช้ .story-subpage เป็นโครงหลัก) ─── */
+.story-activity-group-label { font-size: var(--fs-xs); font-weight: 800; color: var(--text-sub); margin: 14px 0 8px; }
+.story-activity-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); min-height: 44px; }
+.story-activity-row--clickable { cursor: pointer; }
+.story-activity-row--clickable:hover { background: var(--n50); }
+.story-activity-row__body { flex: 1; min-width: 0; }
+.story-activity-row__name { font-weight: 700; font-size: var(--fs-sm); }
+.story-activity-row__time { font-size: var(--fs-xs); color: var(--text-muted); margin-left: 6px; }
+.story-activity-row__excerpt { font-size: var(--fs-xs); color: var(--text-sub); }
+
+/* ─── Modal (compose/edit post/share/likers/comments) ─── */
+.story-modal-backdrop {
+  position: fixed; inset: 0; z-index: 80; background: var(--bg-modal);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.story-modal-card {
+  width: 100%; max-width: 460px; max-height: 88vh; overflow-y: auto;
+  background: var(--bg-card); border-radius: var(--r-xl); box-shadow: var(--sh-modal); padding: 22px;
+}
+.story-modal-card--tall { max-width: 480px; }
+.story-modal-card__title { font-family: var(--font-display); font-size: var(--fs-lg); color: var(--g800); margin-bottom: 14px; }
+.story-modal-card textarea {
+  width: 100%; min-height: 110px; padding: 12px; border-radius: var(--r-md); border: 1.5px solid var(--border-mid);
+  background: var(--input-bg); color: var(--text); font-family: var(--font-body); font-size: var(--fs-sm); resize: vertical;
+}
+.story-modal-card__row { display: flex; align-items: center; justify-content: space-between; margin: 12px 0; min-height: 44px; }
+.story-modal-card__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.story-modal-card__actions button { min-height: 44px; padding: 10px 22px; border-radius: var(--r-pill); border: none; font-weight: 700; font-size: var(--fs-sm); }
+.story-btn-ghost { background: var(--n50); color: var(--text-sub); }
+/* ปุ่ม "แก้ไขโปรไฟล์"/"แชร์โปรไฟล์"/"ดูต้นไม้" เป็นทรงขอบเข้ม พื้นโปร่ง ไม่ใช่พื้นเทาทึบ */
+.story-btn-outline { min-height: 44px; background: transparent; color: var(--text); border: 1.5px solid var(--n300) !important; }
+.story-btn-outline:hover { background: var(--n50); }
+.story-btn-primary { background: var(--g600); color: var(--fixed-white); }
+.story-btn-primary:disabled { opacity: .5; }
+.story-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); min-height: 44px; }
+.story-image-preview { position: relative; margin-top: 10px; }
+.story-image-preview img { width: 100%; max-height: 240px; height: auto; border-radius: var(--r-md); }
+.story-image-preview button {
+  position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--glass-b-60); color: var(--fixed-white); border: none; font-size: var(--fs-sm);
+}
+.story-filter-select {
+  min-height: 44px; padding: 8px 16px; border-radius: var(--r-pill); border: 1.5px solid var(--g500); background: var(--g50);
+  color: var(--g700); font-weight: 700; font-size: var(--fs-xs);
+}
+
+@media (max-width: 640px) {
+  .story-header__title { display: none; }
+  .story-header__search { max-width: none; }
+  .story-post-card__image-placeholder { height: 160px; }
+}

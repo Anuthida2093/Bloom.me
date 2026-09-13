@@ -1,0 +1,268 @@
+/* ═══════════════════════════════════════════════════════════════
+   GameShell.css — ห้องเล่นเควสเต็มกรอบเขียว
+   [กติกาสำคัญ] absolute + inset:0 → ครอบเฉพาะ .gameplay-frame
+   (ซึ่งเป็น position:relative) ไม่ทะลุออกนอกกรอบเขียวเด็ดขาด
+   ═══════════════════════════════════════════════════════════════ */
+
+.game-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  --lc-bg-11: #123528;
+  --lc-bg-12: #0C2A20;
+  --lc-bg-13: #071A14;
+  background: linear-gradient(165deg, var(--lc-bg-11) 0%, var(--lc-bg-12) 55%, var(--lc-bg-13) 100%);
+  --lc-text-14: #EAF4EE;
+  color: var(--lc-text-14);
+  font-family: 'Nunito', 'Mali', sans-serif;
+  --game-accent: var(--g600);
+  --lc-c-15: #D8F3DC;
+  --game-accent-bg: var(--lc-c-15);
+}
+
+.game-shell__scenery {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 45% at 22% 12%, color-mix(in srgb, var(--game-accent) 40%, transparent), transparent 70%),
+    radial-gradient(55% 45% at 82% 88%, color-mix(in srgb, var(--game-accent) 28%, transparent), transparent 72%);
+  opacity: 0.55;
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+/* ── หัวเรื่อง ── */
+.game-shell__header {
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px 58px; /* เว้นซ้าย 58px ให้ปุ่มเต็มจอของ GameplayFrame */
+  border-bottom: 1px solid var(--glass-w-10);
+}
+.game-shell__heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.game-shell__icon {
+  font-size: 30px;
+  filter: drop-shadow(0 4px 10px var(--glass-b-35));
+  flex-shrink: 0;
+}
+.game-shell__title {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 18px;
+  color: var(--fixed-white);
+  line-height: 1.25;
+}
+.game-shell__subtitle {
+  font-size: 11px;
+  --lc-text-10: rgba(234, 244, 238, 0.55);
+  color: var(--lc-text-10);
+}
+.game-shell__close {
+  /* [แก้] มาตรฐานปุ่มปิดทั้งระบบ: วงกลม อย่างน้อย 44x44px (ในนี้วางในแถบหัวด้วย flex
+     แทน position:absolute เพราะไฟล์นี้ใช้ header bar อยู่แล้ว ยังอยู่มุมขวาบนของกรอบเควส
+     เหมือนเดิม แค่ implementation คนละแบบ ไม่ได้ตั้งใจให้ต่างจากหน้าอื่น) */
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 99px;
+  border: none;
+  background: var(--glass-w-14);
+  color: var(--fixed-white);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+.game-shell__close:hover { background: var(--glass-w-28); transform: scale(1.08); }
+.game-shell__close:focus-visible { outline: 2px solid var(--game-accent); outline-offset: 2px; }
+
+/* ── เนื้อหา ── */
+.game-shell__body {
+  position: relative;
+  z-index: 5;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 18px 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.game-shell__brief {
+  width: 100%;
+  max-width: 620px;
+  border-radius: 16px;
+  border: 1px dashed var(--glass-w-22);
+  background: var(--glass-w-5);
+  padding: 12px 16px;
+}
+.game-shell__howto {
+  font-size: 12.5px;
+  line-height: 1.8;
+  --lc-text-9: rgba(234, 244, 238, 0.85);
+  color: var(--lc-text-9);
+}
+.game-shell__theory {
+  margin-top: 6px;
+  font-size: 10.5px;
+  --lc-text-8: rgba(234, 244, 238, 0.45);
+  color: var(--lc-text-8);
+  line-height: 1.6;
+}
+
+.game-shell__stage { width: 100%; max-width: 620px; flex: 1; }
+
+/* ── ฉากรับรางวัล ── */
+.game-shell__reward {
+  position: relative;
+  z-index: 5;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 30px 22px;
+}
+.game-shell__reward-drops { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.game-shell__reward-drops span {
+  position: absolute;
+  top: -30px;
+  font-size: 17px;
+  animation: gameShellDrop 1.6s ease-in both;
+}
+@keyframes gameShellDrop {
+  0%   { transform: translateY(0) rotate(0); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translateY(70vh) rotate(220deg); opacity: 0; }
+}
+.game-shell__reward-icon { font-size: 54px; }
+.game-shell__reward-title {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 24px;
+  color: var(--fixed-white);
+  margin: 6px 0 4px;
+}
+.game-shell__reward-text {
+  font-size: 13px;
+  --lc-text-7: rgba(234, 244, 238, 0.72);
+  color: var(--lc-text-7);
+  margin-bottom: 22px;
+  max-width: 340px;
+  line-height: 1.7;
+}
+.game-shell__reward-cards { display: flex; gap: 12px; margin-bottom: 24px; }
+.game-shell__reward-cards div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 110px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: var(--glass-w-10);
+  border: 1px solid var(--glass-w-16);
+  font-size: 10.5px;
+  --lc-text-6: rgba(234, 244, 238, 0.6);
+  color: var(--lc-text-6);
+  animation: gameShellCardPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.game-shell__reward-cards div:nth-child(2) { animation-delay: 0.12s; }
+.game-shell__reward-cards span { font-size: 24px; }
+.game-shell__reward-cards strong {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-weight: 400;
+  font-size: 20px;
+  color: var(--fixed-white);
+}
+@keyframes gameShellCardPop {
+  from { opacity: 0; transform: translateY(12px) scale(0.8); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.game-shell__claim {
+  min-width: 220px;
+  padding: 15px 28px;
+  border: none;
+  border-radius: 99px;
+  background: linear-gradient(135deg, var(--fixed-white), var(--game-accent-bg));
+  --lc-text-5: #0B241B;
+  color: var(--lc-text-5);
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 12px 30px var(--glass-b-35);
+  transition: transform 0.15s ease;
+}
+.game-shell__claim:hover { transform: translateY(-2px); }
+
+/* ── ยืนยันออกกลางคัน ── */
+.game-shell__confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  --lc-bg-4: rgba(5, 18, 13, 0.76);
+  background: var(--lc-bg-4);
+  backdrop-filter: blur(8px);
+}
+.game-shell__confirm-card {
+  width: 100%;
+  max-width: 330px;
+  border-radius: 22px;
+  --lc-bg-3: #12332A;
+  background: var(--lc-bg-3);
+  border: 1px solid var(--glass-w-16);
+  padding: 26px 22px;
+  text-align: center;
+}
+.game-shell__confirm-icon { font-size: 32px; margin-bottom: 8px; }
+.game-shell__confirm-card p {
+  font-size: 13px;
+  line-height: 1.75;
+  --lc-text-2: rgba(234, 244, 238, 0.82);
+  color: var(--lc-text-2);
+  margin-bottom: 18px;
+}
+.game-shell__confirm-actions { display: flex; gap: 8px; }
+.game-shell__confirm-actions button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-w-20);
+  background: var(--glass-w-7);
+  --lc-text-1: rgba(234, 244, 238, 0.82);
+  color: var(--lc-text-1);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.game-shell__confirm-actions .is-primary {
+  background: var(--game-accent);
+  border-color: var(--game-accent);
+  color: var(--fixed-white);
+}
+
+@media (max-width: 520px) {
+  .game-shell__header { padding: 14px 14px 10px 54px; }
+  .game-shell__body { padding: 14px 14px 22px; }
+  .game-shell__title { font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-shell__reward-drops span,
+  .game-shell__reward-cards div { animation: none; }
+}

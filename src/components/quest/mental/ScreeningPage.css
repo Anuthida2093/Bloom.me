@@ -1,0 +1,308 @@
+/* ═══════════════════════════════════════════════════════════════
+   ScreeningPage.css — แบบคัดกรองภาวะซึมเศร้า
+   โทนกลางคืนสงบ ไม่ใช้สีแดงเตือนภัย เพื่อไม่ให้ผู้ทำรู้สึกถูกตัดสิน
+   ═══════════════════════════════════════════════════════════════ */
+
+.screening {
+  position: absolute;
+  inset: 0;
+  z-index: 860;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 26px 18px;
+  --lc-bg-18: #23324D;
+  --lc-bg-19: #172238;
+  --lc-bg-20: #0B1220;
+  background: radial-gradient(110% 80% at 50% 0%, var(--lc-bg-18) 0%, var(--lc-bg-19) 50%, var(--lc-bg-20) 100%);
+  --lc-text-21: #E8EDF7;
+  color: var(--lc-text-21);
+  font-family: 'Nunito', 'Mali', sans-serif;
+  --lc-c-22: #9B8FD8;
+  --risk-accent: var(--lc-c-22);
+}
+
+.screening__glow {
+  position: absolute;
+  inset: -25%;
+  background: radial-gradient(40% 35% at 50% 30%, color-mix(in srgb, var(--risk-accent) 55%, transparent), transparent 70%);
+  opacity: 0.3;
+  filter: blur(50px);
+  transition: background 0.8s ease;
+  pointer-events: none;
+}
+
+.screening__close {
+  /* [แก้] มาตรฐานปุ่มปิดทั้งระบบ: วงกลม ลอยมุมขวาบน อย่างน้อย 44x44px */
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  border-radius: 99px;
+  border: none;
+  background: var(--glass-w-14);
+  color: var(--fixed-white);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screening__card {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  max-width: 470px;
+  border-radius: 26px;
+  --lc-bg-17: rgba(14, 24, 41, 0.82);
+  background: var(--lc-bg-17);
+  border: 1px solid var(--glass-w-13);
+  backdrop-filter: blur(16px);
+  padding: 30px 26px 24px;
+  text-align: center;
+  box-shadow: 0 26px 70px var(--glass-b-50);
+  animation: screeningIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes screeningIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.screening__icon { font-size: 42px; margin-bottom: 8px; }
+.screening__card h1 {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 23px;
+  color: var(--fixed-white);
+  margin-bottom: 8px;
+}
+.screening__reason {
+  font-size: 13.5px;
+  line-height: 1.85;
+  --lc-text-16: rgba(232, 237, 247, 0.82);
+  color: var(--lc-text-16);
+  margin-bottom: 16px;
+}
+
+.screening__notice {
+  border-radius: 16px;
+  background: var(--glass-w-6);
+  border: 1px solid var(--glass-w-12);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+.screening__notice p {
+  font-size: 12.5px;
+  line-height: 1.8;
+  --lc-text-15: rgba(232, 237, 247, 0.72);
+  color: var(--lc-text-15);
+}
+.screening__notice p + p { margin-top: 6px; }
+.screening__notice strong { color: var(--fixed-white); }
+
+/* ── คำถาม ── */
+.screening__progress {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--glass-w-12);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.screening__progress div {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--risk-accent);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.screening__step {
+  font-size: 11.5px;
+  --lc-text-14: rgba(232, 237, 247, 0.5);
+  color: var(--lc-text-14);
+  margin-bottom: 10px;
+}
+.screening__question {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--fixed-white);
+  margin-bottom: 6px;
+}
+.screening__hint {
+  font-size: 11.5px;
+  --lc-text-13: rgba(232, 237, 247, 0.45);
+  color: var(--lc-text-13);
+  margin-bottom: 20px;
+}
+
+.screening__choices { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.screening__choices button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px 16px;
+  border-radius: 15px;
+  border: 1.5px solid var(--glass-w-16);
+  background: var(--glass-w-5);
+  --lc-text-12: rgba(232, 237, 247, 0.85);
+  color: var(--lc-text-12);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.16s ease;
+}
+.screening__choices button:hover { background: var(--glass-w-12); border-color: var(--risk-accent); }
+.screening__choices button.is-active {
+  background: var(--risk-accent);
+  border-color: var(--risk-accent);
+  --lc-text-11: #101A2C;
+  color: var(--lc-text-11);
+}
+.screening__choice-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* ── ผลลัพธ์ ── */
+.screening__card--result { text-align: center; }
+.screening__score { margin-bottom: 6px; }
+.screening__score strong {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-weight: 400;
+  font-size: 42px;
+  color: var(--fixed-white);
+}
+.screening__score span {
+  font-size: 13px;
+  --lc-text-10: rgba(232, 237, 247, 0.5);
+  color: var(--lc-text-10);
+  margin-left: 4px;
+}
+
+.screening__risk-badge {
+  display: inline-block;
+  padding: 7px 16px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--risk-accent) 28%, transparent);
+  border: 1px solid var(--risk-accent);
+  color: var(--fixed-white);
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.screening__advice {
+  font-size: 14px;
+  line-height: 1.9;
+  --lc-text-9: rgba(232, 237, 247, 0.9);
+  color: var(--lc-text-9);
+  margin-bottom: 18px;
+}
+
+.screening__tree-status {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 16px;
+  background: var(--glass-w-6);
+  border: 1px solid var(--glass-w-12);
+  padding: 13px;
+  margin-bottom: 16px;
+}
+.screening__tree-status span {
+  font-size: 11px;
+  --lc-text-8: rgba(232, 237, 247, 0.5);
+  color: var(--lc-text-8);
+}
+.screening__tree-status strong { font-size: 14px; color: var(--fixed-white); font-weight: 800; }
+
+.screening__actions {
+  list-style: none;
+  text-align: left;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.screening__actions li {
+  position: relative;
+  padding-left: 22px;
+  font-size: 12.5px;
+  line-height: 1.75;
+  --lc-text-7: rgba(232, 237, 247, 0.78);
+  color: var(--lc-text-7);
+}
+.screening__actions li::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--risk-accent);
+}
+
+.screening__cta {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 99px;
+  --lc-bg-5: #DCE6FF;
+  background: linear-gradient(135deg, var(--fixed-white), var(--lc-bg-5));
+  --lc-text-6: #101A2C;
+  color: var(--lc-text-6);
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 15.5px;
+  cursor: pointer;
+  box-shadow: 0 12px 30px var(--glass-b-35);
+  transition: transform 0.15s ease;
+}
+.screening__cta:hover { transform: translateY(-2px); }
+.screening__cta--urgent {
+  --lc-bg-4: #FF8FA8;
+  background: linear-gradient(135deg, var(--lc-bg-4), var(--red));
+  color: var(--fixed-white);
+  margin-bottom: 8px;
+}
+
+.screening__skip {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px;
+  background: none;
+  border: none;
+  --lc-text-3: rgba(232, 237, 247, 0.5);
+  color: var(--lc-text-3);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.screening__skip:hover {
+  --lc-text-2: rgba(232, 237, 247, 0.85);
+  color: var(--lc-text-2);
+}
+
+.screening__disclaimer {
+  margin-top: 14px;
+  font-size: 10.5px;
+  line-height: 1.6;
+  --lc-text-1: rgba(232, 237, 247, 0.38);
+  color: var(--lc-text-1);
+}
+
+@media (max-width: 520px) {
+  .screening__card { padding: 24px 18px 20px; border-radius: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .screening__card { animation: none; }
+}

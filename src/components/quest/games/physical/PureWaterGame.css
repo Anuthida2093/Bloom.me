@@ -1,0 +1,10 @@
+/* PureWaterGame — [เปลี่ยนรอบนี้] เลิกใช้กราฟิกแก้วน้ำแบบกดค้าง เปลี่ยนเป็นถ่ายรูปยืนยัน
+   2 จังหวะแทน (ดู PureWaterGame.tsx) — เหลือแค่ thumbnail โชว์รูปแก้วเต็มระหว่างรอถ่ายรูปที่ 2 */
+.pure-water__thumb {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 2px solid var(--glass-w-22);
+  margin: 0 auto;
+}

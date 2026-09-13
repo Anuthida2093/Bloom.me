@@ -1,0 +1,78 @@
+.top-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  background: linear-gradient(180deg, var(--g800), var(--g700));
+  --lc-border-2: rgba(244, 196, 48, .35);
+  border-bottom: 1.5px solid var(--lc-border-2);
+  box-shadow: 0 2px 10px var(--glass-b-15);
+  z-index: 999;
+}
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--fixed-white);
+}
+
+/* [ใหม่] ครอบปุ่มตั้งค่า + ปุ่มออกจากระบบ ให้อยู่มุมขวาด้วยกัน */
+.navbar-right-cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* [ใหม่] ปุ่มตั้งค่า — ย้ายมาจาก ActionMenuBar เดิม สไตล์วงกลมเดียวกับ profile-btn
+   แต่โทนกระจกใส แยกจากปุ่มออกจากระบบให้ชัดเจนว่าเป็นคนละการกระทำ */
+.navbar-settings-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid var(--glass-w-30);
+  box-shadow: 0 4px 10px var(--glass-b-20);
+  cursor: pointer;
+  background: var(--glass-w-10);
+  color: var(--fixed-white);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--dur-fast) var(--ease-out-soft), background var(--dur-fast) ease;
+}
+.navbar-settings-btn:hover { transform: scale(1.08) rotate(20deg); background: var(--glass-w-18); }
+.navbar-settings-btn:active { transform: scale(.96); }
+
+.profile-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  --lc-border-1: rgba(244, 196, 48, .6);
+  border: 2px solid var(--lc-border-1);
+  box-shadow: 0 4px 10px var(--glass-b-20);
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--g500), var(--g700));
+  color: var(--fixed-white);
+  font-family: var(--font-display);
+  font-size: 18px;
+  transition: transform var(--dur-fast) var(--ease-out-soft);
+}
+.profile-btn:hover { transform: scale(1.08); }
+.profile-btn:active { transform: scale(.96); }
+.profile-btn--login { font-size: 20px; }
+
+@media (max-width: 768px) {
+  .top-navbar { height: 56px; padding: 0 16px; }
+  .navbar-logo { font-size: 18px; }
+  .navbar-right-cluster { gap: 8px; }
+  .profile-btn, .navbar-settings-btn { width: 44px; height: 44px; font-size: 16px; }
+}

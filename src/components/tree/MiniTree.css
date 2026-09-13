@@ -1,0 +1,34 @@
+.mini-tree-wrap {
+  display: inline-block;
+  line-height: 0;
+}
+
+/* "หายใจ" เบาๆ ทั้งต้น — scale ขึ้นลงช้าๆ ผูกกับขอบล่างเป็นจุดหมุน (ต้นไม้ไม่ลอยขึ้นจากพื้น) */
+.mini-tree-wrap--breathing {
+  transform-origin: center bottom;
+  animation: miniTreeBreathe 3.6s ease-in-out infinite;
+}
+
+@keyframes miniTreeBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+
+/* ใบไม้ไหวเบาๆ (แค่ทรงพุ่ม ลำต้นไม่ขยับ) — คนละจังหวะเวลากับ breathing ข้างบน
+   (คาบเวลา/easing ต่างกัน) เพื่อให้ดูเป็นธรรมชาติ ไม่ใช่ล็อกจังหวะเดียวกันทื่อๆ */
+.mini-tree__crown--swaying {
+  animation: miniTreeSway 2.8s ease-in-out infinite;
+}
+
+@keyframes miniTreeSway {
+  0%, 100% { transform: rotate(-1.4deg); }
+  50% { transform: rotate(1.4deg); }
+}
+
+/* เคารพ prefers-reduced-motion — ปิดแอนิเมชันให้คนที่ตั้งค่านี้ไว้ในระบบ */
+@media (prefers-reduced-motion: reduce) {
+  .mini-tree-wrap--breathing,
+  .mini-tree__crown--swaying {
+    animation: none;
+  }
+}

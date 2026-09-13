@@ -1,0 +1,149 @@
+/*============================================================================*\
+  ReframerJournalPage.css — [ไฟล์ใหม่]
+  ────────────────────────────────────────────────────────────────────────────
+  ย้ายมาจาก <style>{...} ที่เคยฝังอยู่ใน ReframerJournalPage.tsx (โครงเดียวกับ
+  GratitudeShieldPage.css ที่แยกไฟล์อยู่แล้ว) — หน้าตาเหมือนเดิมทุกอย่าง
+  เพิ่มเข้ามาคือ :hover / :active และหน้าสรุปเมื่อทำเควสของวันนี้ครบแล้ว
+\*============================================================================*/
+
+/* เลเยอร์ครอบหน้าจอ — absolute inset:0 อยู่ในกรอบเขียวเท่านั้น ไม่ทะลุออกนอกกรอบ */
+.reframer-journal-page {
+  position: absolute;
+  inset: 0;
+  z-index: 800;
+  overflow: hidden;
+}
+
+/* ปุ่มปิดหน้าจอหลัก (มุมขวาบน) */
+.reframer-journal-page__close {
+  /* [แก้] มาตรฐานปุ่มปิดทั้งระบบ: วงกลม ลอยมุมขวาบน อย่างน้อย 44x44px */
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 30;
+  width: 44px;
+  height: 44px;
+  border-radius: 99px;
+  border: none;
+  background: var(--glass-w-18);
+  color: var(--fixed-white);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ปุ่มดูประวัติย้อนหลัง (มุมซ้ายบน) สไตล์ Frosted Glass */
+.reframer-journal-page__history-btn {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 30;
+  padding: 9px 16px;
+  border-radius: 99px;
+  --lc-border-5: rgba(199, 163, 79, 0.5);
+  border: 1px solid var(--lc-border-5);
+  background: var(--glass-b-35);
+  backdrop-filter: blur(8px);
+  --lc-text-6: #F0E4C0;
+  color: var(--lc-text-6);
+  font-family: var(--font-display);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .reframer-journal-page__history-btn {
+    font-size: 12px;
+    padding: 8px 12px;
+    max-width: 60%;
+    white-space: normal;
+    text-align: left;
+    line-height: 1.3;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   [ใหม่] หน้าสรุปเมื่อบันทึกของวันนี้ครบแล้ว
+   ═══════════════════════════════════════════════════════════════════════════ */
+.reframer-journal-page--done {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  --lc-bg-4: rgba(20, 10, 30, 0.85);
+  background: var(--lc-bg-4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.reframer-journal-done {
+  width: 100%;
+  max-width: 400px;
+  padding: 40px 32px;
+  border-radius: 28px;
+  background: var(--bg-card);
+  box-shadow: 0 24px 60px var(--glass-b-40);
+  text-align: center;
+}
+
+.reframer-journal-done__icon {
+  font-size: 64px;
+  line-height: 1;
+  animation: reframerJournalFloat 3s ease-in-out infinite;
+}
+
+@keyframes reframerJournalFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+
+.reframer-journal-done__title {
+  margin-top: 16px;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  --lc-text-3: #9B59D0;
+  color: var(--lc-text-3);
+}
+
+.reframer-journal-done__body {
+  margin: 8px 0 24px;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  color: var(--text-sub);
+}
+
+.reframer-journal-done__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reframer-journal-done__btn {
+  padding: 12px;
+  border-radius: 16px;
+  border: none;
+  background: var(--n100);
+  color: var(--text-sub);
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out-soft), filter var(--dur-fast) ease;
+}
+.reframer-journal-done__btn:hover { filter: brightness(1.05); }
+.reframer-journal-done__btn:active { transform: scale(0.97); }
+
+.reframer-journal-done__btn--primary {
+  padding: 14px;
+  --lc-bg-1: #9B59D0;
+  background: linear-gradient(135deg, var(--purple), var(--lc-bg-1));
+  color: var(--fixed-white);
+  --lc-shadow-2: rgba(155, 89, 208, 0.4);
+  box-shadow: 0 8px 20px var(--lc-shadow-2);
+}
+
+.reframer-journal-done__btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+}

@@ -1,0 +1,167 @@
+/* ═══════════════════════════════════════════════════════════════
+   SafetyNetPage.css — กล่องพยาบาลเวทมนตร์ (High Risk Safety Net)
+   โทนอุ่นนุ่ม ไม่ใช่สีแดงฉุกเฉิน เพื่อไม่ให้ผู้ใช้ตกใจซ้ำ
+   ═══════════════════════════════════════════════════════════════ */
+
+.safety-net {
+  position: absolute;
+  inset: 0;
+  z-index: 880;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 26px 18px;
+  --lc-bg-10: #3A2A3E;
+  --lc-bg-11: #241A2C;
+  --lc-bg-12: #120C18;
+  background: radial-gradient(120% 85% at 50% 0%, var(--lc-bg-10) 0%, var(--lc-bg-11) 48%, var(--lc-bg-12) 100%);
+  --lc-text-13: #F5ECEF;
+  color: var(--lc-text-13);
+  font-family: 'Nunito', 'Mali', sans-serif;
+}
+
+.safety-net__aura {
+  position: absolute;
+  inset: -25%;
+  --lc-bg-9: rgba(255, 179, 198, 0.5);
+  background: radial-gradient(38% 32% at 50% 26%, var(--lc-bg-9), transparent 70%);
+  opacity: 0.4;
+  filter: blur(50px);
+  pointer-events: none;
+  animation: safetyPulse 6s ease-in-out infinite;
+}
+@keyframes safetyPulse {
+  0%, 100% { opacity: 0.32; }
+  50%      { opacity: 0.5; }
+}
+
+.safety-net__close {
+  /* [แก้] มาตรฐานปุ่มปิดทั้งระบบ: วงกลม ลอยมุมขวาบน อย่างน้อย 44x44px */
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  border-radius: 99px;
+  border: none;
+  background: var(--glass-w-14);
+  color: var(--fixed-white);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.safety-net__inner {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  max-width: 470px;
+  text-align: center;
+}
+
+.safety-net__box {
+  font-size: 52px;
+  --lc-shadow-8: rgba(255, 179, 198, 0.45);
+  filter: drop-shadow(0 8px 22px var(--lc-shadow-8));
+  animation: safetyFloat 4.5s ease-in-out infinite;
+}
+@keyframes safetyFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px); }
+}
+
+.safety-net__inner h1 {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 23px;
+  color: var(--fixed-white);
+  margin: 8px 0 10px;
+}
+.safety-net__lead {
+  font-size: 14px;
+  line-height: 1.95;
+  --lc-text-7: rgba(245, 236, 239, 0.86);
+  color: var(--lc-text-7);
+  margin-bottom: 22px;
+}
+
+.safety-net__contacts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.safety-net__contact {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 17px;
+  border-radius: 18px;
+  border: 1px solid var(--glass-w-15);
+  background: var(--glass-w-7);
+  text-decoration: none;
+  color: inherit;
+  text-align: left;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+.safety-net__contact:hover { transform: translateY(-2px); background: var(--glass-w-13); }
+.safety-net__contact--primary {
+  --lc-bg-4: #FF8FA8;
+  --lc-bg-5: #E4577A;
+  background: linear-gradient(135deg, var(--lc-bg-4), var(--lc-bg-5));
+  border-color: transparent;
+  --lc-shadow-6: rgba(228, 87, 122, 0.4);
+  box-shadow: 0 14px 34px var(--lc-shadow-6);
+}
+.safety-net__contact-icon { font-size: 26px; flex-shrink: 0; }
+.safety-net__contact-text { display: flex; flex-direction: column; gap: 2px; }
+.safety-net__contact-text strong {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--fixed-white);
+}
+.safety-net__contact-text small { font-size: 11.5px; color: var(--glass-w-75); }
+
+.safety-net__meanwhile {
+  border-radius: 20px;
+  border: 1px solid var(--glass-w-14);
+  background: var(--glass-w-6);
+  padding: 18px;
+  margin-bottom: 18px;
+}
+.safety-net__meanwhile-title {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 15px;
+  color: var(--fixed-white);
+  margin-bottom: 6px;
+}
+.safety-net__meanwhile p {
+  font-size: 12.5px;
+  line-height: 1.8;
+  --lc-text-3: rgba(245, 236, 239, 0.7);
+  color: var(--lc-text-3);
+  margin-bottom: 13px;
+}
+.safety-net__meanwhile button {
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: 99px;
+  background: var(--glass-w-92);
+  --lc-text-2: #241A2C;
+  color: var(--lc-text-2);
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 14.5px;
+  cursor: pointer;
+}
+
+.safety-net__disclaimer {
+  font-size: 11px;
+  line-height: 1.75;
+  --lc-text-1: rgba(245, 236, 239, 0.45);
+  color: var(--lc-text-1);
+  padding: 0 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .safety-net__aura, .safety-net__box { animation: none; }
+}

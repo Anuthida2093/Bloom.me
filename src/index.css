@@ -1,0 +1,410 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   index.css — ชั้นโทเคนกลางของทั้งแอป
+   ────────────────────────────────────────────────────────────────────────────
+   [แก้รอบนี้]
+     1. เปลี่ยนคู่ฟอนต์เป็น Mali (หัวเรื่อง) + IBM Plex Sans Thai (เนื้อหา)
+        ของเดิม Fredoka One ไม่มีอักขระไทย → หัวข้อไทยตกไปใช้ฟอนต์ระบบทุกจุด
+        และ Sarabun ที่เขียนไว้ใน stack ก็ไม่เคยถูก import จริง
+     2. เพิ่มโทเคนตระกูล "Aether" สำหรับฉากเวทมนตร์ (กรอบเขียว/ไพ่ทิพย์/เตาเผา)
+        ซึ่งเดิมไม่มีโทเคนของตัวเองเลย ต้องเขียนสีดิบทุกไฟล์ → สีม่วง/เขียวเรือง
+        ในแต่ละหน้าเลยเป็นคนละเฉด
+     3. เพิ่ม type scale, focus-visible กลาง, prefers-reduced-motion ระดับโกลบอล
+     4. ถอด @import 'tailwindcss' ออก (ติดตั้งไว้แต่แทบไม่ได้ใช้จริง)
+   คีย์เฟรม/utility เดิมทั้งหมดด้านล่างคงไว้ครบ ไม่มีการลบ
+   ════════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap');
+
+/* ─── Light Mode tokens ─── */
+:root {
+  --g900: #0B2F1E; --g800: #1B4332; --g700: #2D6A4F;
+  --g600: #40916C; --g500: #52B788; --g400: #74C69D;
+  --g300: #95D5B2; --g200: #B7E4C7; --g100: #D8F3DC; --g50: #F0FBF4;
+
+  --b900: #3B1F0A; --b700: #5C3D1E; --b500: #8B5E3C;
+  --b300: #C4956A; --b100: #EDD9C0; --b50:  #FBF4EC;
+
+  --n900: #1A1F1B; --n700: #2B3A2E; --n500: #5A6B5D;
+  --n300: #9BAD9F; --n200: #C8D5CA; --n100: #E8EDE5;
+  --n50:  #F4F7F2; --white: #FFFFFF;
+
+  /* [ใหม่] --fixed-white ต่างจาก --white ตรงที่ "ไม่กลับสีตอน dark mode" (--white ใน
+     dark mode กลายเป็นเกือบดำ เพราะทำหน้าที่เป็นโทเคนพื้นผิว/การ์ด ไม่ใช่ "สีขาว" ตรงตัว)
+     ใช้ตัวนี้กับตัวหนังสือ/ไอคอน/เส้นขอบสีขาวที่วางทับพื้นมืดตายตัวเสมอ เช่น วิดีโอพื้นหลัง
+     ฉากเวทมนตร์ (Aether) หรือปุ่มลอยกระจกดำ ที่ไม่เกี่ยวกับธีมสว่าง/มืดของแอปเลย */
+  --fixed-white: #FFFFFF;
+
+  --coin: #F4C430; --exp: #FFD60A;
+  --blue: #4CC9F0; --pink: #FF85A1; --purple: #C77DFF;
+  --orange: #F4845F; --red: #EF476F;
+
+  /* Semantic */
+  --bg:         var(--n50);
+  --bg-card:    var(--white);
+  --bg-sidebar: var(--white);
+  --bg-modal:   rgba(0,0,0,.45);
+  --text:       var(--n900);
+  --text-sub:   var(--n500);
+  --text-muted: var(--n300);
+  --border:     var(--n100);
+  --border-mid: var(--n200);
+  --input-bg:   var(--white);
+
+  --r-sm: 10px; --r-md: 16px; --r-lg: 24px; --r-xl: 32px; --r-pill: 999px;
+
+  /* [ย้ายมาที่นี่ — เดิมประกาศเฉพาะใน .gameplay-frame (GameplayFrame.css) เท่านั้น]
+     ระยะกันชนของ ActionMenuBar ที่ลอยอยู่ล่างจอเสมอ (z-index: 1000 สูงกว่าทุก modal
+     ตั้งใจให้ลอยทับ เพื่อให้กดสลับหน้าได้แม้เปิด modal ค้างอยู่ — ดู ActionMenuBar.css)
+     รวม --nav-height 70px + bottom 25px ของ .action-menu-container ≈ 100px (มือถือ
+     54px + 15px ≈ 80px) ย้ายมาเป็นโทเคนกลางที่ :root เพื่อให้ "ทุกหน้าจอที่ scroll ได้
+     เต็มจอ" (ไม่ใช่แค่หน้าเควส) อ้างอิงร่วมกันได้ เช่น SettingsModal ที่ปุ่มออกจากระบบ
+     อยู่ล่างสุดของเนื้อหาที่ scroll ได้ */
+  --gpf-safe-bottom: 100px;
+
+  --sh-card:  0 2px 12px rgba(27,67,50,.09), 0 1px 3px rgba(27,67,50,.05);
+  --sh-hover: 0 8px 28px rgba(27,67,50,.15), 0 2px 6px rgba(27,67,50,.07);
+  --sh-btn:   0 4px 14px rgba(45,106,79,.35);
+  --sh-coin:  0 4px 14px rgba(244,196,48,.40);
+  --sh-modal: 0 24px 64px rgba(0,0,0,.22);
+
+  /* ═══ [ใหม่] Aether — โลกที่ 2: ฉากเวทมนตร์ (Ghibli ยามพลบ + แสงเรือง Sci-Fi) ═══
+     ใช้กับ: กรอบเขียวเล่นเควส, หน้าไพ่ทิพย์, เตาเผาขยะความคิด, ฝึกหายใจ, ต้นไม้กลางคืน
+     หลักคิด: ไม่มีสีดำสนิทและไม่มีสีจัดจ้าน — ฉากมืดของ Ghibli คือ "สีเข้มที่ยังมีสี"
+     และครึ่ง Sci-Fi มาจากแสงเรืองสีหยก ซึ่งอยู่ในตระกูลเขียวของแบรนด์อยู่แล้ว
+     จึงไม่ทำให้แอปแตกเป็นสองแอป                                                       */
+  --ae-void:    #0A1714;   /* พื้นฉากลึกสุด — เขียวอมดำ */
+  --ae-deep:    #0E2A22;   /* พื้นฉากหลัก */
+  --ae-mist:    #1B3A34;   /* หมอกในป่า / พื้นการ์ดลอยในฉาก */
+  --ae-glow:    #62D9C0;   /* แสงเวทมนตร์หลัก — เขียวหยกอมฟ้า */
+  --ae-sun:     #F2C879;   /* แสงตะวันลอดใบไม้ — อำพัน */
+  --ae-bloom:   #E9A6C9;   /* ดอกไม้ / หมวดจิตใจ — ชมพูหม่น */
+  --ae-bark:    #C9A97E;   /* เปลือกไม้ / กระดาษพาร์ชเมนต์ */
+  --ae-rune:    #9D8CF0;   /* วงเวทย์ / รูน — ใช้ที่เดียวเท่านั้น ห้ามใช้พร่ำเพรื่อ */
+
+  /* [ใหม่] โทนม่วง/มืดของหน้าเควสสุขภาพจิต (QuestGateView หมวดจิตใจ + ไพ่ทิพย์) — เดิมแต่ละไฟล์
+     ฮาร์ดโค้ดม่วงเข้มไล่ลงไปเกือบดำสนิทที่ขอบเอง (#0a0512 / #070414) คนละไฟล์ คนละเฉด ปรับทีต้อง
+     ไล่แก้หลายจุด และความมืดจัดจนเกือบดำที่ขอบภาพรู้สึกกดดันเกินไปสำหรับแอปดูแลใจ รวมเป็นโทเคน
+     เดียวที่นี่แทน ผสมเทา/น้ำเงินเข้าไปในความมืดแทนสีดำสนิท (ตัวหนังสือสีอ่อนบนพื้นนี้ยังผ่าน
+     WCAG AA สบายๆ) — หมวดสุขภาพกายใช้ชุด --ae-void/--ae-deep/--ae-mist ด้านบนได้เลย (เขียวเทาเข้ม
+     อยู่แล้วตามหลักการ Aether ที่ตั้งไว้ ไม่ต้องเพิ่มโทเคนใหม่ซ้ำ) */
+  --ae-mental-glow: #423A5F;
+  --ae-mental-mid:  #29233D;
+  --ae-mental-deep: #191527;
+
+  --ae-text:      #E8F5EE;
+  --ae-text-sub:  rgba(232,245,238,.62);
+  --ae-text-mute: rgba(232,245,238,.38);
+
+  --ae-surface:      rgba(27,58,52,.58);
+  --ae-surface-soft: rgba(255,255,255,.045);
+  --ae-surface-edge: rgba(98,217,192,.22);
+  --ae-blur:         blur(14px) saturate(1.15);
+
+  --ae-glow-sm:   0 0 12px rgba(98,217,192,.35);
+  --ae-glow-md:   0 0 28px rgba(98,217,192,.28), 0 0 8px rgba(98,217,192,.45);
+  --ae-glow-warm: 0 0 24px rgba(242,200,121,.32);
+  --ae-glow-rune: 0 0 30px rgba(157,140,240,.35);
+
+  /* ระดับความเสี่ยงสุขภาพจิต — เดิมกระจายเป็นสีดิบอยู่หลายไฟล์ */
+  --risk-low:      var(--ae-glow);
+  --risk-moderate: #FBBF24;
+  --risk-high:     #F87171;
+
+  /* ═══ [ใหม่] Type scale + จังหวะบรรทัดสำหรับภาษาไทย ═══
+     ตัวไทยมีสระบน-ล่าง ต้องการ line-height สูงกว่าละติน ของเดิมไม่ได้ตั้งไว้เลย */
+  --font-display: 'Mali', 'Fredoka One', cursive;
+  --font-body:    'IBM Plex Sans Thai', 'Nunito', system-ui, sans-serif;
+
+  --lh-tight: 1.45;   /* หัวเรื่อง */
+  --lh-body:  1.75;   /* เนื้อหา */
+
+  --fs-xs: 11.5px; --fs-sm: 13px; --fs-md: 15px;
+  --fs-lg: 18px;   --fs-xl: 22px; --fs-2xl: 28px; --fs-3xl: 36px;
+
+  /* ═══ [ใหม่] จังหวะการเคลื่อนไหวกลาง — ให้ทุกที่ใช้ค่าชุดเดียวกัน ═══ */
+
+  /* [ใหม่] Glass opacity scale — สีขาว/ดำโปร่งแสงที่ถูกใช้ซ้ำหลายไฟล์แบบ raw rgba()
+     มาก่อนหน้านี้ (กระจกเมนู/การ์ด/เส้นขอบโปร่งแสงในฉากต่างๆ) แทนที่ด้วยชุดโทเคนนี้
+     ค่า alpha คงเดิมทุกจุด (ไม่ merge ค่าใกล้เคียงกัน) เพื่อไม่ให้ภาพเปลี่ยน */
+  --glass-w-5: rgba(255, 255, 255, 0.05);
+  --glass-w-6: rgba(255, 255, 255, 0.06);
+  --glass-w-7: rgba(255, 255, 255, 0.07);
+  --glass-w-8: rgba(255, 255, 255, 0.08);
+  --glass-w-9: rgba(255, 255, 255, 0.09);
+  --glass-w-10: rgba(255, 255, 255, 0.1);
+  --glass-w-12: rgba(255, 255, 255, 0.12);
+  --glass-w-13: rgba(255, 255, 255, 0.13);
+  --glass-w-14: rgba(255, 255, 255, 0.14);
+  --glass-w-15: rgba(255, 255, 255, 0.15);
+  --glass-w-16: rgba(255, 255, 255, 0.16);
+  --glass-w-18: rgba(255, 255, 255, 0.18);
+  --glass-w-20: rgba(255, 255, 255, 0.2);
+  --glass-w-22: rgba(255, 255, 255, 0.22);
+  --glass-w-25: rgba(255, 255, 255, 0.25);
+  --glass-w-28: rgba(255, 255, 255, 0.28);
+  --glass-w-30: rgba(255, 255, 255, 0.3);
+  --glass-w-35: rgba(255, 255, 255, 0.35);
+  --glass-w-40: rgba(255, 255, 255, 0.4);
+  --glass-w-45: rgba(255, 255, 255, 0.45);
+  --glass-w-50: rgba(255, 255, 255, 0.5);
+  --glass-w-55: rgba(255, 255, 255, 0.55);
+  --glass-w-60: rgba(255, 255, 255, 0.6);
+  --glass-w-65: rgba(255, 255, 255, 0.65);
+  --glass-w-70: rgba(255, 255, 255, 0.7);
+  --glass-w-72: rgba(255, 255, 255, 0.72);
+  --glass-w-75: rgba(255, 255, 255, 0.75);
+  --glass-w-80: rgba(255, 255, 255, 0.8);
+  --glass-w-85: rgba(255, 255, 255, 0.85);
+  --glass-w-90: rgba(255, 255, 255, 0.9);
+  --glass-w-92: rgba(255, 255, 255, 0.92);
+  --glass-w-95: rgba(255, 255, 255, 0.95);
+  --glass-w-96: rgba(255, 255, 255, 0.96);
+  --glass-b-7: rgba(0, 0, 0, 0.07);
+  --glass-b-8: rgba(0, 0, 0, 0.08);
+  --glass-b-12: rgba(0, 0, 0, 0.12);
+  --glass-b-15: rgba(0, 0, 0, 0.15);
+  --glass-b-18: rgba(0, 0, 0, 0.18);
+  --glass-b-20: rgba(0, 0, 0, 0.2);
+  --glass-b-22: rgba(0, 0, 0, 0.22);
+  --glass-b-24: rgba(0, 0, 0, 0.24);
+  --glass-b-25: rgba(0, 0, 0, 0.25);
+  --glass-b-28: rgba(0, 0, 0, 0.28);
+  --glass-b-30: rgba(0, 0, 0, 0.3);
+  --glass-b-32: rgba(0, 0, 0, 0.32);
+  --glass-b-35: rgba(0, 0, 0, 0.35);
+  --glass-b-40: rgba(0, 0, 0, 0.4);
+  --glass-b-45: rgba(0, 0, 0, 0.45);
+  --glass-b-50: rgba(0, 0, 0, 0.5);
+  --glass-b-55: rgba(0, 0, 0, 0.55);
+  --glass-b-60: rgba(0, 0, 0, 0.6);
+  --glass-b-80: rgba(0, 0, 0, 0.8);
+
+  --ease-out-soft: cubic-bezier(.22, 1, .36, 1);
+  --ease-spring:   cubic-bezier(.34, 1.56, .64, 1);
+  --dur-fast: .18s; --dur-mid: .32s; --dur-slow: .6s;
+}
+
+@media (max-width: 768px) {
+  :root { --gpf-safe-bottom: 80px; }
+}
+
+/* ─── Dark Mode tokens ─── */
+[data-theme="dark"] {
+  --bg:         #0F1A13;
+  --bg-card:    #192A1E;
+  --bg-sidebar: #162119;
+  --bg-modal:   rgba(0,0,0,.65);
+  --text:       #E8F5EC;
+  --text-sub:   #7EAD8C;
+  --text-muted: #4A6B52;
+  --border:     rgba(255,255,255,.08);
+  --border-mid: rgba(255,255,255,.13);
+  --input-bg:   #1F3328;
+  --white:      #192A1E;
+  --n50:        #0F1A13;
+  --n100:       rgba(255,255,255,.08);
+  --n200:       rgba(255,255,255,.13);
+  --n300:       #4A6B52;
+  --n500:       #7EAD8C;
+  --n700:       #B8D4C0;
+  --n900:       #E8F5EC;
+  --b50:        #1F1810;
+  --b100:       #2E2014;
+  --g50:        #0F1E15;
+  --g100:       #152A1C;
+  --sh-card:    0 2px 12px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
+  --sh-hover:   0 8px 28px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.3);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  line-height: var(--lh-body);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  transition: background .25s ease, color .25s ease;
+}
+
+h1, h2, h3, h4, .display {
+  font-family: var(--font-display);
+  line-height: var(--lh-tight);
+  font-weight: 700;
+}
+h1 { font-size: var(--fs-3xl); }
+h2 { font-size: var(--fs-2xl); }
+h3 { font-size: var(--fs-xl); }
+h4 { font-size: var(--fs-lg); }
+
+button { font-family: var(--font-body); cursor: pointer; }
+input, select, textarea { font-family: var(--font-body); }
+
+/* [ใหม่] โฟกัสคีย์บอร์ดต้องมองเห็นได้เสมอ — เกณฑ์ขั้นต่ำก่อนขึ้นโปรดักชัน */
+:focus-visible {
+  outline: 2px solid var(--ae-glow);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--g200); border-radius: 99px; }
+.no-scroll::-webkit-scrollbar { display: none; }
+.no-scroll { scrollbar-width: none; }
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-card);
+  border: 1px solid var(--border);
+}
+
+.glass {
+  background: rgba(255,255,255,.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+[data-theme="dark"] .glass {
+  background: rgba(25,42,30,.82);
+}
+
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 700;
+}
+
+/* Butterfly animation */
+@keyframes flutter {
+  0%   { transform: translate(0,0) rotate(-10deg); }
+  25%  { transform: translate(12px,-8px) rotate(10deg); }
+  50%  { transform: translate(24px,4px) rotate(-8deg); }
+  75%  { transform: translate(12px,-12px) rotate(12deg); }
+  100% { transform: translate(0,0) rotate(-10deg); }
+}
+.butterfly { animation: flutter 3s ease-in-out infinite; }
+
+/* Post-it wobble */
+@keyframes wobble {
+  0%,100% { transform: rotate(-3deg); }
+  50%      { transform: rotate(3deg); }
+}
+
+/* Coin bounce */
+@keyframes coinPop {
+  0%   { transform: scale(0) translateY(0); opacity:1; }
+  70%  { transform: scale(1.2) translateY(-30px); opacity:1; }
+  100% { transform: scale(1) translateY(-60px); opacity:0; }
+}
+.coin-pop { animation: coinPop .7s ease forwards; }
+
+/* Responsive */
+@media (max-width: 640px)  { .hide-mobile  { display: none !important; } }
+@media (min-width: 641px)  { .show-mobile  { display: none !important; } }
+@media (max-width: 900px)  { .hide-tablet  { display: none !important; } }
+@media (min-width: 901px)  { .show-tablet  { display: none !important; } }
+
+/* ─── V3 Micro-interaction keyframes ─── */
+
+/* Floating reward text (+EXP / +Coin) */
+@keyframes floatUp {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  60%  { opacity: 1; transform: translateY(-52px) scale(1.12); }
+  100% { opacity: 0; transform: translateY(-80px) scale(.9); }
+}
+.float-up { animation: floatUp 1.4s cubic-bezier(.2,.8,.4,1) forwards; }
+
+/* Confetti piece fall */
+@keyframes confettiFall {
+  0%   { transform: translateY(0) rotate(0deg) scale(1);   opacity: 1; }
+  100% { transform: translateY(90px) rotate(var(--cr,540deg)) scale(.5); opacity: 0; }
+}
+
+/* Sparkle placed-item burst */
+@keyframes sparklePop {
+  0%   { transform: scale(0) rotate(0deg);   opacity: 1; }
+  55%  { transform: scale(1.3) rotate(180deg); opacity: 1; }
+  100% { transform: scale(0) rotate(360deg); opacity: 0; }
+}
+.sparkle-dot { animation: sparklePop .7s ease forwards; }
+
+/* Firefly float at night */
+@keyframes fireflyFloat {
+  0%,100% { opacity: 0;   transform: translate(0, 0); }
+  40%     { opacity: .85; transform: translate(var(--ffx, 12px), var(--ffy, -16px)); }
+  70%     { opacity: .6;  transform: translate(calc(var(--ffx, 12px)*.6), var(--ffy, -16px)); }
+}
+
+/* Star twinkle */
+@keyframes twinkle {
+  0%,100% { opacity: .25; transform: scale(.8); }
+  50%     { opacity: 1;   transform: scale(1.3); }
+}
+
+/* Sun ray pulse */
+@keyframes sunrayPulse {
+  0%,100% { opacity: .18; }
+  50%     { opacity: .32; }
+}
+
+/* Celebration modal pop-in */
+@keyframes celebPop {
+  0%  { transform: scale(0) rotate(-12deg); opacity: 0; }
+  65% { transform: scale(1.08) rotate(3deg); opacity: 1; }
+  82% { transform: scale(.96) rotate(-1deg); }
+  100%{ transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Slide up from bottom */
+@keyframes slideUp {
+  0%   { transform: translateY(30px); opacity: 0; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
+.slide-up { animation: slideUp .5s cubic-bezier(.2,.8,.4,1) forwards; }
+
+/* Treasure chest lid open */
+@keyframes chestLid {
+  0%   { transform: rotateX(0deg) translateY(0); }
+  100% { transform: rotateX(-110deg) translateY(-4px); }
+}
+
+/* Speaker icon bounce on change */
+@keyframes speakerPulse {
+  0%,100% { transform: scale(1); }
+  40%     { transform: scale(1.45) rotate(-8deg); }
+  70%     { transform: scale(.9)  rotate(5deg); }
+}
+.speaker-pulse { animation: speakerPulse .45s ease; }
+
+/* Item sparkle ring */
+@keyframes sparkleRing {
+  0%   { transform: scale(.6); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.sparkle-ring { animation: sparkleRing .65s ease-out forwards; }
+
+/* Celebrate confetti rain (position randomly via --cx CSS var) */
+@keyframes confettiRain {
+  0%   { transform: translateX(var(--cx,0px)) translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateX(calc(var(--cx,0px) + var(--csx,0px))) translateY(120px) rotate(var(--cr,420deg)); opacity: 0; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   [ใหม่] เคารพ prefers-reduced-motion ระดับโกลบอล
+   ────────────────────────────────────────────────────────────────────────────
+   เดิมทำไว้เฉพาะจุด (TreeOfLife.css กับทูลทิปบน Dashboard) แต่มีอนิเมชันอีกหลายสิบตัว
+   ที่ยังวิ่งอยู่ สำหรับแอปสุขภาพจิตนี่ไม่ใช่แค่มารยาท — ผู้ใช้ที่เวียนศีรษะจากการเคลื่อนไหว
+   คือกลุ่มที่ทับซ้อนกับกลุ่มเป้าหมายโดยตรง
+   ════════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,426 @@
+/* ==========================================
+   ORACLE CARDS PAGE STYLES (Sharp Edges Version)
+   ========================================== */
+
+/* กรอบเกมหลักแบบขอบเหลี่ยมเต็มพื้นที่ */
+.oracle-game-container {
+  /* [แก้บั๊กร้ายแรง — เควสนี้เล่นไม่ได้เลย] คอมเมนต์อธิบายตรงนี้เดิมตกหล่นเครื่องหมายเปิดคอมเมนต์ไป
+     ทำให้ข้อความ "position: relative ซึ่งทำให้ ... ใช้ position:absolute" กลายเป็นค่า (value)
+     ขยะของ property เดียวกัน แล้วถูก CSS parser ทิ้งทั้งประกาศ (รวม "position: absolute;" ตัวจริง
+     ที่ตามมาไปด้วย เพราะไม่มี ; คั่นให้จบก่อน) container เลยไม่มี position ที่แท้จริง (เหลือค่า
+     เริ่มต้น static) ทำให้ "inset: 0;" และ "z-index: 800;" ด้านล่างไม่มีผลอะไรเลย (ใช้ได้เฉพาะ
+     element ที่ positioned เท่านั้น) — คอนเทนเนอร์เลยหลุดจาก overlay เต็มจอไปอยู่ในลำดับ flow
+     ปกติของ .gameplay-frame แทน ปุ่ม/การ์ดทั้งหน้าจึงบีบอยู่ในแถบเล็กๆ ด้านบนแทนที่จะเต็มกรอบ
+     เขียว (เหมือน "เล่นไม่ได้") ทั้งที่ตรรกะ JS ของเกมทำงานถูกต้องทุกจุด แก้ให้เหลือ
+     position:absolute; inset:0 ตรงๆ ตัวเดียว เหมือนอีก 3 หน้าเควสสุขภาพจิต (Incinerator/
+     GratitudeShield/MindfulAnchor) */
+  position: absolute;
+  inset: 0;
+  z-index: 800;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  overflow: hidden;
+  /* [แก้ธีมสี] ใช้โทเคนกลาง --ae-mental-* (นิยามที่ src/index.css) แทนสีม่วงที่ฮาร์ดโค้ดเฉพาะ
+     ไฟล์นี้ — หน้าเควสสุขภาพจิตที่ใช้โทนม่วง/มืดเดียวกัน (QuestGateView หมวดจิตใจ) จะปรับสี
+     พร้อมกันได้จากจุดเดียว ดูค่าที่เลือกใช้ที่ index.css */
+  background: radial-gradient(circle at 50% 20%, var(--ae-mental-glow) 0%, var(--ae-mental-mid) 60%, var(--ae-mental-deep) 100%);
+  border: 2px solid var(--g500);
+  --lc-shadow-22: rgba(82, 183, 136, 0.25);
+  box-shadow: inset 0 0 25px var(--lc-shadow-22), 0 8px 32px var(--glass-b-40);
+  display: flex;
+  flex-direction: column;
+  /* [เพิ่มรอบนี้] หน้านี้เรียก <CameraCapture> ตรงๆ โดยไม่ผ่าน .game-shell (ดู
+     CameraCapture.css บรรทัดบนสุด) ซึ่งปกติเป็นคนกำหนด --game-accent/--game-accent-bg —
+     ประกาศไว้เองที่นี่ให้ตรงกับสีปุ่มหลัก (.oracle-btn--primary ใช้ --g500/--g700 เดียวกัน)
+     ไม่งั้นปุ่มชัตเตอร์/ปุ่มยืนยันของกล้องจะไม่มีสีพื้นหลังเลย (custom property ไม่มี fallback
+     และไม่มีใครประกาศไว้ = ค่านั้นไม่ถูกใช้) */
+  --game-accent: var(--g600);
+  --game-accent-bg: var(--glass-w-10);
+}
+
+/* ดาวระยิบระยับ */
+.oracle-page__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.oracle-page__star {
+  position: absolute;
+  z-index: 1;
+  width: 3px;
+  height: 3px;
+  border-radius: 0;
+  background: var(--fixed-white);
+  animation: oracleStarTwinkle 2.4s ease-in-out infinite;
+}
+
+@keyframes oracleStarTwinkle {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+/* ปุ่มปิดมุมขวาบน (สี่เหลี่ยมเหลี่ยม) */
+.oracle-page__close {
+  /* [แก้] มาตรฐานปุ่มปิดทั้งระบบ: วงกลม ลอยมุมขวาบน อย่างน้อย 44x44px (เดิมเหลี่ยม+เล็กไป) */
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 20;
+  width: 44px;
+  height: 44px;
+  border-radius: 99px;
+  border: 1px solid var(--glass-w-20);
+  background: var(--glass-b-40);
+  color: var(--fixed-white);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.oracle-page__close:hover {
+  background: var(--glass-w-20);
+  transform: scale(1.05);
+}
+
+.oracle-page__content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  overflow-y: auto;
+}
+
+/* สรุปอารมณ์ */
+.oracle-page__mood-recap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  --lc-bg-16: rgba(82, 183, 136, 0.15);
+  background: var(--lc-bg-16);
+  --lc-border-17: rgba(82, 183, 136, 0.4);
+  border: 1px solid var(--lc-border-17);
+  border-radius: 10px;
+  padding: 8px 18px;
+  --lc-text-18: #D8F3DC;
+  color: var(--lc-text-18);
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+/* หัวข้อหลักทั้งหมด (18px) */
+.oracle-page__title,
+.oracle-card__large-title,
+.oracle-page__summary-title {
+  font-size: 20px !important;
+  font-weight: 700;
+  color: var(--g400);
+  --lc-c-15: rgba(116, 198, 157, 0.5);
+  text-shadow: 0 0 12px var(--lc-c-15);
+  margin-bottom: 8px;
+}
+
+/* ข้อความบรรยาย (16px) */
+.oracle-page__subtitle,
+.oracle-page__desc,
+.oracle-card__typewriter-text,
+.oracle-page__tap-hint,
+.oracle-page__hint {
+  font-size: 18px !important;
+  color: var(--g200);
+  line-height: 1.6;
+}
+
+/* กองไพ่ Intro */
+.oracle-page__intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.oracle-page__deck {
+  position: relative;
+  width: 140px;
+  height: 195px;
+  border-radius: 10px;
+  border: 2px solid var(--g400);
+  cursor: pointer;
+  background: linear-gradient(160deg, var(--g600), var(--g800));
+  --lc-shadow-14: rgba(82, 183, 136, 0.4);
+  box-shadow: 0 0 35px var(--lc-shadow-14);
+  font-size: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: oracleDeckFloat 3s ease-in-out infinite;
+  margin: 20px 0;
+}
+
+@keyframes oracleDeckFloat {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
+}
+
+.oracle-page__deck-glow {
+  position: absolute;
+  inset: -12px;
+  border-radius: 10px;
+  --lc-bg-13: rgba(116, 198, 157, 0.4);
+  background: radial-gradient(circle, var(--lc-bg-13), transparent 70%);
+  animation: oraclePulse 2s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes oraclePulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.08); }
+}
+
+/* การพัดของไพ่ */
+.oracle-page__spread-view {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.oracle-page__fan {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  height: 260px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.oracle-card {
+  position: absolute;
+  bottom: 10px;
+  width: 110px;
+  height: 165px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  perspective: 1000px;
+  /* [แก้รอบนี้] transform ตอนนี้ควบคุมโดย framer-motion (spring physics ผ่าน x/y/rotate
+     motion values) ล้วนๆ — เอา CSS transition บน transform ออกกันชนกับ animation engine
+     ของ framer-motion ที่เขียนทับ style.transform ตรงๆ ทุกเฟรม (ยังคง filter ไว้ได้ปกติ) */
+  transition: filter 0.2s;
+}
+
+.oracle-card:hover {
+  filter: brightness(1.2);
+  z-index: 50 !important;
+}
+
+.oracle-card__inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px; /* ขอบเหลี่ยมคือ 0 */
+  box-shadow: 0 8px 20px var(--glass-b-50);
+}
+
+.oracle-card__face--back {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  --lc-bg-12: #081C15;
+  background: linear-gradient(160deg, var(--g700), var(--lc-bg-12));
+  border: 2px solid var(--g400);
+  font-size: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* หน้าอ่านคำทำนาย */
+.oracle-page__reading-view {
+  width: 100%;
+  max-width: 440px;
+}
+
+.oracle-card--large {
+  width: 100%;
+  --lc-bg-10: #081C15;
+  background: linear-gradient(160deg, var(--g800), var(--lc-bg-10));
+  border: 2px solid var(--g400);
+  border-radius: 10px;
+  padding: 24px;
+  --lc-shadow-11: rgba(116, 198, 157, 0.25);
+  box-shadow: 0 0 30px var(--lc-shadow-11);
+}
+
+.oracle-card__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.oracle-card__large-icon {
+  font-size: 52px;
+  margin-bottom: 6px;
+}
+
+.oracle-card__large-body {
+  width: 100%;
+  background: var(--glass-b-35);
+  border-radius: 10px;
+  padding: 16px;
+  min-height: 150px;
+  --lc-border-9: rgba(116, 198, 157, 0.2);
+  border: 1px solid var(--lc-border-9);
+  text-align: left;
+}
+
+.oracle-page__caret {
+  animation: oracleCaretBlink 0.8s step-end infinite;
+  color: var(--g400);
+}
+
+@keyframes oracleCaretBlink {
+  50% { opacity: 0; }
+}
+
+.oracle-card__actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 18px;
+}
+
+.oracle-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 10px; /* ขอบเหลี่ยมคือ 0 */
+  font-weight: 700;
+  font-size: 18px;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.1s ease;
+}
+
+.oracle-btn:active {
+  transform: scale(0.97);
+}
+
+.oracle-btn--primary {
+  background: linear-gradient(135deg, var(--g500), var(--g700));
+  color: var(--fixed-white);
+  --lc-shadow-8: rgba(82, 183, 136, 0.4);
+  box-shadow: 0 4px 15px var(--lc-shadow-8);
+}
+
+.oracle-btn--ghost {
+  background: var(--glass-w-10);
+  --lc-text-7: #D8F3DC;
+  color: var(--lc-text-7);
+}
+
+/* กล้องภารกิจ */
+.oracle-page__camera {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.oracle-page__viewfinder {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border-radius: 10px;
+  --lc-bg-5: #000;
+  background: var(--lc-bg-5);
+  border: 3px solid var(--g500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  --lc-shadow-6: rgba(82, 183, 136, 0.4);
+  box-shadow: 0 0 25px var(--lc-shadow-6);
+}
+
+.oracle-page__viewfinder--scanning {
+  animation: oracleViewfinderPulse 1s ease-in-out infinite;
+}
+
+@keyframes oracleViewfinderPulse {
+  0%, 100% {
+  --lc-shadow-4: rgba(82, 183, 136, 0.4);
+  box-shadow: 0 0 20px var(--lc-shadow-4);
+}
+  50% {
+  --lc-shadow-3: rgba(82, 183, 136, 0.8);
+  box-shadow: 0 0 40px var(--lc-shadow-3);
+}
+}
+
+.oracle-page__scan-ring {
+  position: absolute;
+  inset: -8px;
+  border-radius: 10px; /* ขอบเหลี่ยมคือ 0 */
+  border: 2px solid var(--g500);
+  animation: oracleScanRing 1s ease-in-out infinite;
+}
+
+@keyframes oracleScanRing {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.15); opacity: 0; }
+}
+
+.oracle-page__captured-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 7px;
+}
+.oracle-page__capture-success-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-b-35);
+  border-radius: 7px;
+}
+
+
+/* หน้าจบ */
+.oracle-page__done-box {
+  background: var(--glass-w-5);
+  --lc-border-2: rgba(116, 198, 157, 0.3);
+  border: 1px solid var(--lc-border-2);
+  border-radius: 10px;
+  padding: 28px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.oracle-page__water-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 10px;
+  --lc-bg-1: rgba(82, 183, 136, 0.2);
+  background: var(--lc-bg-1);
+  border: 1px solid var(--g500);
+  color: var(--g400);
+  font-weight: 700;
+  font-size: 16px;
+  margin-top: 8px;
+}
+
+/* [เพิ่มรอบนี้] ข้อความตอนกดข้ามภารกิจ — ไม่ได้หยดน้ำ แต่เควสโดยรวมยังสำเร็จ */
+.oracle-page__skip-note {
+  font-size: var(--fs-sm);
+  color: var(--glass-w-60);
+  margin-top: 8px;
+}
