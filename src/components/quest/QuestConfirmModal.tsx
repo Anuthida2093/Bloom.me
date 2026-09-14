@@ -94,21 +94,21 @@ export default function QuestConfirmModal({ quest, stageLabel, accent, accentBg,
                 style={{
                   position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: 99,
                   border: 'none', background: 'var(--glass-w-22)', color: 'var(--fixed-white)', cursor: 'pointer',
-                  fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2,
+                  fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2,
                 }}
               >
                 ✕
               </button>
 
               <div style={{ textAlign: 'center', position: 'relative' }}>
-                {stageLabel && <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--glass-w-80)', marginBottom: 6 }}>{stageLabel}</div>}
+                {stageLabel && <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--glass-w-80)', marginBottom: 2 }}>{stageLabel}</div>}
 
                 {/* [ใหม่] Aura เรืองแสงเต้นจังหวะหลังไอคอน — วงกลมเบลอเรืองแสงขยาย-หดวน */}
                 <div className="quest-confirm-icon-wrap">
                   <span className="quest-confirm-aura" />
                   <motion.span
                     className="quest-confirm-icon"
-                    style={{ fontSize: 46, filter: 'drop-shadow(0 6px 12px var(--glass-b-25))', position: 'relative' }}
+                    style={{ fontSize: 4, filter: 'drop-shadow(0 6px 12px var(--glass-b-25))', position: 'relative' }}
                     animate={{ y: [0, -6, 0], rotate: [0, -4, 4, 0] }}
                     transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                   >
@@ -116,31 +116,31 @@ export default function QuestConfirmModal({ quest, stageLabel, accent, accentBg,
                         emoji เดิม — เควสที่ยังไม่มีไฟล์จริง (know-guardian-of-rest,
                         know-ten-year-forest) ยัง fallback เป็น quest.icon (emoji) เหมือนเดิม */}
                     {QUEST_ICONS[quest.code]
-                      ? <img src={QUEST_ICONS[quest.code]} alt={quest.titleTh} style={{ width: 72, height: 72, objectFit: 'contain' }} />
+                      ? <img src={QUEST_ICONS[quest.code]} alt={quest.titleTh} style={{ width: 350, height: 160, objectFit: 'contain' }} />
                       : quest.icon}
                   </motion.span>
                 </div>
 
-                <div style={{ fontFamily: 'Fredoka One', fontSize: 19, color: 'var(--fixed-white)', marginTop: 6 }}>{quest.titleTh}</div>
-                <div style={{ fontSize: 11.5, color: 'var(--glass-w-75)' }}>{quest.title}</div>
+                <div style={{ fontFamily: 'Fredoka One', fontSize: 20, color: 'var(--fixed-white)', marginTop: 4 }}>{quest.titleTh}</div>
+                <div style={{ fontSize: 18, color: 'var(--glass-w-75)' }}>{quest.title}</div>
               </div>
             </div>
 
             {/* Body */}
             <div style={{ padding: '20px 22px 22px' }}>
-              <p style={{ fontSize: 13, color: 'var(--n500)', lineHeight: 1.65, marginBottom: 16, textAlign: 'center' }}>{quest.desc}</p>
+              <p style={{ fontSize: 16, color: 'var(--n500)', lineHeight: 1.65, marginBottom: 10, textAlign: 'center' }}>{quest.desc}</p>
 
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 20 }}>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 10 }}>
                 <span className="tag" style={{ background: BG_2, color: TEXT_3, border: '1px solid var(--coin)' }}><img src={BADGE_ICONS.coins} className="icon-img" alt="" /> +{quest.coinReward}</span>
                 <span className="tag" style={{ background: accentBg, color: accent, border: `1px solid ${accent}55` }}><img src={BADGE_ICONS.exp} className="icon-img" alt="" /> +{quest.expReward} EXP</span>
               </div>
 
               {locked ? (
-                <div style={{ textAlign: 'center', padding: '10px 0', fontSize: 12.5, color: 'var(--n300)', fontWeight: 700 }}>
+                <div style={{ textAlign: 'center', padding: '10px 0', fontSize: 16, color: 'var(--n300)', fontWeight: 400 }}>
                   🔒 ล็อกอยู่ — ทำเควสอื่นให้สำเร็จก่อน
                 </div>
               ) : completed ? (
-                <div style={{ textAlign: 'center', padding: '10px 0', fontSize: 12.5, color: accent, fontWeight: 700 }}>
+                <div style={{ textAlign: 'center', padding: '10px 0', fontSize: 16, color: accent, fontWeight: 500 }}>
                   ✅ ทำสำเร็จแล้ววันนี้
                 </div>
               ) : (

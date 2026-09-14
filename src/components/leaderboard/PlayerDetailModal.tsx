@@ -90,7 +90,7 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
                 width: 32,
                 height: 32,
                 color: 'var(--fixed-white)',
-                fontSize: 15,
+                fontSize: 24,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -116,11 +116,11 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
 
         {/* สถิติแยกหมวดหมู่ */}
         <div style={{ padding: '24px' }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-sub)', marginBottom: 14 }}>สถิติแยกหมวดหมู่</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-sub)', marginBottom: 14 }}>สถิติแยกหมวดหมู่</div>
           {stats.map((s, i) => (
             <div key={s.label} className="player-detail-modal-stat-row" style={{ marginBottom: 16, animationDelay: `${i * 70}ms` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{s.icon} {s.label}</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{s.icon} {s.label}</span>
                 <span style={{ fontFamily: 'Fredoka One', fontSize: 15, color: s.color }}>{s.value.toLocaleString()}</span>
               </div>
               <div style={{ height: 9, background: 'var(--n100)', borderRadius: 99, overflow: 'hidden' }}>

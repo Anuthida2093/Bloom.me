@@ -12,21 +12,22 @@
   padding-top: 80px;
 }
 @media (max-width: 768px) {
-  .friends-page { padding-top: 56px; }
+  .friends-page { padding-top: 66px; }
 }
 
 .friends-page__head {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 18px;
+  padding: 14px 18px;
 }
 .friends-page__back {
   min-width: 44px;
   min-height: 44px;
   background: none;
   border: none;
-  font-size: var(--fs-lg);
+  font-size: var(--fs-lg);/* [แก้ตามที่ระบุ] ใช้ var(--fs-lg) แทนเลขคงที่ 24px เพราะ font-size ของปุ่มย้อนกลับเปลี่ยนตามขนาดหน้าจอ
+  (เดิมเป็นเลขคงที่ 24px ผูกตายตัวไว้จะพังทันทีที่ font-size เปลี่ยน) */
   color: var(--text-sub);
   cursor: pointer;
 }
@@ -59,23 +60,23 @@
 }
 .friends-page__sort-toggle {
   min-height: 32px;
-  padding: 0 10px;
+  padding: 0 30px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border-radius: var(--r-sm, 8px);
+  border-radius: var(--r-sm, 10px);
   border: 1px solid var(--n100, var(--n50));
-  background: var(--n50);
+  background: var(--n210, var(--n50));
   color: var(--text-sub);
-  font-size: var(--fs-xs, 12px);
+  font-size: var(--fs-xs, 20px);
   cursor: pointer;
 }
 .friends-page__sort-caret {
-  font-size: 10px;
+  font-size: 20px;
 }
 .friends-page__sort-menu {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 10px);
   right: 0;
   z-index: 1;
   display: flex;
@@ -92,10 +93,11 @@
   padding: 0 10px;
   text-align: left;
   border: none;
-  border-radius: var(--r-sm, 8px);
+  border-radius: var(--r-sm, 10px);
   background: none;
   color: var(--text-sub);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-sm, 18px);/* [แก้ตามที่ระบุ] ใช้ var(--fs-sm) แทนเลขคงที่ 14px เพราะ font-size ของปุ่มตัวกรองเปลี่ยนตามขนาดหน้าจอ
+  (เดิมเป็นเลขคงที่ 14px ผูกตายตัวไว้จะพังทันทีที่ font-size เปลี่ยน) */
   cursor: pointer;
 }
 .friends-page__sort-option--active {
@@ -112,7 +114,7 @@
 .friends-page__empty {
   text-align: center;
   color: var(--text-muted);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-sm, 18px);
   padding: 40px 0;
 }
 

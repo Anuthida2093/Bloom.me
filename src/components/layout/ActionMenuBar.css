@@ -1,13 +1,13 @@
 :root {
-  --lc-c-4: rgba(39, 130, 69, .2);
+  --lc-c-4: rgba(42, 102, 62, 0.2);
   --nav-cutout-color: var(--lc-c-4);
   --nav-bg: var(--g700);
-  --nav-indicator: var(--fixed-white);
+  --nav-indicator: var(--fixed-white);/* [แก้ตามที่ระบุ] เดิมใช้ var(--lc-c-4) แต่ผู้ใช้บอกว่าไม่ค่อยเห็น เลยเปลี่ยนเป็นสีขาวให้เด่นชัดขึ้น */
   /* [แก้ตามที่ระบุ — รอบนี้] ผู้ใช้บอกว่ายังใหญ่ไป ลดจาก 2.5cm → 1.5cm ปรับ nav-height/
      btn-width ลงตามสัดส่วนเดิม (เผื่อ padding รอบไอคอนไว้ที่ประมาณ 35px เท่ารอบก่อน) */
-  --nav-icon-size: 1.5cm;
-  --nav-height: 90px;
-  --btn-width: 90px;
+  --nav-icon-size: 70px;
+  --nav-height: 80px;
+  --btn-width: 100px;
 }
 
 .action-menu-container {
@@ -23,14 +23,14 @@
 
 .quest-floating-menu {
   position: absolute;
-  bottom: calc(var(--nav-height) + 15px);
+  bottom: calc(var(--nav-height) + 8px);
   left: 0;                   /* [แก้] ตรงกับปุ่ม "เควส" ซึ่งเป็นปุ่มซ้ายสุดของแถบพอดี */
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   padding: 12px;
-  border-radius: var(--r-md);
-  background: var(--ae-surface);
+  border-radius: var(--r-md);/* [แก้ตามที่ระบุ] ปรับ border-radius ให้กลมขึ้นเล็กน้อยจากเดิม var(--r-sm) */
+  background: var(--ae-surface);/* [แก้ตามที่ระบุ] ปรับพื้นหลังให้เป็นสีเดียวกับแถบเมนูล่างหลัก (var(--ae-surface)) */
   backdrop-filter: var(--ae-blur);
   -webkit-backdrop-filter: var(--ae-blur);
   border: 1px solid var(--ae-surface-edge);
@@ -41,22 +41,22 @@
   background: var(--glass-w-8);
   border: none;
   color: var(--fixed-white);
-  padding: 10px 18px;
+  padding: 4px 8px;
   border-radius: var(--r-sm);
   cursor: pointer;
   white-space: nowrap;
   text-align: left;
   font-family: var(--font-body);
-  font-weight: 700;
+  font-weight: 300;
   font-size: var(--fs-sm);
   display: flex;
   align-items: center;
-  gap: 10px;
-  transition: background .18s ease, transform .18s ease;
+  gap: 2px;
+  transition: background .16s ease, transform .18s ease;
 }
 /* [แก้ตามที่ระบุ] ไอคอนหมวดเควสในเมนูลอย — ใช้ขนาดเดียวกับแถบเมนูล่างหลัก (--nav-icon-size) */
 .quest-floating-menu .icon-img {
-  width: var(--nav-icon-size);
+  width: 100px;/* [แก้ตามที่ระบุ] ไอคอนหมวดเควสในเมนูลอย — ใช้ขนาดเดียวกับแถบเมนูล่างหลัก (--nav-icon-size) */
   height: var(--nav-icon-size);
   flex-shrink: 0;
 }
@@ -104,14 +104,14 @@
 .liquid-nav-bar ul li.active a .nav-icon { opacity: 1; }
 /* [แก้ตามที่ระบุ] ไอคอนแถบเมนูล่าง — ใช้ --nav-icon-size (เดิม font-size:26px ตอนยังเป็น emoji) */
 .liquid-nav-bar ul li a .nav-icon .icon-img {
-  width: var(--nav-icon-size);
-  height: var(--nav-icon-size);
+  width: 125px;/* [แก้ตามที่ระบุ] ไอคอนแถบเมนูล่าง — ใช้ --nav-icon-size (เดิม font-size:26px ตอนยังเป็น emoji) */
+  height: 130px;/* [แก้ตามที่ระบุ] ไอคอนแถบเมนูล่าง — ใช้ --nav-icon-size (เดิม font-size:26px ตอนยังเป็น emoji) */
 }
 .liquid-nav-bar ul li a .nav-text {
   position: absolute;
   color: var(--fixed-white);
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: 500;
+  font-size: var(--fs-xs, 12px);
   font-family: var(--font-body);
   opacity: 0;
   transform: translateY(20px);
@@ -131,7 +131,7 @@
   color: var(--lc-text-1);
   font-size: 10px;
   font-family: var(--font-body);
-  font-weight: 800;
+  font-weight: 500;
   border-radius: var(--r-pill);
   min-width: 16px;
   height: 16px;
@@ -167,10 +167,10 @@
 @media (max-width: 768px) {
   /* [แก้ตามที่ระบุ] เดสก์ท็อปลดลงเหลือ 1.5cm แล้ว บนจอเล็กก็ลดตามสัดส่วนด้วย (เดิม 1.6cm
      ใหญ่กว่าเดสก์ท็อป 1.5cm ใหม่ไปแล้ว กลับตาลปัตร) */
-  :root { --nav-icon-size: 1.2cm; --nav-height: 74px; --btn-width: 74px; }
+  :root { --nav-icon-size: 1.5cm; --nav-height: 75px; --btn-width: 75px; }
   .action-menu-container { bottom: 15px; }
-  .liquid-nav-bar ul li a .nav-text { font-size: 11px; }
-  .liquid-nav-bar ul li.active a .nav-text { transform: translateY(11px); }
+  .liquid-nav-bar ul li a .nav-text { font-size: var(--fs-sm, 18px); }
+  .liquid-nav-bar ul li.active a .nav-text { transform: translateY(14px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

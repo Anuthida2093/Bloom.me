@@ -98,7 +98,9 @@
 }
 .dashboard__panel--right {
   right: 16px;
-  max-height: calc(100vh - 160px);
+  max-height: calc(100vh - 190px);/* [แก้ตามที่ระบุ] เดิมใช้ 100vh - 160px แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่
+     ทำให้แผงขวาเลยล้นจอออกไปนิดหน่อย เปลี่ยนเป็น 100vh - 190px ให้เหลือพื้นที่ว่าง
+     ด้านบน/ล่างเท่ากัน (95px) */
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -118,8 +120,8 @@
 
 /* ── จอกลาง ── */
 @media (max-width: 768px) {
-  .dashboard__panel--left  { left: 8px; }
-  .dashboard__panel--right { right: 8px; }
+  .dashboard__panel--left  { left: 6px; }
+  .dashboard__panel--right { right: 6px; }
 }
 
 /* ── มือถือ ──
@@ -142,7 +144,8 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 90;
-  width: 95%;
+  width: 95%;/* [แก้ตามที่ระบุ] เดิมใช้ 100% แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่ ทำให้ HUD ล้นจอออกไปนิดหน่อย
+     เปลี่ยนเป็น 95% ให้เหลือพื้นที่ว่างด้านซ้าย/ขวาเท่ากัน */
   max-width: 600px;
   display: flex;
   justify-content: center;
@@ -155,7 +158,7 @@
 .hud-pill {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   padding: 6px 14px;
   border-radius: var(--r-pill);
   --lc-bg-4: rgba(20, 30, 25, .6);
@@ -179,7 +182,7 @@
 .hud-bar-fill { height: 100%; background: linear-gradient(90deg, var(--exp), var(--coin)); border-radius: var(--r-pill); }
 /* [แก้ตามที่ระบุ] เลข "99/100" ก็ขยายตาม — จาก --fs-xs (11.5px) เป็น --fs-sm (13px) */
 .hud-bar-text {
-  font-size: var(--fs-sm);
+  font-size: var(--fs-sm);/* 13px */
   --lc-text-3: #E2E8F0;
   color: var(--lc-text-3);
   font-family: var(--font-body);
@@ -211,7 +214,8 @@
 .right-action-buttons {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 12px;/* [แก้ตามที่ระบุ] เดิมใช้ 8px แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่ ทำให้ปุ่มล้นจอออกไปนิดหน่อย
+     เปลี่ยนเป็น 12px ให้เหลือพื้นที่ว่างด้านบน/ล่างเท่ากัน */
   flex-shrink: 0;
 }
 
@@ -229,17 +233,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2cm;
+  font-size: 1.5cm; /* ขนาดตัวอักษรของ emoji ล้วน (🌳/🔊/📖) ให้ใกล้เคียงกับขนาดรูปจริงในปุ่มเดียวกัน*/
   transition: transform var(--dur-fast) var(--ease-spring);
 }
-.game-icon-btn .icon-img { width: 2cm; height: 2cm; }
+.game-icon-btn .icon-img { width: 4cm; height: 4cm; }
 .game-icon-btn:hover { transform: scale(1.08); }
 .game-icon-btn:active { transform: scale(.94); }
 
 @media (max-width: 768px) {
-  .dashboard__right-cluster { top: 80px; right: 8px; gap: 8px; }
-  .game-icon-btn { width: 1.6cm; height: 1.6cm; font-size: 1.6cm; }
-  .game-icon-btn .icon-img { width: 1.6cm; height: 1.6cm; }
+  .dashboard__right-cluster { top: 80px; right: 2px; gap: 2px; }/* [แก้ตามที่ระบุ] เดิมใช้ 8px แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่ ทำให้ปุ่มล้นจอออกไปนิดหน่อย
+     เปลี่ยนเป็น 2px ให้เหลือพื้นที่ว่างด้านบน/ล่างเท่ากัน */
+  .game-icon-btn { width: 1.5cm; height: 1.5cm; font-size: 1.2cm; }/* ขนาดปุ่มย่อเหลือ 1.5cm บนจอเล็ก */
+  .game-icon-btn .icon-img { width: 1.5cm; height: 1.5cm; }/* ขนาดรูปย่อเหลือ 1.5cm บนจอเล็ก */
 }
 
 /* ═══════════════════════════════════════════
@@ -252,17 +257,18 @@
   bottom: 25px;
   z-index: 90;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  flex-direction: column;/* [แก้ตามที่ระบุ] เดิมใช้ 8px แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่ ทำให้ปุ่มล้นจอออกไปนิดหน่อย
+     เปลี่ยนเป็น 2px ให้เหลือพื้นที่ว่างด้านบน/ล่างเท่ากัน */
+  gap: 2px;
 }
 .dashboard__corner-actions--left { left: 16px; }
 .dashboard__corner-actions--right { right: 16px; }
 
 @media (max-width: 768px) {
   .dashboard__corner-actions { bottom: 15px; gap: 8px; }
-  .dashboard__corner-actions--left { left: 8px; }
-  .dashboard__corner-actions--right { right: 8px; }
-  /* ขนาดปุ่ม .game-icon-btn ย่อเหลือ 1.6cm บนจอเล็กแล้วที่ media query ของ .game-icon-btn เอง */
+  .dashboard__corner-actions--left { left: 6px; }
+  .dashboard__corner-actions--right { right: 6px; }
+  /* ขนาดปุ่ม .game-icon-btn ย่อเหลือ 1.5cm บนจอเล็กแล้วที่ media query ของ .game-icon-btn เอง */
 }
 
 /* ═══════════════════════════════════════════

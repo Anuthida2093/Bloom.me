@@ -27,7 +27,7 @@ export default function PlayerTreeCard({ player }: PlayerTreeCardProps) {
     <div className="card glass no-scroll player-tree-card" style={{ width: 210, flexShrink: 0, padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
         <div style={{ fontSize: 40 }}>🌳</div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--text)' }}>{player.username}</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--text)' }}>{player.username}</div>
         <div style={{ display: 'flex', gap: 6 }}>
           <span className="tag" style={{ background: 'var(--g50)', color: 'var(--g700)' }}>{player.mbtiType}</span>
           <span className="tag" style={{ background: 'var(--g50)', color: 'var(--g700)' }}>🌳 Lv.{player.level}</span>
@@ -35,17 +35,17 @@ export default function PlayerTreeCard({ player }: PlayerTreeCardProps) {
       </div>
 
       <div>
-        <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-sub)', marginBottom: 10 }}>สถิติแยกหมวดหมู่</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-sub)', marginBottom: 8 }}>สถิติแยกหมวดหมู่</div>
         {stats.map((s) => (
-          <div key={s.label} style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+          <div key={s.label} style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0 }}>
               <div>
-                <span style={{ fontSize: 13 }}>{s.img ? <img src={s.img} className="icon-img" alt="" /> : s.icon}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', marginLeft: 4 }}>{s.label}</span>
+                <span style={{ fontSize: 18 }}>{s.img ? <img src={s.img} className="icon-img" alt="" /> : s.icon}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginLeft: 4 }}>{s.label}</span>
               </div>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: s.color }}>{Math.round(s.val)}%</span>
             </div>
-            <div style={{ height: 7, background: 'var(--n100)', borderRadius: 99, overflow: 'hidden' }}>
+            <div style={{ height: 8, background: 'var(--n100)', borderRadius: 99, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${s.val}%`, background: s.color, borderRadius: 99, transition: 'width .6s cubic-bezier(.22,1,.36,1)' }} />
             </div>
           </div>
