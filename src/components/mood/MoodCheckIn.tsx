@@ -1,6 +1,8 @@
 import { useState, type ChangeEvent } from 'react'
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import type { MoodTypeValue } from '../../types'
+import { MOOD_TYPE_INFO, MOOD_CATEGORY_SUBTYPES, LEGACY_KEY_TO_CATEGORY } from '../../config/moodTypes'
 
 const C_1 = '#D8F3DC'
 const C_2 = '#FBF4EC'
@@ -19,7 +21,11 @@ interface MoodOption {
 }
 
 interface MoodCheckInProps {
-  onSubmit?: (mood: MoodKey, text: string) => void
+  /** [แก้ตามที่ระบุ — ขยาย MoodType ให้ครบ 8 อารมณ์] เดิมส่งแค่ mood (bucket 3 ค่า) —
+   *  เพิ่ม subMood (อารมณ์ย่อยจริง 1 ใน 8 ค่าตาม backend MoodType) เข้าไปด้วย
+   *  [แก้รอบนี้ — บั๊กเจอเควสประตูอารมณ์ซ้ำบนจอเล็ก] คืน Promise ได้ — handleSubmit ด้านล่าง
+   *  จะรอ (await) ให้บันทึกเสร็จจริงก่อนแล้วค่อยปิด modal เอง ไม่ใช่ปิดทันทีที่กดปุ่ม */
+  onSubmit?: (mood: MoodKey, subMood: MoodTypeValue, text: string) => void | Promise<void>
   onSkip?: () => void
 }
 
@@ -38,8 +44,16 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
   useEscapeKey(onSkip)
   const [text, setText] = useState('')
   const [mood, setMood] = useState<MoodKey | null>(null)
+  /** [เพิ่มตามที่ระบุ — ขยาย MoodType ให้ครบ 8 อารมณ์] อารมณ์ย่อยจริงที่จะส่งเป็น
+   *  MoodEntryData.mood — ตั้งค่าเริ่มต้นอัตโนมัติเป็นตัวแรกของ bucket ที่เลือกทุกครั้ง
+   *  (ดู handlePickMood/handleAnalyze) ผู้ใช้กดเปลี่ยนเป็นตัวอื่นในกลุ่มเดียวกันได้ */
+  const [subMood, setSubMood] = useState<MoodTypeValue | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [justPicked, setJustPicked] = useState<MoodKey | null>(null)
+  /** [เพิ่มรอบนี้ — บั๊กเจอเควสประตูอารมณ์ซ้ำบนจอเล็ก] โชว์สถานะ "กำลังบันทึก" ระหว่างรอ
+   *  onSubmit (ตอนนี้ await จริงจนกว่า moodEntries จะถูกบันทึกเสร็จ) กันผู้ใช้กดซ้ำระหว่างรอ
+   *  และให้เห็นชัดว่าระบบกำลังทำงานอยู่ ไม่ใช่ค้าง/พัง */
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const moods: MoodOption[] = [
     { key: 'good', emoji: '😊', label: 'ดี', color: 'var(--g600)', bg: C_1 },
@@ -55,8 +69,7 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
       const neg = ['เครียด', 'เศร้า', 'เหนื่อย', 'กังวล', 'ท้อ', 'ไม่ดี', 'แย่']
       const lc = text.toLowerCase()
       const picked: MoodKey = neg.some(w => lc.includes(w)) ? 'bad' : pos.some(w => lc.includes(w)) ? 'good' : 'neutral'
-      setMood(picked)
-      pulsePick(picked)
+      pickMood(picked)
       setAnalyzing(false)
     }, 900)
   }
@@ -66,14 +79,31 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
     setTimeout(() => setJustPicked(null), 500)
   }
 
-  const handlePickMood = (key: MoodKey) => {
+  /** [เพิ่มตามที่ระบุ] เลือก bucket แล้วตั้ง subMood เริ่มต้นเป็นตัวแรกของกลุ่มนั้นให้อัตโนมัติ
+   *  เสมอ (ไม่ว่าจะมาจาก AI วิเคราะห์หรือกดเลือกเอง) — ผู้ใช้ยังกดเปลี่ยนอารมณ์ย่อยในชิปแถวล่าง
+   *  ได้ตามต้องการก่อนกดส่ง ไม่บังคับให้ต้องกดเพิ่มถ้าไม่สนใจความละเอียด */
+  const pickMood = (key: MoodKey) => {
     setMood(key)
+    setSubMood(MOOD_CATEGORY_SUBTYPES[LEGACY_KEY_TO_CATEGORY[key]][0])
     pulsePick(key)
   }
 
-  const handleSubmit = () => {
-    if (!mood) return
-    onSubmit(mood, text)
+  const handlePickMood = (key: MoodKey) => {
+    pickMood(key)
+  }
+
+  const handleSubmit = async () => {
+    if (!mood || !subMood || isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      await onSubmit(mood, subMood, text)
+    } finally {
+      // [เพิ่มรอบนี้] ไม่ setIsSubmitting(false) ใน finally เฉยๆ จะปลอดภัย เพราะกรณีสำเร็จ
+      // modal ปิดไปแล้ว (ผู้เรียก onSubmit ปิดเองหลัง await เสร็จ — ดู MentalContext.tsx)
+      // component นี้ unmount ไปแล้ว การ setState ไม่มีผลอะไร ส่วนกรณี error ยังอยู่ต้องปลด
+      // ล็อกปุ่มคืนให้กดใหม่ได้จริง
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -94,6 +124,15 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
       ))}
 
       <div className="mood-checkin-card" style={{ background: 'var(--fixed-white)', borderRadius: 28, padding: '32px 28px', width: '100%', maxWidth: 420, boxShadow: '0 24px 60px var(--glass-b-20)', position: 'relative' }}>
+        {/* [แก้บั๊ก — จอเล็ก/มือถือ] เดิม card ไม่มี max-height/overflow เลย บนจอสูงไม่พอ (มือถือ
+            ส่วนใหญ่, หรือคีย์บอร์ดเด้งขึ้นตอนพิมพ์บันทึก) เนื้อหาในนี้ (หัวข้อ+textarea+ปุ่ม AI+
+            เลือกอารมณ์+อารมณ์ย่อย+ตัวอย่างโพสอิท+ปุ่มส่ง) รวมกันสูงเกิน viewport ได้ง่าย แต่
+            backdrop ข้างนอกตั้ง overflow:'hidden' ไว้ (กันพื้นหลังเลื่อน) ผลคือปุ่ม "🌱 รดน้ำต้นไม้
+            วันนี้!" ที่อยู่ล่างสุดถูกตัดออกนอกจอไปเลยโดยไม่มีทางเลื่อนไปกดได้ — ผู้ใช้กด "ข้าม
+            สำหรับวันนี้" (ปุ่มที่ยังพอเห็น) หรือปิด modal ไปแทน handleSubmit เลยไม่เคยถูกเรียก
+            เควสไพ่ทิพย์ (ต้องมี moodEntry ของวันนี้ก่อนถึงจะเล่นได้ ดู GameplayFrame.tsx) จึง
+            เหมือน "กดเช็คอินแล้วไม่ไปไหนเลย" เฉพาะจอเล็ก — แก้ด้วยการจำกัดความสูงสูงสุด + ให้
+            เลื่อนดูเนื้อหาข้างในการ์ดเองได้ (ดู .mood-checkin-card ใน <style> ท้ายไฟล์) */}
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <div className="mood-checkin-header-emoji" style={{ fontSize: 52, marginBottom: 8 }}>🌤️</div>
@@ -105,7 +144,7 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
         <div style={{ marginBottom: 16 }}>
           <textarea
             value={text}
-            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => { setText(e.target.value); setMood(null) }}
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => { setText(e.target.value); setMood(null); setSubMood(null) }}
             placeholder="เขียนบันทึกความรู้สึกประจำวัน... ข้อความนี้จะถูกเปลี่ยนเป็นโพสอิทติดบนต้นไม้ของคุณ ✏️"
             rows={4}
             style={{
@@ -164,6 +203,43 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
               </button>
             ))}
           </div>
+
+          {/* [เพิ่มตามที่ระบุ — ขยาย MoodType ให้ครบ 8 อารมณ์] เลือก bucket แล้วค่อยเลือก
+              อารมณ์ย่อยละเอียดขึ้น — ตรงกับที่ schema.prisma อธิบายไว้ว่า MoodCategory คือ
+              "3 bucket ใหญ่ที่โชว์ก่อน" ส่วน MoodType 8 ค่าคือ "sub-emotion ที่เลือกจาก
+              bottom sheet หลังเลือก bucket แล้ว" — ตั้งค่าเริ่มต้นให้อัตโนมัติแล้ว (pickMood)
+              แถวนี้แค่ให้ปรับละเอียดขึ้นถ้าต้องการ ไม่บังคับต้องกดเพิ่ม */}
+          {mood && (
+            <div className="mood-checkin-submood" style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--n300)', marginBottom: 8, textAlign: 'center' }}>
+                เจาะจงขึ้นอีกนิด — รู้สึกแบบไหน:
+              </div>
+              <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+                {MOOD_CATEGORY_SUBTYPES[LEGACY_KEY_TO_CATEGORY[mood]].map((value) => {
+                  const info = MOOD_TYPE_INFO[value]
+                  const active = subMood === value
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => setSubMood(value)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        padding: '6px 12px', borderRadius: 999,
+                        border: `1.5px solid ${active ? 'var(--g500)' : 'var(--n100)'}`,
+                        background: active ? 'var(--g50)' : 'var(--white)',
+                        color: active ? 'var(--g700)' : 'var(--n500)',
+                        fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                        transition: 'border-color .15s, background .15s',
+                      }}
+                    >
+                      <span>{info.emoji}</span>
+                      <span>{info.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Post-it preview */}
@@ -176,21 +252,22 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
 
         <button
           onClick={handleSubmit}
-          disabled={!mood}
+          disabled={!mood || isSubmitting}
           className={mood ? 'mood-checkin-submit-btn mood-checkin-submit-btn--ready' : 'mood-checkin-submit-btn'}
           style={{
             width: '100%', padding: '14px', border: 'none', borderRadius: 16,
             background: mood ? 'linear-gradient(135deg, var(--g600), var(--g500))' : 'var(--n100)',
             color: mood ? 'var(--fixed-white)' : 'var(--n300)',
             fontFamily: 'Fredoka One', fontSize: 18,
-            cursor: mood ? 'pointer' : 'default',
+            cursor: mood && !isSubmitting ? 'pointer' : 'default',
+            opacity: isSubmitting ? 0.75 : 1,
             boxShadow: mood ? 'var(--sh-btn)' : 'none',
             transition: 'transform .15s, box-shadow .15s',
           }}>
-          🌱 รดน้ำต้นไม้วันนี้!
+          {isSubmitting ? '🌱 กำลังบันทึก...' : '🌱 รดน้ำต้นไม้วันนี้!'}
         </button>
 
-        <button onClick={onSkip} style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: 'var(--n300)', fontSize: 13, cursor: 'pointer', padding: '6px' }}>
+        <button onClick={onSkip} disabled={isSubmitting} style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: 'var(--n300)', fontSize: 13, cursor: isSubmitting ? 'default' : 'pointer', padding: '6px', opacity: isSubmitting ? 0.5 : 1 }}>
           ข้ามสำหรับวันนี้
         </button>
       </div>
@@ -200,7 +277,17 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
           from { opacity: 0; transform: scale(.9) translateY(14px); }
           to   { opacity: 1; transform: scale(1) translateY(0); }
         }
-        .mood-checkin-card { animation: moodCheckinCardPop .35s cubic-bezier(.22,1,.36,1) both; }
+        .mood-checkin-card {
+          animation: moodCheckinCardPop .35s cubic-bezier(.22,1,.36,1) both;
+          /* [แก้บั๊กจอเล็ก] จำกัดสูงสุดไม่ให้เกิน viewport (เผื่อ padding ของ backdrop 16px
+             บน+ล่าง) แล้วให้เลื่อนเนื้อหาข้างในการ์ดเองได้แทนการโดนตัดทิ้งเงียบๆ — ใช้ vh ก่อน
+             เป็น fallback แล้วค่อยทับด้วย dvh (นับความสูงจริงที่มองเห็นบนมือถือ ไม่รวมแถบ URL
+             ที่ย่อ/ขยายได้ ของเบราว์เซอร์มือถือ) เบราว์เซอร์ที่ไม่รู้จัก dvh จะข้ามบรรทัดนั้นไปเอง */
+          max-height: calc(100vh - 32px);
+          max-height: calc(100dvh - 32px);
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+        }
 
         @keyframes moodCheckinBackdropFade { from { opacity: 0; } to { opacity: 1; } }
         .mood-checkin-backdrop { animation: moodCheckinBackdropFade .25s ease both; }

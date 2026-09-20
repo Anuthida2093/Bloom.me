@@ -7,6 +7,7 @@ import {
   type JournalEntryRecord,
   type PostItData,
   type QuestCategory,
+  type MoodTypeValue,
 } from '../types'
 import { findQuestByCode } from '../config/questCatalog'
 import { queryKeys } from '../services/queryKeys'
@@ -34,20 +35,31 @@ interface ProgressContextValue {
   journalEntries: JournalEntryRecord[]
   postIts: PostItData[]
   completedQuestCount: number
-  treeGrowthPulse: { category: QuestCategory; key: number } | null
+  /** [แก้รอบนี้ — เพิ่ม questCode] เดิมมีแค่ category+key (พอสำหรับต้นไม้เติบโตทั่วไป) — เพิ่ม
+   *  questCode (optional) ให้ผู้ฟัง (Dashboard.tsx) แยกได้ว่า pulse นี้มาจากเควสไหนเจาะจง เช่น
+   *  เควส "สารอาหารแห่งผืนดิน" ต้องเล่นแอนิเมชันบัวรดน้ำเพิ่มเติมจากปุ่มเติบโตทั่วไป */
+  treeGrowthPulse: { category: QuestCategory; key: number; questCode?: string } | null
   hasSoot: boolean
   isLoadingProgress: boolean
 
   handleToggleQuest: (questCode: string, payload?: Record<string, unknown>) => void
   markIncineratorFailed: () => void
-  handleMoodSubmit: (mood: 'good' | 'neutral' | 'bad', text: string) => void
+  /** [แก้ตามที่ระบุ — ขยาย MoodType ให้ครบ 8 อารมณ์] เดิมรับแค่ mood (bucket 3 ค่า) แล้ว
+   *  คำนวณ MoodEntryData.mood เองผ่าน MOOD_TYPE map ที่ปัดเหลือแค่ HAPPY/CALM/SAD เสมอ —
+   *  ตอนนี้รับ subMood (ค่าจริง 1 ใน 8 ตัวที่ผู้ใช้เลือก) มาใช้ตรงๆ แทน
+   *  [แก้รอบนี้ — บั๊กเจอเควสประตูอารมณ์ซ้ำบนจอเล็ก] คืน Promise ที่ resolve ต่อเมื่อ moodEntries
+   *  ใน cache อัปเดตจริงแล้วเท่านั้น (ไม่ใช่แค่ยิง mutate() แบบ fire-and-forget) — ผู้เรียก
+   *  (MentalContext.handleMoodSubmit) ต้อง await ก่อนปิด modal เช็คอิน กัน race condition ที่
+   *  todaysMoodEntry (QuestSection.tsx) ยังเป็น null อยู่ตอนปิด modal ทำให้เจอ MoodGateScreen
+   *  ซ้ำทั้งที่เพิ่งเช็คอินสำเร็จ — เห็นชัดขึ้นมากเมื่อ setTimeout ของ mockDelay() ถูก browser
+   *  throttle (เช่นตอนแท็บถูกมองว่า background ซึ่งมือถือเจอได้ง่ายกว่าเดสก์ท็อป) */
+  handleMoodSubmit: (mood: 'good' | 'neutral' | 'bad', subMood: MoodTypeValue, text: string) => Promise<void>
   handleAddJournalEntry: (entry: { questCode: string; originalText: string; aiReframedText: string }) => void
 }
 
 const ProgressCtx = createContext<ProgressContextValue | null>(null)
 
 const MOOD_CATEGORY = { good: 'POSITIVE', neutral: 'NEUTRAL', bad: 'NEGATIVE' } as const
-const MOOD_TYPE = { good: 'HAPPY', neutral: 'CALM', bad: 'SAD' } as const
 
 export function ProgressProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
@@ -55,7 +67,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   const [journalEntries, setJournalEntries] = useState<JournalEntryRecord[]>(DEFAULT_JOURNAL_ENTRIES)
   const [postIts] = useState<PostItData[]>([])
-  const [treeGrowthPulse, setTreeGrowthPulse] = useState<{ category: QuestCategory; key: number } | null>(null)
+  const [treeGrowthPulse, setTreeGrowthPulse] = useState<{ category: QuestCategory; key: number; questCode?: string } | null>(null)
   const [hasSoot, setHasSoot] = useState(false)
 
   const { data: questLogsData, isLoading: loadingQuests } = useQuery({
@@ -173,17 +185,19 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     // เอฟเฟกต์ต้นไม้เติบโตทุกครั้งที่เล่นสำเร็จ ไม่ใช่แค่ครั้งแรก — alreadyDone เดิมเช็คแค่
     // "เคยสำเร็จมาก่อนไหม" ซึ่งใช้ไม่ได้กับเควสที่ตั้งใจให้ทำซ้ำได้
     if (!alreadyDone || def?.maxPerDay) {
-      setTreeGrowthPulse({ category, key: Date.now() })
+      setTreeGrowthPulse({ category, key: Date.now(), questCode })
       if (questCode === 'ment-cognitive-incinerator') setHasSoot(false)
     }
   }, [completeQuestMutation, questLogs])
 
   const markIncineratorFailed = useCallback(() => setHasSoot(true), [])
 
-  const handleMoodSubmit = useCallback((mood: 'good' | 'neutral' | 'bad', text: string) => {
-    createMoodMutation.mutate({
+  const handleMoodSubmit = useCallback(async (mood: 'good' | 'neutral' | 'bad', subMood: MoodTypeValue, text: string) => {
+    // [แก้รอบนี้] mutateAsync แทน mutate() เฉยๆ — ให้ผู้เรียก await จนกว่า onSuccess (setQueryData
+    // เข้า moodEntries cache) จะทำงานเสร็จจริงก่อน ไม่ใช่แค่ "ยิงแล้วไม่รอ" เหมือนเดิม
+    await createMoodMutation.mutateAsync({
       category: MOOD_CATEGORY[mood] ?? 'NEUTRAL',
-      mood: MOOD_TYPE[mood] ?? 'CALM',
+      mood: subMood,
       note: text || null,
     })
   }, [createMoodMutation])

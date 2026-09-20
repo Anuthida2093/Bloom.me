@@ -52,6 +52,19 @@
   opacity: 0.4;
 }
 
+/* [ใหม่ — ลำต้นชุดใหม่] ทับ animation ของ .tree-of-life__layer ด้านบน (0.7s scale+fade)
+   เฉพาะลำต้น ให้เป็น crossfade ล้วนๆ สั้นกว่า (0.4s ตามที่ระบุ ช่วง 300-500ms) แยกจากหญ้า/
+   ราก (grass) ที่ยังใช้ 0.7s เดิมไม่เปลี่ยน — มาทีหลังในไฟล์ ชนะ specificity เท่ากันด้วย
+   ลำดับประกาศ (source order) */
+.tree-of-life__layer--trunk {
+  animation: treeOfLifeTrunkFade 0.4s ease-in-out both;
+}
+
+@keyframes treeOfLifeTrunkFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* container เต็มพื้นที่ที่ "ปั๊ม" ใบ/ดอกลงไป — ตัว container เองไม่มีขนาด/รูปร่างอะไร
    เป็นแค่กรอบอ้างอิง % สำหรับ .tree-of-life__stamp แต่ละจุดข้างใน */
 .tree-of-life__foliage {

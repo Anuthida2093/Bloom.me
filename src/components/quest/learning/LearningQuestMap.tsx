@@ -95,11 +95,11 @@ interface LearningQuestMapProps {
  * เส้นทางในวิดีโอพอดี ปรับตัวเลขตรงนี้ได้ตรงๆ
  */
 const FIXED_NODE_POSITIONS: { x: number; y: number }[] = [
-  { x: 42, y: 69 },     // 1. เพ่งสมาธิ / ตั้งเป้าหมาย
-  { x: 55.5, y: 63 },   // 2. หยั่งรากลึก / โหมดจดจ่อ
-  { x: 62.5, y: 51 },   // 3. เทกระเป๋าความจำผ่านเสียง
-  { x: 46.5, y: 42.5 }, // 4. ผสมเกสรข้ามศาสตร์
-  { x: 38, y: 38 },     // 5. เช็กอินรายวัน (locked node)
+  { x: 26, y: 72 },     // 1. เพ่งสมาธิ / ตั้งเป้าหมาย
+  { x: 40, y: 61 },   // 2. หยั่งรากลึก / โหมดจดจ่อ
+  { x: 55, y: 51 },   // 3. เทกระเป๋าความจำผ่านเสียง
+  { x: 55, y: 30 }, // 4. ผสมเกสรข้ามศาสตร์
+  { x: 56, y: 15 },     // 5. เช็กอินรายวัน (locked node)
 ]
 
 const VIDEO_NATIVE_WIDTH = 1920
@@ -343,7 +343,7 @@ export default function LearningQuestMap({
     <div ref={containerRef} className="learning-quest-map">
       {/* วิดีโอพื้นหลังเส้นทางป่าเวทมนตร์ วนลูป */}
       <video className="learning-quest-map__video" autoPlay loop muted playsInline>
-        <source src="/assets/videos/QuestPathMap.mp4" type="video/mp4" />
+        <source src="/assets/videos/quest-learning/QuestPathMap.mp4" type="video/mp4" />
       </video>
 
       <div className="learning-quest-map__scrim" />
@@ -479,7 +479,7 @@ export default function LearningQuestMap({
 
         .learning-quest-map__node-label {
   font-family: 'Fredoka One', sans-serif;
-  font-size: 12px;
+  font-size: 18px;
   color: var(--fixed-white);
   --lc-bg-11: rgba(15, 23, 42, 0.75);
   background: var(--lc-bg-11);
@@ -502,7 +502,7 @@ export default function LearningQuestMap({
 
         /* ตราวงกลมรองรับกองไฟ */
         .learning-quest-map__node-badge {
-          width: 58px; height: 58px; border-radius: 99px; display: flex; align-items: center; justify-content: center;
+          width: 80px; height: 80px; border-radius: 99px; display: flex; align-items: center; justify-content: center;
           background: radial-gradient(circle, var(--glass-w-20) 0%, var(--glass-b-50) 80%);
           backdrop-filter: blur(2px);
           box-shadow: 0 8px 20px var(--glass-b-50), inset 0 0 12px var(--glass-w-30);
@@ -553,11 +553,11 @@ export default function LearningQuestMap({
   background: var(--lc-bg-1);
   --lc-text-2: #0F172A;
   color: var(--lc-text-2);
-  font-size: 11px;
+  font-size: 20px;
   font-weight: 900;
   border-radius: 99px;
-  width: 20px;
-  height: 20px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -573,8 +573,8 @@ export default function LearningQuestMap({
           background: var(--g500);
           font-size: 10px;
           border-radius: 99px;
-          width: 20px;
-          height: 20px;
+          width: 30px;
+          height: 30px;
           display: flex;
           align-items: center;
           justify-content: center;

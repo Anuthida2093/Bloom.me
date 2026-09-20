@@ -1,21 +1,21 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MBTI_TREE_THEME, DEFAULT_USER_DATA, type MbtiType, type UserData } from '../../types'
+import { MBTI_TREE_THEME, DEFAULT_USER_DATA, type MbtiType, type UserData, type Gender } from '../../types'
 import type { AppSettings } from '../../context/AppContext'
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import MiniTree from '../tree/MiniTree'
 import GameAlert from '../ui/GameAlert'
+import PasswordInput from '../ui/PasswordInput'
 import { BADGE_ICONS } from '../../config/iconAssets'
+import { ApiError } from '../../services/http'
+import { validatePasswordStrength } from '../../utils/mockAuth'
 
 const C_1 = 'rgba(116,198,157,.35)'
 const C_2 = 'rgba(116,198,157,.2)'
 const BORDER_3 = '#e2e8f0'
-const BG_4 = '#f8fafc'
-const TEXT_5 = '#1e293b'
 const BORDER_6 = 'rgba(116,198,157,.8)'
 const BORDER_7 = '#e2e8f0'
-const BG_8 = '#f8fafc'
 const SHADOW_9 = 'rgba(45,106,79,.3)'
 
 interface SettingsModalProps {
@@ -26,6 +26,10 @@ interface SettingsModalProps {
   onUpdateUser?: (partial: Partial<UserData>) => void // ฟังก์ชันอัปเดตข้อมูลผู้ใช้
   /** [เพิ่มรอบนี้] ออกจากระบบ — เดิมไม่มี prop นี้เลย ปุ่มออกจากระบบมีแค่ใน NavBar */
   onLogout?: () => void
+  /** [เพิ่มรอบนี้ — ข้อ 4] เปลี่ยนรหัสผ่าน — ต้อง throw ถ้ารหัสเดิมผิด (ดู UserContext.changePassword) */
+  onChangePassword?: (data: { currentPassword: string; newPassword: string }) => Promise<void>
+  /** [เพิ่มรอบนี้ — ข้อ 3] ลบบัญชีถาวร — เรียกหลังผ่าน confirm 2 ชั้นแล้วเท่านั้น */
+  onDeleteAccount?: () => Promise<void>
   onClose?: () => void
   /** [ใหม่ — ฟีเจอร์สตอรี่ ข้อ 5] เปิดตรงไปที่หน้าย่อยไหนทันทีตอน mount — ใช้ตอนกดปุ่ม
    *  "แก้ไขโปรไฟล์" จากหน้าโปรไฟล์ Story แล้วอยากให้เด้งมาหน้านี้ตรงๆ เลย ไม่ต้องกด "บัญชี"
@@ -34,9 +38,15 @@ interface SettingsModalProps {
   initialSubModal?: SubModalType
 }
 
-const DEFAULT_SETTINGS: AppSettings = { darkMode: false, soundEnabled: true, musicVolume: 60, sfxVolume: 80, strictMode: false }
+const DEFAULT_SETTINGS: AppSettings = {
+  darkMode: false, soundEnabled: true, musicVolume: 60, sfxVolume: 80, strictMode: false,
+  dailyQuestReminderEnabled: false, dailyQuestReminderTime: '09:00', questUnlockNotifyEnabled: true,
+}
 
-type SubModalType = 'profile' | 'notifications' | 'privacy' | null
+type SubModalType = 'profile' | 'notifications' | 'privacy' | 'security' | null
+
+/** ข้อความยืนยันที่ต้องพิมพ์ตรงเป๊ะก่อนปุ่ม "ลบถาวร" จะกดได้ — กันกดพลาด (ข้อ 3) */
+const DELETE_CONFIRM_PHRASE = 'ลบบัญชี'
 
 export default function SettingsModal({
   settings = DEFAULT_SETTINGS,
@@ -45,11 +55,17 @@ export default function SettingsModal({
   onUpdateSettings = () => {},
   onUpdateUser = () => {},
   onLogout = () => {},
+  onChangePassword,
+  onDeleteAccount,
   onClose = () => {},
   initialSubModal = null,
 }: SettingsModalProps) {
-  const { musicVolume, sfxVolume, darkMode, soundEnabled, strictMode } = settings
+  const { musicVolume, sfxVolume, darkMode, soundEnabled, strictMode, dailyQuestReminderEnabled, dailyQuestReminderTime, questUnlockNotifyEnabled } = settings
   const [confirmLogout, setConfirmLogout] = useState(false)
+  /** [เพิ่มรอบนี้ — ข้อ 3] ขั้นตอน confirm ลบบัญชี: 0 = ปิดอยู่, 1 = โมดัลอธิบายผล, 2 = โมดัลพิมพ์ยืนยัน */
+  const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const theme = MBTI_TREE_THEME[mbtiType as MbtiType] ?? MBTI_TREE_THEME.INFP
   const navigate = useNavigate()
 
@@ -60,6 +76,22 @@ export default function SettingsModal({
   const handleConfirmLogout = () => {
     onLogout()
     navigate('/', { replace: true })
+  }
+
+  // [เพิ่มรอบนี้ — ข้อ 3] ลบบัญชีถาวร — ปุ่ม "ลบถาวร" ใน modal ขั้นที่ 2 disabled จนกว่าจะพิมพ์
+  // ข้อความยืนยันตรงเป๊ะ (กันกดพลาด) เรียก onDeleteAccount() แล้ว navigate ไปหน้า Welcome ทันที
+  // แบบเดียวกับ handleConfirmLogout ด้านบน (เคลียร์ session แล้วต้อง navigate เสมอ)
+  const handleConfirmDelete = async () => {
+    if (!onDeleteAccount || isDeletingAccount) return
+    setIsDeletingAccount(true)
+    try {
+      await onDeleteAccount()
+      navigate('/', { replace: true })
+    } catch {
+      setAlertMessage('ลบบัญชีไม่สำเร็จ ลองอีกครั้ง')
+      setIsDeletingAccount(false)
+      setDeleteStep(0)
+    }
   }
 
   const [activeSubModal, setActiveSubModal] = useState<SubModalType>(initialSubModal)
@@ -189,6 +221,64 @@ export default function SettingsModal({
             <SettingBtn icon="📤" label="ส่งออกข้อมูล (Export)" onClick={handleExportData} accent={theme.accent} />
           </div>
         </Section>
+
+        {/* [เพิ่มรอบนี้ — ข้อ 5] หมวดใหม่ที่ยังไม่มีมาก่อน — ความปลอดภัยบัญชี (เปลี่ยนรหัสผ่าน
+            แยกออกมาให้ทำงานจริง + placeholder รายการอุปกรณ์) */}
+        <Section label="🔐 ความปลอดภัยบัญชี" index={6} accent={theme.accent} full>
+          <div className="settings-account-grid">
+            <SettingBtn icon="🔑" label="เปลี่ยนรหัสผ่าน" onClick={() => setActiveSubModal('security')} accent={theme.accent} />
+          </div>
+        </Section>
+
+        {/* [เพิ่มรอบนี้ — ข้อ 5] หมวดใหม่ที่ยังไม่มีมาก่อน — แจ้งเตือนเควสประจำวัน/เควสปลดล็อกใหม่
+            [หมายเหตุ] ตอนนี้บันทึกแค่ toggle+เวลาไว้ฝั่ง client (localStorage) เท่านั้น ยังไม่ได้
+            ต่อกับ push notification จริง เพราะต้องมี service worker + backend ส่ง push ตามเวลา
+            จริงถึงจะแจ้งเตือนได้ตอนไม่ได้เปิดแอปอยู่ — ดูสรุปท้ายบทสนทนาสำหรับสิ่งที่ต้องทำเพิ่ม */}
+        <Section label="📚 การเรียนรู้/แจ้งเตือนเควส" index={7} accent={theme.accent} full>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button
+              type="button"
+              onClick={() => onUpdateSettings({ dailyQuestReminderEnabled: !dailyQuestReminderEnabled })}
+              className="settings-toggle-row"
+              style={{
+                border: `2px solid ${dailyQuestReminderEnabled ? theme.accent : 'var(--border-mid)'}`,
+                background: dailyQuestReminderEnabled ? theme.accent + '14' : 'var(--bg-card)',
+              }}
+            >
+              <span>{dailyQuestReminderEnabled ? '🔔 เตือนทำเควสประจำวัน — เปิดอยู่' : '🔕 เตือนทำเควสประจำวัน — ปิดอยู่'}</span>
+              <span style={{ width: 44, height: 24, borderRadius: 99, position: 'relative', background: dailyQuestReminderEnabled ? theme.accent : 'var(--n200)', transition: 'background .25s' }}>
+                <span className="settings-toggle-knob" style={{ position: 'absolute', top: 2, left: dailyQuestReminderEnabled ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)' }} />
+              </span>
+            </button>
+
+            {dailyQuestReminderEnabled && (
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 44, padding: '10px 14px', background: `${theme.accent}0d`, borderRadius: 12, fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--text)' }}>
+                เวลาที่อยากให้เตือน
+                <input
+                  type="time"
+                  value={dailyQuestReminderTime}
+                  onChange={(e) => onUpdateSettings({ dailyQuestReminderTime: e.target.value })}
+                  style={{ border: `1.5px solid var(--border)`, borderRadius: 8, padding: '6px 10px', fontFamily: 'Nunito', background: 'var(--input-bg)', color: 'var(--text)' }}
+                />
+              </label>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onUpdateSettings({ questUnlockNotifyEnabled: !questUnlockNotifyEnabled })}
+              className="settings-toggle-row"
+              style={{
+                border: `2px solid ${questUnlockNotifyEnabled ? theme.accent : 'var(--border-mid)'}`,
+                background: questUnlockNotifyEnabled ? theme.accent + '14' : 'var(--bg-card)',
+              }}
+            >
+              <span>{questUnlockNotifyEnabled ? '🔓 แจ้งเตือนเควสล็อก/ปลดล็อกใหม่ — เปิดอยู่' : '🔒 แจ้งเตือนเควสล็อก/ปลดล็อกใหม่ — ปิดอยู่'}</span>
+              <span style={{ width: 44, height: 24, borderRadius: 99, position: 'relative', background: questUnlockNotifyEnabled ? theme.accent : 'var(--n200)', transition: 'background .25s' }}>
+                <span className="settings-toggle-knob" style={{ position: 'absolute', top: 2, left: questUnlockNotifyEnabled ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)' }} />
+              </span>
+            </button>
+          </div>
+        </Section>
       </div>
 
       <button
@@ -223,6 +313,68 @@ export default function SettingsModal({
         </div>
       )}
 
+      {/* [เพิ่มรอบนี้ — ข้อ 3] โซนอันตราย — ลบบัญชีถาวร แยกจากโซนออกจากระบบชัดเจนด้วยเส้นคั่น
+          สีแดงของตัวเอง อยู่ท้ายสุดของหน้าเสมอ ต้อง confirm 2 ชั้นก่อนลบได้จริง */}
+      <div className="settings-danger-zone">
+        <div className="settings-danger-zone__label">⚠️ โซนอันตราย</div>
+        <button type="button" onClick={() => setDeleteStep(1)} className="settings-danger-zone__btn">
+          🗑️ ลบบัญชี
+        </button>
+      </div>
+
+      {/* Modal ขั้นที่ 1 — อธิบายผลที่ตามมา */}
+      {deleteStep === 1 && (
+        <div className="settings-logout-confirm">
+          <div className="settings-logout-confirm__card">
+            <div style={{ fontSize: 34 }}>⚠️</div>
+            <p style={{ marginBottom: 8 }}>ต้องการลบบัญชีนี้ถาวรใช่ไหม?</p>
+            <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--n300)', fontWeight: 600, marginTop: -4, marginBottom: 20 }}>
+              ข้อมูลทั้งหมด — เควส ต้นไม้ โพสต์ เพื่อน คลังไอเทม — จะถูกลบถาวรและกู้คืนไม่ได้
+            </p>
+            <div className="settings-logout-confirm__actions">
+              <button type="button" onClick={() => setDeleteStep(0)}>ยกเลิก</button>
+              <button type="button" className="is-danger" onClick={() => setDeleteStep(2)}>ดำเนินการต่อ</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal ขั้นที่ 2 — พิมพ์ยืนยันก่อนปุ่มลบถาวรจะกดได้ */}
+      {deleteStep === 2 && (
+        <div className="settings-logout-confirm">
+          <div className="settings-logout-confirm__card">
+            <div style={{ fontSize: 34 }}>🗑️</div>
+            <p style={{ marginBottom: 10 }}>
+              พิมพ์ "<strong>{DELETE_CONFIRM_PHRASE}</strong>" เพื่อยืนยันการลบถาวร
+            </p>
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder={DELETE_CONFIRM_PHRASE}
+              autoFocus
+              style={{
+                width: '100%', minHeight: 44, padding: '10px 14px', borderRadius: 10,
+                border: '1.5px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)',
+                fontFamily: 'Nunito', fontSize: 'var(--fs-md)', marginBottom: 16, boxSizing: 'border-box',
+              }}
+            />
+            <div className="settings-logout-confirm__actions">
+              <button type="button" onClick={() => { setDeleteStep(0); setDeleteConfirmText('') }}>ยกเลิก</button>
+              <button
+                type="button"
+                className="is-danger"
+                disabled={deleteConfirmText !== DELETE_CONFIRM_PHRASE || isDeletingAccount}
+                style={{ opacity: deleteConfirmText !== DELETE_CONFIRM_PHRASE || isDeletingAccount ? 0.5 : 1, cursor: deleteConfirmText !== DELETE_CONFIRM_PHRASE || isDeletingAccount ? 'not-allowed' : 'pointer' }}
+                onClick={handleConfirmDelete}
+              >
+                {isDeletingAccount ? 'กำลังลบ...' : 'ลบถาวร'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Sub Modals ── */}
       {activeSubModal === 'profile' && (
         <SubModalTemplate title="👤 ตั้งค่าโปรไฟล์" onClose={() => setActiveSubModal(null)} accent={theme.accent}>
@@ -248,6 +400,19 @@ export default function SettingsModal({
         </SubModalTemplate>
       )}
 
+      {activeSubModal === 'security' && (
+        <SubModalTemplate title="🔐 ความปลอดภัยบัญชี" onClose={() => setActiveSubModal(null)} accent={theme.accent}>
+          <ChangePasswordForm accent={theme.accent} onChangePassword={onChangePassword} onDone={() => setActiveSubModal(null)} />
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px dashed var(--border)' }}>
+            <div style={{ fontWeight: 800, fontSize: 'var(--fs-sm)', color: 'var(--text-sub)', marginBottom: 10 }}>💻 อุปกรณ์ที่เข้าสู่ระบบ</div>
+            <div style={{ padding: 14, borderRadius: 12, background: `${theme.accent}0d`, fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>
+              เร็วๆ นี้ — ฟีเจอร์นี้ต้องมีระบบ session ฝั่ง backend จริงถึงจะแสดงรายการอุปกรณ์/
+              ตำแหน่งที่ล็อกอินอยู่ได้ถูกต้อง (mock ปัจจุบันมี session เดียวเสมอ)
+            </div>
+          </div>
+        </SubModalTemplate>
+      )}
+
       <GameAlert open={alertMessage !== null} message={alertMessage ?? ''} onClose={() => setAlertMessage(null)} />
 
       <style>{`
@@ -270,7 +435,7 @@ export default function SettingsModal({
           border-radius: 50%; pointer-events: none;
         }
         .settings-hero__title {
-          position: relative; font-family: 'Fredoka One'; font-size: var(--fs-xl); color: var(--g800);
+          position: relative; font-family: 'Fredoka One'; font-size: var(--fs-xl); color: var(--heading-accent);
         }
         .settings-hero__subtitle {
           position: relative; font-size: var(--fs-xs); font-weight: 700; margin-top: 2px;
@@ -348,12 +513,37 @@ export default function SettingsModal({
         .settings-logout-confirm__card p { font-size: var(--fs-md); color: var(--text); margin: 12px 0 20px; font-weight: 700; }
         .settings-logout-confirm__actions { display: flex; gap: 10px; }
         .settings-logout-confirm__actions button {
+          /* [แก้บั๊ก — พบระหว่างแก้ข้อ 7] เดิม background: var(--bg-body) — โทเคนนี้ไม่มีอยู่จริง
+             ในระบบ (ไม่ได้ประกาศไว้ที่ :root เลย) และตรงนี้ไม่มี fallback ด้วย ตกเป็น "transparent"
+             (ค่าเริ่มต้นของ background) เสมอ ปุ่ม "ยกเลิก" เลยไม่มีพื้นหลังจริงทั้ง 2 โหมด (บังเอิญ
+             ยังอ่านออกเพราะพื้นหลังที่โผล่มาคือ .settings-logout-confirm__card ที่สีเข้ม/อ่อนตรง
+             ข้ามกับ --text พอดีอยู่แล้ว แต่ก็ยังเป็นโทเคนที่ไม่มีจริง ไม่ควรอ้างอิงค้างไว้) เปลี่ยนเป็น
+             var(--n100) ซึ่งเป็นโทเคนพื้นผิวรองที่ใช้จริงในระบบ (สลับ light/dark ถูกต้อง) */
           flex: 1; min-height: 44px; border-radius: var(--r-md); border: 1.5px solid var(--border);
-          background: var(--bg-body); color: var(--text); font-weight: 800; font-size: var(--fs-sm); cursor: pointer;
+          background: var(--n100); color: var(--text); font-weight: 800; font-size: var(--fs-sm); cursor: pointer;
         }
         .settings-logout-confirm__actions .is-danger {
           border-color: var(--red); background: var(--red); color: var(--fixed-white);
         }
+        .settings-logout-confirm__actions .is-danger:disabled {
+          opacity: 0.5; cursor: not-allowed;
+        }
+
+        /* [เพิ่มรอบนี้ — ข้อ 3] โซนอันตราย (ลบบัญชี) — เส้นคั่นสีแดงของตัวเอง แยกจาก
+           settings-logout-zone ชัดเจน (ออกจากระบบ = เปลี่ยนใจได้ / ลบบัญชี = กู้คืนไม่ได้) */
+        .settings-danger-zone {
+          margin-top: 20px; padding: 18px 16px; border-radius: var(--r-md);
+          border: 1.5px dashed var(--red); background: color-mix(in srgb, var(--red) 6%, transparent);
+          display: flex; flex-direction: column; align-items: center; gap: 10px;
+        }
+        .settings-danger-zone__label { font-weight: 800; font-size: var(--fs-sm); color: var(--red); }
+        .settings-danger-zone__btn {
+          min-height: 44px; padding: 10px 24px; border-radius: var(--r-pill);
+          border: none; background: var(--red); color: var(--fixed-white);
+          font-family: 'Nunito'; font-weight: 800; font-size: var(--fs-sm); cursor: pointer;
+          transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .settings-danger-zone__btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(220,60,60,.35); }
       `}</style>
     </Overlay>
   )
@@ -465,7 +655,7 @@ function SubModalTemplate({ title, onClose, accent, children }: { title: string,
     <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-card)', zIndex: 510, padding: '95px 20px 28px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ maxWidth: 760, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexShrink: 0 }}>
-          <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-lg)', color: 'var(--g800)' }}>{title}</div>
+          <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-lg)', color: 'var(--heading-accent)' }}>{title}</div>
           <button
             onClick={onClose}
             title="ปิด"
@@ -493,8 +683,8 @@ function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData,
   const [formData, setFormData] = useState({
     email: userData.email || '',
     username: userData.username || '',
-    password: '', // ปล่อยว่างไว้ หากกรอกคือเปลี่ยนรหัส
     birthDate: userData.birthDate ? userData.birthDate.split('T')[0] : '', // ดึงมาเฉพาะวันที่ YYYY-MM-DD
+    gender: userData.gender ?? 'FEMALE',
     height: userData.height?.toString() || '',
     weight: userData.weight?.toString() || '',
     mbtiType: userData.mbtiType || 'INFP',
@@ -525,6 +715,7 @@ function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData,
     e.preventDefault()
     onSave({
       ...formData,
+      gender: formData.gender as Gender,
       height: formData.height ? Number(formData.height) : null,
       weight: formData.weight ? Number(formData.weight) : null,
       mbtiType: formData.mbtiType as MbtiType,
@@ -539,10 +730,21 @@ function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData,
   const BLUR_SHADOW = 'none'
 
   // [แก้] ฟิลด์สูงอย่างน้อย 44px (เดิม padding 12px + fs 14 ≈ 38px ต่ำกว่ามาตรฐาน)
+  //
+  // [แก้บั๊ก — ตามที่ระบุ ข้อ 7] เดิม background: var(--bg-body, ${BG_4}) — "--bg-body" ไม่ใช่
+  // โทเคนที่มีอยู่จริงในระบบ (ไม่ได้ประกาศไว้ที่ :root ใน index.css เลย) ทำให้ var() นี้ invalid
+  // เสมอ ตกไปใช้ fallback (#f8fafc สีขาวอมฟ้าอ่อน) ตรงๆ ทุกครั้งไม่ว่าธีมไหน — ส่วน color ใช้
+  // var(--text, ...) ซึ่ง --text เป็นโทเคนจริงที่ "สลับกลับด้าน" ตอน dark mode (เกือบดำ →
+  // เกือบขาว ดู [data-theme="dark"] ใน index.css) ผลคือพอสลับ dark mode ได้ตัวอักษรเกือบขาว
+  // บนพื้นหลังที่ยังขาวอมฟ้าเหมือนเดิม (ไม่เคยเข้มขึ้นเลย) อ่านไม่ออกเลย — บั๊กเดียวกับที่เคย
+  // พบและแก้ไปแล้วใน Login.tsx (แถวคอมเมนต์อธิบายไว้ที่นั่น) ต่างกันตรงที่หน้านี้ฟิลด์วางอยู่บน
+  // .settings-overlay-card ที่มี var(--bg-card) เป็นพื้นหลังจริงอยู่แล้ว (ไม่ใช่วิดีโอเต็มจอ
+  // แบบ Login) จึงแก้ที่ต้นตอตรงๆ แทน: เปลี่ยนไปอ้าง var(--input-bg) ซึ่งเป็นโทเคนที่มีอยู่จริง
+  // และสร้างมาเพื่อพื้นหลังช่องกรอกฟอร์มโดยเฉพาะ (สลับ light/dark คู่กับ --text ถูกต้องแล้ว)
   const fieldStyle = {
     width: '100%', minHeight: 44, padding: '13px 14px', borderRadius: 12, boxSizing: 'border-box' as const,
     border: `2px solid var(--n200, ${BORDER_3})`, fontSize: 'var(--fs-md)', fontFamily: 'Nunito',
-    outline: 'none', background: `var(--bg-body, ${BG_4})`, color: `var(--text, ${TEXT_5})`,
+    outline: 'none', background: 'var(--input-bg)', color: 'var(--text)',
     boxShadow: BLUR_SHADOW, transition: 'all .3s ease', marginBottom: 14
   }
 
@@ -554,15 +756,21 @@ function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData,
   const mbtiAlreadySet = !!userData.mbtiType
 
   // เอฟเฟกต์ตอนกดพิมพ์ช่องต่างๆ
+  // [แก้บั๊ก — ตามที่ระบุ ข้อ 7] เดิม focus ใช้ var(--fixed-white) (ขาวล้วนตายตัว ไม่กลับสีตอน
+  // dark mode ตามชื่อ — ดูคำอธิบาย --fixed-white ใน index.css) ตอนโฟกัสพิมพ์ตัวอักษรจึงกลาย
+  // เป็นขาวเกือบขาวบนพื้นขาวล้วนเสมอใน dark mode (ยิ่งแย่กว่าตอน blur อีก เพราะ blur เดิมยัง
+  // สุ่มได้ backgroun อ่อนที่ไม่ใช่ขาวสนิทจาก fallback บั๊ก) เปลี่ยนเป็น var(--input-bg) ให้
+  // ตรงกับ fieldStyle ด้านบน (โทเคนเดียวกัน สลับ light/dark ถูกต้อง) ส่วน handleFieldBlur มี
+  // บั๊ก var(--bg-body, ...) แบบเดียวกับ fieldStyle เปลี่ยนเป็น var(--input-bg) เช่นกัน
   const handleFieldFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     e.target.style.boxShadow = FOCUS_GLOW
     e.target.style.borderColor = BORDER_6
-    e.target.style.background = 'var(--fixed-white)'
+    e.target.style.background = 'var(--input-bg)'
   }
   const handleFieldBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     e.target.style.boxShadow = BLUR_SHADOW
     e.target.style.borderColor= `var(--n200, ${BORDER_7})`
-    e.target.style.background= `var(--bg-body, ${BG_8})`
+    e.target.style.background= 'var(--input-bg)'
   }
 
   return (
@@ -594,9 +802,10 @@ function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData,
 
       <label style={labelStyle}>ชื่อผู้ใช้ (Username)</label>
       <input type="text" name="username" value={formData.username} onChange={handleChange} onFocus={handleFieldFocus} onBlur={handleFieldBlur} style={fieldStyle} required />
-
-      <label style={labelStyle}>เปลี่ยนรหัสผ่าน (เว้นว่างไว้หากไม่ต้องการเปลี่ยน)</label>
-      <input type="password" name="password" value={formData.password} onChange={handleChange} onFocus={handleFieldFocus} onBlur={handleFieldBlur} placeholder="••••••••" style={fieldStyle} />
+      {/* [แก้รอบนี้] ช่อง "เปลี่ยนรหัสผ่าน" เดิมตรงนี้ไม่เคยทำงานจริง (formData.password ไม่มีทาง
+          ไปถึง userApi ไหนเลย — onSave ส่งเข้า updateProfile ที่แก้เฉพาะ UserData ซึ่งไม่มี field
+          รหัสผ่านอยู่แล้วตามที่ตั้งใจ ดูคอมเมนต์ที่ UserData ใน types.ts) ย้ายไปทำใหม่ให้ทำงานจริง
+          ที่หมวด "ความปลอดภัยบัญชี" แทน (ตรวจรหัสเดิมก่อนเปลี่ยนจริงผ่าน userApi.changePassword) */}
 
       {/* [ใหม่ — ข้อ 5b] รายละเอียด/แนะนำตัว — ใช้ field เดียวกับ userData.bio ที่ StoryProfilePage
           แสดงอยู่แล้ว (จุดนี้คือที่แก้จริง ไม่มีฟอร์มแยกซ้ำใน Story อีกต่อไป) */}
@@ -609,6 +818,14 @@ function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData,
 
       <label style={labelStyle}>วันเกิด</label>
       <input type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} onFocus={handleFieldFocus} onBlur={handleFieldBlur} style={fieldStyle} />
+
+      {/* [ใหม่] เพศ — วางไว้ใกล้ส่วนสูง/น้ำหนักตามที่ระบุ เพราะใช้ร่วมกันเลือกภาพ "รูปร่างของคุณ"
+          ในหน้าโปรไฟล์ (ดู getBodyTypeImagePath ใน bodyTypeAssets.ts) แก้ไขได้ปกติ ไม่ล็อกแบบ MBTI */}
+      <label style={labelStyle}>เพศ</label>
+      <select name="gender" value={formData.gender} onChange={handleChange} onFocus={handleFieldFocus} onBlur={handleFieldBlur} style={fieldStyle}>
+        <option value="FEMALE">หญิง</option>
+        <option value="MALE">ชาย</option>
+      </select>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
@@ -677,6 +894,79 @@ function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData,
         onMouseLeave={e => e.currentTarget.style.transform = 'none'}
       >
         บันทึกข้อมูลโปรไฟล์
+      </button>
+    </form>
+  )
+}
+
+/** [เพิ่มรอบนี้ — ข้อ 4/5] ฟอร์มเปลี่ยนรหัสผ่านจริง (แทนที่ช่องเดิมใน ProfileSettingsForm ที่
+ * ไม่เคยทำงาน) ต้องกรอกรหัสผ่านปัจจุบันให้ถูกก่อน — ตรวจผ่าน userApi.changePassword (มี hash
+ * เทียบจริงในโหมด mock ดู user.api.ts) */
+function ChangePasswordForm({ accent, onChangePassword, onDone }: {
+  accent: string
+  onChangePassword?: (data: { currentPassword: string; newPassword: string }) => Promise<void>
+  onDone: () => void
+}) {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const fieldStyle: CSSProperties = {
+    width: '100%', minHeight: 44, padding: '13px 14px', borderRadius: 12, boxSizing: 'border-box',
+    border: '2px solid var(--n200)', fontSize: 'var(--fs-md)', fontFamily: 'Nunito',
+    outline: 'none', background: 'var(--input-bg)', color: 'var(--text)', marginBottom: 14,
+  }
+  const labelStyle: CSSProperties = { display: 'block', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--n500)', marginBottom: 6 }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrorMessage(null)
+    setSuccessMessage(null)
+
+    const strengthIssue = validatePasswordStrength(newPassword)
+    if (strengthIssue) { setErrorMessage(strengthIssue); return }
+    if (newPassword !== confirmPassword) { setErrorMessage('รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน'); return }
+
+    setIsSubmitting(true)
+    try {
+      await onChangePassword?.({ currentPassword, newPassword })
+      setSuccessMessage('เปลี่ยนรหัสผ่านสำเร็จแล้ว')
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('')
+      window.setTimeout(onDone, 1200)
+    } catch (err) {
+      setErrorMessage(err instanceof ApiError ? err.userMessage : 'เปลี่ยนรหัสผ่านไม่สำเร็จ ลองอีกครั้ง')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <label style={labelStyle}>รหัสผ่านปัจจุบัน</label>
+      <PasswordInput value={currentPassword} onChange={setCurrentPassword} placeholder="••••••••" required style={fieldStyle} />
+
+      <label style={labelStyle}>รหัสผ่านใหม่</label>
+      <PasswordInput value={newPassword} onChange={setNewPassword} placeholder="อย่างน้อย 8 ตัวอักษร มีตัวอักษรและตัวเลข" required style={fieldStyle} />
+
+      <label style={labelStyle}>ยืนยันรหัสผ่านใหม่</label>
+      <PasswordInput value={confirmPassword} onChange={setConfirmPassword} placeholder="••••••••" required style={fieldStyle} />
+
+      {errorMessage && <div style={{ marginBottom: 14, fontSize: 'var(--fs-xs)', color: '#c0392b', fontWeight: 700 }}>⚠️ {errorMessage}</div>}
+      {successMessage && <div style={{ marginBottom: 14, fontSize: 'var(--fs-xs)', color: accent, fontWeight: 700 }}>✅ {successMessage}</div>}
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        style={{
+          width: '100%', minHeight: 48, padding: 14, background: accent, color: 'var(--fixed-white)', border: 'none',
+          borderRadius: 12, fontFamily: 'Fredoka One', fontSize: 'var(--fs-lg)', cursor: isSubmitting ? 'not-allowed' : 'pointer',
+          opacity: isSubmitting ? 0.6 : 1,
+        }}
+      >
+        {isSubmitting ? 'กำลังบันทึก...' : 'เปลี่ยนรหัสผ่าน'}
       </button>
     </form>
   )

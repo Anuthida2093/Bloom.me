@@ -99,21 +99,24 @@
   overflow-y: auto;
 }
 
-/* สรุปอารมณ์ */
+/* สรุปอารมณ์ — [แก้ตามที่ระบุ] เดิมขอบมนแค่ 10px แบนกลืนกับพื้นหลังฉาก ตอนนี้ทำเป็น pill
+   เต็มรูปแบบ (border-radius: var(--r-pill)) เพิ่มความทึบพื้นหลัง + เงาลอยให้แยกจากพื้นหลัง
+   ฉากชัดเจนขึ้น และเพิ่ม padding แนวตั้งให้สมส่วนกับ font-size 18px มากกว่าเดิม (8px แน่นไป) */
 .oracle-page__mood-recap {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  --lc-bg-16: rgba(82, 183, 136, 0.15);
+  --lc-bg-16: rgba(82, 183, 136, 0.22);
   background: var(--lc-bg-16);
-  --lc-border-17: rgba(82, 183, 136, 0.4);
+  --lc-border-17: rgba(82, 183, 136, 0.45);
   border: 1px solid var(--lc-border-17);
-  border-radius: 10px;
-  padding: 8px 18px;
+  border-radius: var(--r-pill);
+  padding: 11px 22px;
   --lc-text-18: #D8F3DC;
   color: var(--lc-text-18);
   font-size: 18px;
   margin-bottom: 20px;
+  box-shadow: 0 6px 18px var(--glass-b-30), 0 2px 6px var(--glass-b-20);
 }
 
 /* หัวข้อหลักทั้งหมด (18px) */
@@ -249,10 +252,13 @@
   max-width: 440px;
 }
 
+/* [แก้ตามที่ระบุ] เดิมไล่จาก --g800 (#1B4332) ไปเกือบดำสนิท (#081C15) เข้มจัดและ contrast
+   ระหว่างจุดเริ่ม-จบสูงเกินไปดูไม่ minimal เปลี่ยนเป็นไล่ระหว่าง --g700/--g800 (ทั้งคู่เป็น
+   เฉดเขียวกลางที่มีอยู่แล้วในโทเคนกลาง) ห่างกันน้อยลงมาก ภาพรวมสว่างขึ้นแต่ยังเข้มพอให้ตัวหนังสือ
+   สีอ่อน (--g200/--g400/--fixed-white) อ่านผ่าน WCAG AA สบายๆ เหมือนเดิม */
 .oracle-card--large {
   width: 100%;
-  --lc-bg-10: #081C15;
-  background: linear-gradient(160deg, var(--g800), var(--lc-bg-10));
+  background: linear-gradient(160deg, var(--g700), var(--g800));
   border: 2px solid var(--g400);
   border-radius: 10px;
   padding: 24px;
@@ -281,6 +287,35 @@
   --lc-border-9: rgba(116, 198, 157, 0.2);
   border: 1px solid var(--lc-border-9);
   text-align: left;
+}
+
+/* [เพิ่มตามที่ระบุ] เดิม affirmation กับภารกิจ 2 นาทีพิมพ์ต่อกันเป็นพารากราฟเดียว อ่านปนกัน
+   ตอนนี้แยกเป็น 2 บล็อกชัดเจน: affirmation เป็นข้อความเปล่าด้านบน ส่วนภารกิจอยู่ในกล่องมีขอบ/
+   พื้นหลังของตัวเองด้านล่าง (โผล่มาพร้อมปุ่ม action ตอน typewriter พิมพ์จบ) */
+.oracle-card__affirmation-block {
+  margin-bottom: 14px;
+}
+
+.oracle-card__mission-block {
+  background: var(--glass-w-7);
+  border: 1px solid var(--lc-border-9);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.oracle-card__mission-label {
+  display: block;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--g300);
+  margin-bottom: 4px;
+}
+
+.oracle-card__mission-text {
+  font-size: 18px;
+  color: var(--g100);
+  line-height: 1.6;
 }
 
 .oracle-page__caret {

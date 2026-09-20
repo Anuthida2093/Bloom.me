@@ -9,6 +9,7 @@ import { playSfx, stopSfx } from '../../../utils/audioPlayer'
 import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import CameraCapture from '../shared/CameraCapture'
 import { BADGE_ICONS } from '../../../config/iconAssets'
+import { MOOD_TYPE_INFO } from '../../../config/moodTypes'
 import './OracleCardsPage.css'
 
 type Stage = 'intro' | 'spread' | 'reading' | 'camera' | 'done'
@@ -18,11 +19,8 @@ type Stage = 'intro' | 'spread' | 'reading' | 'camera' | 'done'
  *  ยังนับว่าสำเร็จเหมือนเดิม ดู handleSkip/handleClaimReward ด้านล่าง) */
 const WATER_DROP_REWARD = 20
 
-// [แก้ไขตามการตรวจสอบ DATA_DICTIONARY.md] ขยายให้ครบ 8 ค่าจริงของ MoodType (เดิมมีแค่ 3)
-const MOOD_EMOJI: Record<MoodEntryData['mood'], string> = {
-  HAPPY: '😊', ENERGETIC: '⚡', FOCUSED: '🎯', CALM: '😐',
-  SAD: '😔', ANXIOUS: '😰', TIRED: '😴', ANGRY: '😠',
-}
+// [แก้ตามที่ระบุ] ย้ายไปเป็นแหล่งข้อมูลกลางที่ src/config/moodTypes.ts แทนการประกาศซ้ำ
+// ที่นี่ — MoodCheckIn.tsx (bottom sheet เลือกอารมณ์ 8 ค่า) ใช้ไฟล์เดียวกันนี้ด้วย
 
 interface OracleCardsPageProps {
   moodEntry: MoodEntryData
@@ -50,11 +48,16 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
   // ตอนนี้ปั้นข้อความจริงจากคลัง Combinatorics ที่ผูกกับอารมณ์ "ทั้งหมด 8 แบบ" ของผู้ใช้
   // (ดู oracleMessageGenerator.ts — เกิน 1,000 ชุดค่าผสมต่ออารมณ์) seedKey ผูกกับทั้งรอบ
   // เช็กอินอารมณ์และไพ่ที่จับได้ ทำให้ข้อความเดิมเป๊ะถ้าเปิดซ้ำ แต่ต่างกันทุกครั้งที่มู้ด/ไพ่เปลี่ยน
-  const fullTextToType = selectedCard
-    ? `${generateOracleMessage(selectedCard, moodEntry.mood, `${moodEntry.id}-${selectedCard.id}`)}\n\n⚡ ภารกิจ 2 นาทีวันนี้:\n${selectedCard.twoMinuteTask}`
+  //
+  // [แก้ตามที่ระบุ] เดิมต่อท้าย "⚡ ภารกิจ 2 นาทีวันนี้:" + twoMinuteTask เข้าไปในสตริงเดียวกัน
+  // แล้วพิมพ์ทีละตัวเป็นพารากราฟเดียว ทำให้ affirmation กับภารกิจอ่านปนกันเป็นก้อนเดียว
+  // ตอนนี้พิมพ์เฉพาะ affirmation ด้วย typewriter แล้วค่อยโชว์ภารกิจเป็นกล่องแยกทีหลัง
+  // (ดู .oracle-card__mission-block ใน JSX ด้านล่าง — โผล่พร้อมปุ่ม action ตอน typewriter จบ)
+  const affirmationText = selectedCard
+    ? generateOracleMessage(selectedCard, moodEntry.mood, `${moodEntry.id}-${selectedCard.id}`)
     : ''
 
-  const { displayedText, isDone: isTypewriterDone } = useTypewriter(fullTextToType, 25)
+  const { displayedText, isDone: isTypewriterDone } = useTypewriter(affirmationText, 25)
 
   /** [แก้ตามที่ระบุ — ข้อ 4] เดิมไฟล์นี้มีโค้ดกล้อง (getUserMedia/video/canvas/facingMode)
    *  แยกเป็นชุดของตัวเอง ซ้ำกับ CameraCapture.tsx ที่ phys-pure-water/phys-photosynthesis
@@ -145,7 +148,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
 
       <div className="oracle-page__content">
         <div className="oracle-page__mood-recap">
-          <span style={{ fontSize: 22 }}>{MOOD_EMOJI[moodEntry.mood]}</span>
+          <span style={{ fontSize: 22 }}>{MOOD_TYPE_INFO[moodEntry.mood].emoji}</span>
           <span>วันนี้คุณรู้สึก{moodEntry.note ? `: "${moodEntry.note}"` : 'แบบนี้อยู่นะ'}</span>
         </div>
 
@@ -219,10 +222,23 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
                 </div>
 
                 <div className="oracle-card__large-body">
-                  <p className="oracle-card__typewriter-text">
+                  <p className="oracle-card__typewriter-text oracle-card__affirmation-block">
                     {displayedText}
                     {!isTypewriterDone && <span className="oracle-page__caret">▍</span>}
                   </p>
+
+                  <AnimatePresence>
+                    {isTypewriterDone && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="oracle-card__mission-block"
+                      >
+                        <span className="oracle-card__mission-label">⚡ ภารกิจ 2 นาทีวันนี้</span>
+                        <p className="oracle-card__mission-text">{selectedCard.twoMinuteTask}</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <AnimatePresence>

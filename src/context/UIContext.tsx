@@ -21,6 +21,14 @@ export interface AppSettings {
   /** [เพิ่มรอบนี้] โหมดเคร่งครัด — true = เควสจับเวลาทุกตัวต้องทำจนครบเวลาจริง (ไม่มีปุ่มข้าม)
    *  false (ค่าเริ่มต้น) = มีปุ่ม "ข้าม/เก็บครึ่งรางวัล" ให้เลือกระหว่างเล่น ดู GameShell.tsx */
   strictMode: boolean
+  /** [เพิ่มรอบนี้ — ข้อ 5] เตือนทำเควสประจำวันตามเวลาที่ตั้ง — ตอนนี้เป็นแค่ toggle+เวลาที่บันทึก
+   *  ไว้ฝั่ง client เท่านั้น ยังไม่ได้ต่อกับ push notification จริง (ต้องมี service worker +
+   *  backend ส่ง push ตามเวลาจริงถึงจะแจ้งเตือนได้ตอนแอปไม่ได้เปิดอยู่ — ดูสรุปท้ายบทสนทนา) */
+  dailyQuestReminderEnabled: boolean
+  /** เวลาที่อยากให้เตือน รูปแบบ "HH:MM" (ค่าจาก <input type="time">) */
+  dailyQuestReminderTime: string
+  /** [เพิ่มรอบนี้ — ข้อ 5] แจ้งเตือนเมื่อมีเควสใหม่ปลดล็อก/ถูกล็อก (เช่นจากผลคัดกรองสุขภาพจิต) */
+  questUnlockNotifyEnabled: boolean
 }
 
 const SETTINGS_INITIAL: AppSettings = {
@@ -29,6 +37,9 @@ const SETTINGS_INITIAL: AppSettings = {
   musicVolume: 60,
   sfxVolume: 80,
   strictMode: false,
+  dailyQuestReminderEnabled: false,
+  dailyQuestReminderTime: '09:00',
+  questUnlockNotifyEnabled: true,
 }
 
 /** [แก้ตามที่ระบุ] 'inventory' ย้ายเข้าไปเป็นโซนหนึ่งของหน้าโปรไฟล์แล้ว (ดู ProfilePage.tsx)
@@ -62,7 +73,12 @@ interface UIContextValue {
 const UICtx = createContext<UIContextValue | null>(null)
 
 export function UIProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = usePersistentState<AppSettings>('settings', SETTINGS_INITIAL)
+  const [settingsRaw, setSettings] = usePersistentState<AppSettings>('settings', SETTINGS_INITIAL)
+  // [เพิ่มรอบนี้] usePersistentState แทนที่ค่าทั้งก้อนตรงๆ ไม่ merge กับ default — ผู้ใช้เดิมที่
+  // เคย persist settings ไว้ก่อนมี dailyQuestReminderEnabled/dailyQuestReminderTime/
+  // questUnlockNotifyEnabled จะไม่มี 3 คีย์นี้เลยใน localStorage (undefined จริงตอน runtime
+  // ถึง type จะบอกว่าไม่ใช่ก็ตาม) เติม fallback จาก SETTINGS_INITIAL ตรงนี้จุดเดียว
+  const settings = useMemo(() => ({ ...SETTINGS_INITIAL, ...settingsRaw }), [settingsRaw])
   const [decorationPositions, setDecorationPositions] =
     usePersistentState<DecorationPositionMap>('decoration-positions', {})
 

@@ -3,6 +3,7 @@ import type { MbtiType, RiskLevel, PlacedItem, DecorationPositionMap, QuestCateg
 import { DECORATION_EMOJI, DECORATION_ZONE_POSITION, getDecorationImage } from '../../config/decorationItems'
 import { useIsSmallScreen, usePrefersReducedMotion } from '../../hooks/useMediaQuery'
 import { getCanopyShape, sampleCanopyPoint } from '../../config/canopyShape'
+import { getTrunkImagePath, toVisualLevel } from '../../config/treeAssets'
 import { seededRandom } from '../../utils/seededRandom'
 import GroundScene from './GroundScene'
 import { useAudio } from '../../context/AudioContext'
@@ -197,6 +198,15 @@ function TreeOfLifeBase({
   const { folder } = useMemo(() => resolveFolder(preferredFolder), [preferredFolder])
   const canopyShape = useMemo(() => getCanopyShape(mbtiType), [mbtiType])
 
+  /* [ใหม่ — ลำต้นชุดใหม่] เลเวลระบบจริง (trunkBranchLevel ไม่มีเพดานบน) → visual level 1-8
+     (มีเพดาน เท่าจำนวนภาพที่มีจริง) คำนวณสดทุก render จาก trunkBranchLevel ตรงๆ ผ่าน
+     useMemo (ไม่ใช่ state แยกที่ sync ทีหลังด้วย effect — แพทเทิร์นเดียวกับที่แก้บั๊ก
+     "ไอคอนนกฮูกขยับช้ากว่า level จริง" ไปแล้วก่อนหน้านี้ กันปัญหาซิงก์ช้าแบบเดียวกัน)
+     shapeTrunkUrl คือชุดภาพใหม่ (ดู treeAssets.ts) — trunkUrl (ระบบเก่า ด้านล่าง) กลายเป็น
+     แค่ fallback ให้ TrunkLayer ตอนชุดใหม่ยังไม่มีไฟล์จริงสำหรับ shape นั้น */
+  const visualLevel = useMemo(() => toVisualLevel(trunkBranchLevel), [trunkBranchLevel])
+  const shapeTrunkUrl = useMemo(() => getTrunkImagePath(mbtiType, visualLevel), [mbtiType, visualLevel])
+
   const trunkUrl = useMemo(() => findLeveledAsset(folder, 'trunk', trunkBranchLevel), [folder, trunkBranchLevel])
   const grassUrl = useMemo(() => findLeveledAsset(folder, 'grass', grassSoilLevel), [folder, grassSoilLevel])
 
@@ -278,7 +288,7 @@ function TreeOfLifeBase({
         {/* [ข้อกำหนดข้อ 4] หญ้า/ดอกไม้มีมิติ ซ้อนทับภาพพื้นหญ้าเดิม */}
         <GroundScene grassSoilLevel={grassSoilLevel} seedKey={`${folder}-ground`} />
 
-        <LeveledLayer url={trunkUrl} kind="trunk" zIndex={2} />
+        <TrunkLayer primaryUrl={shapeTrunkUrl} fallbackUrl={trunkUrl} zIndex={2} />
 
         <div className="tree-of-life__foliage" style={{ zIndex: 3 }} aria-hidden="true">
           {leafStamps.map((s) => (
@@ -434,6 +444,60 @@ function LeveledLayer({ url, kind, zIndex }: LeveledLayerProps) {
       className={`tree-of-life__layer tree-of-life__layer--${kind}`}
       style={{ zIndex }}
       onError={() => setErrored(true)}
+    />
+  )
+}
+
+interface TrunkLayerProps {
+  /** ชุดภาพใหม่ (shape-based ตาม MBTI/visual level — ดู treeAssets.ts) ลองก่อนเสมอ */
+  primaryUrl: string
+  /** ชุดภาพเก่า (src/assets/trees/<MBTI>/trunk_lvl{N}.*) — ใช้ก็ต่อเมื่อ primaryUrl โหลด
+   *  ไม่ขึ้นเท่านั้น (shape ที่ยังไม่มี asset จริง) */
+  fallbackUrl: string | null
+  zIndex: number
+}
+
+/*============================================================================*\
+  TrunkLayer — [ใหม่] เรนเดอร์ลำต้นจากชุดภาพใหม่ (shape-based) เป็นหลัก มี fallback 2 ชั้น:
+  primaryUrl (ชุดใหม่) โหลดไม่ขึ้น → fallbackUrl (ชุดเก่า) → ไม่มีทั้งคู่ → placeholder 🌱
+  เดียวกับ LeveledLayer ทุกจุด (เช็คจาก onError จริง ไม่ใช่เดาว่าไฟล์มีไหม กันโชว์ broken image)
+
+  ใช้ key={resolvedUrl} ให้ <img> ถูก remount ทุกครั้งที่ level/MBTI เปลี่ยนจน src เปลี่ยนจริง
+  แล้วปล่อยให้ CSS animation ของ .tree-of-life__layer--trunk (TreeOfLife.css) เล่น fade เข้า
+  เอง — ไม่ใช้ framer-motion AnimatePresence เพราะ pattern "key เปลี่ยน + CSS @keyframes
+  เล่นตอน mount" นี้มีอยู่แล้วในระบบ (LeveledLayer เดิมข้างบนใช้แบบเดียวกันกับ 0.7s ของ grass)
+  เรียบง่าย/สอดคล้องกับโค้ดเดิมกว่า — เฉพาะ trunk ปรับความยาวเป็น 0.4s ตามที่ระบุ (300-500ms)
+  แยกจาก grass ที่ยังคง 0.7s เดิม (ดู .tree-of-life__layer--trunk override ใน .css)
+\*============================================================================*/
+function TrunkLayer({ primaryUrl, fallbackUrl, zIndex }: TrunkLayerProps) {
+  const [prevPrimaryUrl, setPrevPrimaryUrl] = useState(primaryUrl)
+  const [primaryFailed, setPrimaryFailed] = useState(false)
+  const [fallbackFailed, setFallbackFailed] = useState(false)
+  if (primaryUrl !== prevPrimaryUrl) {
+    setPrevPrimaryUrl(primaryUrl)
+    setPrimaryFailed(false)
+    setFallbackFailed(false)
+  }
+
+  const resolvedUrl = !primaryFailed ? primaryUrl : (!fallbackFailed ? fallbackUrl : null)
+
+  if (!resolvedUrl) {
+    return (
+      <div className="tree-of-life__layer tree-of-life__layer--placeholder" style={{ zIndex }} aria-hidden="true">
+        🌱
+      </div>
+    )
+  }
+
+  return (
+    <img
+      key={resolvedUrl} src={resolvedUrl} alt="" aria-hidden="true"
+      className="tree-of-life__layer tree-of-life__layer--trunk"
+      style={{ zIndex }}
+      onError={() => {
+        if (!primaryFailed) setPrimaryFailed(true)
+        else setFallbackFailed(true)
+      }}
     />
   )
 }

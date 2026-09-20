@@ -61,7 +61,7 @@ export default function GratitudeShieldPage({ alreadyCompleted, onComplete, onCl
   if (showIntro && !alreadyCompleted) {
     return (
       <IntroVideoSequence
-        videoSrc="/assets/videos/Gratitude-Shield.mp4"
+        videoSrc="/assets/videos/quest-mental/Gratitude-Shield.mp4"
         audioSrc="/assets/sounds/Gratitude-Shield.mp3"
         overlayText="คุณกำลังเข้าสู่ เกราะแห่งความขอบคุณ มาเก็บสิ่งดีๆ ของวันนี้ไว้ ทีละชิ้น จนกลายเป็นเกราะป้องกันใจของคุณ"
         accent={C_1}

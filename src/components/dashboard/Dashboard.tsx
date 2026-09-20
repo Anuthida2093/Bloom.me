@@ -6,6 +6,7 @@ import TreeOfLife from '../tree/TreeOfLife'
 import LeaderboardPanel from '../leaderboard/LeaderboardPanel'
 import PlayerTreeCard from '../leaderboard/PlayerTreeCard'
 import TreeStatsPanel from '../tree/TreeStatsPanel'
+import NotificationPanel from './NotificationPanel'
 import ActionMenuBar from '../layout/ActionMenuBar'
 import type { NavKey } from '../layout/ActionMenuBar'
 import ErrorBoundary from '../common/ErrorBoundary'
@@ -16,6 +17,7 @@ import { useUI } from '../../context/UIContext'
 import { useMental } from '../../context/MentalContext'
 import { useAudio } from '../../context/AudioContext'
 import { useIsLowPowerMode } from '../../hooks/useMediaQuery'
+import { useNotifications } from '../../hooks/useNotifications'
 import { sceneEnter } from '../../config/motion'
 import { EXP_PER_LEVEL, STACK_PER_VISUAL_LEVEL, type MbtiType } from '../../types'
 import type { LeaderboardPlayer } from '../../config/leaderboardData'
@@ -52,6 +54,7 @@ export default function Dashboard() {
     isLoggedIn, isGuest, setLoggedIn,
     streakCelebrationDays, setStreakCelebrationDays,
     handleBuy, handleEquip, handleClaimStreakReward, updateProfile,
+    changePassword, deleteAccount,
   } = useUser()
 
   const {
@@ -59,7 +62,7 @@ export default function Dashboard() {
     handleToggleQuest, markIncineratorFailed,
   } = useProgress()
 
-  const { handleMoodSubmit } = useMental()
+  const { handleMoodSubmit, earnedBadges } = useMental()
   const { isMuted, toggleMute } = useAudio()
 
   const {
@@ -70,6 +73,13 @@ export default function Dashboard() {
   const [viewingPlayer, setViewingPlayer] = useState<LeaderboardPlayer | null>(null)
   const [showTreeSummary, setShowTreeSummary] = useState(false)
   const [showTreeStats, setShowTreeStats] = useState(false)
+  /** [เพิ่มตามที่ระบุ — ปุ่มแจ้งเตือนใหม่] แผงเดียวกับ showTreeStats แต่คนละปุ่ม — ปิดกันเอง
+   *  เสมอ (เปิดอันนึงต้องปิดอีกอันเสมอ) กันแผงสองอันซ้อนกันแน่นในคอลัมน์ขวาแคบๆ */
+  const [showNotifications, setShowNotifications] = useState(false)
+  const { items: notificationItems, unreadCount: unreadNotifCount, markAllSeen: markNotificationsSeen } = useNotifications()
+  /** พาไปเปิดโพสต์ที่เกี่ยวข้องใน Story ตอนกดแจ้งเตือนไลค์/คอมเมนต์/แชร์ — ส่งต่อเป็น
+   *  initialPostId ของ StoryOverlay (ดู handleOpenNotificationPost ด้านล่าง) */
+  const [storyInitialPostId, setStoryInitialPostId] = useState<string | null>(null)
   const [questsInitialTab, setQuestsInitialTab] = useState<QuestTabId>('knowledge')
   /** [ใหม่ — ฟีเจอร์สตอรี่ ข้อ 5] ให้ปุ่ม "แก้ไขโปรไฟล์" ในหน้าโปรไฟล์ Story เปิด SettingsModal
    *  ตรงไปที่หน้าย่อย "ตั้งค่าโปรไฟล์" เลย — reset กลับเป็น null ทุกครั้งที่เปิด Settings
@@ -143,10 +153,26 @@ export default function Dashboard() {
     openMainPanel('quests')
   }
 
+  /** [เพิ่มตามที่ระบุ] กดแจ้งเตือนเควส (ปลดล็อกใหม่/ทำสำเร็จวันนี้) → เปิดหมวดที่เกี่ยวข้อง
+   *  reuse handleOpenQuestCategory ตัวเดียวกับที่ oracle-nudge ใช้อยู่แล้ว */
+  const handleOpenNotificationQuest = (tab: QuestTabId) => {
+    setShowNotifications(false)
+    handleOpenQuestCategory(tab)
+  }
+
+  /** [เพิ่มตามที่ระบุ] กดแจ้งเตือนไลค์/คอมเมนต์/แชร์ → เปิด Story ไปที่โพสต์นั้นตรงๆ */
+  const handleOpenNotificationPost = (postId: string) => {
+    setShowNotifications(false)
+    setStoryInitialPostId(postId)
+    openMainPanel('story')
+  }
+
   /** ปุ่ม "หน้าแรก" ใน Liquid Nav — ปิดทุกโมดัลที่เปิดอยู่ กลับมาที่ต้นไม้เต็มจอ */
   const handleGoHome = () => {
     ALL_MODAL_KEYS.forEach((key) => closeModal(key))
     setShowTreeStats(false)
+    setShowNotifications(false)
+    setStoryInitialPostId(null)
     setViewingPlayer(null)
   }
 
@@ -265,7 +291,7 @@ export default function Dashboard() {
           aria-hidden="true"
         >
           <source src="/assets/videos/hero-waterfall.webm" type="video/webm" />
-          <source src="/assets/videos/hero-waterfall.mp4" type="video/mp4" />
+          <source src="/assets/videos/intro/hero-waterfall.mp4" type="video/mp4" />
         </video>
       )}
       {lowPower && <div className="dashboard__bg-still" aria-hidden="true" />}
@@ -372,7 +398,7 @@ export default function Dashboard() {
         <div className="dashboard__corner-actions dashboard__corner-actions--left">
           <button
             className="game-icon-btn"
-            onClick={() => openMainPanel('story')}
+            onClick={() => { setStoryInitialPostId(null); openMainPanel('story') }}
             title="สตอรี่"
           >
             📖
@@ -396,12 +422,42 @@ export default function Dashboard() {
                 />
               </div>
             )}
+            {/* [เพิ่มตามที่ระบุ] แผงแจ้งเตือน — ใช้ .dashboard__panel--right ตัวเดียวกับ
+                TreeStatsPanel (ปิดกันเองเสมอ ดู handleToggleNotifications) */}
+            {showNotifications && (
+              <div className="dashboard__panel dashboard__panel--right">
+                <NotificationPanel
+                  items={notificationItems}
+                  onOpenQuest={handleOpenNotificationQuest}
+                  onOpenPost={handleOpenNotificationPost}
+                  glass
+                />
+              </div>
+            )}
             <div className="right-action-buttons">
-              <button className="game-icon-btn" onClick={() => setShowTreeStats((v) => !v)} title="สถานะต้นไม้">
+              <button className="game-icon-btn" onClick={() => { setShowTreeStats((v) => !v); setShowNotifications(false) }} title="สถานะต้นไม้">
                 🌳
               </button>
           <button className="game-icon-btn mood-btn" onClick={() => openModal('moodCheckin')} title="เช็คอินอารมณ์">
                 <img src={BADGE_ICONS.checkin} className="icon-img" alt="" />
+              </button>
+              {/* [เพิ่มตามที่ระบุ — ปุ่มแจ้งเตือนใหม่] แทรกระหว่างเช็คอินรายวันกับปิดเสียง
+                  เปิด panel แล้ว mark ว่าอ่านแล้วทันที (เคลียร์ badge) — pattern เดียวกับที่
+                  Story ทำตอนเปิดหน้ากิจกรรม */}
+              <button
+                className="game-icon-btn notif-btn"
+                style={{ position: 'relative' }}
+                onClick={() => {
+                  setShowNotifications((v) => {
+                    const next = !v
+                    if (next) { setShowTreeStats(false); markNotificationsSeen() }
+                    return next
+                  })
+                }}
+                title="แจ้งเตือน"
+              >
+                <img src={BADGE_ICONS.notification} className="icon-img" alt="" />
+                {unreadNotifCount > 0 && <span className="nav-badge">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
               </button>
               <button className="game-icon-btn sound-btn" onClick={toggleMute} title={isMuted ? 'เปิดเสียง' : 'ปิดเสียง'}>
                 {isMuted ? '🔇' : '🔊'}
@@ -500,6 +556,7 @@ export default function Dashboard() {
                 moodEntries={moodEntries}
                 journalEntries={journalEntries}
                 inventoryData={inventoryData}
+                earnedBadges={earnedBadges}
                 onPlace={handleEquip}
                 onClose={() => closeModal('profile')}
               />
@@ -519,6 +576,8 @@ export default function Dashboard() {
                 onUpdateSettings={updateSettings}
                 onUpdateUser={updateProfile}
                 onLogout={() => setLoggedIn(false, false)}
+                onChangePassword={changePassword}
+                onDeleteAccount={deleteAccount}
                 onClose={() => closeModal('settings')}
                 initialSubModal={settingsInitialSubModal}
               />
@@ -572,9 +631,10 @@ export default function Dashboard() {
           <AnimatePresence>
             <m.div key="story" className="dashboard__modal-layer" {...sceneEnter}>
               <StoryOverlay
-                onClose={() => closeModal('story')}
+                onClose={() => { closeModal('story'); setStoryInitialPostId(null) }}
                 onViewTree={handleViewTreeFromStory}
                 onEditProfile={handleOpenProfileSettingsFromStory}
+                initialPostId={storyInitialPostId}
               />
             </m.div>
           </AnimatePresence>
@@ -601,10 +661,6 @@ export default function Dashboard() {
             onClose={() => setShowTreeSummary(false)}
             mbtiType={userData.mbtiType as MbtiType}
             username={userData.username}
-            trunkBranchLevel={treeStats.trunkBranchLevel}
-            leafFlowerLevel={treeStats.leafFlowerLevel}
-            grassSoilLevel={treeStats.grassSoilLevel}
-            riskLevel={userData.currentRiskLevel}
           />
         )}
 

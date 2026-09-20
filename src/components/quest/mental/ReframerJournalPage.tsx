@@ -53,7 +53,7 @@ export default function ReframerJournalPage({ moodEntry, alreadyCompleted, onCom
   if (showIntro && !alreadyCompleted) {
     return (
       <IntroVideoSequence
-        videoSrc="/assets/videos/Reframer-Journal.mp4"
+        videoSrc="/assets/videos/quest-mental/Reframer-Journal.mp4"
         audioSrc="/assets/sounds/Reframer-Journal.mp3"
         overlayText="คุณกำลังเข้าสู่ สมุดบันทึกรากไม้เรืองแสง มาบันทึกเรื่องของคุณและเก็บความรู้สึกเหล่านี้ไว้ ฉันช่วยคุณได้นะ"
         accent={C_1}

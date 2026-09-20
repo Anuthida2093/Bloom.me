@@ -79,6 +79,9 @@ export type ActivityType =
   | 'BRAIN_DUMP'     // อัดเสียงทวนความจำ
   | 'REVIEW'         // ทบทวนแบบเว้นระยะ (กลยุทธ์การรอคอย)
   | 'CHECKIN'        // Daily Learning Check-in
+  // [เพิ่มรอบนี้ — เควสสุขภาพใหม่]
+  | 'STEPS'          // Vitality Steps (จังหวะแห่งรากแก้ว)
+  | 'NUTRITION'      // Balanced Nutrients (สารอาหารแห่งผืนดิน)
 
 export interface ActivityLogRecord {
   id: string
@@ -119,6 +122,28 @@ export interface LearningCheckinRecord {
   /** คำถามโบนัส "พรุ่งนี้อยากปรับอะไร" → เอาไปแปะเป็น Post-it */
   bonusNote: string | null
   createdAt: string
+}
+
+/* ── 7) Badge / Achievement — [เพิ่มตามที่ระบุ] backend มีตาราง badges + user_badges
+   (ดู schema.prisma) แต่ frontend ไม่เคยมีระบบแสดงผล badge เลยแม้แต่จุดเดียว ตอนนี้เพิ่ม
+   กลไกจริงให้ 2 badge ที่ถูกตัดสินใจให้สร้างแล้ว (Strategic Delay / Mirror of Truth)
+   [ต้องเพิ่มใน DB] ตาราง user_badges (ผูก userId+badgeCode+earnedAt) — ตอนนี้เป็น
+   client-only state ล้วนๆ ใน MentalContext เหมือน moodPotionLogs/activityLogs อื่นๆ      */
+export interface UserBadgeRecord {
+  code: string
+  earnedAt: string
+}
+
+/** ฟีดแบ็กสั้นๆ หลังทำเควสสำเร็จ — ใช้ประเมิน badge "Mirror of Truth" (feedbackWithinHours
+ *  criteria ใน seed.ts: ให้ feedback ทันทีหลังทำกิจกรรมเสร็จ) [ต้องเพิ่มใน DB] ยังไม่มีตาราง
+ *  รองรับ — ใกล้เคียง quest_logs แต่เป็นคนละ record (feedback แยกจากตัวเควสเอง) */
+export interface QuestFeedbackRecord {
+  id: string
+  questCode: string
+  reaction: 'good' | 'neutral' | 'bad'
+  /** เวลาที่ทำเควสสำเร็จ (ใช้เทียบกับ submittedAt ว่าอยู่ในกรอบ 24 ชม. ไหม) */
+  completedAt: string
+  submittedAt: string
 }
 
 /* ── 6) payload ของการเล่นเควสแต่ละครั้ง ─────────────────────────────────────

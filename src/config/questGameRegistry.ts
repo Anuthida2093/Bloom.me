@@ -6,7 +6,7 @@ import DeepRootGame from '../components/quest/games/learning/DeepRootGame'
 import BrainDumpGame from '../components/quest/games/learning/BrainDumpGame'
 import CrossPollinationGame from '../components/quest/games/learning/CrossPollinationGame'
 import DailyCheckinGame from '../components/quest/games/learning/DailyCheckinGame'
-import StrategicDelayGame from '../components/quest/games/learning/StrategicDelayGame'
+import ContentReviewGame from '../components/quest/games/learning/ContentReviewGame'
 import GuardianOfRestGame from '../components/quest/games/learning/GuardianOfRestGame'
 import TenYearForestGame from '../components/quest/games/learning/TenYearForestGame'
 
@@ -35,11 +35,17 @@ import GenericConfirmGame from '../components/quest/games/GenericConfirmGame'
   สมุดรากไม้ / เกราะขอบคุณ) ไม่ผ่าน registry นี้ — GameplayFrame.tsx
   เรนเดอร์หน้าเหล่านั้นตรงๆ เพราะแต่ละหน้ามีฉาก/วิดีโอ/เสียงเป็นของตัวเอง
 
-  [แก้รอบนี้] ลบ 'time-capsule' (รวมเข้า 'strategic-delay' แล้ว), 'mirror-of-truth' และ
-  'mindful-breeze' ออกจากตาราง — เควสของทั้งสามถูกลบ/รวมทิ้งใน questCatalog.ts
-  [แก้รอบนี้] ลบ 'sunlit-root' ออกด้วย — 'ment-sunlit-root' (หมวดจิตใจ) ถูกลบทิ้งเพราะซ้ำกับ
-  'phys-photosynthesis' (ดู comment หัวไฟล์ questCatalog.ts) ไฟล์เกม SunlitRootGame.tsx
-  ไม่มีใครอ้างอิงแล้วจึงลบทิ้งไปด้วย
+  [ประวัติ] ลบ 'mirror-of-truth' และ 'mindful-breeze' ออกจากตารางไปแล้วก่อนหน้านี้ — เควส
+  ทั้งสองถูกลบทิ้งใน questCatalog.ts (mirror-of-truth มีกลไกทดแทนใหม่แบบไม่ใช่เควสแล้ว คือ
+  QuestFeedbackPrompt.tsx — ดู MentalContext.earnedBadges)
+  [ประวัติ] ลบ 'sunlit-root' (ตัวเก่าในหมวดจิตใจ 'ment-sunlit-root') ออกด้วย — ซ้ำกับ
+  'phys-photosynthesis' (ปัจจุบัน code คือ 'phys-sunlit-root' แล้ว ดู questCatalog.ts)
+  ไฟล์เกม SunlitRootGame.tsx ไม่มีใครอ้างอิงแล้วจึงลบทิ้งไปด้วย
+
+  [แก้รอบนี้ — ตามที่ระบุ] เปลี่ยน 'strategic-delay' → 'content-review' — เควส "กลยุทธ์การ
+  รอคอย" เดิมถูกแยกกลับเป็นเควส content-review (Time Capsule) + badge Strategic Delay
+  แยกต่างหากตามที่ backend ออกแบบไว้จริง (ดู questCatalog.ts ข้อ 1) StrategicDelayGame.tsx
+  ถูกลบทิ้ง แทนที่ด้วย ContentReviewGame.tsx
 \*============================================================================*/
 
 export const QUEST_GAME_REGISTRY: Record<string, ComponentType<QuestGameProps>> = {
@@ -49,7 +55,7 @@ export const QUEST_GAME_REGISTRY: Record<string, ComponentType<QuestGameProps>> 
   'brain-dump': BrainDumpGame,
   'cross-pollination': CrossPollinationGame,
   'daily-checkin': DailyCheckinGame,
-  'strategic-delay': StrategicDelayGame,
+  'content-review': ContentReviewGame,
   'guardian-of-rest': GuardianOfRestGame,
   'ten-year-forest': TenYearForestGame,
 

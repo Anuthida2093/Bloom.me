@@ -1,8 +1,12 @@
-import { useState, type FormEvent, type CSSProperties } from 'react'
+import { useState, type FormEvent, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAppContext } from '../context/AppContext'
 import SoundToggleButton from '../components/layout/SoundToggleButton'
+import PasswordInput from '../components/ui/PasswordInput'
 import { BADGE_ICONS } from '../config/iconAssets'
+import { ApiError } from '../services/http'
+import { validatePasswordStrength } from '../utils/mockAuth'
+import type { Gender } from '../types'
 
 /**
  * Register — หน้าสมัครสมาชิก (route "/register")
@@ -36,19 +40,56 @@ export default function Register() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [birthDate, setBirthDate] = useState('')
+  /** [ใหม่] เพศ — ต้องเลือกตั้งแต่สมัคร (บังคับกรอก ดู <select required> ด้านล่าง) ใช้คำนวณ
+   *  ชุดภาพ "รูปร่างของคุณ" ตั้งแต่เข้าเกมครั้งแรก ไม่ต้องรอไปตั้งทีหลังในหน้าตั้งค่าโปรไฟล์
+   *  (ดู getBodyTypeImagePath ใน bodyTypeAssets.ts) — ค่าเริ่มต้นเป็นสตริงว่าง (ไม่ใช่ Gender
+   *  ที่ถูกต้อง) ตั้งใจให้ browser validation บล็อกการ submit จนกว่าจะเลือกจริง ไม่ปล่อยผ่าน
+   *  ด้วยค่า default เงียบๆ แบบที่ทำในหน้าตั้งค่าโปรไฟล์ (ที่นั่น fallback ได้เพราะเป็น user
+   *  เดิมที่มีบัญชีอยู่แล้ว แต่ตรงนี้คือจุดตั้งค่าครั้งแรก) */
+  const [gender, setGender] = useState<'' | Gender>('')
   const [height, setHeight] = useState('')
   const [weight, setWeight] = useState('')
+  const [emailError, setEmailError] = useState<ReactNode>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    registerUser({
-      email,
-      username,
-      birthDate,
-      height: Number(height),
-      weight: Number(weight),
-    })
-    navigate('/mbti')
+    if (!gender) return // กันไว้อีกชั้น เผื่อ required ของ <select> ถูกข้ามด้วยวิธีใดก็ตาม
+    setEmailError(null)
+    setPasswordError(null)
+
+    const passwordIssue = validatePasswordStrength(password)
+    if (passwordIssue) { setPasswordError(passwordIssue); return }
+
+    setIsSubmitting(true)
+    try {
+      await registerUser({
+        email,
+        username,
+        password,
+        birthDate,
+        gender,
+        height: Number(height),
+        weight: Number(weight),
+      })
+      navigate('/mbti')
+    } catch (err) {
+      // [ตามที่ระบุ — ข้อ 1] อีเมลซ้ำ (409) โชว์ error ใต้ช่องอีเมลทันที พร้อมลิงก์ไปหน้า
+      // Login/ลืมรหัสผ่านในข้อความเลย ไม่ใช้ alert()
+      if (err instanceof ApiError && err.status === 409) {
+        setEmailError(
+          <>
+            อีเมลนี้มีผู้ใช้งานแล้ว ลอง<Link to="/login" style={{ color: 'var(--g700)', fontWeight: 800 }}>เข้าสู่ระบบ</Link>
+            {' '}หรือ<Link to="/forgot-password" style={{ color: 'var(--g700)', fontWeight: 800 }}>กู้รหัสผ่าน</Link>แทน
+          </>,
+        )
+      } else {
+        setEmailError(err instanceof ApiError ? err.userMessage : 'สมัครสมาชิกไม่สำเร็จ ลองอีกครั้ง')
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -88,8 +129,15 @@ export default function Register() {
         >
           <label style={labelStyle}>
             อีเมล
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required style={fieldStyle} />
+            <input
+              type="email" value={email}
+              onChange={(e) => { setEmail(e.target.value); setEmailError(null) }}
+              placeholder="you@example.com" required style={fieldStyle}
+            />
           </label>
+          {emailError && (
+            <div style={{ marginTop: -10, fontSize: 13, color: '#c0392b', fontWeight: 700 }}>⚠️ {emailError}</div>
+          )}
 
           <label style={labelStyle}>
             ชื่อผู้ใช้
@@ -98,12 +146,37 @@ export default function Register() {
 
           <label style={labelStyle}>
             รหัสผ่าน
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required style={fieldStyle} />
+            <PasswordInput
+              value={password}
+              onChange={(v) => { setPassword(v); setPasswordError(null) }}
+              placeholder="อย่างน้อย 8 ตัวอักษร มีตัวอักษรและตัวเลข"
+              required
+              style={fieldStyle}
+            />
           </label>
+          {passwordError && (
+            <div style={{ marginTop: -10, fontSize: 13, color: '#c0392b', fontWeight: 700 }}>⚠️ {passwordError}</div>
+          )}
 
           <label style={labelStyle}>
             วันเกิด
             <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required style={fieldStyle} />
+          </label>
+
+          {/* [ใหม่] เพศ — บังคับเลือกก่อนสมัครสำเร็จ ใช้คำนวณชุดภาพ "รูปร่างของคุณ" คู่กับ
+              ส่วนสูง/น้ำหนักด้านล่าง จึงวางไว้ติดกัน */}
+          <label style={labelStyle}>
+            เพศ
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value as '' | Gender)}
+              required
+              style={fieldStyle}
+            >
+              <option value="" disabled>เลือกเพศ</option>
+              <option value="FEMALE">หญิง</option>
+              <option value="MALE">ชาย</option>
+            </select>
           </label>
 
           <div style={{ display: 'flex', gap: 10 }}>
@@ -119,14 +192,16 @@ export default function Register() {
 
           <button
             type="submit"
+            disabled={isSubmitting}
             style={{
               padding: '14px 24px', border: 'none', borderRadius: 'var(--r-md)',
               background: 'linear-gradient(135deg, var(--g700), var(--g600))',
-              color: 'var(--fixed-white)', fontFamily: 'Fredoka One', fontSize: 17, cursor: 'pointer',
+              color: 'var(--fixed-white)', fontFamily: 'Fredoka One', fontSize: 17,
+              cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.6 : 1,
               boxShadow: 'var(--sh-btn)', marginTop: 4,
             }}
           >
-            <img src={BADGE_ICONS.seed} className="icon-img" alt="" /> สมัครสมาชิก
+            {isSubmitting ? 'กำลังสมัครสมาชิก...' : <><img src={BADGE_ICONS.seed} className="icon-img" alt="" /> สมัครสมาชิก</>}
           </button>
 
           <div style={{ textAlign: 'center', fontSize: 13, color: FIELD_TEXT }}>

@@ -42,12 +42,19 @@ export default function MoodGateScreen({ title, icon, iconImg, accent, onRequest
         ✕
       </button>
 
+      {/* [แก้บั๊ก — พบระหว่างทดสอบจริงตามข้อ 7] เดิม heading ใช้ color: var(--n900) และ
+          คำอธิบายใช้ color: var(--n500) — ทั้งคู่ "สลับกลับด้าน" ตอน dark mode (ดู
+          [data-theme="dark"] ใน index.css) แต่พื้นหลังการ์ดนี้เป็น var(--glass-w-96) (ขาวเกือบ
+          ทึบตายตัว ไม่มีเวอร์ชัน dark mode) เหมือนกับฟิลด์ของ Login.tsx เป๊ะ — พอสลับ dark mode
+          หัวเรื่องกลายเป็นเกือบขาวบนพื้นขาว อ่านแทบไม่ออก ใช้เทคนิคเดียวกับ Login.tsx: ล็อกสี
+          เป็นค่าคงที่เข้ม (เท่ากับค่า --n900/--n500 ฝั่ง light mode) แทนการอ้างโทเคนที่สลับสี
+          เพราะพื้นหลังการ์ดนี้ไม่เปลี่ยนตามธีมอยู่แล้ว */}
       <div className="mood-gate-card" style={{ textAlign: 'center', maxWidth: 420, background: 'var(--glass-w-96)', borderRadius: 28, padding: '40px 32px', boxShadow: '0 28px 70px var(--glass-b-40)' }}>
         <div className="mood-gate-icon" style={{ fontSize: 56, marginBottom: 8 }}>
           {iconImg ? <img src={iconImg} style={{ width: 56, height: 56, objectFit: 'contain' }} alt="" /> : icon}
         </div>
-        <div style={{ fontFamily: 'Fredoka One', fontSize: 22, color: 'var(--n900)', marginBottom: 8 }}>ก่อนเข้า {title}</div>
-        <p style={{ fontSize: 13.5, color: 'var(--n500)', lineHeight: 1.7, marginBottom: 24 }}>
+        <div style={{ fontFamily: 'Fredoka One', fontSize: 22, color: '#1A1F1B', marginBottom: 8 }}>ก่อนเข้า {title}</div>
+        <p style={{ fontSize: 13.5, color: '#5A6B5D', lineHeight: 1.7, marginBottom: 24 }}>
           ทุกวันต้องเช็คอินอารมณ์ก่อนนะ — ความรู้สึกวันนี้ของคุณคือกุญแจสำคัญที่ทำให้ไพ่ทิพย์และสมุดบันทึกเข้าใจคุณได้ตรงจุด
         </p>
         <button

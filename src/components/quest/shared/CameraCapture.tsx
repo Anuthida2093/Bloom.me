@@ -135,19 +135,25 @@ export default function CameraCapture({ hint, onConfirm, onSkip, skipLabel = '�
         {cameraError ? cameraError : hint}
       </p>
 
-      <div className="camera-capture__viewfinder">
-        {capturedImage ? (
-          <img src={capturedImage} alt="ภาพที่ถ่าย" className="camera-capture__captured-img" />
-        ) : cameraError ? (
-          <span className="camera-capture__error-icon">🚫</span>
-        ) : (
-          <video ref={videoRef} playsInline muted className="camera-capture__live-video" />
-        )}
-        <canvas ref={canvasRef} style={{ display: 'none' }} />
-        {justCaptured && <div className="camera-capture__flash" aria-hidden="true" />}
-      </div>
+      {/* [แก้ตามที่ระบุ — ข้อ 4] เดิมกรอบรูปลอยอยู่คนเดียวกึ่งกลาง "เวที" เต็มจอ (align-items/
+          justify-content:center บน .camera-capture) ส่วนปุ่มควบคุมเป็น position:absolute แปะ
+          ทับขอบล่างสุดของเวทีต่างหาก (ซ้อนทับรูป/วิดีโอเสมอเพราะกรอบรูปอยู่กลางจอพอดี) ตอนนี้
+          ห่อกรอบรูป + แถวปุ่มไว้ใน .camera-capture__stage เดียวกัน เรียงเป็นคอลัมน์ในโฟลว์ปกติ
+          (ไม่ absolute อีกต่อไป) แถวปุ่มจึงอยู่ "ใต้กรอบรูป" จริงๆ เสมอ ไม่ทับภาพ และทั้งกลุ่ม
+          ขยับขึ้นไปชิด navbar มากขึ้นแทนที่จะลอยกลางจอเว้นที่ว่างด้านบนเยอะเหมือนเดิม */}
+      <div className="camera-capture__stage">
+        <div className="camera-capture__viewfinder">
+          {capturedImage ? (
+            <img src={capturedImage} alt="ภาพที่ถ่าย" className="camera-capture__captured-img" />
+          ) : cameraError ? (
+            <span className="camera-capture__error-icon">🚫</span>
+          ) : (
+            <video ref={videoRef} playsInline muted className="camera-capture__live-video" />
+          )}
+          <canvas ref={canvasRef} style={{ display: 'none' }} />
+          {justCaptured && <div className="camera-capture__flash" aria-hidden="true" />}
+        </div>
 
-      <div className="camera-capture__bottom-bar">
         {!cameraError && !capturedImage && (
           <div className="camera-capture__controls">
             {onSkip && <button className="camera-capture__side-btn" onClick={onSkip} title={skipLabel}>✕</button>}
@@ -158,13 +164,17 @@ export default function CameraCapture({ hint, onConfirm, onSkip, skipLabel = '�
 
         {!cameraError && capturedImage && (
           <div className="camera-capture__review-controls">
-            <button className="qg-btn qg-btn--ghost" onClick={handleRetakePhoto}>↺ ถ่ายใหม่</button>
-            <button className="qg-btn" onClick={handleConfirm}>✅ บันทึก</button>
+            <button className="camera-capture__review-btn camera-capture__review-btn--retake" onClick={handleRetakePhoto}>
+              ↺ ถ่ายใหม่
+            </button>
+            <button className="camera-capture__review-btn camera-capture__review-btn--confirm" onClick={handleConfirm}>
+              ✅ บันทึก
+            </button>
           </div>
         )}
 
         {cameraError && onSkip && (
-          <button className="qg-btn qg-btn--ghost" onClick={onSkip}>{skipLabel}</button>
+          <button className="qg-btn qg-btn--ghost camera-capture__error-skip-btn" onClick={onSkip}>{skipLabel}</button>
         )}
       </div>
     </div>

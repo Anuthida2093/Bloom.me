@@ -1,79 +1,15 @@
-import type { MbtiType, RiskLevel, MoodEntryData } from '../types'
+import type { MoodEntryData } from '../types'
 
 /**
  * aiSummaryService.ts
  * ────────────────────
- * [ข้อกำหนดข้อ 2] จำลอง service ที่ดึง "บทความสั้นๆ เกี่ยวกับตัวตนของต้นไม้ในช่วงเวลานั้น"
- * มาจากฟังก์ชัน AI ที่สรุปจาก "สมุดบันทึกรากไม้เรืองแสง" (The Reframer Journal — เควส
- * ment-reframer-journal ในหมวดสุขภาพจิต) ตอนนี้ backend ยังไม่มี endpoint สรุปด้วย AI จริง
- * (ไม่มีอยู่ใน docs/API_DICTIONARY.md ปัจจุบัน) จึง mock ไว้ก่อนตามที่ขอ โดยออกแบบ signature
- * ให้เหมือนเรียก API จริงทุกกระเบียดนิ้ว (async, มี delay จำลอง, คืนค่าเป็น Promise) —
- * พอ backend มี endpoint จริง (เช่น POST /tree/summary) แค่เปลี่ยนเนื้อใน getTreeSummary()
- * ให้ fetch จริงแทน ไม่ต้องแก้ signature หรือฝั่ง component ที่เรียกใช้เลย
+ * รวม service ที่ยัง mock ผลลัพธ์แบบ AI (async, มี delay จำลอง, คืนค่าเป็น Promise) เพื่อให้
+ * สลับไปเรียก backend จริงได้ในอนาคตโดยไม่ต้องแก้ signature/ฝั่ง component ที่เรียกใช้
+ *
+ * [แก้ตามที่ระบุ] getTreeSummary (สรุปตัวตนต้นไม้ด้วย AI mock) ถูกถอดออกไปแล้ว — popup
+ * ที่ขึ้นตอนกดต้นไม้ (TreeSummaryModal.tsx) เปลี่ยนไปแสดงคำอธิบาย MBTI จริงแทน (ดู
+ * src/config/mbtiDescriptions.ts) ไม่ใช่บทความ AI mock อีกต่อไป
  */
-
-export interface TreeSummaryRequest {
-  mbtiType: MbtiType | null
-  trunkBranchLevel: number
-  leafFlowerLevel: number
-  grassSoilLevel: number
-  riskLevel: RiskLevel
-  /** ชื่อผู้ใช้ ใช้แทรกในบทความให้เป็นส่วนตัวขึ้น */
-  username: string
-}
-
-export interface TreeSummaryResponse {
-  summary: string
-  /** วันที่ของบทความนี้ (ISO string) — ใช้แสดงผลว่า "สรุปล่าสุดเมื่อ..." */
-  generatedAt: string
-}
-
-// เทมเพลตบทความแยกตาม riskLevel — โทนบทความเปลี่ยนไปตามสุขภาพต้นไม้จริง (LOW=สดใส,
-// MODERATE=ให้กำลังใจ, HIGH=ปลอบโยน) ผสมกับ mbtiType/username ที่ inject เข้าไปตอน runtime
-const SUMMARY_TEMPLATES: Record<RiskLevel, string[]> = {
-  LOW: [
-    '{username} เอ๋ย วันนี้{treeAdj}ดูสดใสเป็นพิเศษ กิ่งก้านที่แผ่ออกมาสะท้อนความมุ่งมั่นที่สะสมมาหลายวัน จากสมุดบันทึกล่าสุด ดูเหมือนคุณกำลังอยู่ในจังหวะที่ลงตัวระหว่างการเรียนรู้กับการพักผ่อน — ให้เวลานี้เป็นแรงส่งต่อไปเรื่อยๆ นะ',
-    'บันทึกของ{username}ในช่วงนี้เต็มไปด้วยพลังบวก {treeAdj}จึงตอบสนองด้วยใบใหม่ที่ผลิออกมาไม่ขาดสาย ทุกความพยายามเล็กๆ ที่ทำในแต่ละวันไม่ได้หายไปไหน มันสะสมอยู่ในวงปีของลำต้นจริงๆ',
-  ],
-  MODERATE: [
-    '{treeAdj}สังเกตว่าช่วงนี้{username}อาจจะเหนื่อยกว่าปกตินิดหน่อย ใบบางส่วนดูซีดลงเล็กน้อย แต่ไม่เป็นไรเลย — การเติบโตไม่จำเป็นต้องเส้นตรงเสมอไป ลองหาเวลาพักสั้นๆ ระหว่างวัน แล้วต้นไม้จะค่อยๆ ฟื้นกลับมาเอง',
-    'จากสมุดบันทึกล่าสุด {username}ดูเหมือนกำลังแบกอะไรไว้เยอะอยู่ {treeAdj}เข้าใจนะ บางวันก็แค่ต้องการเวลาตั้งหลักใหม่ ลองทำเควสฝึกหายใจสักรอบ อาจช่วยให้ใจเบาขึ้นได้',
-  ],
-  HIGH: [
-    '{treeAdj}อยากบอก{username}ว่าตอนนี้เหี่ยวไปหน่อย แต่รากยังแข็งแรงอยู่ข้างล่างเสมอ ไม่มีอะไรผิดพลาดที่การหยุดพักบ้าง — ถ้ารู้สึกหนักเกินไป อย่าลืมว่ามีคนพร้อมรับฟังอยู่เสมอนะ',
-  ],
-}
-
-const MBTI_ADJ: Partial<Record<MbtiType, string>> = {
-  INFP: 'ต้นไม้แห่งความฝันของคุณ',
-  INTJ: 'ต้นสนแห่งกลยุทธ์ของคุณ',
-  ENFP: 'ต้นไม้แห่งพลังบวกของคุณ',
-}
-
-function pickTemplate(riskLevel: RiskLevel): string {
-  const pool = SUMMARY_TEMPLATES[riskLevel]
-  return pool[Math.floor(Math.random() * pool.length)]
-}
-
-/**
- * getTreeSummary — จุดเดียวที่ component เรียกใช้ ไม่ต้องรู้เลยว่าข้างในเป็น mock หรือ fetch จริง
- * @param delayMs หน่วงเวลาจำลอง network latency (ค่าเริ่มต้น 900-1600ms แบบสุ่ม ให้ความรู้สึกสมจริง)
- */
-export async function getTreeSummary(request: TreeSummaryRequest): Promise<TreeSummaryResponse> {
-  const delayMs = 900 + Math.random() * 700
-  await new Promise((resolve) => setTimeout(resolve, delayMs))
-
-  const treeAdj = (request.mbtiType && MBTI_ADJ[request.mbtiType]) || 'ต้นไม้ของคุณ'
-  const template = pickTemplate(request.riskLevel)
-  const summary = template
-    .replaceAll('{username}', request.username || 'เพื่อน')
-    .replaceAll('{treeAdj}', treeAdj)
-
-  return {
-    summary,
-    generatedAt: new Date().toISOString(),
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════════════
 // [ใหม่] getOracleActionPlan — เควส "ไพ่ทิพย์กระตุ้นพลัง" (ment-oracle-activation)

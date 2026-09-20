@@ -26,7 +26,7 @@ interface QuestPlayModalProps {
       BreathingInteraction    → hooks/useBreathingSession.ts + MindfulAnchorPage
       MicInteraction          → games/learning/BrainDumpGame.tsx (ถอดเสียงจริง)
       CheckinInteraction      → games/learning/DailyCheckinGame.tsx (บัวรดน้ำ)
-      GoalInputInteraction    → games/learning/ActiveFocusGame.tsx / StrategicDelayGame.tsx
+      GoalInputInteraction    → games/learning/ActiveFocusGame.tsx / ContentReviewGame.tsx
       SwipeDiscardInteraction → mental/IncineratorPage.tsx (มีอยู่แล้ว)
       ToggleTopicsInteraction → games/learning/CrossPollinationGame.tsx
       BellInteraction         → games/physical/GreenVisionGame.tsx

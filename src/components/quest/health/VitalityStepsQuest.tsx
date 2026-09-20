@@ -1,0 +1,220 @@
+import { useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
+import { useAppContext } from '../../../context/AppContext'
+import { playSfx, startLoopingSfx, stopLoopingSfx } from '../../../utils/audioPlayer'
+import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
+import { useEscapeKey } from '../../../hooks/useEscapeKey'
+import { useIsLowPowerMode } from '../../../hooks/useMediaQuery'
+import { OWL_AVATAR_ICON } from '../../../config/iconAssets'
+import { findQuestByCode } from '../../../config/questCatalog'
+import CameraCapture from '../shared/CameraCapture'
+import type { QuestPlayPayload } from '../../../types.mental'
+import './VitalityStepsQuest.css'
+
+const QUEST_CODE = 'phys-vitality-steps'
+/** [ขั้นที่ 0 — เช็ค asset จริงแล้ว] มีไฟล์จริงที่ public/assets/videos/quest-learning/
+ *  QuestPathMap.mp4 (โฟลเดอร์เดียวกับที่ใช้ในแผนที่เควสความรู้ — ยังไม่มีวิดีโอเส้นทางเฉพาะของ
+ *  หมวดสุขภาพ ใช้ตัวนี้ไปก่อนตามที่ระบุ "ถ้ามีไฟล์จริงให้ใช้") */
+const BG_VIDEO_SRC = '/assets/videos/quest-learning/QuestPathMap.mp4'
+
+interface VitalityStepsConfig {
+  verificationMethod?: 'PHOTO'
+  baseStepGoal?: number
+  bmiAdjustment?: { highBmiThreshold: number; highBmiExtraSteps: number }
+  allowManualStepEntry?: boolean
+}
+
+interface VitalityStepsQuestProps {
+  onComplete: (payload?: QuestPlayPayload) => void
+  onClose: () => void
+}
+
+type Stage = 'walk' | 'camera' | 'done'
+
+/**
+ * VitalityStepsQuest — เควส "จังหวะแห่งรากแก้ว" (Vitality Steps)   [ไฟล์ใหม่]
+ * ────────────────────────────────────────────────────────────────────────────
+ * เปิดเป็นหน้าเต็มกรอบผ่าน SPECIAL_QUEST_CODES pattern เดียวกับเควสสุขภาพจิต
+ * (ดู GameplayFrame.tsx) เพราะมีฉาก/เสียง/VFX เป็นของตัวเอง — เดินสะสมก้าวให้ครบเป้าหมาย
+ * (ปรับเพิ่มอัตโนมัติถ้า BMI สูง) นกฮูกเดินตามเส้นทางตามสัดส่วนก้าวที่กรอก/ถ่ายรูปยืนยัน
+ *
+ * [ข้อจำกัดที่ต้องแจ้ง] ยังไม่มีการเชื่อมต่อ Health API จริง (Apple HealthKit/Google Fit)
+ * จำนวนก้าวตอนนี้มาจากผู้ใช้กรอกเอง (allowManualStepEntry) หรือถ่ายรูปยืนยันประกอบเท่านั้น
+ * ระบบไม่ได้ตรวจสอบว่าตัวเลขที่กรอกตรงกับรูปจริงหรือไม่ (ดูสรุปท้ายบทสนทนา)
+ */
+export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStepsQuestProps) {
+  useLockBodyScroll()
+  const { settings, userData, logActivity } = useAppContext()
+  const lowPower = useIsLowPowerMode()
+  const sfxOpts = useMemo(
+    () => ({ volume: settings.sfxVolume, enabled: settings.soundEnabled }),
+    [settings.sfxVolume, settings.soundEnabled],
+  )
+
+  const config = (findQuestByCode(QUEST_CODE)?.config ?? {}) as VitalityStepsConfig
+  const baseGoal = config.baseStepGoal ?? 8000
+  const highBmiThreshold = config.bmiAdjustment?.highBmiThreshold ?? 23
+  const highBmiExtraSteps = config.bmiAdjustment?.highBmiExtraSteps ?? 1500
+  const allowManualStepEntry = config.allowManualStepEntry ?? true
+
+  // [ตามที่ระบุ] reuse BMI ที่คำนวณไว้แล้วจากฟีเจอร์ "รูปร่างของคุณ" (userData.bmi) — ไม่คำนวณ
+  // BMI ซ้ำแยกต่างหากในไฟล์นี้
+  const stepGoal = useMemo(() => {
+    const bmi = userData.bmi ?? 0
+    return bmi >= highBmiThreshold ? baseGoal + highBmiExtraSteps : baseGoal
+  }, [userData.bmi, baseGoal, highBmiThreshold, highBmiExtraSteps])
+
+  const [stage, setStage] = useState<Stage>('walk')
+  const [stepsInput, setStepsInput] = useState('')
+  const [hasPhoto, setHasPhoto] = useState(false)
+
+  const steps = Number(stepsInput) || 0
+  const progressPct = Math.min(100, (steps / stepGoal) * 100)
+  const reachedGoal = steps >= stepGoal
+
+  // เสียงนกฮูกเดินวนเบาๆ ตลอดเวลาที่อยู่หน้านี้ (หยุดตอนเข้าฉากถ่ายรูป/สำเร็จ)
+  useEffect(() => {
+    if (stage !== 'walk') return
+    startLoopingSfx('OWL_WALK', { ...sfxOpts, volume: (sfxOpts.volume ?? 70) * 0.5 })
+    return () => stopLoopingSfx('OWL_WALK')
+  }, [stage, sfxOpts])
+
+  useEscapeKey(onClose)
+
+  const handleStepsChange = (value: string) => {
+    const digitsOnly = value.replace(/[^0-9]/g, '')
+    setStepsInput(digitsOnly)
+  }
+
+  const handlePhotoConfirm = () => {
+    setHasPhoto(true)
+    setStage('walk')
+  }
+
+  const handleSubmit = () => {
+    if (!reachedGoal) return
+    playSfx('TREE_GROW', sfxOpts)
+    logActivity({ activityType: 'STEPS', durationSeconds: 0, meta: { steps, stepGoal, hasPhoto } })
+    setStage('done')
+    // ให้เวลาเห็น VFX ระยิบระยับสั้นๆ ก่อนส่งต่อให้ระบบฉลองรางวัลกลาง (QuestRewardCelebration
+    // ใน QuestSection.tsx) ทำงานต่อ — ไม่สร้างระบบตัวเลขรางวัลซ้ำในไฟล์นี้
+    window.setTimeout(() => {
+      onComplete({ steps, stepGoal, hasPhoto })
+      onClose()
+    }, 1500)
+  }
+
+  return (
+    <div className="vitality-steps">
+      {!lowPower && (
+        <video className="vitality-steps__bg-video" autoPlay muted loop playsInline>
+          <source src={BG_VIDEO_SRC} type="video/mp4" />
+        </video>
+      )}
+      <div className="vitality-steps__scrim" aria-hidden="true" />
+
+      <button onClick={onClose} title="ปิด" className="vitality-steps__close" aria-label="ปิดเควสจังหวะแห่งรากแก้ว">✕</button>
+
+      {stage !== 'done' && (
+        <div className="vitality-steps__content">
+          <div className="vitality-steps__header">
+            <div className="vitality-steps__icon">🦶</div>
+            <h1 className="vitality-steps__title">จังหวะแห่งรากแก้ว</h1>
+            <p className="vitality-steps__subtitle">เดินให้ครบ {stepGoal.toLocaleString()} ก้าววันนี้</p>
+            {stepGoal > baseGoal && (
+              <p className="vitality-steps__bmi-note">
+                ✨ BMI ของคุณสูงกว่า {highBmiThreshold} เป้าหมายจึงถูกปรับเพิ่มขึ้น {highBmiExtraSteps.toLocaleString()} ก้าวเพื่อผลลัพธ์ที่ดีขึ้น
+              </p>
+            )}
+          </div>
+
+          {/* เส้นทางเดิน — นกฮูกเลื่อนตามสัดส่วน steps/stepGoal */}
+          <div className="vitality-steps__path">
+            <div className="vitality-steps__path-track" />
+            <div className="vitality-steps__path-fill" style={{ width: `${progressPct}%` }} />
+            <img
+              src={OWL_AVATAR_ICON}
+              alt=""
+              className="vitality-steps__owl"
+              style={{ left: `${progressPct}%` }}
+            />
+            <span className="vitality-steps__path-flag vitality-steps__path-flag--start">🌱</span>
+            <span className="vitality-steps__path-flag vitality-steps__path-flag--end">🏁</span>
+          </div>
+          <div className="vitality-steps__progress-label">
+            {steps.toLocaleString()} / {stepGoal.toLocaleString()} ก้าว ({Math.round(progressPct)}%)
+          </div>
+
+          {allowManualStepEntry && (
+            <div className="vitality-steps__input-row">
+              <label htmlFor="vitality-steps-input" className="vitality-steps__input-label">กรอกจำนวนก้าวที่เดินได้วันนี้</label>
+              <input
+                id="vitality-steps-input"
+                type="text"
+                inputMode="numeric"
+                value={stepsInput}
+                onChange={(e) => handleStepsChange(e.target.value)}
+                placeholder="เช่น 8000"
+                className="vitality-steps__input"
+              />
+            </div>
+          )}
+
+          <div className="vitality-steps__actions">
+            <button className="vitality-steps__btn vitality-steps__btn--ghost" onClick={() => setStage('camera')}>
+              📸 {hasPhoto ? 'ถ่ายรูปยืนยันอีกครั้ง' : 'แนบรูปยืนยัน (เช่นแอปนับก้าว)'}
+            </button>
+            {hasPhoto && <span className="vitality-steps__photo-badge">✅ แนบรูปแล้ว</span>}
+          </div>
+
+          <button
+            className="vitality-steps__submit"
+            disabled={!reachedGoal}
+            onClick={handleSubmit}
+          >
+            {reachedGoal ? '🌿 ส่งภารกิจ' : `เหลืออีก ${(stepGoal - steps).toLocaleString()} ก้าว`}
+          </button>
+        </div>
+      )}
+
+      {stage === 'camera' && (
+        <CameraCapture
+          hint="ถ่ายรูปยืนยันการเดิน (เช่น หน้าจอแอปนับก้าว หรือรองเท้าหลังเดินเสร็จ)"
+          onConfirm={handlePhotoConfirm}
+          onSkip={() => setStage('walk')}
+          skipLabel="ข้าม"
+          onExit={onClose}
+        />
+      )}
+
+      {stage === 'done' && (
+        <div className="vitality-steps__done">
+          <div className="vitality-steps__done-sparkles" aria-hidden="true">
+            {Array.from({ length: 16 }).map((_, i) => (
+              <motion.span
+                key={i}
+                className="vitality-steps__spark"
+                style={{ left: `${(i * 6.4) % 100}%` }}
+                initial={{ opacity: 0, y: 0, scale: 0.4 }}
+                animate={{ opacity: [0, 1, 0], y: -120 - (i % 4) * 20, scale: 1 }}
+                transition={{ duration: 1.3 + (i % 3) * 0.2, delay: i * 0.04, ease: 'easeOut' }}
+              >
+                {i % 2 === 0 ? '✨' : '💧'}
+              </motion.span>
+            ))}
+          </div>
+          <motion.div
+            className="vitality-steps__done-icon"
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 16 }}
+          >
+            🌳
+          </motion.div>
+          <h2 className="vitality-steps__done-title">ถึงเป้าหมายแล้ว!</h2>
+          <p className="vitality-steps__done-text">รากแก้วของคุณแข็งแรงขึ้นจากการเดินวันนี้</p>
+        </div>
+      )}
+    </div>
+  )
+}

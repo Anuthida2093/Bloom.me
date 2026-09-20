@@ -14,7 +14,7 @@
  * bgm-relaxing-forest.mp3 — เพลงพื้นหลัง (BGM) สบายๆ เปิดคลอ
  * tree-grow.mp3          — เสียงตอนต้นไม้โต / เลเวลอัป
  * reward-claim.mp3       — เสียงรับรางวัล / รับไอเทม / รับเหรียญ
- * owl-walk.mp3           — เสียงนกฮูกเดินไปตามด่าน
+ * owl-walk .mp3          — เสียงนกฮูกเดินไปตามด่าน (ชื่อไฟล์จริงมีเว้นวรรคก่อนนามสกุล)
  * paper-crumple.mp3      — เสียงขยำกระดาษ (ตอนแปลงข้อความเป็นก้อนกระดาษ)
  * fire-burn.mp3          — เสียงไฟเผาไหม้ (ตอนกระดาษตกลงกองไฟ)
  * fire-crackle.mp3       — เสียงไฟลุกโชนต่อเนื่อง (loop เบาๆ)
@@ -34,7 +34,7 @@ export const SFX_FILES = {
   BGM_FOREST: 'bgm-relaxing-forest.mp3',
   TREE_GROW: 'tree-grow.mp3',
   REWARD_CLAIM: 'reward-claim.mp3',
-  OWL_WALK: 'owl-walk.mp3',
+  OWL_WALK: 'owl-walk .mp3',
   PAPER_CRUMPLE: 'paper-crumple.mp3',
   FIRE_BURN: 'fire-burn.mp3',
   FIRE_CRACKLE: 'fire-crackle.mp3',

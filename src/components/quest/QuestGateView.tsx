@@ -1,6 +1,8 @@
+import { useEffect, useRef } from 'react'
 import { isQuestFullyDoneToday, type QuestDef } from '../../config/questCatalog'
 import { SAFETY_NET_CONTACTS } from '../../config/screening'
 import { QUEST_ICONS } from '../../config/iconAssets'
+import { useIsLowPowerMode } from '../../hooks/useMediaQuery'
 
 const C_4 = '#9b59d0'
 const BORDER_5 = '#b785f5'
@@ -22,6 +24,11 @@ interface QuestGateViewProps {
    * โดยไม่มีสัญลักษณ์อะไรบอกล่วงหน้าที่เมนูนี้เลย ดูเหมือนเควสพัง จึงเพิ่ม badge/tooltip บอก
    * ชัดเจนตรงนี้แทน — ไม่ใช่ isLocked จริง (ยังกดเข้าไปได้ แค่จะเจอหน้าชวนไปเช็คอินก่อน) */
   needsMoodCheckin?: (questCode: string) => boolean
+  /** [ใหม่] มี modal/popup อื่นลอยทับเต็มจอ (เช่น QuestConfirmModal/QuestPlayModal/
+   * ScreeningPage — ดู GameplayFrame.tsx) — ใช้หยุดวิดีโอพื้นหลังหมวดสุขภาพกายชั่วคราว
+   * ตอนมองไม่เห็นอยู่แล้ว (ประหยัดแบต/พลังงานตาม pattern เดียวกับ Dashboard.tsx) ไม่มีผล
+   * กับหมวดสุขภาพจิตที่ไม่มีวิดีโอพื้นหลัง */
+  obscured?: boolean
 }
 
 /* [แก้ธีมสี — รอบก่อนหน้า ไม่แตะซ้ำรอบนี้] พื้นหลังมืดของทั้งสองหมวดใช้โทเคนกลาง --ae-*
@@ -55,12 +62,45 @@ const THEME = {
  */
 export default function QuestGateView({
   category, quests, isCompleted, isLocked, getTodayCompletionCount = () => 0, onSelectQuest, onOpenSafetyNet,
-  needsMoodCheckin = () => false,
+  needsMoodCheckin = () => false, obscured = false,
 }: QuestGateViewProps) {
   const theme = THEME[category]
 
+  /* [ใหม่ — วิดีโอพื้นหลังหมวดสุขภาพกาย] เฉพาะ category==='physical' เท่านั้น (หมวดสุขภาพจิต
+     ยังใช้ theme.bg เดิมทุกประการ ไม่แตะ) — pattern เดียวกับ videoRef+useIsLowPowerMode+
+     document.hidden ของ Dashboard.tsx (ดู videoRef/lowPower ใน Dashboard.tsx) ต่างกันตรงที่
+     ที่นี่ไม่มี "anyModalOpen" ของทั้งแอปให้เช็ค (อยู่ลึกเข้ามาใน gameplay-frame แล้ว) จึงรับ
+     obscured จาก GameplayFrame.tsx แทน (true เมื่อ QuestConfirmModal/QuestPlayModal/
+     ScreeningPage ลอยทับอยู่) */
+  const lowPower = useIsLowPowerMode()
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const showVideo = category === 'physical' && !lowPower
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    const sync = () => {
+      const shouldPause = obscured || document.hidden || lowPower
+      if (shouldPause) video.pause()
+      else video.play().catch(() => {})
+    }
+    sync()
+    document.addEventListener('visibilitychange', sync)
+    return () => document.removeEventListener('visibilitychange', sync)
+  }, [obscured, lowPower])
+
   return (
     <div className="quest-gate-view" style={{ background: theme.bg }}>
+      {showVideo && (
+        <video
+          ref={videoRef}
+          className="quest-gate-view__bg-video"
+          src="/assets/videos/quest-physical/Physical-intro.mp4"
+          autoPlay loop muted playsInline preload="metadata"
+          aria-hidden="true"
+        />
+      )}
+      {showVideo && <div className="quest-gate-view__bg-overlay" aria-hidden="true" />}
       <div className="quest-gate-view__list">
         {quests.map((q) => {
           const locked = isLocked(q)
@@ -146,6 +186,21 @@ export default function QuestGateView({
         .quest-gate-view {
           position: absolute; inset: 0; z-index: 10; overflow: hidden;
         }
+        /* [ใหม่ — วิดีโอพื้นหลังหมวดสุขภาพกาย] อยู่ล่างสุดในกอง (z-index:0) ใต้ overlay มืด
+           (z-index:1) ใต้ .quest-gate-view__list ทั้งก้อน (z-index:20 เดิม ครอบคลุมทั้งลิสต์
+           เควส+พื้นหลังไล่เฉดมืดของมันเองที่ท้ายลิสต์อยู่แล้ว) — object-fit:cover ให้เต็มพื้นที่
+           โดยไม่บิดเบี้ยว, overlay สีดำโปร่งแสง .45 กันตัวหนังสือ/ปุ่มด้านบนกลืนกับวิดีโอสว่างๆ
+           (ทดสอบแล้วปุ่มเควสเองทึบอยู่แล้ว (background: ${theme.itemBg}) ไม่ได้พึ่ง overlay
+           นี้เพื่ออ่านออก — overlay นี้ช่วยเฉพาะพื้นที่ว่างระหว่าง/เหนือปุ่ม เช่นป้ายชื่อโซนที่ลอย
+           อยู่ด้านบนสุดจาก QuestSection.tsx) */
+        .quest-gate-view__bg-video {
+          position: absolute; inset: 0; width: 100%; height: 100%;
+          object-fit: cover; z-index: 0; pointer-events: none;
+        }
+        .quest-gate-view__bg-overlay {
+          position: absolute; inset: 0; z-index: 1; pointer-events: none;
+          background: rgba(0,0,0,.45);
+        }
         /* [แก้ตามที่ระบุ — ลบลิงก์ "ต้องการความช่วยเหลือด่วน?"] ซ้ำซ้อนกับแถบศูนย์ฉุกเฉิน
            (.quest-gate-view__safety-banner) ที่อยู่ท้ายลิสต์อยู่แล้ว (เบอร์ 1323 เดียวกัน)
            ตัด element/ปุ่มนี้ออกจาก JSX ทั้งหมดแล้ว (ดูด้านบน) — ลบ CSS ที่ไม่มีใครใช้ทิ้งด้วย
@@ -221,15 +276,22 @@ export default function QuestGateView({
         .quest-gate-view__list::-webkit-scrollbar { width: 4px; }
         .quest-gate-view__list::-webkit-scrollbar-thumb { background: var(--glass-w-30); border-radius: 99px; }
 
-        /* [ใหม่ — ข้อ D2] เดสก์ท็อปขึ้นไป (≥1024px) — ปุ่มเควสกว้างแค่ ~8cm (≈302px ที่ 96dpi)
-           จัดกึ่งกลางจอแทนเต็มความกว้าง — ใช้ px แทน cm ตรงๆ เพราะหน่วย cm ใน CSS อิงสมมติฐาน
-           96dpi ซึ่งจอจริงมักไม่ตรงเป๊ะ (ความละเอียด/การตั้งค่าสเกลต่างกันไปแต่ละเครื่อง) แปลง
-           เป็น px ล่วงหน้าแทนจึงได้ผลลัพธ์ที่คาดเดาได้เหมือนกันทุกจอ ไม่ใช้กับมือถือ/แท็บเล็ต
-           (ปุ่มยังเต็มความกว้างเหมือนเดิมตามที่ระบุ) */
+        /* [ใหม่ — ข้อ D2] เดสก์ท็อปขึ้นไป (≥1024px) — ปุ่มเควสจัดกึ่งกลางจอแทนเต็มความกว้าง
+           ใช้ px ตรงๆ (ไม่ใช้หน่วย cm เพราะอิงสมมติฐาน 96dpi ที่จอจริงมักไม่ตรงเป๊ะ) ไม่ใช้กับ
+           มือถือ/แท็บเล็ต (ปุ่มยังเต็มความกว้างเหมือนเดิมตามที่ระบุ)
+
+           [แก้ตามที่ระบุ] เดิม max-width: 302px (~8cm) สั้น/เล็กเกินไปไม่สมส่วนกับพื้นที่จอใหญ่ —
+           ไอคอนอย่างเดียวก็กิน 2.5cm (~94.5px ที่ 96dpi) ของความกว้างนั้นไปแล้วเกือบ 1 ใน 3
+           เหลือพื้นที่ให้หัวข้อ+ป้ายสถานะแคบมาก ขยายเป็น 520px แทน (ใกล้เคียง max-width ของ
+           การ์ด/แผงเนื้อหากึ่งกลางจออื่นในแอปที่ใช้ช่วง 420-480px เช่น .oracle-page__reading-view
+           440px, .camera-capture__review-controls 420px — 520px ให้ปุ่มเควสซึ่งเป็นรายการยาว
+           ทั้งแถวยาวสมส่วนกว่าเล็กน้อยโดยยังไม่กว้างจนรู้สึกโล่งเกินไปบนจอกว้างมากๆ) ใช้ component
+           เดียวกันทั้งหมวดสุขภาพจิตและสุขภาพกาย จึงแก้จุดเดียวได้ผลทั้งสองหมวด (ไม่มี override
+           เฉพาะหมวดที่ไหนอีก — ยืนยันด้วย grep ทั้งโปรเจกต์แล้วว่าไม่มีไฟล์อื่นอ้างถึง class นี้) */
         @media (min-width: 1024px) {
           .quest-gate-view__list { align-items: center; }
           .quest-gate-view__row,
-          .quest-gate-view__safety-banner { max-width: 302px; }
+          .quest-gate-view__safety-banner { max-width: 520px; }
         }
 
         @media (prefers-reduced-motion: reduce) {

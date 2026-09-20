@@ -1,7 +1,9 @@
-import { useState, type FormEvent, type CSSProperties, type FocusEvent, type MouseEvent } from 'react'
+import { useRef, useState, type FormEvent, type CSSProperties, type FocusEvent, type MouseEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAppContext } from '../context/AppContext'
 import SoundToggleButton from '../components/layout/SoundToggleButton'
+import PasswordInput from '../components/ui/PasswordInput'
+import { ApiError } from '../services/http'
 
 const C_1 = 'rgba(116,198,157,.35)'
 const C_2 = 'rgba(116,198,157,.55)'
@@ -19,9 +21,13 @@ const SHADOW_11 = 'rgba(45,106,79,.4)'
  * Login — หน้ากรอกเข้าสู่ระบบ (route "/login")
  * ────────────────────────────────────────────
  * [ข้อกำหนดข้อ 1] เข้าถึงจากปุ่ม "เข้าสู่ระบบ" ใน WelcomeModal.tsx
- * กรอกแค่ username + password แล้วกด "เข้าสู่ระบบ" ได้เลย (ไม่มี backend จริงในโปรเจกต์นี้
- * จึงไม่ตรวจรหัสผ่านจริงจัง — สมมติว่ามีบัญชีอยู่แล้วเสมอ) แล้วไปหน้า dashboard ตรงๆ
+ * กรอก username + password แล้วกด "เข้าสู่ระบบ" → ไปหน้า dashboard
  * (ต่างจาก Register ที่ต้องไปเลือก MBTI ก่อน เพราะ Login คือผู้ใช้เดิมที่มีต้นไม้อยู่แล้ว)
+ *
+ * [แก้รอบนี้ — เตรียมความปลอดภัยฝั่ง frontend] เดิม password ที่ผู้ใช้กรอกถูกทิ้งไปเฉยๆ
+ * (ส่ง password: '' ตายตัวเข้า mock login เสมอ ไม่เคยตรวจจริง) ตอนนี้ตรวจกับบัญชีที่สมัครไว้
+ * จริงใน mockDb (ดู user.api.ts login()) — ผิดพลาดจะโชว์ error ใต้ฟอร์ม พร้อม rate-limit
+ * เบื้องต้นฝั่ง client (ล็อกปุ่มชั่วคราวหลังกดผิดติดกัน 3 ครั้ง — ดูคอมเมนต์ที่ handleSubmit)
  *
  * [ข้อกำหนดข้อ 3] พื้นหลังวิดีโอ hero-waterfall.mp4 เต็มจอ + overlay โปร่งแสง glassmorphic
  * [ข้อกำหนดข้อ 4] การ์ดฟอร์ม/ช่องกรอก/ปุ่ม ปรับสไตล์อนิเมะ-เกม (glow ตอน focus, micro-animation ปุ่ม)
@@ -57,16 +63,42 @@ function handleFieldBlur(e: FocusEvent<HTMLInputElement>) {
   e.target.style.background = 'var(--glass-w-85)'
 }
 
+/** [ใหม่ — ข้อ 4] rate-limit เบื้องต้นฝั่ง client เท่านั้น — "ชะลอ" การกดรัว ไม่ใช่การป้องกัน
+ * brute-force จริง (ผู้โจมตีเรียก API ตรงๆ ผ่าน curl/script ได้โดยไม่ผ่านปุ่มนี้เลย) ระบบ
+ * ป้องกันจริงต้องทำที่ backend (เช่น ล็อกบัญชีชั่วคราว/CAPTCHA/IP throttling หลังพยายามผิดครบจำนวน) */
+const FAILED_ATTEMPTS_BEFORE_LOCK = 3
+const LOCKOUT_MS = 3000
+
 export default function Login() {
   const navigate = useNavigate()
   const { loginWithUsername } = useAppContext()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLocked, setIsLocked] = useState(false)
+  const failedAttempts = useRef(0)
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    loginWithUsername(username)
-    navigate('/dashboard')
+    if (isLocked || isSubmitting) return
+    setErrorMessage(null)
+    setIsSubmitting(true)
+    try {
+      await loginWithUsername(username, password)
+      failedAttempts.current = 0
+      navigate('/dashboard')
+    } catch (err) {
+      failedAttempts.current += 1
+      setErrorMessage(err instanceof ApiError ? err.userMessage : 'เข้าสู่ระบบไม่สำเร็จ ลองอีกครั้ง')
+      if (failedAttempts.current >= FAILED_ATTEMPTS_BEFORE_LOCK) {
+        setIsLocked(true)
+        failedAttempts.current = 0
+        window.setTimeout(() => setIsLocked(false), LOCKOUT_MS)
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   // ปุ่มหลัก "เข้าสู่ระบบ" — pill-shaped, gradient สไตล์ธรรมชาติ/อนิเมะ, hover ขยาย+เรืองแสง,
@@ -165,10 +197,9 @@ export default function Login() {
 
           <label style={labelStyle}>
             รหัสผ่าน
-            <input
-              type="password"
+            <PasswordInput
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
               onFocus={handleFieldFocus}
               onBlur={handleFieldBlur}
               placeholder="••••••••"
@@ -177,8 +208,22 @@ export default function Login() {
             />
           </label>
 
+          <div style={{ textAlign: 'right', marginTop: -8 }}>
+            <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--glass-w-85)', fontWeight: 700 }}>ลืมรหัสผ่าน?</Link>
+          </div>
+
+          {errorMessage && (
+            <div style={{
+              background: 'rgba(220,60,60,.18)', border: '1.5px solid rgba(220,60,60,.55)',
+              borderRadius: 12, padding: '10px 14px', color: 'var(--fixed-white)', fontSize: 13, fontWeight: 700,
+            }}>
+              ⚠️ {errorMessage}
+            </div>
+          )}
+
           <button
             type="submit"
+            disabled={isSubmitting || isLocked}
             onMouseEnter={handlePrimaryBtnEnter}
             onMouseLeave={handlePrimaryBtnLeave}
             onMouseDown={handlePrimaryBtnDown}
@@ -186,12 +231,14 @@ export default function Login() {
             style={{
               padding: '15px 24px', border: 'none', borderRadius: 999,
               background: 'linear-gradient(135deg, var(--g400) 0%, var(--g700, var(--g700)) 100%)',
-              color: 'var(--fixed-white)', fontFamily: 'Fredoka One', fontSize: 18, cursor: 'pointer',
+              color: 'var(--fixed-white)', fontFamily: 'Fredoka One', fontSize: 18,
+              cursor: isSubmitting || isLocked ? 'not-allowed' : 'pointer',
+              opacity: isSubmitting || isLocked ? 0.6 : 1,
               boxShadow: `0 8px 24px ${SHADOW_11}`, marginTop: 6,
               transition: 'transform .18s ease, box-shadow .18s ease',
             }}
           >
-            🔑 เข้าสู่ระบบ
+            {isLocked ? '⏳ ลองใหม่อีกครั้งในอีกสักครู่' : isSubmitting ? 'กำลังเข้าสู่ระบบ...' : '🔑 เข้าสู่ระบบ'}
           </button>
 
           <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--glass-w-85)' }}>

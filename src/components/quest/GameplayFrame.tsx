@@ -36,7 +36,7 @@
 
 import React, { useState } from 'react'
 
-import { MOOD_GATED_QUEST_CODES, type QuestDef, type QuestTabId } from '../../config/questCatalog'
+import { MOOD_GATED_QUEST_CODES, CATEGORY_TO_TAB, type QuestDef, type QuestTabId } from '../../config/questCatalog'
 import { QUEST_ICONS } from '../../config/iconAssets'
 import type { UserData, TreeStats, PlacedItem, DecorationPositionMap, MoodEntryData, QuestCategory } from '../../types'
 import type { QuestPlayPayload } from '../../types.mental'
@@ -61,13 +61,6 @@ const INCINERATOR_QUEST_CODE = 'ment-cognitive-incinerator'
 const GRATITUDE_SHIELD_QUEST_CODE = 'ment-gratitude-shield'
 /** [ใหม่] เควสที่มีหน้าจอเต็มของตัวเอง ไม่ผ่าน questGameRegistry */
 const MINDFUL_ANCHOR_QUEST_CODE = 'ment-mindful-anchor'
-
-/** หมวดของเควส → แท็บที่เควสนั้นสังกัด ใช้กรองไม่ให้ popup ข้ามหมวดมาซ้อนกัน */
-const CATEGORY_TO_TAB: Record<QuestCategory, QuestTabId> = {
-  KNOWLEDGE: 'knowledge',
-  HEALTH: 'physical',
-  EMOTION: 'mental',
-}
 
 interface GameplayFrameProps {
   activeTab: QuestTabId
@@ -108,7 +101,7 @@ interface GameplayFrameProps {
   placedItems: PlacedItem[]
   decorationPositions: DecorationPositionMap
   onDecorationMove: (itemId: string, xPct: number, yPct: number) => void
-  treeGrowthPulse?: { category: QuestCategory; key: number } | null
+  treeGrowthPulse?: { category: QuestCategory; key: number; questCode?: string } | null
 }
 
 export default function GameplayFrame({
@@ -141,6 +134,14 @@ export default function GameplayFrame({
     setPrevActiveTab(activeTab)
     setSafetyNetOpen(false)
   }
+
+  /* [ใหม่ — วิดีโอพื้นหลังหมวดสุขภาพกาย] QuestGateView(physical) อยู่ "ใต้" popup พวกนี้เสมอ
+     (ทุกตัวเป็น position:absolute ซ้อนทับใน .gameplay-frame เดียวกัน ไม่ได้ unmount กัน — ดู
+     comment หัวไฟล์) จึงต้องบอกมันตรงๆ ว่ากำลังถูกบังอยู่หรือเปล่าเพื่อ pause วิดีโอประหยัด
+     พลังงาน (pendingScreening ไม่ถูก reset ตอนสลับแท็บโดยตั้งใจ — ดู comment ด้านบน — จึงต้อง
+     รวมไว้ด้วยแม้ปกติจะโผล่จากหมวดสุขภาพจิตก็ตาม) safetyNetOpen ไม่ต้องรวมเพราะถูก reset
+     เป็น false ทันทีที่สลับแท็บอยู่แล้ว (ไม่มีทางเป็น true พร้อมกับ activeTab==='physical') */
+  const anyPopupOpen = !!visibleConfirmQuest || !!visiblePlayingQuest || !!pendingScreening
 
   const confirmLocked = visibleConfirmQuest ? isLocked(visibleConfirmQuest) : false
   // [แก้รอบนี้ — เควสเล่นซ้ำได้ต่อวัน] เควสที่มี maxPerDay (เช่น phys-pure-water) ต้องยัง
@@ -177,6 +178,7 @@ export default function GameplayFrame({
             isLocked={isLocked}
             getTodayCompletionCount={getTodayCompletionCount}
             onSelectQuest={onSelectQuest}
+            obscured={anyPopupOpen}
           />
         )}
 

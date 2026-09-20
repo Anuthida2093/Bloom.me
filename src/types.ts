@@ -197,6 +197,10 @@ export const STACK_PER_VISUAL_LEVEL = 50
 
 export type RiskLevel = 'LOW' | 'MODERATE' | 'HIGH'
 export type BodyType = 'THIN' | 'AVERAGE' | 'OVERWEIGHT'
+/** [ใหม่] เพศ — ตรวจแล้วระบบยังไม่เคยมีฟิลด์นี้มาก่อน (ดู UserData ด้านล่าง) ใช้เลือกชุดภาพ
+ *  "รูปร่างของคุณ" ให้ตรงเพศจริง (ดู src/config/bodyTypeAssets.ts) แก้ไขได้ปกติเหมือน
+ *  ส่วนสูง/น้ำหนัก ไม่ได้ล็อกถาวรแบบ MBTI */
+export type Gender = 'MALE' | 'FEMALE'
 export type TreeSpecies = 'OAK' | 'CHERRY_BLOSSOM' | 'PINE' | 'WILLOW' | 'BALANCED'
 export type QuestCategory = 'KNOWLEDGE' | 'EMOTION' | 'HEALTH'
 export type QuestControlType =
@@ -241,6 +245,8 @@ export interface UserData {
   lastWateredAt: string | null
   mbtiType: MbtiType | null
   birthDate: string | null
+  /** [ใหม่] fallback 'FEMALE' สำหรับ user เดิมที่ยังไม่เคยตั้งค่านี้ (ดู mockDb.ts read()) */
+  gender: Gender
   height: number | null
   weight: number | null
   bmi: number | null
@@ -276,6 +282,7 @@ export const DEFAULT_USER_DATA: UserData = {
   lastWateredAt: null,
   mbtiType: 'INFP',
   birthDate: null,
+  gender: 'FEMALE',
   height: null,
   weight: null,
   bmi: null,

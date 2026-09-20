@@ -22,6 +22,28 @@ import {
 
 const STORE_KEY = 'bloom:mock-db'
 
+/** [เพิ่มรอบนี้ — ระบบ auth จำลอง] บัญชีที่สมัครไว้จริง แยกจาก `user` (ข้อมูลเกมของโปรไฟล์ที่
+ * กำลังใช้งานอยู่ตอนนี้) เพราะ mockDb เดิมออกแบบมาเป็น "เซฟไฟล์เดียวต่อเบราว์เซอร์" ไม่มีระบบ
+ * หลายบัญชี/สลับผู้ใช้จริง — รายชื่อนี้มีไว้ใช้แค่ตรวจสอบตอน login/register/ลืมรหัสผ่าน
+ * (อีเมลซ้ำ, รหัสผ่านถูกไหม) เท่านั้น ไม่ได้ผูกกับข้อมูลเกมแยกรายบัญชีจริง — ดูสรุปท้ายบทสนทนา
+ * สำหรับสิ่งที่ backend จริงต้องทำเพิ่มเพื่อให้แยกข้อมูลผู้ใช้แต่ละคนได้จริง */
+export interface MockAccount {
+  id: string
+  /** เก็บเป็นตัวพิมพ์เล็กเสมอ ใช้เป็น key ตรวจอีเมลซ้ำแบบ case-insensitive */
+  email: string
+  username: string
+  /** แฮชด้วย mockAuth.hashPasswordMock — ดูคำเตือนความปลอดภัยในไฟล์นั้น */
+  passwordHash: string
+  createdAt: string
+}
+
+/** [เพิ่มรอบนี้] โทเคนกู้รหัสผ่านชั่วคราว จำลองสิ่งที่ backend จริงจะส่งไปในอีเมล */
+export interface MockPasswordResetToken {
+  token: string
+  email: string
+  expiresAt: string
+}
+
 export interface MockDb {
   user: UserData
   questLogs: QuestLogEntry[]
@@ -36,6 +58,10 @@ export interface MockDb {
    *  บัญชีเราเองใช้ user.isProfilePrivate แทน (แก้ได้จากหน้าตั้งค่าจริง) ส่วนชุดนี้ mock ตายตัว
    *  ไว้สาธิตว่า toast "โพสต์ปิดโปรไฟล์" ทำงานจริงตอนพยายามดูโปรไฟล์คนอื่นที่ปิดไว้ */
   privateProfileUserIds: string[]
+  /** [เพิ่มรอบนี้ — ระบบ auth จำลอง] ดู MockAccount ด้านบน */
+  accounts: MockAccount[]
+  /** [เพิ่มรอบนี้ — ระบบ auth จำลอง] ดู MockPasswordResetToken ด้านบน */
+  passwordResetTokens: MockPasswordResetToken[]
 }
 
 /** [ใหม่] โพสต์ตัวอย่าง 2 อัน — ใช้ userId ตรงกับ MOCK_LEADERBOARD_PLAYERS (p1/p2 ใน
@@ -112,13 +138,20 @@ const EMPTY_DB: MockDb = {
   // [เพิ่มรอบแก้ไข Story] ตั้งให้ "วาสนา" (p4) ปิดโปรไฟล์ไว้เป็นตัวอย่างตายตัว — ใช้สาธิต
   // ว่าตอนกดดูโปรไฟล์เขาจาก list เพื่อน/คนกดไลค์/คอมเมนต์ จะเจอ toast แจ้งจริง (ข้อ 11)
   privateProfileUserIds: ['p4'],
+  accounts: [],
+  passwordResetTokens: [],
 }
 
 function read(): MockDb {
   try {
     const raw = window.localStorage.getItem(STORE_KEY)
     if (!raw) return structuredClone(EMPTY_DB)
-    return { ...structuredClone(EMPTY_DB), ...(JSON.parse(raw) as Partial<MockDb>) }
+    const db = { ...structuredClone(EMPTY_DB), ...(JSON.parse(raw) as Partial<MockDb>) }
+    // [ใหม่] db.user จาก JSON.parse (ถ้ามี) แทนที่ EMPTY_DB.user ทั้งก้อนแบบ shallow (ไม่ merge
+    // ทีละฟิลด์) — ผู้ใช้เดิมที่ persist ไว้ก่อนมีฟิลด์ gender จะไม่มีคีย์นี้เลย (undefined จริง
+    // ตอน runtime ถึง type จะบอกว่าไม่ null ก็ตาม) เติม fallback 'FEMALE' ตรงนี้จุดเดียวตามที่ระบุ
+    db.user.gender = db.user.gender ?? 'FEMALE'
+    return db
   } catch {
     return structuredClone(EMPTY_DB)
   }

@@ -7,12 +7,16 @@ import {
   type JournalEntryRecord,
   type InventoryItem,
   type PlacedItem,
+  type BodyType,
 } from '../../types'
 import { DECORATION_ITEM_META, type DecorationCategory } from '../../config/decorationItems'
 import { findQuestByCode } from '../../config/questCatalog'
+import { BADGE_CATALOG } from '../../config/badgeCatalog'
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { BADGE_ICONS, ITEM_ICONS } from '../../config/iconAssets'
+import { computeBmi, computeBodyType } from '../../utils/bmi'
+import { getBodyTypeImagePath } from '../../config/bodyTypeAssets'
 
 /*============================================================================*\
   ProfilePage — [ไฟล์ใหม่] หน้าโปรไฟล์เต็มจอ เปิดจากปุ่ม "โปรไฟล์" ใน ActionMenuBar
@@ -50,19 +54,16 @@ const MOOD_EMOJI: Record<MoodEntryData['mood'], string> = {
 const DAYS_TH = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
 const MONTH_NAMES_TH = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
 
-/** BMI ระดับ 0-3 → พารามิเตอร์ SVG อวตาร (ผอม/ปกติ/ท้วม/อ้วน) — ยิ่งดัชนีสูงตัวยิ่งกว้าง */
-const BMI_AVATAR_LEVELS = [
-  { label: 'น้ำหนักน้อย', color: 'var(--blue)', headR: 10, bodyRx: 11, bodyRy: 24, armW: 8, legW: 9 },
-  { label: 'ปกติ', color: 'var(--g600)', headR: 11, bodyRx: 14, bodyRy: 25, armW: 9, legW: 10.5 },
-  { label: 'น้ำหนักเกิน', color: '#E8A020', headR: 12, bodyRx: 18, bodyRy: 25, armW: 11, legW: 12.5 },
-  { label: 'อ้วน', color: 'var(--red)', headR: 13, bodyRx: 22, bodyRy: 26, armW: 13, legW: 14.5 },
-] as const
-
-function bmiLevelOf(bmi: number): 0 | 1 | 2 | 3 {
-  if (bmi < 18.5) return 0
-  if (bmi < 23) return 1
-  if (bmi < 25) return 2
-  return 3
+/** [แก้ตามที่ระบุ — เอาตาม backend] เดิมมี 4 ระดับ (ผอม/ปกติ/เกิน/อ้วน) คำนวณจาก bmi ตรงๆ
+ *  แยกจาก userData.bodyType อย่างสิ้นเชิง (ฟิลด์นั้นไม่เคยถูกอ่าน/เขียนที่ไหนเลย) — ตอนนี้ยุบ
+ *  เหลือ 3 ระดับให้ตรงกับ BodyType enum จริงของ backend (THIN/AVERAGE/OVERWEIGHT) คีย์เป็น
+ *  BodyType ตรงๆ ใช้พารามิเตอร์ทรงของระดับ "อ้วน" เดิมสำหรับ OVERWEIGHT (เห็นความต่างจาก
+ *  AVERAGE ชัดกว่าใช้ทรง "น้ำหนักเกิน" เดิมที่ใกล้เคียง AVERAGE เกินไป) ดูเกณฑ์ตัวเลขที่
+ *  src/utils/bmi.ts (computeBodyType) */
+const BMI_AVATAR_LEVELS: Record<BodyType, { label: string; color: string; headR: number; bodyRx: number; bodyRy: number; armW: number; legW: number }> = {
+  THIN: { label: 'น้ำหนักน้อย', color: 'var(--blue)', headR: 10, bodyRx: 11, bodyRy: 24, armW: 8, legW: 9 },
+  AVERAGE: { label: 'ปกติ', color: 'var(--g600)', headR: 11, bodyRx: 14, bodyRy: 25, armW: 9, legW: 10.5 },
+  OVERWEIGHT: { label: 'น้ำหนักเกิน', color: 'var(--red)', headR: 13, bodyRx: 22, bodyRy: 26, armW: 13, legW: 14.5 },
 }
 
 function toDateStr(d: Date): string {
@@ -88,6 +89,9 @@ interface ProfilePageProps {
   moodEntries?: MoodEntryData[]
   journalEntries?: JournalEntryRecord[]
   inventoryData?: InventoryItem[]
+  /** [เพิ่มตามที่ระบุ] code ของ badge ที่ปลดล็อกแล้ว (MentalContext.earnedBadges) — แสดงใน
+   *  การ์ด "ความสำเร็จ" ใหม่ด้านล่าง */
+  earnedBadges?: string[]
   onPlace?: (itemId: string, zone: PlacedItem['zone']) => void
   onClose?: () => void
 }
@@ -98,6 +102,7 @@ export default function ProfilePage({
   moodEntries = [],
   journalEntries = [],
   inventoryData = [],
+  earnedBadges = [],
   onPlace = () => {},
   onClose = () => {},
 }: ProfilePageProps) {
@@ -114,9 +119,13 @@ export default function ProfilePage({
   // ── โซนกลาง: อวตาร BMI ──
   const height = userData.height ?? 170
   const weight = userData.weight ?? 60
-  const bmi = userData.bmi ?? weight / ((height / 100) ** 2)
-  const bmiLevel = bmiLevelOf(bmi)
-  const avatar = BMI_AVATAR_LEVELS[bmiLevel]
+  const bmi = userData.bmi ?? computeBmi(height, weight)
+  const bodyType = userData.bodyType ?? computeBodyType(bmi)
+  const avatar = BMI_AVATAR_LEVELS[bodyType]
+  // [ใหม่] เพศ+BMI → รูปจริง (แทนอวตาร SVG สีเขียวเดิมด้านล่าง) — derived สดจาก userData ตรงๆ
+  // ทุก render (ไม่ใช่ state แยก) ให้เปลี่ยนทันทีถ้าแก้ส่วนสูง/น้ำหนัก/เพศแล้วกลับมาหน้านี้
+  const gender = userData.gender ?? 'FEMALE'
+  const bodyTypeImageUrl = getBodyTypeImagePath(gender, bmi)
 
   // ── โซนขวา: กิจกรรมของวันที่เลือก (ค่าเริ่มต้น = วันนี้) ──
   const moodOfDay = moodEntries.find((m) => dateOfIso(m.createdAt) === selectedDate)
@@ -125,8 +134,9 @@ export default function ProfilePage({
 
   const completedLogsOfDay = questLogs.filter((l) => l.status === 'COMPLETED' && dateOfLog(l) === selectedDate)
   const activeFocusLog = completedLogsOfDay.find((l) => l.quest?.code === 'know-active-focus')
-  const strategicDelayLog = completedLogsOfDay.find((l) => l.quest?.code === 'know-strategic-delay')
-  const waterCount = completedLogsOfDay.filter((l) => l.quest?.code === 'phys-pure-water').length
+  // [แก้ตามที่ระบุ] เปลี่ยนตาม code ใหม่ที่ sync กับ backend (ดู questCatalog.ts ข้อ 1)
+  const contentReviewLog = completedLogsOfDay.find((l) => l.quest?.code === 'know-content-review')
+  const waterCount = completedLogsOfDay.filter((l) => l.quest?.code === 'phys-hydration-drop').length
 
   const activityList = completedLogsOfDay
     .map((l) => ({ log: l, def: l.quest?.code ? findQuestByCode(l.quest.code) : undefined }))
@@ -175,7 +185,7 @@ export default function ProfilePage({
 
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '95px 20px 48px' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-3xl)', color: 'var(--g800)' }}>👤 {userData.username || 'ผู้ใช้'}</div>
+          <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-3xl)', color: 'var(--heading-accent)' }}>👤 {userData.username || 'ผู้ใช้'}</div>
           {/* [แก้ตามที่ระบุ — ข้อ 7] ขยาย MBTI/Lv./เหรียญ ให้เด่นชัดขึ้น (เดิม fs-sm เท่าตัวหนังสือรองทั่วไป) ใช้ --fs-md + ตัวหนา แทนตัวเลขแบนราบเดิม */}
           <p style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--text-sub)', marginTop: 4 }}>
             {userData.mbtiType ?? '—'} · เลเวล {userData.level} · <img src={BADGE_ICONS.coins} className="icon-img" alt="" /> {userData.coins.toLocaleString()}
@@ -186,7 +196,7 @@ export default function ProfilePage({
 
           {/* ═══ โซนซ้าย: คลังไอเทม ═══ */}
           <div className="card" style={{ padding: 22, maxHeight: 640, overflowY: 'auto' }}>
-            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--g800)', marginBottom: 4 }}><img src={BADGE_ICONS.item} className="icon-img" alt="" /> คลังไอเทม</div>
+            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}><img src={BADGE_ICONS.item} className="icon-img" alt="" /> คลังไอเทม</div>
             <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>กดไอเทมเพื่อวางบนต้นไม้ กดซ้ำเพื่อถอด</p>
 
             {groupedInventory.length === 0 ? (
@@ -251,23 +261,18 @@ export default function ProfilePage({
 
           {/* ═══ โซนกลาง: อวตาร BMI ═══ */}
           <div className="card" style={{ padding: 22, textAlign: 'center' }}>
-            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--g800)', marginBottom: 16 }}>📊 รูปร่างของคุณ</div>
+            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 16 }}>📊 รูปร่างของคุณ</div>
 
-            <svg viewBox="0 0 80 150" width={140} height={260} style={{ margin: '0 auto', display: 'block' }}>
-              <circle cx="40" cy="20" r={avatar.headR} fill={avatar.color} />
-              <circle cx="36" cy="17" r={3} fill="var(--glass-w-30)" />
-              <rect x={40 - avatar.armW / 2} y="30" width={avatar.armW} height="10" rx="4" fill={avatar.color} />
-              <ellipse cx="40" cy={30 + avatar.bodyRy * 0.62} rx={avatar.bodyRx} ry={avatar.bodyRy} fill={avatar.color} />
-              <ellipse cx={40 - avatar.bodyRx * 0.35} cy={30 + avatar.bodyRy * 0.45} rx="6" ry="4" fill="var(--glass-w-18)" />
-              <rect x={40 - avatar.bodyRx - avatar.armW * 0.4} y="46" width={avatar.armW} height={avatar.bodyRy * 1.15} rx="6"
-                fill={avatar.color} transform={`rotate(-9 ${40 - avatar.bodyRx} 70)`} />
-              <rect x={40 + avatar.bodyRx - avatar.armW * 0.6} y="46" width={avatar.armW} height={avatar.bodyRy * 1.15} rx="6"
-                fill={avatar.color} transform={`rotate(9 ${40 + avatar.bodyRx} 70)`} />
-              <rect x={40 - avatar.legW - 2} y={30 + avatar.bodyRy * 1.5} width={avatar.legW} height="42" rx="6"
-                fill={avatar.color} transform={`rotate(-3 ${40 - avatar.legW - 2} ${30 + avatar.bodyRy * 1.5})`} />
-              <rect x={40 + 2} y={30 + avatar.bodyRy * 1.5} width={avatar.legW} height="42" rx="6"
-                fill={avatar.color} transform={`rotate(3 ${40 + 2} ${30 + avatar.bodyRy * 1.5})`} />
-            </svg>
+            {/* [แก้ — ตามที่ระบุ] เดิมเป็นอวตาร SVG วาดเองสีเขียวเดียวไม่แยกเพศ (ดู avatar.color
+                ด้านบน ยังใช้อยู่กับแท็ก/หมุดสไลเดอร์ด้านล่าง แค่ตัวรูปคนเปลี่ยนเป็นภาพจริงตาม
+                เพศ+BMI แทน — key={bodyTypeImageUrl} ให้ <img> remount ทันทีที่ path เปลี่ยน
+                (เพศ/BMI เปลี่ยน) กันรูปเก่าค้างจากปัญหา browser cache ตัวเดียวกับ URL เดิม) */}
+            <img
+              key={bodyTypeImageUrl}
+              src={bodyTypeImageUrl}
+              alt={`รูปร่างตาม BMI ${bmi.toFixed(1)}`}
+              style={{ width: '100%', maxWidth: 200, aspectRatio: '1 / 1', objectFit: 'contain', margin: '0 auto', display: 'block' }}
+            />
 
             <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-3xl)', color: avatar.color, marginTop: 8 }}>{bmi.toFixed(1)}</div>
             <span className="tag" style={{ background: `color-mix(in srgb, ${avatar.color} 18%, transparent)`, color: avatar.color, fontSize: 'var(--fs-sm)' }}>
@@ -287,7 +292,7 @@ export default function ProfilePage({
 
           {/* ═══ โซนขวา: กิจกรรม + ปฏิทิน ═══ */}
           <div className="card" style={{ padding: 22 }}>
-            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--g800)', marginBottom: 4 }}>
+            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>
               📋 {isToday ? 'กิจกรรมวันนี้' : `กิจกรรมวันที่ ${selectedDate}`}
             </div>
 
@@ -309,10 +314,10 @@ export default function ProfilePage({
                     <div style={{ marginTop: 2, color: 'var(--text-sub)' }}>{String(activeFocusLog.payload?.skill ?? '—')}</div>
                   </div>
                 )}
-                {strategicDelayLog && (
+                {contentReviewLog && (
                   <div style={{ background: 'var(--n50)', borderRadius: 12, padding: '10px 12px', fontSize: 'var(--fs-sm)' }}>
-                    <b>📅 ทบทวนเรื่อง</b>
-                    <div style={{ marginTop: 2, color: 'var(--text-sub)' }}>{String(strategicDelayLog.payload?.topic ?? '—')}</div>
+                    <b>📅 แคปซูลเวลา — นัดทบทวนวันที่</b>
+                    <div style={{ marginTop: 2, color: 'var(--text-sub)' }}>{String(contentReviewLog.payload?.scheduledReviewDate ?? '—')}</div>
                   </div>
                 )}
                 {waterCount > 0 && (
@@ -351,7 +356,7 @@ export default function ProfilePage({
                 (เดิม gap 2-3px แน่นจนอ่านยาก, ตัวอักษร 10px เล็กเกินไปเทียบกับพื้นที่การ์ด) */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <button onClick={() => changeMonth(-1)} style={{ background: 'none', border: 'none', fontSize: 'var(--fs-lg)', cursor: 'pointer', color: 'var(--text-sub)' }}>←</button>
-              <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-md)', color: 'var(--g800)' }}>📅 {MONTH_NAMES_TH[calMonth]} {calYear}</div>
+              <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-md)', color: 'var(--heading-accent)' }}>📅 {MONTH_NAMES_TH[calMonth]} {calYear}</div>
               <button onClick={() => changeMonth(1)} style={{ background: 'none', border: 'none', fontSize: 'var(--fs-lg)', cursor: 'pointer', color: 'var(--text-sub)' }}>→</button>
             </div>
 
@@ -387,6 +392,49 @@ export default function ProfilePage({
                     {mood && <span style={{ fontSize: 'var(--fs-sm)', lineHeight: 1 }}>{MOOD_EMOJI[mood.mood]}</span>}
                     {hasActivity && <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--g500)' }} />}
                   </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* ═══ [เพิ่มตามที่ระบุ] โซนความสำเร็จ — badge/achievement ตัวแรกที่มีจริงใน frontend
+              เทียบกับ backend badges ใน seed.ts (BADGE_CATALOG ตอนนี้มีแค่ 2 ตัวที่ตัดสินใจ
+              ให้สร้างแล้ว — Strategic Delay กับ Mirror of Truth ดู MentalContext.earnedBadges) */}
+          <div className="card" style={{ padding: 22 }}>
+            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>
+              🏅 ความสำเร็จ
+            </div>
+            <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>ปลดล็อกอัตโนมัติเมื่อทำเงื่อนไขสำเร็จ</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {BADGE_CATALOG.map((badge) => {
+                const earned = earnedBadges.includes(badge.code)
+                return (
+                  <div
+                    key={badge.code}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      background: earned ? 'var(--g50)' : 'var(--n50)',
+                      border: `1.5px solid ${earned ? 'var(--g300)' : 'var(--border)'}`,
+                      borderRadius: 14, padding: '10px 14px',
+                      opacity: earned ? 1 : 0.55,
+                    }}
+                  >
+                    <span style={{ fontSize: 28, lineHeight: 1 }}>{badge.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--text)' }}>{badge.titleTh}</div>
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>{badge.description}</div>
+                    </div>
+                    <span
+                      className="tag"
+                      style={{
+                        background: earned ? 'var(--g100)' : 'var(--n100)',
+                        color: earned ? 'var(--g700)' : 'var(--text-muted)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {earned ? '✓ ปลดล็อกแล้ว' : 'ยังไม่ปลดล็อก'}
+                    </span>
+                  </div>
                 )
               })}
             </div>

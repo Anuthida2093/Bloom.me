@@ -33,13 +33,13 @@ const AFFIRMATIONS = [
 const CONFIG_LANDSCAPE = {
   video: { width: 1920, height: 1080 },
   fire: { fx: 0.5, fy: 0.65, fw: 0.2, fh: 0.3 },
-  src: '/assets/videos/incinerator-bg-browser_1920x1080.mp4'
+  src: '/assets/videos/quest-mental/incinerator-bg-browser_1920x1080.mp4'
 }
 
 const CONFIG_PORTRAIT = {
   video: { width: 1080, height: 1920 },
   fire: { fx: 0.5, fy: 0.70, fw: 0.4, fh: 0.25 },
-  src: '/assets/videos/incinerator-bg-browser_1080x1920.mp4'
+  src: '/assets/videos/quest-mental/incinerator-bg-browser_1080x1920.mp4'
 }
 
 interface MappedRect { leftPct: number; topPct: number; widthPct: number; heightPct: number }

@@ -26,6 +26,8 @@ import { ApiError } from './services/http'
 const WelcomeModal = lazy(() => import('./components/welcome/WelcomeModal'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const MBTISelect = lazy(() => import('./pages/MBTISelect'))
 const Dashboard = lazy(() => import('./components/dashboard/Dashboard'))
 
@@ -57,6 +59,8 @@ export default function App() {
                   <Route path="/" element={<WelcomeModal />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/mbti" element={<MBTISelect />} />
                   <Route
                     path="/dashboard"

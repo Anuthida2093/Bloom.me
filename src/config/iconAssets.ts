@@ -54,6 +54,9 @@ export const BADGE_ICONS = {
   // นอกเหนือจาก QUEST_TAB_ICONS.mental ที่ผูกกับ Mental Quests.png ไปแล้ว (คนละแถวคนละไฟล์ใน
   // เอกสาร) จึงยังไม่ได้เอาไปต่อสายใช้งานจริงที่ไหน — เก็บ path ไว้เผื่ออนาคต
   flower: '/assets/images/icons/badges/flower.png',
+  // [เพิ่มรอบนี้ — เควส Balanced Nutrients] ยืนยันแล้วว่ามีไฟล์จริง (ls badges/) ใช้เล่นแอนิเมชัน
+  // "บัวรดน้ำบินเข้าต้นไม้" ตอนกลับมา Dashboard หลังปิดเควสสำเร็จ (ดู WateringCanFx.tsx)
+  wateringCan: '/assets/images/icons/badges/Watering Can.png',
 } as const
 
 /** ไอคอนหมวดเควส (QUEST_TABS[].emoji) — ครบทั้ง 3 หมวดแล้ว (รอบก่อนหน้าหมวดสุขภาพกายยังไม่มี
@@ -84,10 +87,14 @@ export const QUEST_ICONS: Record<string, string> = {
   'know-brain-dump': '/assets/images/icons/quests/Brain Dump.png',
   'know-cross-pollination': '/assets/images/icons/quests/Cross-Pollination.png',
   'know-daily-checkin': '/assets/images/icons/quests/Daily Learning Check-in.png',
-  'know-strategic-delay': '/assets/images/icons/quests/Strategic Delay.png',
-  'phys-photosynthesis': '/assets/images/icons/quests/Photosynthesis.png',
+  // [แก้ตามที่ระบุ] key เปลี่ยนตาม code ใหม่ 'know-content-review' (ดู questCatalog.ts) —
+  // ยังไม่มีไฟล์ภาพใหม่ชื่อ "Time Capsule.png" ให้ ใช้ไฟล์เดิม "Strategic Delay.png" ไปก่อน
+  'know-content-review': '/assets/images/icons/quests/Strategic Delay.png',
+  // [แก้ตามที่ระบุ] key เปลี่ยนตาม code ใหม่ที่ sync กับ backend แล้ว (ดู questCatalog.ts) —
+  // ไฟล์ภาพจริงบนดิสก์ยังชื่อเดิม (Photosynthesis.png/Pure Water.png) ไม่ได้เปลี่ยนไฟล์
+  'phys-sunlit-root': '/assets/images/icons/quests/Photosynthesis.png',
   'phys-green-vision': '/assets/images/icons/quests/Green Vision.png',
-  'phys-pure-water': '/assets/images/icons/quests/Pure Water.png',
+  'phys-hydration-drop': '/assets/images/icons/quests/Pure Water.png',
   'phys-soil-restoration': '/assets/images/icons/quests/Soil Restoration.png',
   'ment-oracle-activation': '/assets/images/icons/quests/Oracle Activation.png',
   // [แก้จากเอกสารร่าง] เอกสารเขียน key ว่า 'ment-incinerator' — code จริงใน questCatalog.ts

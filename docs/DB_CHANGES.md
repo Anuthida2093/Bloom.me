@@ -152,3 +152,79 @@ model LearningCheckin {
 3. `users.nextScreeningDueAt` + `mental_health_screenings.nextDueAt/triggerType/answers`
 4. `quest_logs.payload` + `quests.gameKey/energyLevel/isCalming`
 5. `learning_checkins`, `oracle_draws`, และคอลัมน์ที่เหลือของ `users`
+
+---
+
+## 8) ระบบ auth/บัญชี — [เพิ่มรอบนี้] ตารางใหม่ + คอลัมน์ที่ backend จริงต้องมี
+
+> เตรียมฝั่ง frontend ไว้ครบแล้ว (กันสมัครซ้ำ, ลืมรหัสผ่าน, ลบบัญชี, เปลี่ยนรหัสผ่าน,
+> rate-limit เบื้องต้น) ทั้งหมดจำลองด้วย mockDb (`src/services/mock/mockDb.ts`,
+> `MockAccount`/`MockPasswordResetToken`) — ตารางข้างล่างนี้คือสิ่งที่ backend จริงต้องมี
+> ถึงจะทำงานแบบเดียวกันได้อย่างปลอดภัยจริง (ไม่ใช่แค่ mock)
+
+### 8.1 ตาราง `users` (หรือตารางแยก `credentials`) — เพิ่มคอลัมน์
+
+| คอลัมน์ที่ต้องเพิ่ม | ชนิด | ใช้ทำอะไร |
+|---|---|---|
+| `passwordHash` | `String` | แฮชด้วย **bcrypt/argon2 ฝั่ง server เท่านั้น** — ห้ามรับค่าที่ผ่าน hash ฝั่ง client มาแทน (ดูคำเตือนใน `src/utils/mockAuth.ts`) |
+| `email` | `String @unique` | ใช้ index ระดับฐานข้อมูลกันอีเมลซ้ำจริง (ไม่ใช่แค่เช็คฝั่ง client ก่อน insert ซึ่งมี race condition ได้) — ต้อง normalize เป็นตัวพิมพ์เล็กก่อนเทียบ |
+| `failedLoginAttempts` | `Int @default(0)` | นับจำนวนครั้งที่ login ผิดติดกัน สำหรับ rate-limit/ล็อกบัญชีจริงฝั่ง server |
+| `lockedUntil` | `DateTime?` | เวลาที่บัญชีถูกล็อกชั่วคราวถึง (หลัง failedLoginAttempts เกินเกณฑ์) — rate-limit ฝั่ง client ตอนนี้ (ล็อกปุ่ม 3 วิ) **ไม่ใช่การป้องกันจริง** เพราะเรียก API ตรงๆ ผ่าน curl ได้เลย |
+
+### 8.2 ตารางใหม่ `password_reset_tokens`
+```prisma
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique // แฮช token ก่อนเก็บ ไม่เก็บ token ดิบ (เผื่อฐานข้อมูลรั่ว)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+```
+**ทำไมต้องมี:** ตอนนี้ mock เก็บ token เป็น plaintext ใน `mockDb.passwordResetTokens` (localStorage
+ของเบราว์เซอร์ผู้ใช้เอง — ไม่ใช่ฐานข้อมูลกลาง จึงไม่มีความเสี่ยงเดียวกัน) ของจริงต้องมีระบบส่งอีเมล
+จริง (SES/SendGrid ฯลฯ) และ endpoint `/auth/request-password-reset` ต้องคืน 200 เสมอไม่ว่าจะเจอ
+อีเมลหรือไม่ (ดูคอมเมนต์ใน `src/pages/ForgotPassword.tsx` และ `user.api.ts`)
+
+### 8.3 ตารางใหม่ `sessions` (หรือ `refresh_tokens`) — สำหรับ "อุปกรณ์ที่เข้าสู่ระบบ"
+```prisma
+model Session {
+  id         String   @id @default(uuid())
+  userId     String
+  deviceInfo String?  // user agent / ชื่ออุปกรณ์
+  ipAddress  String?
+  lastActiveAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  revokedAt  DateTime?
+  user       User     @relation(fields: [userId], references: [id])
+}
+```
+**ทำไมต้องมี:** หน้าตั้งค่า > ความปลอดภัยบัญชี มีช่อง "อุปกรณ์ที่เข้าสู่ระบบ" เตรียม UI ไว้แล้ว
+(โชว์ placeholder "เร็วๆ นี้") แต่ mock มี session เดียวเสมอ (auth token เดียวใน localStorage)
+ต้องมีตารางนี้ + endpoint list/revoke session ถึงจะแสดงรายการจริงและ "ออกจากระบบอุปกรณ์อื่น" ได้
+
+### 8.4 Endpoint ที่ต้องมีให้ตรงกับที่ frontend เรียกไว้แล้ว (`src/services/api/user.api.ts`)
+
+| Endpoint | Method | หมายเหตุ |
+|---|---|---|
+| `/auth/login` | POST | ต้องคืน error message เดียวกันไม่ว่า username ผิดหรือรหัสผ่านผิด (กัน user enumeration) |
+| `/auth/register` | POST | คืน 409 ถ้าอีเมลซ้ำ — ตรวจด้วย unique constraint ระดับ DB ไม่ใช่ query-then-insert |
+| `/auth/request-password-reset` | POST | คืน 200 เสมอ ไม่เปิดเผยว่าอีเมลมีในระบบไหม ส่งอีเมลจริงพร้อม token |
+| `/auth/reset-password` | POST | ตรวจ token ยังไม่หมดอายุ/ยังไม่ถูกใช้ ก่อนอัปเดต passwordHash แล้ว invalidate token ทันที |
+| `/auth/change-password` | POST | ตรวจ currentPassword ตรงกับ hash เดิมก่อนเปลี่ยน |
+| `/users/me` (DELETE) | DELETE | ลบ user + cascade ข้อมูลที่เกี่ยวข้องทั้งหมด (quest_logs, mood_entries, posts, user_items ฯลฯ) ตาม GDPR/PDPA |
+
+### 8.5 ข้อจำกัดสำคัญที่ backend ต้องแก้ (ไม่ใช่แค่ "เพิ่มตาราง")
+
+- **rate-limit/brute-force จริง**: ต้องทำที่ backend (ล็อกบัญชีชั่วคราวตาม `failedLoginAttempts`,
+  IP throttling, หรือ CAPTCHA) — เวอร์ชัน frontend ตอนนี้แค่ล็อกปุ่ม 3 วินาทีฝั่ง client เท่านั้น
+- **ข้อมูลเกมแยกรายบัญชี**: ตอนนี้ mockDb ออกแบบเป็น "เซฟไฟล์เดียวต่อเบราว์เซอร์" (`mockDb.user`
+  ก้อนเดียว ไม่ผูกกับ `accountId`) ระบบสมัคร/ล็อกอินหลายบัญชีในเบราว์เซอร์เดียวกันตอนนี้ยังใช้
+  ข้อมูลเกมก้อนเดียวกันอยู่ (เควส/ต้นไม้/เหรียญไม่แยกตามบัญชีจริง) — backend จริงต้องผูกทุกตาราง
+  เกม (quest_logs, mood_entries, inventory ฯลฯ) กับ `userId` ที่มาจาก JWT/session จริง ไม่ใช่
+  สมมติว่ามี user เดียวเสมอแบบที่ mock ทำอยู่ตอนนี้
+- **ส่งอีเมลจริง**: ต้องต่อผู้ให้บริการอีเมล (SES/SendGrid/Postmark) แล้ว "ลบ" แผงจำลองอีเมลใน
+  `ForgotPassword.tsx` (ดูคอมเมนต์ในไฟล์นั้น) และลบ field `devToken` ออกจาก response ของ
+  `requestPasswordReset` ทันที

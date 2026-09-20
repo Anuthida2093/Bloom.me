@@ -9,12 +9,12 @@ export type GameSoundType = 'tree-grow' | 'reward-claim' | 'owl-walk'
  *   bgm-relaxing-forest.mp3  — เพลงพื้นหลังวน loop ตลอด
  *   tree-grow.mp3            — เล่นตอนต้นไม้โตขึ้นระดับ/ได้ growth pulse
  *   reward-claim.mp3         — เล่นตอนรับรางวัล/streak/ซื้อของ
- *   owl-walk.mp3             — เล่นตอนนกฮูก avatar เดินไป node เควสถัดไป
+ *   owl-walk .mp3            — เล่นตอนนกฮูก avatar เดินไป node เควสถัดไป (ชื่อไฟล์จริงมีเว้นวรรคก่อนนามสกุล)
  */
 const GAME_SOUND_FILES: Record<GameSoundType, string> = {
   'tree-grow': 'tree-grow.mp3',
   'reward-claim': 'reward-claim.mp3',
-  'owl-walk': 'owl-walk.mp3',
+  'owl-walk': 'owl-walk .mp3',
 }
 const BGM_PATH = '/assets/sounds/bgm-relaxing-forest.mp3'
 const SOUND_BASE_PATH = '/assets/sounds/'

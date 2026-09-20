@@ -1,0 +1,94 @@
+/* TreeSummaryModal.css — [แก้ตามที่ระบุ] แผงคำอธิบาย MBTI ลอยข้างต้นไม้ (ไม่ใช่ modal
+   กึ่งกลางจอทับต้นไม้แบบเดิม) — ดู TreeSummaryModal.tsx
+
+   [ตำแหน่ง] desktop/tablet (>768px): ลอยชิดขวาจอ กึ่งกลางแนวตั้ง เว้นระยะพ้นคอลัมน์ปุ่ม
+   ลอยขวาบน (.right-action-buttons ที่ top:95px;right:16px กว้าง ~2cm/75px) เพื่อไม่ให้ซ้อน
+   ทับกัน — มือถือ (≤768px) ไม่มีที่ว่างด้านข้างพอ เปลี่ยนเป็นแผ่นลอยชิดขอบล่างแทน (เต็ม
+   ความกว้างลบระยะขอบ) แบบเดียวกับ pattern bottom-sheet ที่ใช้ทั่วระบบ */
+.tree-mbti-panel {
+  position: fixed;
+  top: 50%;
+  right: 110px;
+  transform: translateY(-50%);
+  width: min(320px, calc(100vw - 32px));
+  max-height: calc(100vh - 190px);
+  overflow-y: auto;
+  animation: treeMbtiPanelInRight .32s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes treeMbtiPanelInRight {
+  from { opacity: 0; transform: translateY(-50%) translateX(16px); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+
+@media (max-width: 768px) {
+  /* [แก้ตามที่ระบุ — พบจากการวัดจริงในเบราว์เซอร์] เดิม +12px เหลือช่องว่างจริงกับ
+     ActionMenuBar แค่ ~2px (วัดจริง: bottom ของแผง 187px vs top ของแถบเมนู 189px ที่จอสูง
+     279px) แทบชนกัน ขยับขึ้นเพิ่มอีกเกือบ 3 เท่า (+32px) ให้เห็นช่องว่างชัดเจนจริงจากขอบจอ */
+  .tree-mbti-panel {
+    top: auto;
+    bottom: calc(var(--gpf-safe-bottom, 100px) + 32px);
+    right: 16px;
+    left: 16px;
+    width: auto;
+    max-height: 50vh;
+    transform: none;
+    animation-name: treeMbtiPanelInBottom;
+  }
+  @keyframes treeMbtiPanelInBottom {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* [แก้ตามที่ระบุ — เอฟเฟกต์ขอบ] เลือกทำ "เส้นขอบไล่เฉด + glow เรืองจางๆ ที่หายใจเบาๆ"
+   (ไม่ใช้ shimmer เคลื่อนที่ เพราะจะรบกวนสายตาระหว่างอ่านคำอธิบายยาวๆ) ทำด้วย CSS ล้วน:
+   .ring เป็นกล่องนอกพื้นหลังไล่เฉดฟ้า→เขียว (มีความหมายผสมสีฟ้าตามที่ระบุ + สีเขียวของธีม
+   ต้นไม้ให้กลมกลืน) หนา 2px แล้วเว้น padding ให้ .inner ทึบด้านในบังจนเหลือแค่ขอบบางๆ —
+   วิธีนี้ได้เส้นขอบไล่เฉดจริงโดยไม่ต้องพึ่ง border-image ที่เบราว์เซอร์บางตัวจัดการมุมโค้งได้
+   ไม่สวย ส่วน glow มาจาก box-shadow สีฟ้าอ่อนที่ pulse ความเข้มขึ้น-ลงช้าๆ (คีย์เฟรมเดียว
+   กับแนวคิด treeSummaryLeafSway ของโมดัลเดิม) */
+.tree-mbti-panel__ring {
+  position: relative;
+  border-radius: 26px;
+  padding: 2px;
+  background: linear-gradient(135deg, #7DD3FC 0%, #BAE6FD 45%, var(--g300) 100%);
+  animation: treeMbtiGlowPulse 3.2s ease-in-out infinite;
+}
+@keyframes treeMbtiGlowPulse {
+  0%, 100% { box-shadow: 0 0 14px rgba(125, 211, 252, .35), 0 14px 40px var(--glass-b-20); }
+  50%      { box-shadow: 0 0 26px rgba(125, 211, 252, .55), 0 14px 40px var(--glass-b-20); }
+}
+
+.tree-mbti-panel__inner {
+  position: relative;
+  border-radius: 24px;
+  background: linear-gradient(165deg, #EFF9FF 0%, var(--g50) 100%);
+  padding: 22px 20px 20px;
+}
+
+.tree-mbti-panel__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 99px;
+  border: none;
+  background: var(--glass-b-8);
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tree-mbti-panel__close:hover { background: var(--glass-b-15); }
+
+@keyframes treeMbtiLeafSway {
+  0%, 100% { transform: rotate(-6deg); }
+  50%      { transform: rotate(6deg); }
+}
+.tree-mbti-panel__leaf { display: inline-block; animation: treeMbtiLeafSway 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-mbti-panel, .tree-mbti-panel__ring, .tree-mbti-panel__leaf { animation: none; }
+}

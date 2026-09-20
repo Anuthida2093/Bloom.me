@@ -10,6 +10,7 @@ import { Z_INDEX } from '../../config/zIndex'
 import { QUEST_TAB_ICONS } from '../../config/iconAssets'
 import { useAppContext, DAILY_FOCUS_QUOTA_MINUTES } from '../../context/AppContext'
 import QuestRewardCelebration, { type QuestCelebrationData } from './QuestRewardCelebration'
+import QuestFeedbackPrompt, { type QuestFeedbackPromptData } from './QuestFeedbackPrompt'
 import { playSfx } from '../../utils/audioPlayer'
 
 interface QuestSectionProps {
@@ -19,7 +20,7 @@ interface QuestSectionProps {
   placedItems?: PlacedItem[]
   decorationPositions?: DecorationPositionMap
   onDecorationMove?: (itemId: string, xPct: number, yPct: number) => void
-  treeGrowthPulse?: { category: QuestCategory; key: number } | null
+  treeGrowthPulse?: { category: QuestCategory; key: number; questCode?: string } | null
   moodEntries?: MoodEntryData[]
   onRequestMoodCheckin?: () => void
   onFailIncinerator?: () => void
@@ -77,7 +78,7 @@ export default function QuestSection({
 }: QuestSectionProps) {
   useLockBodyScroll()
 
-  const { focusMinutesToday, screenCurfew, consecutiveNegativeDays, settings } = useAppContext()
+  const { focusMinutesToday, screenCurfew, consecutiveNegativeDays, settings, earnedBadges, submitQuestFeedback } = useAppContext()
   const sfxOpts = { volume: settings.sfxVolume, enabled: settings.soundEnabled }
 
   const [activeTab, setActiveTab] = useState<QuestTabId>(initialTab)
@@ -96,6 +97,11 @@ export default function QuestSection({
    *  handleCompletePlaying (เกมทุกตัวที่ผ่าน GameShell/registry) และ handleCompleteSpecial
    *  (5 หน้าเควสสุขภาพจิตแบบเต็มกรอบ) เรียกจุดเดียวนี้ทั้งคู่ ดู QuestRewardCelebration.tsx */
   const [celebration, setCelebration] = useState<QuestCelebrationData | null>(null)
+  /** [เพิ่มตามที่ระบุ — กลไกใหม่แทน 'know-mirror-of-truth'] ป้ายขอ feedback ลอยคู่กับป้าย
+   *  ฉลองรางวัล ยิงจากจุดเดียวกันเสมอ (ทุกเส้นทางทำเควสสำเร็จ) — หยุดถามอัตโนมัติเมื่อ badge
+   *  "Mirror of Truth" ปลดล็อกแล้ว (ดู MentalContext.earnedBadges) กันแสดงป้ายรบกวนไปเรื่อยๆ
+   *  ทั้งที่ไม่มีประโยชน์ต่อผู้ใช้อีกแล้ว */
+  const [feedbackPrompt, setFeedbackPrompt] = useState<QuestFeedbackPromptData | null>(null)
   const triggerCelebration = (questCode: string, skipped: boolean) => {
     const questDef = findQuestByCode(questCode)
     if (!questDef) return
@@ -105,6 +111,15 @@ export default function QuestSection({
     // ซึ่งตรงธีม "ได้รางวัล" แต่ชนกับเสียงเดิมของเส้นทางอื่นน้อยกว่ามาก
     playSfx('TREE_GROW', sfxOpts)
     setCelebration({ quest: questDef, skipped, key: Date.now() })
+    if (!earnedBadges.includes('mirror-of-truth')) {
+      setFeedbackPrompt({ questCode, completedAt: new Date().toISOString(), key: Date.now() })
+    }
+  }
+
+  const handleQuestFeedback = (reaction: 'good' | 'neutral' | 'bad') => {
+    if (!feedbackPrompt) return
+    submitQuestFeedback(feedbackPrompt.questCode, feedbackPrompt.completedAt, reaction)
+    setFeedbackPrompt(null)
   }
 
   /*──────────────────────────────────────────────────────────────────────────*\
@@ -168,14 +183,15 @@ export default function QuestSection({
   const overFocusQuota = focusMinutesToday >= DAILY_FOCUS_QUOTA_MINUTES
   const inCurfew = isInCurfew(screenCurfew)
 
-  /** [ใหม่] ด่านที่ 2 เป็นต้นไปในเส้นทางหมวดความรู้ (LearningQuestMap ใช้ catalog.daily
-   *  เป็น "เส้นทาง" เดินทีละด่าน) ต้องล็อกจนกว่าด่านก่อนหน้าจะสำเร็จ — ไม่ใช้กับเควสที่มี
-   *  เงื่อนไขปลดล็อกของตัวเองอยู่แล้ว (q.isLocked, เช่น เช็กอินรายวันที่ล็อกแบบนับจำนวน) */
-  const isPrecedingKnowledgeDailyQuestIncomplete = (q: QuestDef): boolean => {
-    const dailyPath = QUEST_CATALOG_BY_TAB.knowledge.daily
-    const idx = dailyPath.findIndex((d) => d.code === q.code)
-    if (idx <= 0) return false // ด่านแรก หรือไม่ได้อยู่ในเส้นทางนี้ (เช่นเควสเสริม) → ไม่ล็อกแบบต่อเนื่อง
-    return !isCompleted(dailyPath[idx - 1].code)
+  /** [แก้ตามที่ระบุ — เอาตาม backend schema.prisma Quest.requiresQuestIds] เดิม hardcode
+   *  "ด่านที่ 2 เป็นต้นไปในหมวดความรู้ต้องรอด่านก่อนหน้าใน array" (อิงตำแหน่ง index ของ
+   *  KNOWLEDGE_DAILY ตรงๆ ไม่ใช่ข้อมูลต่อเควส) — ตอนนี้เปลี่ยนเป็นอ่านจาก q.requiresQuestIds
+   *  ทั่วไปแทน (generic dependency ตาม schema จริง) เควสไหนไม่ได้ใส่ requiresQuestIds ไว้
+   *  = ไม่มีเงื่อนไขนี้เลย ไม่ต้องพึ่งตำแหน่งใน array อีกต่อไป — ยังคงพฤติกรรมเดิมทุกจุดเพราะ
+   *  KNOWLEDGE_DAILY 4 ตัวหลังใส่ requiresQuestIds ไล่ตามลำดับเดิมไว้ครบแล้ว (ดู questCatalog.ts) */
+  const isRequiredQuestsIncomplete = (q: QuestDef): boolean => {
+    if (!q.requiresQuestIds || q.requiresQuestIds.length === 0) return false
+    return q.requiresQuestIds.some((code) => !isCompleted(code))
   }
 
   /** เหตุผลที่เควสนี้ยังกดไม่ได้ (null = กดได้) — ใช้ทั้งล็อกจริงและอธิบายให้ผู้ใช้ฟัง */
@@ -186,7 +202,7 @@ export default function QuestSection({
     if (q.isLocked && completedDailyCount < (q.unlockAfterQuestCount ?? 1)) {
       return `ต้องทำเควสประจำวันให้ครบ ${q.unlockAfterQuestCount ?? 1} ข้อก่อน`
     }
-    if (!q.isLocked && isPrecedingKnowledgeDailyQuestIncomplete(q)) {
+    if (!q.isLocked && isRequiredQuestsIncomplete(q)) {
       return 'ต้องทำด่านก่อนหน้าในเส้นทางนี้ให้สำเร็จก่อน'
     }
     if (q.energyLevel === 'HIGH') {
@@ -279,6 +295,7 @@ export default function QuestSection({
       <button onClick={onClose} title="ปิด" className="quest-section-close-btn">✕</button>
 
       <QuestRewardCelebration data={celebration} onDone={() => setCelebration(null)} />
+      <QuestFeedbackPrompt data={feedbackPrompt} onReact={handleQuestFeedback} onDismiss={() => setFeedbackPrompt(null)} />
 
       {globalNotice && (
         <div className="quest-section-notice">{globalNotice}</div>

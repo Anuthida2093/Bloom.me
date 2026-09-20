@@ -9,6 +9,7 @@ import {
   type InventoryItem,
   type PlacedItem,
   type MbtiType,
+  type Gender,
 } from '../types'
 import { DECORATION_ITEM_META } from '../config/decorationItems'
 import { queryKeys } from '../services/queryKeys'
@@ -49,8 +50,18 @@ interface UserContextValue {
 
   setMbtiType: (mbti: MbtiType) => void
   setLoggedIn: (loggedIn: boolean, guest: boolean) => void
-  loginWithUsername: (username: string) => void
-  registerUser: (data: { email: string; username: string; birthDate: string; height: number; weight: number }) => void
+  /** คืน Promise เพื่อให้หน้า Login จับ error ได้เอง (เช่น รหัสผ่านผิด) แล้วโชว์ข้อความใต้ฟอร์ม */
+  loginWithUsername: (username: string, password: string) => Promise<void>
+  /** คืน Promise เพื่อให้หน้า Register จับ error ได้เอง (เช่น อีเมลซ้ำ) แล้วโชว์ข้อความใต้ฟอร์ม */
+  registerUser: (data: { email: string; username: string; password: string; birthDate: string; gender: Gender; height: number; weight: number }) => Promise<void>
+  /** [เพิ่มรอบนี้ — ข้อ 4] เปลี่ยนรหัสผ่านจากหน้าตั้งค่า ต้องกรอกรหัสเดิมให้ถูกก่อน */
+  changePassword: (data: { currentPassword: string; newPassword: string }) => Promise<void>
+  /** [เพิ่มรอบนี้ — ข้อ 3] ลบบัญชีถาวร — ล้าง mockDb ทั้งก้อนแล้วเคลียร์ session ทันที */
+  deleteAccount: () => Promise<void>
+  /** [เพิ่มรอบนี้ — ข้อ 2] ขอลิงก์กู้รหัสผ่าน — ดูคำเตือนเรื่อง devToken ใน user.api.ts */
+  requestPasswordReset: (email: string) => Promise<userApi.RequestPasswordResetResult>
+  /** [เพิ่มรอบนี้ — ข้อ 2] ตั้งรหัสผ่านใหม่จาก token ในลิงก์กู้รหัสผ่าน */
+  resetPassword: (data: { token: string; newPassword: string }) => Promise<void>
 
   handleBuy: (itemId: string, price: number) => void
   handleEquip: (itemId: string) => void
@@ -119,7 +130,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [queryClient])
 
   const loginMutation = useMutation({
-    mutationFn: (username: string) => userApi.login({ username, password: '' }),
+    mutationFn: (vars: { username: string; password: string }) => userApi.login(vars),
     onSuccess: (nextUser) => {
       queryClient.setQueryData(queryKeys.me, nextUser)
       setIsLoggedIn(true)
@@ -128,12 +139,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
   })
 
   const registerMutation = useMutation({
-    mutationFn: (data: { email: string; username: string; birthDate: string; height: number; weight: number }) =>
-      userApi.register({ ...data, password: '' }),
+    mutationFn: (data: { email: string; username: string; password: string; birthDate: string; gender: Gender; height: number; weight: number }) =>
+      userApi.register(data),
     onSuccess: (nextUser) => {
       queryClient.setQueryData(queryKeys.me, nextUser)
       setIsLoggedIn(true)
       setIsGuest(false)
+    },
+  })
+
+  const changePasswordMutation = useMutation({
+    mutationFn: userApi.changePassword,
+  })
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: userApi.deleteAccount,
+    onSuccess: () => {
+      setIsLoggedIn(false)
+      setIsGuest(false)
+      queryClient.clear()
     },
   })
 
@@ -182,11 +206,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
   })
 
   const setMbtiType = useCallback((mbti: MbtiType) => { mbtiMutation.mutate(mbti) }, [mbtiMutation])
-  const loginWithUsername = useCallback((username: string) => { loginMutation.mutate(username) }, [loginMutation])
+  const loginWithUsername = useCallback(
+    (username: string, password: string) => loginMutation.mutateAsync({ username, password }).then(() => {}),
+    [loginMutation])
   const registerUser = useCallback(
-    (data: { email: string; username: string; birthDate: string; height: number; weight: number }) => {
-      registerMutation.mutate(data)
-    }, [registerMutation])
+    (data: { email: string; username: string; password: string; birthDate: string; gender: Gender; height: number; weight: number }) =>
+      registerMutation.mutateAsync(data).then(() => {}),
+    [registerMutation])
+  const changePassword = useCallback(
+    (data: { currentPassword: string; newPassword: string }) => changePasswordMutation.mutateAsync(data),
+    [changePasswordMutation])
+  const deleteAccount = useCallback(() => deleteAccountMutation.mutateAsync(), [deleteAccountMutation])
+  // [เพิ่มรอบนี้ — ข้อ 2] ไม่ต้องผ่าน useMutation เพราะไม่มี user session ให้อัปเดต cache
+  // (หน้า ForgotPassword/ResetPassword ทำงานได้ทั้งตอนล็อกอินอยู่หรือไม่อยู่ก็ได้)
+  const requestPasswordReset = useCallback((email: string) => userApi.requestPasswordReset(email), [])
+  const resetPassword = useCallback(
+    (data: { token: string; newPassword: string }) => userApi.resetPassword(data),
+    [])
 
   const handleBuy = useCallback((itemId: string, price: number) => {
     if (inventoryData.some((i) => i.shopItemId === itemId)) return
@@ -209,12 +245,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     userData, treeStats, inventoryData, placedItems,
     isLoggedIn, isGuest, isLoadingUser,
     streakCelebrationDays, setStreakCelebrationDays,
-    setMbtiType, setLoggedIn, loginWithUsername, registerUser,
+    setMbtiType, setLoggedIn, loginWithUsername, registerUser, changePassword, deleteAccount,
+    requestPasswordReset, resetPassword,
     handleBuy, handleEquip, handleClaimStreakReward, applyUserPatch, updateProfile,
   }), [
     userData, treeStats, inventoryData, placedItems,
     isLoggedIn, isGuest, isLoadingUser, streakCelebrationDays,
-    setMbtiType, setLoggedIn, loginWithUsername, registerUser,
+    setMbtiType, setLoggedIn, loginWithUsername, registerUser, changePassword, deleteAccount,
+    requestPasswordReset, resetPassword,
     handleBuy, handleEquip, handleClaimStreakReward, applyUserPatch, updateProfile,
   ])
 

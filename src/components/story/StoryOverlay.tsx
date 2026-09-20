@@ -16,6 +16,7 @@ import OtherProfileView from './OtherProfileView'
 import FriendsListPanel from './FriendsListPanel'
 import ContentSettingsPage from './ContentSettingsPage'
 import PostListPage from './PostListPage'
+import PostCard from './PostCard'
 import './Story.css'
 
 /*============================================================================*\
@@ -37,9 +38,14 @@ interface StoryOverlayProps {
   onClose: () => void
   onViewTree: (player: LeaderboardPlayer | null) => void
   onEditProfile: () => void
+  /** [เพิ่มตามที่ระบุ] เปิด Story ไปที่โพสต์นี้ทันที (กดแจ้งเตือนไลค์/คอมเมนต์/แชร์) —
+   *  โชว์เป็น popup เล็กลอยทับฟีด reuse pattern เดียวกับที่ ActivityPanel.tsx ใช้เปิด
+   *  โพสต์จากรายการกิจกรรม (openedPostId + story-modal-backdrop + PostCard) แค่ยกขึ้นมา
+   *  ไว้ระดับ StoryOverlay เพื่อให้เปิดได้ทันทีตั้งแต่ mount โดยไม่ต้องผ่านหน้ากิจกรรมก่อน */
+  initialPostId?: string | null
 }
 
-export default function StoryOverlay({ onClose, onViewTree, onEditProfile }: StoryOverlayProps) {
+export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initialPostId = null }: StoryOverlayProps) {
   useLockBodyScroll()
 
   const { posts } = usePosts()
@@ -67,6 +73,8 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile }: Sto
   const [showCompose, setShowCompose] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [openedPostId, setOpenedPostId] = useState(initialPostId)
+  const openedPost = openedPostId ? posts.find((p) => p.id === openedPostId) ?? null : null
 
   const anonymousPosts = useMemo(
     () => posts.filter((p) => p.userId === userData.id && p.isAnonymous),
@@ -143,6 +151,18 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile }: Sto
       </div>
 
       {showCompose && <ComposeStoryModal onClose={() => setShowCompose(false)} />}
+
+      {/* [เพิ่มตามที่ระบุ] popup โพสต์ที่เปิดจากแจ้งเตือน — pattern เดียวกับ ActivityPanel.tsx */}
+      {openedPost && (
+        <div className="story-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setOpenedPostId(null) }}>
+          <div className="story-modal-card" style={{ maxWidth: 520, padding: 0 }}>
+            <PostCard post={openedPost} />
+            <div style={{ padding: 16 }}>
+              <button className="story-btn-ghost" style={{ width: '100%', padding: '10px 0', borderRadius: 999 }} onClick={() => setOpenedPostId(null)}>ปิด</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* [ข้อ 11] toast กลางจอตอนพยายามดูโปรไฟล์คนที่ปิดไว้ */}
       <GameAlert open={showPrivacyToast} message="โพสต์ปิดโปรไฟล์" icon="🔒" onClose={dismissPrivacyToast} />
