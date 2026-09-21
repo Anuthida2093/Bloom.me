@@ -26,7 +26,7 @@
      พร้อมกันได้จากจุดเดียว ดูค่าที่เลือกใช้ที่ index.css */
   background: radial-gradient(circle at 50% 20%, var(--ae-mental-glow) 0%, var(--ae-mental-mid) 60%, var(--ae-mental-deep) 100%);
   border: 2px solid var(--g500);
-  --lc-shadow-22: rgba(82, 183, 136, 0.25);
+  --lc-shadow-22: rgba(16, 18, 17, 0.878);
   box-shadow: inset 0 0 25px var(--lc-shadow-22), 0 8px 32px var(--glass-b-40);
   display: flex;
   flex-direction: column;
@@ -61,7 +61,7 @@
   50% { opacity: 1; }
 }
 
-/* ปุ่มปิดมุมขวาบน (สี่เหลี่ยมเหลี่ยม) */
+/* ปุ่มปิดมุมขวาบน (สี่เหลี่ยม กากบาท) */
 .oracle-page__close {
   /* [แก้] มาตรฐานปุ่มปิดทั้งระบบ: วงกลม ลอยมุมขวาบน อย่างน้อย 44x44px (เดิมเหลี่ยม+เล็กไป) */
   position: absolute;
@@ -101,43 +101,58 @@
 
 /* สรุปอารมณ์ — [แก้ตามที่ระบุ] เดิมขอบมนแค่ 10px แบนกลืนกับพื้นหลังฉาก ตอนนี้ทำเป็น pill
    เต็มรูปแบบ (border-radius: var(--r-pill)) เพิ่มความทึบพื้นหลัง + เงาลอยให้แยกจากพื้นหลัง
-   ฉากชัดเจนขึ้น และเพิ่ม padding แนวตั้งให้สมส่วนกับ font-size 18px มากกว่าเดิม (8px แน่นไป) */
+   ฉากชัดเจนขึ้น และเพิ่ม padding แนวตั้งให้สมส่วนกับ font-size 18px มากกว่าเดิม (8px แน่นไป)
+
+   [แก้ตามที่ระบุ — รอบนี้] เดิมเป็น flex child ตัวแรกของ .oracle-page__content ที่ตั้ง
+   justify-content:center ไว้ — พอเนื้อหาส่วนอื่น (กองไพ่/การ์ด) สั้น ทั้งก้อนจะลอยกึ่งกลาง
+   จอพอดี ทำให้ป้ายนี้ดู "ต่ำเกินไป กลางจอ" แทนที่จะติดใกล้ Navbar ด้านบน — ดึงออกจาก flow
+   ปกติมาเป็น position:absolute ยึด top ตรงๆ แทน ไม่ขึ้นกับความสูงของเนื้อหาอื่นอีกต่อไป
+   (.oracle-page__content เป็น position:relative; height:100% อยู่แล้ว จึงอ้างอิง top จาก
+   ขอบบนสุดของกรอบเควสได้ตรงๆ) */
 .oracle-page__mood-recap {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  --lc-bg-16: rgba(82, 183, 136, 0.22);
+  --lc-bg-16: rgba(9, 20, 15, 0.22);
   background: var(--lc-bg-16);
-  --lc-border-17: rgba(82, 183, 136, 0.45);
+  --lc-border-17: rgba(198, 230, 215, 0.45);
   border: 1px solid var(--lc-border-17);
   border-radius: var(--r-pill);
   padding: 11px 22px;
   --lc-text-18: #D8F3DC;
   color: var(--lc-text-18);
-  font-size: 18px;
-  margin-bottom: 20px;
+  font-size: 20px;
+  white-space: nowrap;
   box-shadow: 0 6px 18px var(--glass-b-30), 0 2px 6px var(--glass-b-20);
 }
+@media (max-width: 480px) {
+  .oracle-page__mood-recap { white-space: normal; max-width: calc(100% - 32px); text-align: center; }
+}
 
-/* หัวข้อหลักทั้งหมด (18px) */
+/* หัวข้อหลักทั้งหมด (20px) */
 .oracle-page__title,
 .oracle-card__large-title,
 .oracle-page__summary-title {
   font-size: 20px !important;
   font-weight: 700;
   color: var(--g400);
-  --lc-c-15: rgba(116, 198, 157, 0.5);
+  --lc-c-15: rgba(230, 243, 236, 0.5);
   text-shadow: 0 0 12px var(--lc-c-15);
   margin-bottom: 8px;
 }
 
-/* ข้อความบรรยาย (16px) */
+/* ข้อความบรรยาย (20px) */
 .oracle-page__subtitle,
 .oracle-page__desc,
 .oracle-card__typewriter-text,
 .oracle-page__tap-hint,
 .oracle-page__hint {
-  font-size: 18px !important;
+  font-size: 20px !important;
   color: var(--g200);
   line-height: 1.6;
 }
@@ -157,7 +172,7 @@
   border: 2px solid var(--g400);
   cursor: pointer;
   background: linear-gradient(160deg, var(--g600), var(--g800));
-  --lc-shadow-14: rgba(82, 183, 136, 0.4);
+  --lc-shadow-14: rgba(198, 230, 215, 0.4);
   box-shadow: 0 0 35px var(--lc-shadow-14);
   font-size: 48px;
   display: flex;
@@ -176,7 +191,7 @@
   position: absolute;
   inset: -12px;
   border-radius: 10px;
-  --lc-bg-13: rgba(116, 198, 157, 0.4);
+  --lc-bg-13: rgba(198, 230, 215, 0.4);
   background: radial-gradient(circle, var(--lc-bg-13), transparent 70%);
   animation: oraclePulse 2s ease-in-out infinite;
   z-index: -1;
@@ -249,6 +264,8 @@
 /* หน้าอ่านคำทำนาย */
 .oracle-page__reading-view {
   width: 100%;
+  text-align: center;
+  transition: opacity 0.3s ease;
   max-width: 440px;
 }
 
@@ -262,7 +279,7 @@
   border: 2px solid var(--g400);
   border-radius: 10px;
   padding: 24px;
-  --lc-shadow-11: rgba(116, 198, 157, 0.25);
+  --lc-shadow-11: rgba(198, 230, 215, 0.25);
   box-shadow: 0 0 30px var(--lc-shadow-11);
 }
 
@@ -270,7 +287,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  gap: 12px;
 }
 
 .oracle-card__large-icon {
@@ -284,7 +302,7 @@
   border-radius: 10px;
   padding: 16px;
   min-height: 150px;
-  --lc-border-9: rgba(116, 198, 157, 0.2);
+  --lc-border-9: rgba(198, 230, 215, 0.2);
   border: 1px solid var(--lc-border-9);
   text-align: left;
 }
@@ -313,7 +331,7 @@
 }
 
 .oracle-card__mission-text {
-  font-size: 18px;
+  font-size: 20px;
   color: var(--g100);
   line-height: 1.6;
 }

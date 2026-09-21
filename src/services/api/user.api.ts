@@ -1,6 +1,6 @@
 import { http, API_MODE, ApiError, mockDelay, setAuthToken } from '../http'
-import { getDb, updateDb, resetDb } from '../mock/mockDb'
-import type { UserData, MbtiType, Gender } from '../../types'
+import { getDb, updateDb, resetDb, switchActiveAccount } from '../mock/mockDb'
+import { DEFAULT_USER_DATA, type UserData, type MbtiType, type Gender } from '../../types'
 import { computeBmi, computeBodyType } from '../../utils/bmi'
 import { hashPasswordMock, verifyPasswordMock, generateMockResetToken } from '../../utils/mockAuth'
 
@@ -36,7 +36,12 @@ export async function login(payload: LoginPayload): Promise<UserData> {
     if (!passwordOk) throw invalidCredentialsError
 
     setAuthToken('mock-token')
-    const db = updateDb((d) => { d.user = { ...d.user, username: account.username, email: account.email } })
+    // [แก้บั๊กรอบนี้] เดิมเขียนทับแค่ d.user แต่ d.questLogs/moodEntries/inventory/posts/activity
+    // ทั้งก้อนยังเป็นของบัญชีที่ล็อกอินอยู่ก่อนหน้าเสมอ (เซฟไฟล์เดียวใช้ร่วมกันทุกบัญชี) —
+    // switchActiveAccount() เซฟข้อมูลบัญชีเดิมออกและโหลดข้อมูลของบัญชีนี้เข้ามาแทนแบบแยกจริง
+    const db = updateDb((d) => {
+      switchActiveAccount(d, account.id, { username: account.username, email: account.email })
+    })
     return db.user
   }
   const res = await http.post<{ token: string; user: UserData }>('/auth/login', payload, { skipAuth: true })
@@ -56,31 +61,38 @@ export async function register(payload: RegisterPayload): Promise<UserData> {
     }
     const passwordHash = await hashPasswordMock(payload.password)
     setAuthToken('mock-token')
+    // [แก้บั๊กรอบนี้] เดิม fallback height/weight เป็น d.user.height/weight ของบัญชีก่อนหน้า
+    // (เศษบั๊กเดียวกัน — บัญชีใหม่เห็นส่วนสูง/น้ำหนักของคนก่อน) ตอนนี้บัญชีใหม่ไม่เคยมี d.user
+    // เดิมให้ fallback แล้ว (switchActiveAccount สร้างโปรไฟล์ใหม่จริง) จึง fallback ไปที่ค่า
+    // เริ่มต้นกลางแทน
+    const height = payload.height > 0 ? payload.height : DEFAULT_USER_DATA.height
+    const weight = payload.weight > 0 ? payload.weight : DEFAULT_USER_DATA.weight
+    // [แก้ตามที่ระบุ — เอาตาม backend] เดิม bmi/bodyType ไม่เคยถูกคำนวณที่ไหนเลย ยังเป็น
+    // null ค้างเสมอ (ProfilePage คำนวณ bmi เองแบบ client-only แยกต่างหาก ไม่เคยเขียนกลับ
+    // เข้า userData) จำลองพฤติกรรมที่ backend จริงควรทำ (คำนวณตอนบันทึก height/weight)
+    const bmi = height && weight ? computeBmi(height, weight) : null
     const db = updateDb((d) => {
+      const accountId = `acct-${Date.now()}`
       d.accounts.push({
-        id: `acct-${Date.now()}`,
+        id: accountId,
         email: emailLower,
         username: payload.username,
         passwordHash,
         createdAt: new Date().toISOString(),
       })
-      const height = payload.height > 0 ? payload.height : d.user.height
-      const weight = payload.weight > 0 ? payload.weight : d.user.weight
-      // [แก้ตามที่ระบุ — เอาตาม backend] เดิม bmi/bodyType ไม่เคยถูกคำนวณที่ไหนเลย ยังเป็น
-      // null ค้างเสมอ (ProfilePage คำนวณ bmi เองแบบ client-only แยกต่างหาก ไม่เคยเขียนกลับ
-      // เข้า userData) จำลองพฤติกรรมที่ backend จริงควรทำ (คำนวณตอนบันทึก height/weight)
-      const bmi = height && weight ? computeBmi(height, weight) : d.user.bmi
-      d.user = {
-        ...d.user,
+      // [แก้บั๊กรอบนี้] เดิมเขียนทับแค่ d.user แต่ d.questLogs/moodEntries/inventory/posts/activity
+      // ทั้งก้อนยังเป็นของบัญชีก่อนหน้าเสมอ — switchActiveAccount() สร้างโปรไฟล์เกมใหม่ทั้งชุด
+      // (questLogs ว่าง ฯลฯ) ให้บัญชีที่เพิ่งสมัครจริงๆ แทนการสืบทอดของบัญชีเดิม
+      switchActiveAccount(d, accountId, {
         email: payload.email,
-        username: payload.username || d.user.username,
+        username: payload.username,
         birthDate: payload.birthDate || null,
         gender: payload.gender,
         height,
         weight,
         bmi,
-        bodyType: bmi ? computeBodyType(bmi) : d.user.bodyType,
-      }
+        bodyType: bmi ? computeBodyType(bmi) : null,
+      })
     })
     return db.user
   }

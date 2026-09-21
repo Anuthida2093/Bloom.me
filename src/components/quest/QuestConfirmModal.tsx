@@ -131,8 +131,10 @@ export default function QuestConfirmModal({ quest, stageLabel, accent, accentBg,
               <p style={{ fontSize: 16, color: 'var(--n500)', lineHeight: 1.65, marginBottom: 10, textAlign: 'center' }}>{quest.desc}</p>
 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 10 }}>
-                <span className="tag" style={{ background: BG_2, color: TEXT_3, border: '1px solid var(--coin)' }}><img src={BADGE_ICONS.coins} className="icon-img" alt="" /> +{quest.coinReward}</span>
-                <span className="tag" style={{ background: accentBg, color: accent, border: `1px solid ${accent}55` }}><img src={BADGE_ICONS.exp} className="icon-img" alt="" /> +{quest.expReward} EXP</span>
+                {/* [แก้ตามที่ระบุรอบนี้ — ข้อ 7] ย้ายตัวเลขไว้หน้ารูป + ขยายรูปให้ใหญ่ชัดเจน
+                    ขึ้น (icon-img--reward) แทน icon-img ตัวเล็กเดิม */}
+                <span className="tag" style={{ background: BG_2, color: TEXT_3, border: '1px solid var(--coin)' }}>+{quest.coinReward} <img src={BADGE_ICONS.coins} className="icon-img--reward" alt="" /></span>
+                <span className="tag" style={{ background: accentBg, color: accent, border: `1px solid ${accent}55` }}>+{quest.expReward} EXP <img src={BADGE_ICONS.exp} className="icon-img--reward" alt="" /></span>
               </div>
 
               {locked ? (

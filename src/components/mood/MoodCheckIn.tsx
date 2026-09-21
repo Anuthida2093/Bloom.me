@@ -1,8 +1,9 @@
 import { useState, type ChangeEvent } from 'react'
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
-import type { MoodTypeValue } from '../../types'
+import type { MoodCategory, MoodTypeValue } from '../../types'
 import { MOOD_TYPE_INFO, MOOD_CATEGORY_SUBTYPES, LEGACY_KEY_TO_CATEGORY } from '../../config/moodTypes'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 const C_1 = '#D8F3DC'
 const C_2 = '#FBF4EC'
@@ -12,12 +13,35 @@ const BG_5 = '#FFF9C4'
 
 type MoodKey = 'good' | 'neutral' | 'bad'
 
-interface MoodOption {
-  key: MoodKey
-  emoji: string
-  label: string
-  color: string
-  bg: string
+/** [แก้ตามที่ระบุ — ขยาย MoodType ให้ครบ 8 อารมณ์] ทุกตัวเลือกในกริด 4x2 อ้างอิงสีตาม
+ *  bucket ที่มันสังกัดอยู่ (POSITIVE/NEUTRAL/NEGATIVE) — จานสีเดียวกับที่ 3 ปุ่มเดิมเคยใช้
+ *  (C_1/C_2/C_3) เพื่อให้ยังจัดกลุ่มด้วยสายตาได้แม้ตัวเลือกจะเยอะขึ้นเป็น 8 ตัว */
+const CATEGORY_STYLE: Record<MoodCategory, { color: string; bg: string }> = {
+  POSITIVE: { color: 'var(--g600)', bg: C_1 },
+  NEUTRAL: { color: 'var(--b500)', bg: C_2 },
+  NEGATIVE: { color: 'var(--red)', bg: C_3 },
+}
+
+/** ตัวเลือก 8 อารมณ์เต็มรูปแบบ เรียงตามลำดับที่นิยามไว้ใน MOOD_CATEGORY_SUBTYPES
+ *  (POSITIVE → NEUTRAL → NEGATIVE) ให้ grid 4x2 จัดกลุ่มเดียวกันอยู่ใกล้กัน */
+const ALL_MOOD_VALUES: MoodTypeValue[] = [
+  ...MOOD_CATEGORY_SUBTYPES.POSITIVE,
+  ...MOOD_CATEGORY_SUBTYPES.NEUTRAL,
+  ...MOOD_CATEGORY_SUBTYPES.NEGATIVE,
+]
+
+/** ย้อนกลับ LEGACY_KEY_TO_CATEGORY (MoodKey→MoodCategory) เป็น MoodCategory→MoodKey —
+ *  ยังต้องส่ง MoodKey (bucket) ให้ onSubmit เดิมอยู่ (ดู MoodCheckInProps) แม้ตอนนี้ผู้ใช้จะ
+ *  เลือกอารมณ์ย่อยตรงๆ จากกริด 8 ตัวแทนการเลือก bucket ก่อนแล้ว */
+const CATEGORY_TO_LEGACY_KEY = Object.fromEntries(
+  (Object.entries(LEGACY_KEY_TO_CATEGORY) as [MoodKey, MoodCategory][]).map(([key, cat]) => [cat, key]),
+) as Record<MoodCategory, MoodKey>
+
+function categoryOfMood(value: MoodTypeValue): MoodCategory {
+  for (const [cat, list] of Object.entries(MOOD_CATEGORY_SUBTYPES) as [MoodCategory, MoodTypeValue[]][]) {
+    if (list.includes(value)) return cat
+  }
+  return 'NEUTRAL'
 }
 
 interface MoodCheckInProps {
@@ -49,17 +73,11 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
    *  (ดู handlePickMood/handleAnalyze) ผู้ใช้กดเปลี่ยนเป็นตัวอื่นในกลุ่มเดียวกันได้ */
   const [subMood, setSubMood] = useState<MoodTypeValue | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
-  const [justPicked, setJustPicked] = useState<MoodKey | null>(null)
+  const [justPicked, setJustPicked] = useState<MoodTypeValue | null>(null)
   /** [เพิ่มรอบนี้ — บั๊กเจอเควสประตูอารมณ์ซ้ำบนจอเล็ก] โชว์สถานะ "กำลังบันทึก" ระหว่างรอ
    *  onSubmit (ตอนนี้ await จริงจนกว่า moodEntries จะถูกบันทึกเสร็จ) กันผู้ใช้กดซ้ำระหว่างรอ
    *  และให้เห็นชัดว่าระบบกำลังทำงานอยู่ ไม่ใช่ค้าง/พัง */
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const moods: MoodOption[] = [
-    { key: 'good', emoji: '😊', label: 'ดี', color: 'var(--g600)', bg: C_1 },
-    { key: 'neutral', emoji: '😐', label: 'เฉยๆ', color: 'var(--b500)', bg: C_2 },
-    { key: 'bad', emoji: '😔', label: 'ไม่ดี', color: 'var(--red)', bg: C_3 },
-  ]
 
   const handleAnalyze = () => {
     if (!text.trim()) return
@@ -68,28 +86,30 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
       const pos = ['ดี', 'สุข', 'สนุก', 'ยินดี', 'ภูมิใจ', 'ดีใจ']
       const neg = ['เครียด', 'เศร้า', 'เหนื่อย', 'กังวล', 'ท้อ', 'ไม่ดี', 'แย่']
       const lc = text.toLowerCase()
-      const picked: MoodKey = neg.some(w => lc.includes(w)) ? 'bad' : pos.some(w => lc.includes(w)) ? 'good' : 'neutral'
-      pickMood(picked)
+      const category: MoodCategory = neg.some(w => lc.includes(w)) ? 'NEGATIVE' : pos.some(w => lc.includes(w)) ? 'POSITIVE' : 'NEUTRAL'
+      // ให้ AI เดาแค่ bucket ใหญ่ (บวก/กลาง/ลบ) เหมือนเดิม — ตั้ง subMood เป็นตัวแรกของกลุ่มนั้น
+      pickMood(MOOD_CATEGORY_SUBTYPES[category][0])
       setAnalyzing(false)
     }, 900)
   }
 
-  const pulsePick = (key: MoodKey) => {
-    setJustPicked(key)
+  const pulsePick = (value: MoodTypeValue) => {
+    setJustPicked(value)
     setTimeout(() => setJustPicked(null), 500)
   }
 
-  /** [เพิ่มตามที่ระบุ] เลือก bucket แล้วตั้ง subMood เริ่มต้นเป็นตัวแรกของกลุ่มนั้นให้อัตโนมัติ
-   *  เสมอ (ไม่ว่าจะมาจาก AI วิเคราะห์หรือกดเลือกเอง) — ผู้ใช้ยังกดเปลี่ยนอารมณ์ย่อยในชิปแถวล่าง
-   *  ได้ตามต้องการก่อนกดส่ง ไม่บังคับให้ต้องกดเพิ่มถ้าไม่สนใจความละเอียด */
-  const pickMood = (key: MoodKey) => {
-    setMood(key)
-    setSubMood(MOOD_CATEGORY_SUBTYPES[LEGACY_KEY_TO_CATEGORY[key]][0])
-    pulsePick(key)
+  /** [แก้ตามที่ระบุ — ขยาย MoodType ให้ครบ 8 อารมณ์] ตอนนี้ผู้ใช้เลือกอารมณ์ย่อย (1 ใน 8)
+   *  ตรงๆ จากกริดแทนการเลือก bucket ก่อนแล้วค่อยเจาะจง — bucket (MoodKey เดิม) จึง derive
+   *  กลับจากอารมณ์ย่อยที่เลือกแทน เพื่อให้ onSubmit เดิม (ที่ยังรับ MoodKey อยู่) ทำงานต่อได้ */
+  const pickMood = (value: MoodTypeValue) => {
+    const category = categoryOfMood(value)
+    setMood(CATEGORY_TO_LEGACY_KEY[category])
+    setSubMood(value)
+    pulsePick(value)
   }
 
-  const handlePickMood = (key: MoodKey) => {
-    pickMood(key)
+  const handlePickMood = (value: MoodTypeValue) => {
+    pickMood(value)
   }
 
   const handleSubmit = async () => {
@@ -123,7 +143,7 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
         </span>
       ))}
 
-      <div className="mood-checkin-card" style={{ background: 'var(--fixed-white)', borderRadius: 28, padding: '32px 28px', width: '100%', maxWidth: 420, boxShadow: '0 24px 60px var(--glass-b-20)', position: 'relative' }}>
+      <div className="mood-checkin-card" style={{ background: 'linear-gradient(180deg, var(--g50) 0%, var(--fixed-white) 55%)', borderRadius: 28, padding: '32px 28px', width: '100%', maxWidth: 420, boxShadow: '0 24px 60px var(--glass-b-20)', position: 'relative' }}>
         {/* [แก้บั๊ก — จอเล็ก/มือถือ] เดิม card ไม่มี max-height/overflow เลย บนจอสูงไม่พอ (มือถือ
             ส่วนใหญ่, หรือคีย์บอร์ดเด้งขึ้นตอนพิมพ์บันทึก) เนื้อหาในนี้ (หัวข้อ+textarea+ปุ่ม AI+
             เลือกอารมณ์+อารมณ์ย่อย+ตัวอย่างโพสอิท+ปุ่มส่ง) รวมกันสูงเกิน viewport ได้ง่าย แต่
@@ -133,11 +153,13 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
             เควสไพ่ทิพย์ (ต้องมี moodEntry ของวันนี้ก่อนถึงจะเล่นได้ ดู GameplayFrame.tsx) จึง
             เหมือน "กดเช็คอินแล้วไม่ไปไหนเลย" เฉพาะจอเล็ก — แก้ด้วยการจำกัดความสูงสูงสุด + ให้
             เลื่อนดูเนื้อหาข้างในการ์ดเองได้ (ดู .mood-checkin-card ใน <style> ท้ายไฟล์) */}
-        {/* Header */}
+        {/* Header — [แก้ตามที่ระบุ] แทนอิโมจิ 🌤️ ด้วยรูป BADGE_ICONS.checkin (Check-in.png)
+            ขนาดพอดีจุดเดิม (เดิม fontSize:52 ของอิโมจิ) — หัวข้อหลัก 20px, คำอธิบาย 18px
+            (--fs-lg ตรงเป๊ะ 18px พอดี ส่วนหัวข้อ 20px ไม่มี token ตรง จึงกำหนดค่าตรงจุดนี้เอง) */}
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <div className="mood-checkin-header-emoji" style={{ fontSize: 52, marginBottom: 8 }}>🌤️</div>
-          <h2 style={{ fontFamily: 'Fredoka One', fontSize: 24, color: 'var(--g800)' }}>สวัสดีตอนเช้า!</h2>
-          <p style={{ color: 'var(--n500)', fontSize: 14, marginTop: 4 }}>วันนี้คุณรู้สึกอย่างไร? บอกเล่าให้ต้นไม้ฟังหน่อยนะ 🌿</p>
+          <img src={BADGE_ICONS.checkin} alt="" className="mood-checkin-header-emoji" style={{ width: 52, height: 52, objectFit: 'contain', marginBottom: 8 }} />
+          <h2 style={{ fontFamily: 'Fredoka One', fontSize: 20, color: 'var(--g800)' }}>สวัสดีตอนเช้า!</h2>
+          <p style={{ color: 'var(--n500)', fontSize: 'var(--fs-lg)', marginTop: 4 }}>วันนี้คุณรู้สึกอย่างไร? บอกเล่าให้ต้นไม้ฟังหน่อยนะ 🌿</p>
         </div>
 
         {/* Journal input */}
@@ -180,66 +202,38 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
           </button>
         </div>
 
-        {/* AI result or manual mood */}
+        {/* AI result or manual mood — [แก้ตามที่ระบุ — ขยาย MoodType ให้ครบ 8 อารมณ์] เดิมมีแค่
+            3 ตัวเลือก (ดี/เฉยๆ/ไม่ดี) แล้วค่อยกดเจาะจงอารมณ์ย่อยในแถวล่างอีกที — ตอนนี้เลือก
+            อารมณ์ย่อยทั้ง 8 ตัวได้ตรงๆ จากกริดเดียว (4 คอลัมน์ x 2 แถว, ทุกปุ่มขนาดเท่ากันเป๊ะ
+            ผ่าน grid 1fr + aspect-ratio:1) ไม่ต้องเลือกทีละขั้นอีกต่อไป */}
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--n500)', marginBottom: 10, textAlign: 'center' }}>
             {mood ? '✨ AI วิเคราะห์ว่า — หรือเลือกเอง:' : 'เลือกอารมณ์วันนี้:'}
           </div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-            {moods.map(m => (
-              <button
-                key={m.key}
-                onClick={() => handlePickMood(m.key)}
-                className={justPicked === m.key ? 'mood-checkin-mood-btn mood-checkin-mood-btn--picked' : 'mood-checkin-mood-btn'}
-                style={{
-                  flex: 1, padding: '12px 8px', border: `2.5px solid ${mood === m.key ? m.color : 'var(--n100)'}`,
-                  borderRadius: 16, background: mood === m.key ? m.bg : 'var(--white)',
-                  cursor: 'pointer', transition: 'border-color .18s, background .18s, transform .18s ease',
-                  transform: mood === m.key ? 'scale(1.06)' : 'scale(1)',
-                  boxShadow: mood === m.key ? `0 4px 16px ${m.color}44` : 'none',
-                }}>
-                <div className="mood-checkin-mood-emoji" style={{ fontSize: 28 }}>{m.emoji}</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: mood === m.key ? m.color : 'var(--n500)', marginTop: 4 }}>{m.label}</div>
-              </button>
-            ))}
+          <div className="mood-checkin-mood-grid">
+            {ALL_MOOD_VALUES.map((value) => {
+              const info = MOOD_TYPE_INFO[value]
+              const style = CATEGORY_STYLE[categoryOfMood(value)]
+              const active = subMood === value
+              return (
+                <button
+                  key={value}
+                  onClick={() => handlePickMood(value)}
+                  title={info.label}
+                  className={justPicked === value ? 'mood-checkin-mood-btn mood-checkin-mood-btn--picked' : 'mood-checkin-mood-btn'}
+                  style={{
+                    border: `2.5px solid ${active ? style.color : 'var(--n100)'}`,
+                    borderRadius: 16, background: active ? style.bg : 'var(--white)',
+                    cursor: 'pointer', transition: 'border-color .18s, background .18s, transform .18s ease',
+                    transform: active ? 'scale(1.06)' : 'scale(1)',
+                    boxShadow: active ? `0 4px 16px ${style.color}44` : 'none',
+                  }}>
+                  <div className="mood-checkin-mood-emoji" style={{ fontSize: 24 }}>{info.emoji}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: active ? style.color : 'var(--n500)', marginTop: 4 }}>{info.label}</div>
+                </button>
+              )
+            })}
           </div>
-
-          {/* [เพิ่มตามที่ระบุ — ขยาย MoodType ให้ครบ 8 อารมณ์] เลือก bucket แล้วค่อยเลือก
-              อารมณ์ย่อยละเอียดขึ้น — ตรงกับที่ schema.prisma อธิบายไว้ว่า MoodCategory คือ
-              "3 bucket ใหญ่ที่โชว์ก่อน" ส่วน MoodType 8 ค่าคือ "sub-emotion ที่เลือกจาก
-              bottom sheet หลังเลือก bucket แล้ว" — ตั้งค่าเริ่มต้นให้อัตโนมัติแล้ว (pickMood)
-              แถวนี้แค่ให้ปรับละเอียดขึ้นถ้าต้องการ ไม่บังคับต้องกดเพิ่ม */}
-          {mood && (
-            <div className="mood-checkin-submood" style={{ marginTop: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--n300)', marginBottom: 8, textAlign: 'center' }}>
-                เจาะจงขึ้นอีกนิด — รู้สึกแบบไหน:
-              </div>
-              <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                {MOOD_CATEGORY_SUBTYPES[LEGACY_KEY_TO_CATEGORY[mood]].map((value) => {
-                  const info = MOOD_TYPE_INFO[value]
-                  const active = subMood === value
-                  return (
-                    <button
-                      key={value}
-                      onClick={() => setSubMood(value)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 5,
-                        padding: '6px 12px', borderRadius: 999,
-                        border: `1.5px solid ${active ? 'var(--g500)' : 'var(--n100)'}`,
-                        background: active ? 'var(--g50)' : 'var(--white)',
-                        color: active ? 'var(--g700)' : 'var(--n500)',
-                        fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                        transition: 'border-color .15s, background .15s',
-                      }}
-                    >
-                      <span>{info.emoji}</span>
-                      <span>{info.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Post-it preview */}
@@ -263,8 +257,11 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
             opacity: isSubmitting ? 0.75 : 1,
             boxShadow: mood ? 'var(--sh-btn)' : 'none',
             transition: 'transform .15s, box-shadow .15s',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}>
-          {isSubmitting ? '🌱 กำลังบันทึก...' : '🌱 รดน้ำต้นไม้วันนี้!'}
+          {/* [เพิ่มตามที่ระบุ] ไอคอน BADGE_ICONS.water (Water.png) หน้าข้อความปุ่ม แทนอิโมจิ 🌱 เดิม */}
+          <img src={BADGE_ICONS.water} alt="" style={{ width: 20, height: 20, objectFit: 'contain' }} />
+          {isSubmitting ? 'กำลังบันทึก...' : 'รดน้ำต้นไม้วันนี้!'}
         </button>
 
         <button onClick={onSkip} disabled={isSubmitting} style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: 'var(--n300)', fontSize: 13, cursor: isSubmitting ? 'default' : 'pointer', padding: '6px', opacity: isSubmitting ? 0.5 : 1 }}>
@@ -311,6 +308,25 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
           0%, 100% { transform: rotate(0deg) scale(1); }
           25% { transform: rotate(-10deg) scale(1.1); }
           75% { transform: rotate(10deg) scale(1.1); }
+        }
+        /* [เพิ่มตามที่ระบุ — ขยาย MoodType ให้ครบ 8 อารมณ์] กริด 4 คอลัมน์ x 2 แถว จัดกึ่งกลาง
+           การ์ด — grid-template-columns: repeat(4, 1fr) การันตีทุกคอลัมน์กว้างเท่ากัน บวก
+           aspect-ratio:1 บนตัวปุ่มเอง ทำให้ทุกปุ่มเป็นสี่เหลี่ยมจัตุรัสขนาดเท่ากันเป๊ะเสมอ
+           ไม่ว่าความยาวป้ายชื่ออารมณ์จะสั้น/ยาวแค่ไหน */
+        .mood-checkin-mood-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 8px;
+          max-width: 340px;
+          margin: 0 auto;
+        }
+        .mood-checkin-mood-btn {
+          aspect-ratio: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 4px;
         }
         .mood-checkin-mood-btn--picked { animation: moodCheckinPickBounce .5s cubic-bezier(.34,1.56,.64,1); }
         @keyframes moodCheckinPickBounce {

@@ -83,7 +83,13 @@
 .mindful-anchor__close:hover { background: var(--glass-w-30); transform: scale(1.08); }
 .mindful-anchor__close:focus-visible { outline: 2px solid var(--anchor-accent); outline-offset: 2px; }
 
-/* ── การ์ดเนื้อหา (ฉากเกริ่นนำ / ฉากจบ) ── */
+/* ── การ์ดเนื้อหา (ฉากเกริ่นนำ / ฉากจบ) ──
+   [แก้ตามที่ระบุ — ปรับให้มินิมอล/ทันสมัย/เรียบหรูขึ้น] เดิมการ์ดทึบเข้ม (rgba เกือบดำ)
+   ขอบ/เงาหนา (blur 18px + shadow 70px) ตอนนี้เปลี่ยนเป็นการ์ดกระจกใสสว่างพาสเทล ลดความหนา
+   ของเงา/ขอบลง เพิ่ม padding ให้มี white space มากขึ้น — สีตัวอักษรของลูกทุกตัวด้านล่าง
+   (title/subtitle/rhythm/lead/mode-switch/forced-note/theory) ปรับจาก "อ่อนบนพื้นเข้ม"
+   เป็น "เข้มบนพื้นสว่าง" ให้เข้ากัน ฉากอื่น (นับถอยหลัง/ฝึกหายใจ/aurora พื้นหลัง) ไม่แตะ
+   เพราะโจทย์ระบุแค่ "การ์ด" ไม่ใช่ทั้งหน้า */
 .mindful-anchor__panel {
   position: relative;
   z-index: 5;
@@ -92,13 +98,14 @@
   max-height: 100%;
   overflow-y: auto;
   text-align: center;
-  padding: 30px 26px 26px;
-  border-radius: 26px;
-  --lc-bg-27: rgba(9, 32, 39, 0.72);
+  padding: 36px 30px 30px;
+  border-radius: 28px;
+  --lc-bg-27: rgba(255, 255, 255, 0.92);
   background: var(--lc-bg-27);
-  border: 1px solid var(--glass-w-14);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 26px 70px var(--glass-b-45);
+  border: 1px solid rgba(127, 231, 217, 0.3);
+  backdrop-filter: blur(14px);
+  --lc-shadow-panel: rgba(20, 55, 60, 0.16);
+  box-shadow: 0 16px 40px var(--lc-shadow-panel);
   animation: anchorPanelIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @keyframes anchorPanelIn {
@@ -120,12 +127,13 @@
   font-family: 'Fredoka One', 'Mali', sans-serif;
   font-size: 27px;
   margin: 6px 0 2px;
-  color: var(--fixed-white);
+  --lc-text-panel-title: #0E2C2A;
+  color: var(--lc-text-panel-title);
   letter-spacing: 0.4px;
 }
 .mindful-anchor__subtitle {
   font-size: 12.5px;
-  --lc-text-26: rgba(234, 246, 244, 0.6);
+  --lc-text-26: rgba(14, 44, 42, 0.55);
   color: var(--lc-text-26);
   margin-bottom: 20px;
 }
@@ -143,26 +151,25 @@
   flex-direction: column;
   gap: 2px;
   font-size: 11px;
-  --lc-text-25: rgba(234, 246, 244, 0.7);
+  --lc-text-25: rgba(14, 44, 42, 0.6);
   color: var(--lc-text-25);
 }
 .mindful-anchor__rhythm-item span {
   font-family: 'Fredoka One', 'Mali', sans-serif;
   font-size: 26px;
   color: var(--anchor-accent);
-  text-shadow: 0 0 14px var(--anchor-glow);
 }
 .mindful-anchor__rhythm-sep {
   width: 22px;
   height: 1px;
-  background: var(--glass-w-25);
+  background: rgba(14, 44, 42, 0.15);
   margin-top: 12px;
 }
 
 .mindful-anchor__lead {
   font-size: 13.5px;
   line-height: 1.85;
-  --lc-text-24: rgba(234, 246, 244, 0.86);
+  --lc-text-24: rgba(14, 44, 42, 0.78);
   color: var(--lc-text-24);
   margin-bottom: 18px;
 }
@@ -178,9 +185,9 @@
   flex: 1;
   padding: 10px 8px;
   border-radius: 14px;
-  border: 1.5px solid var(--glass-w-20);
-  background: var(--glass-w-6);
-  --lc-text-23: rgba(234, 246, 244, 0.75);
+  border: 1.5px solid rgba(14, 44, 42, 0.14);
+  background: rgba(14, 44, 42, 0.04);
+  --lc-text-23: rgba(14, 44, 42, 0.7);
   color: var(--lc-text-23);
   font-family: inherit;
   font-weight: 700;
@@ -197,11 +204,11 @@
 
 .mindful-anchor__forced-note {
   border-radius: 14px;
-  --lc-border-19: rgba(255, 214, 150, 0.4);
+  --lc-border-19: rgba(214, 150, 40, 0.35);
   border: 1px solid var(--lc-border-19);
-  --lc-bg-20: rgba(255, 196, 100, 0.12);
+  --lc-bg-20: rgba(255, 196, 100, 0.14);
   background: var(--lc-bg-20);
-  --lc-text-21: #FFD9A8;
+  --lc-text-21: #8A5A0A;
   color: var(--lc-text-21);
   font-size: 12.5px;
   line-height: 1.7;
@@ -221,13 +228,14 @@
   font-family: 'Fredoka One', 'Mali', sans-serif;
   font-size: 16px;
   cursor: pointer;
-  box-shadow: 0 12px 30px var(--glass-b-35), 0 0 0 1px var(--glass-w-25) inset;
+  --lc-shadow-cta: rgba(20, 55, 60, 0.2);
+  box-shadow: 0 10px 24px var(--lc-shadow-cta);
   transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 .mindful-anchor__cta:hover {
   transform: translateY(-2px);
-  --lc-shadow-16: rgba(0, 0, 0, 0.42);
-  box-shadow: 0 16px 38px var(--lc-shadow-16);
+  --lc-shadow-16: rgba(20, 55, 60, 0.28);
+  box-shadow: 0 14px 30px var(--lc-shadow-16);
 }
 .mindful-anchor__cta:active { transform: translateY(1px) scale(0.99); }
 
@@ -235,7 +243,7 @@
   margin-top: 14px;
   font-size: 10.5px;
   line-height: 1.6;
-  --lc-text-15: rgba(234, 246, 244, 0.42);
+  --lc-text-15: rgba(14, 44, 42, 0.4);
   color: var(--lc-text-15);
 }
 
@@ -363,11 +371,11 @@
 .mindful-anchor__stats div {
   flex: 1;
   border-radius: 16px;
-  background: var(--glass-w-8);
-  border: 1px solid var(--glass-w-14);
+  background: rgba(127, 231, 217, 0.1);
+  border: 1px solid rgba(14, 44, 42, 0.1);
   padding: 12px 6px;
   font-size: 10.5px;
-  --lc-text-6: rgba(234, 246, 244, 0.65);
+  --lc-text-6: rgba(14, 44, 42, 0.6);
   color: var(--lc-text-6);
   display: flex;
   flex-direction: column;
@@ -377,7 +385,8 @@
   font-family: 'Fredoka One', 'Mali', sans-serif;
   font-size: 19px;
   font-weight: 400;
-  color: var(--fixed-white);
+  --lc-text-stats-strong: #0E2C2A;
+  color: var(--lc-text-stats-strong);
 }
 
 /* ── ยืนยันออกกลางคัน ── */

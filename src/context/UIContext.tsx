@@ -67,7 +67,10 @@ interface UIContextValue {
   closeModal: (key: ModalKey) => void
   closeAllModals: () => void
   setLeaderboardCollapsed: (updater: (collapsed: boolean) => boolean) => void
-  updateDecorationPosition: (itemId: string, xPct: number, yPct: number) => void
+  /** [แก้ตามที่ระบุ — ปรับขนาดไอเทมตกแต่งได้อิสระ] scale เป็น parameter ที่ 4 แบบ optional —
+   *  จุดเรียกเดิม (ลากปรับตำแหน่ง x/y) ไม่ต้องแก้อะไร ยังไม่ส่ง scale มาก็ได้ (คงค่าเดิมไว้)
+   *  จุดเรียกใหม่ (ลากปรับขนาดที่ handle) ส่ง scale เข้ามาคู่กับ x/y ปัจจุบันของไอเทมนั้น */
+  updateDecorationPosition: (itemId: string, xPct: number, yPct: number, scale?: number) => void
 }
 
 const UICtx = createContext<UIContextValue | null>(null)
@@ -102,8 +105,11 @@ export function UIProvider({ children }: { children: ReactNode }) {
     setLeaderboardCollapsedState(updater)
   }, [])
 
-  const updateDecorationPosition = useCallback((itemId: string, xPct: number, yPct: number) => {
-    setDecorationPositions((prev) => ({ ...prev, [itemId]: { xPct, yPct } }))
+  const updateDecorationPosition = useCallback((itemId: string, xPct: number, yPct: number, scale?: number) => {
+    setDecorationPositions((prev) => ({
+      ...prev,
+      [itemId]: { xPct, yPct, scale: scale ?? prev[itemId]?.scale },
+    }))
   }, [setDecorationPositions])
 
   const anyModalOpen = useMemo(() => Object.values(modals).some(Boolean), [modals])

@@ -29,7 +29,7 @@ interface OracleCardsPageProps {
 }
 
 export default function OracleCardsPage({ moodEntry, onComplete, onClose }: OracleCardsPageProps) {
-  const { settings, userData, updateProfile } = useAppContext()
+  const { settings, userData, updateProfile, triggerWateringEffect } = useAppContext()
   // [แก้] ตรึง identity ของ sfxOpts ด้วย useMemo — เดิมสร้าง object ใหม่ทุก render ทำให้
   // effect ที่พึ่งพา sfxOpts (เล่น/หยุดเสียงพิมพ์ดีด) รีรันโดยไม่จำเป็นทุกครั้งที่คอมโพเนนต์วาดใหม่
   const sfxOpts = useMemo(
@@ -252,7 +252,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
                         ข้ามภารกิจ
                       </button>
                       <button className="oracle-btn oracle-btn--primary" onClick={handleStartCamera}>
-                        📸 ทำภารกิจ (รับ <img src={BADGE_ICONS.water} className="icon-img" alt="" /> +{WATER_DROP_REWARD})
+                        📸 ทำภารกิจ (รับ +{WATER_DROP_REWARD} <img src={BADGE_ICONS.water} className="icon-img--reward" alt="" />)
                       </button>
                     </motion.div>
                   )}
@@ -306,7 +306,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
             <div style={{ fontSize: 52, marginBottom: 8 }}>🌟</div>
             <h2 className="oracle-page__summary-title">รับพลังใจเรียบร้อย!</h2>
             {gotWaterDrop ? (
-              <div className="oracle-page__water-badge"><img src={BADGE_ICONS.water} className="icon-img" alt="" /> +{WATER_DROP_REWARD} หยดน้ำแห่งชีวิต</div>
+              <div className="oracle-page__water-badge">+{WATER_DROP_REWARD} <img src={BADGE_ICONS.water} className="icon-img--reward" alt="" /> หยดน้ำแห่งชีวิต</div>
             ) : (
               // [เพิ่มรอบนี้] กดข้ามภารกิจ → ไม่ได้หยดน้ำโบนัส แต่เควสไพ่ทิพย์โดยรวมยังสำเร็จปกติ
               // (ปุ่ม "เสร็จสิ้น" ด้านล่างเรียก onComplete() เหมือนกันทั้งสองเส้นทาง)
@@ -316,6 +316,11 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
               className="oracle-btn oracle-btn--primary"
               style={{ width: '100%', marginTop: 20 }}
               onClick={() => {
+                // [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 6] trigger เอฟเฟกต์บัวรดน้ำ "ตอนกลับไปหน้า Home"
+                // (คลิกปุ่มนี้ = จุดที่ผู้ใช้ออกจากเควสจริง) ไม่ใช่ตอนได้รางวัลตอนอยู่กลางเควส
+                // (handleConfirmPhoto ก่อนหน้านี้) เพราะตอนนั้นยัง cover เต็มจอ ต้นไม้จริงมองไม่
+                // เห็นอยู่ดี ต่อให้ trigger ไปก่อนแอนิเมชันก็จะเล่นจบไปเปล่าๆ ก่อนกลับมาเห็น
+                if (gotWaterDrop) triggerWateringEffect()
                 onComplete()
                 handleClose()
               }}

@@ -15,6 +15,7 @@ import { DECORATION_ITEM_META } from '../config/decorationItems'
 import { queryKeys } from '../services/queryKeys'
 import * as userApi from '../services/api/user.api'
 import * as shopApi from '../services/api/shop.api'
+import { getAuthToken } from '../services/http'
 
 /*============================================================================*\
   UserContext — [ไฟล์ใหม่ แยกออกจาก AppContext เดิม]
@@ -80,7 +81,13 @@ const UserCtx = createContext<UserContextValue | null>(null)
 export function UserProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  // [แก้บั๊ก — พบระหว่างพิสูจน์ผลข้อ 2 รอบก่อน] เดิม isLoggedIn เริ่มที่ false เสมอ ไม่มีจุดไหน
+  // เช็ค token ที่ persist ไว้ใน localStorage เลย — รีเฟรชหน้าทีไร (แม้ล็อกอินค้างจริงอยู่)
+  // isLoggedIn จะรีเซ็ตเป็น false ทันที ทำให้ query questLogs/me/inventory (enabled: isLoggedIn)
+  // ไม่ยิงเลย หน้าเควสทุกด่านที่ต้องเช็ค isCompleted() จึงเห็นเป็น "ล็อกหมด" ทั้งที่ทำสำเร็จ
+  // มาก่อนแล้วจริงๆ — อ่าน token ตรงๆ ตอน mount ด้วย lazy initializer (ไม่ใช้ useEffect+setState
+  // เพราะเป็นการเช็คค่าเดียวจบ ไม่ต้อง subscribe อะไร ตรงตามที่ react-hooks/set-state-in-effect ต้องการ)
+  const [isLoggedIn, setIsLoggedIn] = useState(() => getAuthToken() !== null)
   const [isGuest, setIsGuest] = useState(false)
   const [streakCelebrationDays, setStreakCelebrationDays] = useState<number | null>(null)
 

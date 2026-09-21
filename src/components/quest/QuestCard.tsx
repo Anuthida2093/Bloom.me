@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 const CONFETTI_COLORS = ['var(--coin)', 'var(--pink)', 'var(--g400)', 'var(--purple)', 'var(--blue)', 'var(--orange)', 'var(--exp)', 'var(--g600)']
 
@@ -112,8 +113,10 @@ export default function QuestCard({
 
       {showFloat && (
         <div className="quest-card-float">
-          <span className="quest-card-float__pill quest-card-float__pill--coin">🪙 +{coins}</span>
-          <span className="quest-card-float__pill quest-card-float__pill--exp">⭐ +{exp} EXP</span>
+          {/* [แก้ตามที่ระบุรอบนี้ — ข้อ 7] เลิกใช้ emoji (🪙/⭐) เปลี่ยนเป็นรูปจริงจาก
+              BADGE_ICONS + ย้ายตัวเลขไว้ "หน้า" รูปตามที่ระบุ (เดิมรูป/emoji อยู่หน้าเลขทุกจุด) */}
+          <span className="quest-card-float__pill quest-card-float__pill--coin">+{coins} <img src={BADGE_ICONS.coins} className="icon-img--reward" alt="" /></span>
+          <span className="quest-card-float__pill quest-card-float__pill--exp">+{exp} EXP <img src={BADGE_ICONS.exp} className="icon-img--reward" alt="" /></span>
         </div>
       )}
 
@@ -144,8 +147,8 @@ export default function QuestCard({
           )}
 
           <div className="quest-card-rewards">
-            <span className="tag quest-card-reward-coin">🪙 +{coins}</span>
-            <span className="tag quest-card-reward-exp">⭐ +{exp} EXP</span>
+            <span className="tag quest-card-reward-coin">+{coins} <img src={BADGE_ICONS.coins} className="icon-img--reward" alt="" /></span>
+            <span className="tag quest-card-reward-exp">+{exp} EXP <img src={BADGE_ICONS.exp} className="icon-img--reward" alt="" /></span>
           </div>
         </div>
       </div>

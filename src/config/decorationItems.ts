@@ -14,25 +14,12 @@ export interface DecorationItemMeta {
   category: DecorationCategory
 }
 
-/*  [เพิ่มรอบนี้ — เตรียมพร้อมสำหรับอาร์ตจริง]
-    ────────────────────────────────────────────────────────────────────────
-    ปัญหาของการใช้ emoji เป็นอาร์ตเวิร์กจริง: emoji เรนเดอร์คนละสไตล์ทุกระบบ
-    ปฏิบัติการ (Windows / iOS / Android / Linux) → ภาพในแอปไม่มีทางนิ่งข้ามเครื่อง
-    และไม่มีทางเข้ากับสไตล์ Ghibli ได้เลย นอกจากนี้ผู้ใช้ที่เก็บเหรียญมาซื้อ
-    "มังกรหยก" แล้วได้ 🐉 กลับไป จะรู้สึกว่าถูกหลอก
-
-    วิธีย้ายไปใช้ภาพจริงโดยไม่ต้องแก้โค้ดที่ไหนเลย:
-      1. วางไฟล์ที่ public/assets/images/decorations/<itemId>.webp
-         (256x256 พื้นหลังโปร่งใส ตามที่ระบุใน docs/ART_BIBLE.md)
-      2. เท่านั้น — getDecorationImage() จะหาเจอเอง และ emoji จะถูกใช้เป็น
-         ตัวสำรองเฉพาะไอเทมที่ยังไม่มีภาพ
-    ทำให้ทยอยแทนที่ทีละชิ้นได้ ไม่ต้องรอให้ครบ 20 ชิ้นก่อนแล้วค่อยเปลี่ยนทีเดียว  */
-const DECORATION_IMAGE_BASE = '/assets/images/decorations'
-
-export function getDecorationImage(itemId: string): string {
-  return `${DECORATION_IMAGE_BASE}/${itemId}.webp`
-}
-
+/* [ลบตามที่พบบั๊ก] เดิมไฟล์นี้มี getDecorationImage() ชี้ไป
+   public/assets/images/decorations/<itemId>.webp — โฟลเดอร์นั้นไม่มีไฟล์จริงเลยสักไฟล์
+   (มีแค่ .gitkeep) ทำให้ TreeOfLife.tsx (จุดเดียวที่เคยเรียกฟังก์ชันนี้) โหลดรูปไม่ขึ้นเสมอ
+   และ fallback เป็น emoji ทุกชิ้นอย่างเงียบๆ — รูปจริงของไอเทมตกแต่งอยู่ที่ ITEM_ICONS
+   (src/config/iconAssets.ts) อยู่แล้ว ซึ่งเป็นจุดเดียวกับที่ ShopSection.tsx/ProfilePage.tsx
+   ใช้แสดงไอเทมชุดเดียวกันนี้ — TreeOfLife.tsx เปลี่ยนไปอ้าง ITEM_ICONS ตรงๆ แทนแล้ว */
 /**
  * DECORATION_ITEM_META — แหล่งความจริงเดียวของ "ไอเทมตกแต่ง" ทั้งหมด (emoji, ชื่อไทย,
  * โซนที่ควรไปติดบนต้นไม้) เดิมข้อมูลชุดเดียวกันนี้กระจายซ้ำกันอยู่ 3 ที่แยกกัน

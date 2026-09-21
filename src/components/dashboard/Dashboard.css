@@ -35,6 +35,35 @@
   z-index: 1;
 }
 
+/* [เพิ่มรอบนี้ — เควส "แคลอรี่ตาม BMI"] แอนิเมชันบัวรดน้ำบินเข้ามาที่โคนต้นไม้ (ดู
+   WateringCanFx.tsx) — วางไว้ค่อนไปทางล่างขวาของ .dashboard__tree-layer ใกล้กระถาง/โคนต้น */
+.watering-can-fx {
+  position: absolute;
+  right: 12%;
+  bottom: 22%;
+  z-index: 6;
+  width: 90px;
+  height: 90px;
+  pointer-events: none;
+}
+.watering-can-fx__can {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 14px var(--glass-b-35));
+}
+.watering-can-fx__drops {
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+}
+.watering-can-fx__drop {
+  position: absolute;
+  top: 0;
+  width: 14px;
+  height: 14px;
+}
+
 /* [ใหม่ — ข้อ C] ตัวครอบต้นไม้ของตัวเอง ใช้เป็นเป้าหมายของ html-to-image ตอนกดแชร์
    (ดู treeCaptureRef ใน Dashboard.tsx) — ต้อง position:absolute;inset:0 เอง เพราะ
    TreeOfLife.tsx สูง/กว้าง 100% ของพาเรนต์ตรง (.tree-of-life { width/height:100% }

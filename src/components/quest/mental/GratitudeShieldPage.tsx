@@ -6,6 +6,7 @@ import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import IntroVideoSequence from './shared/IntroVideoSequence'
 import ParchmentJournalEditor from './shared/ParchmentJournalEditor'
 import JournalHistoryModal from './shared/JournalHistoryModal'
+import { QUEST_ICONS } from '../../../config/iconAssets'
 
 import './GratitudeShieldPage.css'
 
@@ -13,6 +14,9 @@ const C_1 = '#FFB020'
 const C_2 = '#FFB020'
 const C_3 = '#FFB020'
 const C_4 = '#FFB020'
+/** [เพิ่มตามที่ระบุ — ข้อ 10] ปุ่ม "เริ่มเขียน" ของเควสนี้ใช้เหลืองพาสเทลของตัวเอง แทน
+ *  gradient ส้ม-ม่วง (theme.gold + accent เดิม) ที่ใช้ร่วมกับ Reframer Journal */
+const YELLOW_PASTEL_BTN = 'linear-gradient(135deg, #FFF9C4, var(--coin))'
 
 /** รหัสอ้างอิงเควสเกราะแห่งความขอบคุณ */
 const QUEST_CODE = 'ment-gratitude-shield'
@@ -117,15 +121,15 @@ export default function GratitudeShieldPage({ alreadyCompleted, onComplete, onCl
         ✕
       </button>
 
-      {/* ปุ่มเปิดดูประวัติเกราะแห่งความขอบคุณย้อนหลัง (มุมซ้ายบน) */}
-      <button onClick={() => setShowHistory(true)} className="gratitude-shield-page__history-btn">
-        🛡️ ประวัติเกราะแห่งความขอบคุณ
-      </button>
+      {/* [ย้ายตามที่ระบุ — ข้อ 12] ป้ายลอยมุมซ้ายบน "ประวัติเกราะแห่งความขอบคุณ" ย้ายไปเป็น
+          การ์ดเปิด modal ที่หน้าโปรไฟล์แล้ว (ดู ProfilePage.tsx) — ลบปุ่มซ้ำจากหน้าเควสนี้ */}
 
       {/* บล็อกกระดาษบันทึกแบบโหมดสีทอง (Golden Theme) */}
       <ParchmentJournalEditor
         theme="golden"
         accent={C_3}
+        askIconSrc={QUEST_ICONS[QUEST_CODE]}
+        askButtonBg={YELLOW_PASTEL_BTN}
         askQuestion={alreadyCompleted
           ? 'มีเรื่องดีๆ อะไรเกิดขึ้นอีก เล่ามาได้เลยนะ'
           : 'วันนี้มีเรื่องดีๆ อะไรเกิดขึ้นบ้าง ไหนเล่าให้ฟังหน่อย?'}

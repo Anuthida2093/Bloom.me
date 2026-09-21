@@ -19,7 +19,7 @@ interface QuestSectionProps {
   treeStats?: TreeStats
   placedItems?: PlacedItem[]
   decorationPositions?: DecorationPositionMap
-  onDecorationMove?: (itemId: string, xPct: number, yPct: number) => void
+  onDecorationMove?: (itemId: string, xPct: number, yPct: number, scale?: number) => void
   treeGrowthPulse?: { category: QuestCategory; key: number; questCode?: string } | null
   moodEntries?: MoodEntryData[]
   onRequestMoodCheckin?: () => void
@@ -362,7 +362,7 @@ export default function QuestSection({
           display: flex; align-items: center;
           padding: 8px 16px; border-radius: var(--r-pill);
           background: var(--bg-card); box-shadow: var(--sh-card);
-          font-family: var(--font-display); font-weight: 700; font-size: var(--fs-sm); color: var(--text);
+          font-family: var(--font-display); font-weight: 700; font-size: 24px; color: var(--text);
         }
 
         /* [แก้] ปุ่มปิด — แยกจากป้ายชื่อโซน คงตำแหน่งมุมขวาบนเดิมไว้ นี่คือปุ่มปิดเดียวของ

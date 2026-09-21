@@ -284,6 +284,17 @@ input, select, textarea { font-family: var(--font-body); }
   height: 28px;
 }
 
+/* [ใหม่ — ตามที่ระบุ "รูปใหญ่ชัดเจน ไม่ใช่ไอคอนเล็กจิ๋วแบบ inline text"] ใช้เฉพาะจุดที่โชว์
+   จำนวนรางวัลที่เพิ่งได้รับ (เควสสำเร็จ/ป๊อปอัพผลลัพธ์) — ใหญ่กว่า .icon-img ปกติชัดเจน
+   แต่ยังพอดีกับ inline text รอบข้าง ไม่ล้นจนดีไซน์เพี้ยน */
+.icon-img--reward {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  vertical-align: -5px;
+  display: inline-block;
+}
+
 .card {
   background: var(--bg-card);
   border-radius: var(--r-lg);

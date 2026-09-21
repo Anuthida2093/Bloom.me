@@ -41,6 +41,17 @@ interface ProgressContextValue {
   treeGrowthPulse: { category: QuestCategory; key: number; questCode?: string } | null
   hasSoot: boolean
   isLoadingProgress: boolean
+  /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 6] "แรงสั่นบัวรดน้ำ" ทั่วไป — key เปลี่ยนทุกครั้งที่
+   *  triggerWateringEffect() ถูกเรียก (ดูด้านล่าง) Dashboard.tsx (ที่มองเห็นอยู่เสมอ ไม่ว่า
+   *  จุดที่เรียกจะเป็นหน้าเควสไหนก็ตาม เพราะ Dashboard คือ parent ที่ไม่เคย unmount) ฟังค่านี้
+   *  ผ่าน WateringCanFx เพื่อเล่นเอฟเฟกต์บัวรดน้ำที่โคนต้นจริงบนหน้า Home */
+  waterPulseKey: number
+  /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 6] เรียกจาก "ทุกจุดที่ให้รางวัลหยดน้ำ" ในระบบ (ตอนนี้คือ
+   *  OracleCardsPage.tsx เท่านั้น — จุดเดียวที่ตรวจแล้วว่ามีการเพิ่ม waterDrops จริง ไม่ใช่แค่
+   *  โชว์ badge) — ไม่ต้อง navigate เองเพราะ Dashboard.tsx (หน้า Home) เป็น parent ที่ mount
+   *  ค้างอยู่เสมอ (เควสทุกหน้าเป็น modal ซ้อนทับ ไม่ใช่ route แยก) เอฟเฟกต์จึงเล่นที่ต้นไม้จริง
+   *  ได้ทันทีโดยไม่ต้องปิด modal ก่อน */
+  triggerWateringEffect: () => void
 
   handleToggleQuest: (questCode: string, payload?: Record<string, unknown>) => void
   markIncineratorFailed: () => void
@@ -69,6 +80,9 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const [postIts] = useState<PostItData[]>([])
   const [treeGrowthPulse, setTreeGrowthPulse] = useState<{ category: QuestCategory; key: number; questCode?: string } | null>(null)
   const [hasSoot, setHasSoot] = useState(false)
+  // [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 6] ดู triggerWateringEffect ใน context value ด้านล่าง
+  const [waterPulseKey, setWaterPulseKey] = useState(0)
+  const triggerWateringEffect = useCallback(() => setWaterPulseKey((k) => k + 1), [])
 
   const { data: questLogsData, isLoading: loadingQuests } = useQuery({
     queryKey: queryKeys.questLogs(),
@@ -221,12 +235,12 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<ProgressContextValue>(() => ({
     questLogs, moodEntries, journalEntries, postIts,
-    completedQuestCount, treeGrowthPulse, hasSoot,
+    completedQuestCount, treeGrowthPulse, hasSoot, waterPulseKey, triggerWateringEffect,
     isLoadingProgress: loadingQuests || loadingMood,
     handleToggleQuest, markIncineratorFailed, handleMoodSubmit, handleAddJournalEntry,
   }), [
     questLogs, moodEntries, journalEntries, postIts,
-    completedQuestCount, treeGrowthPulse, hasSoot, loadingQuests, loadingMood,
+    completedQuestCount, treeGrowthPulse, hasSoot, waterPulseKey, triggerWateringEffect, loadingQuests, loadingMood,
     handleToggleQuest, markIncineratorFailed, handleMoodSubmit, handleAddJournalEntry,
   ])
 

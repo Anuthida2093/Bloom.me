@@ -53,6 +53,8 @@ import GratitudeShieldPage from './mental/GratitudeShieldPage'
 import MindfulAnchorPage from './mental/MindfulAnchorPage'
 import ScreeningPage from './mental/ScreeningPage'
 import SafetyNetPage from './mental/SafetyNetPage'
+import VitalityStepsQuest from './health/VitalityStepsQuest'
+import BalancedNutrientsQuest from './health/BalancedNutrientsQuest'
 import './GameplayFrame.css'
 
 const ORACLE_QUEST_CODE = 'ment-oracle-activation'
@@ -61,6 +63,9 @@ const INCINERATOR_QUEST_CODE = 'ment-cognitive-incinerator'
 const GRATITUDE_SHIELD_QUEST_CODE = 'ment-gratitude-shield'
 /** [ใหม่] เควสที่มีหน้าจอเต็มของตัวเอง ไม่ผ่าน questGameRegistry */
 const MINDFUL_ANCHOR_QUEST_CODE = 'ment-mindful-anchor'
+/** [เพิ่มรอบนี้ — เควสสุขภาพใหม่] มีฉาก/เสียง/VFX เป็นของตัวเองเหมือนกลุ่มเควสสุขภาพจิตด้านบน */
+const VITALITY_STEPS_QUEST_CODE = 'phys-vitality-steps'
+const BALANCED_NUTRIENTS_QUEST_CODE = 'phys-balanced-nutrients'
 
 interface GameplayFrameProps {
   activeTab: QuestTabId
@@ -100,7 +105,7 @@ interface GameplayFrameProps {
   treeStats: TreeStats
   placedItems: PlacedItem[]
   decorationPositions: DecorationPositionMap
-  onDecorationMove: (itemId: string, xPct: number, yPct: number) => void
+  onDecorationMove: (itemId: string, xPct: number, yPct: number, scale?: number) => void
   treeGrowthPulse?: { category: QuestCategory; key: number; questCode?: string } | null
 }
 
@@ -134,14 +139,6 @@ export default function GameplayFrame({
     setPrevActiveTab(activeTab)
     setSafetyNetOpen(false)
   }
-
-  /* [ใหม่ — วิดีโอพื้นหลังหมวดสุขภาพกาย] QuestGateView(physical) อยู่ "ใต้" popup พวกนี้เสมอ
-     (ทุกตัวเป็น position:absolute ซ้อนทับใน .gameplay-frame เดียวกัน ไม่ได้ unmount กัน — ดู
-     comment หัวไฟล์) จึงต้องบอกมันตรงๆ ว่ากำลังถูกบังอยู่หรือเปล่าเพื่อ pause วิดีโอประหยัด
-     พลังงาน (pendingScreening ไม่ถูก reset ตอนสลับแท็บโดยตั้งใจ — ดู comment ด้านบน — จึงต้อง
-     รวมไว้ด้วยแม้ปกติจะโผล่จากหมวดสุขภาพจิตก็ตาม) safetyNetOpen ไม่ต้องรวมเพราะถูก reset
-     เป็น false ทันทีที่สลับแท็บอยู่แล้ว (ไม่มีทางเป็น true พร้อมกับ activeTab==='physical') */
-  const anyPopupOpen = !!visibleConfirmQuest || !!visiblePlayingQuest || !!pendingScreening
 
   const confirmLocked = visibleConfirmQuest ? isLocked(visibleConfirmQuest) : false
   // [แก้รอบนี้ — เควสเล่นซ้ำได้ต่อวัน] เควสที่มี maxPerDay (เช่น phys-pure-water) ต้องยัง
@@ -178,7 +175,6 @@ export default function GameplayFrame({
             isLocked={isLocked}
             getTodayCompletionCount={getTodayCompletionCount}
             onSelectQuest={onSelectQuest}
-            obscured={anyPopupOpen}
           />
         )}
 
@@ -257,6 +253,17 @@ export default function GameplayFrame({
       {/* [ใหม่] ทอดสมอใจ — 4-7-8 breathing 2 นาที (ไฟล์ MindfulAnchorPage.tsx ที่เขียนใหม่ทั้งไฟล์) */}
       {visibleSpecialQuest?.code === MINDFUL_ANCHOR_QUEST_CODE && (
         <MindfulAnchorPage onComplete={onCompleteSpecial} onClose={onCloseSpecial} />
+      )}
+
+      {/* [เพิ่มรอบนี้ — เควสสุขภาพใหม่] ก้าวเพื่อสุขภาพ / แคลอรี่ตาม BMI — category:'HEALTH'
+          จึงถูกกรองด้วย belongsToActiveTab ให้โผล่เฉพาะตอน activeTab==='physical' อัตโนมัติ
+          (เหมือนเควสสุขภาพจิตด้านบนที่กรองเฉพาะ activeTab==='mental') */}
+      {visibleSpecialQuest?.code === VITALITY_STEPS_QUEST_CODE && (
+        <VitalityStepsQuest onComplete={onCompleteSpecial} onClose={onCloseSpecial} />
+      )}
+
+      {visibleSpecialQuest?.code === BALANCED_NUTRIENTS_QUEST_CODE && (
+        <BalancedNutrientsQuest onComplete={onCompleteSpecial} onClose={onCloseSpecial} />
       )}
 
       {/* ── [ใหม่] ระบบตอบสนองเมื่อรู้สึกแย่ติดต่อกันหลายวัน ──

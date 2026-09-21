@@ -107,8 +107,12 @@ export interface PlacedItem {
  * model ของ backend เลย (ดู docs/DATA_DICTIONARY.md: id/userId/shopItemId/isEquipped/
  * purchasedAt เท่านั้น ไม่มี positionX/positionY เหมือน PostIt) จึงเก็บเป็น state ฝั่ง
  * client ล้วนๆ ไปก่อน (คล้ายกับ AppSettings) ไม่ได้เขียนทับหรือสมมติชื่อ field ใหม่ให้ backend
+ *
+ * [เพิ่มตามที่ระบุ — ปรับขนาดไอเทมตกแต่งได้อิสระ] scale เก็บคู่กับ x/y ในอ็อบเจ็กต์เดียวกัน
+ * เพราะเป็นข้อมูล "การจัดวางของไอเทมชิ้นนี้" ชุดเดียวกัน ไม่แยกเก็บคนละ map — optional เพราะ
+ * ไอเทมที่ยังไม่เคยลากปรับขนาดเลยจะไม่มี key นี้ (ใช้ค่าเริ่มต้น 1 ที่ผู้เรียกใช้เอง)
  */
-export type DecorationPositionMap = Record<string, { xPct: number; yPct: number }>
+export type DecorationPositionMap = Record<string, { xPct: number; yPct: number; scale?: number }>
 
 export type CompletedQuestsMap = Record<string, boolean>
 

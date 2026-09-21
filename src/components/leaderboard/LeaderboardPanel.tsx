@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MBTI_TREE_THEME, type MbtiType } from '../../types';
 import MiniTree from '../tree/MiniTree';
 import { RANK_CATEGORIES, MOCK_LEADERBOARD_PLAYERS, type LeaderboardPlayer, type RankCategory } from '../../config/leaderboardData';
@@ -28,6 +28,17 @@ interface LeaderboardPanelProps {
   myName?: string
   glass?: boolean
   onPlayerClick?: (player: PanelPlayer) => void
+  /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 8] สถิติจริงของผู้ใช้เอง ใช้คำนวณอันดับจริงแทนเลข "#8"
+   *  ที่ hardcode ไว้เดิม (ตรวจโค้ดจริงแล้ว — ไม่เคยมีการคำนวณอันดับผู้ใช้เองเลยสักจุด) */
+  myLevel?: number
+  myKnowledgeStack?: number
+  myHealthStack?: number
+  myEmotionStack?: number
+  /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 8] แจ้งอันดับ "โดยรวม" (หมวด level) ทุกครั้งที่คำนวณใหม่
+   *  ให้ Dashboard.tsx เทียบกับ lastKnownRank เพื่อตัดสินใจโชว์ popup เลื่อนอันดับ — ใช้หมวด
+   *  level คงที่เสมอ (ไม่ใช่ cat ที่ผู้ใช้สลับดูในแผงนี้) เพราะเป็น "อันดับรวม" ที่ควรวัดจาก
+   *  เกณฑ์เดียวกันตลอด ไม่งั้นสลับแท็บไปมาจะเห็น popup ผิดๆ ทั้งที่อันดับรวมไม่ได้เปลี่ยน */
+  onMyRankChange?: (rank: number) => void
 }
 
 export default function LeaderboardPanel({
@@ -37,6 +48,11 @@ export default function LeaderboardPanel({
   myName,
   glass = false,
   onPlayerClick = () => {},
+  myLevel = 0,
+  myKnowledgeStack = 0,
+  myHealthStack = 0,
+  myEmotionStack = 0,
+  onMyRankChange,
 }: LeaderboardPanelProps) {
   const [cat, setCat] = useState<RankCategory>('level');
 
@@ -45,6 +61,25 @@ export default function LeaderboardPanel({
   );
 
   const myTheme = MBTI_TREE_THEME[myMbti] ?? MBTI_TREE_THEME.INFP;
+
+  /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 8] อันดับจริง = จำนวนผู้เล่นใน mock leaderboard ที่มีค่า
+     หมวดนั้นสูงกว่าเรา + 1 (backend endpoint จริงยังไม่มี — ดูคอมเมนต์หัวไฟล์ leaderboardData.ts
+     ว่าเป็น mock ที่จำลอง GET /leaderboard ไว้ก่อน) */
+  const myStatsByCategory: Record<RankCategory, number> = {
+    level: myLevel,
+    knowledgeStack: myKnowledgeStack,
+    healthStack: myHealthStack,
+    emotionStack: myEmotionStack,
+  };
+  const computeMyRank = (category: RankCategory) =>
+    MOCK_LEADERBOARD_PLAYERS.filter((p) => p[category] > myStatsByCategory[category]).length + 1;
+
+  const myRankForCurrentCat = computeMyRank(cat);
+  const myRankOverall = computeMyRank('level');
+
+  useEffect(() => {
+    onMyRankChange?.(myRankOverall);
+  }, [myRankOverall, onMyRankChange]);
 
   return (
     <div
@@ -266,7 +301,7 @@ export default function LeaderboardPanel({
                 fontWeight: 700,
               }}
             >
-              #8
+              #{myRankForCurrentCat}
             </span>
 
             <MiniTree theme={myTheme} size={38} />

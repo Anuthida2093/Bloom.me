@@ -14,9 +14,13 @@ import { findQuestByCode } from '../../config/questCatalog'
 import { BADGE_CATALOG } from '../../config/badgeCatalog'
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
-import { BADGE_ICONS, ITEM_ICONS } from '../../config/iconAssets'
+import { BADGE_ICONS, ITEM_ICONS, QUEST_ICONS } from '../../config/iconAssets'
 import { computeBmi, computeBodyType } from '../../utils/bmi'
 import { getBodyTypeImagePath } from '../../config/bodyTypeAssets'
+// [ย้ายตามที่ระบุ — ข้อ 12] ปุ่ม "ประวัติสมุดบันทึกรากไม้เรืองแสง"/"ประวัติเกราะแห่งความ
+// ขอบคุณ" ย้ายจากป้ายลอยมุมซ้ายบนของ ReframerJournalPage.tsx/GratitudeShieldPage.tsx มาไว้
+// ที่นี่แทน — reuse JournalHistoryModal ตัวเดิมเป๊ะ (ย้ายจุดเรียกใช้ ไม่เขียน UI แสดงผลใหม่)
+import JournalHistoryModal from '../quest/mental/shared/JournalHistoryModal'
 
 /*============================================================================*\
   ProfilePage — [ไฟล์ใหม่] หน้าโปรไฟล์เต็มจอ เปิดจากปุ่ม "โปรไฟล์" ใน ActionMenuBar
@@ -110,6 +114,12 @@ export default function ProfilePage({
   useEscapeKey(onClose)
 
   const [sparkleId, setSparkleId] = useState<string | null>(null)
+  /** [ย้ายตามที่ระบุ — ข้อ 12] เปิด JournalHistoryModal ของเควสไหน — null = ปิดอยู่ */
+  const [openHistoryFor, setOpenHistoryFor] = useState<'ment-reframer-journal' | 'ment-gratitude-shield' | null>(null)
+  /** [เพิ่มตามที่ระบุ — ข้อ 15] แท็บกรองหมวดหมู่คลังไอเทม — pattern เดียวกับ shopCategory ใน
+   *  ShopSection.tsx ('all' เพิ่มเข้ามาเป็นค่าเริ่มต้นเพื่อไม่ให้พฤติกรรมเดิม "เห็นทุกหมวด
+   *  พร้อมกัน" หายไปทันทีที่อัปเดต — ผู้ใช้กดเลือกหมวดเพื่อกรองดูทีละหมวดได้เพิ่มเข้ามา) */
+  const [inventoryFilter, setInventoryFilter] = useState<DecorationCategory | 'all'>('all')
   const today = new Date()
   const [calYear, setCalYear] = useState(today.getFullYear())
   const [calMonth, setCalMonth] = useState(today.getMonth())
@@ -160,6 +170,11 @@ export default function ProfilePage({
     category: cat,
     items: inventoryData.filter((item) => DECORATION_ITEM_META[item.shopItemId]?.category === cat),
   })).filter((g) => g.items.length > 0)
+  /** [เพิ่มตามที่ระบุ — ข้อ 15] 'all' โชว์ทุกหมวด (พฤติกรรมเดิม) เลือกหมวดใดหมวดหนึ่ง = กรอง
+   *  เหลือเฉพาะหมวดนั้น เหมือนแท็บหมวดหมู่ของ ShopSection.tsx */
+  const visibleInventoryGroups = inventoryFilter === 'all'
+    ? groupedInventory
+    : groupedInventory.filter((g) => g.category === inventoryFilter)
 
   const handlePlace = (item: InventoryItem) => {
     const meta = DECORATION_ITEM_META[item.shopItemId]
@@ -205,7 +220,36 @@ export default function ProfilePage({
                 ยังไม่มีไอเทมในคลัง — ไปซื้อจากร้านค้าได้เลย!
               </div>
             ) : (
-              groupedInventory.map((group) => (
+              <>
+                {/* [เพิ่มตามที่ระบุ — ข้อ 15] แท็บกรองหมวดหมู่ — เฉพาะหมวดที่มีไอเทมจริงเท่านั้น */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+                  <button
+                    onClick={() => setInventoryFilter('all')}
+                    className="tag"
+                    style={{
+                      cursor: 'pointer', border: 'none',
+                      background: inventoryFilter === 'all' ? 'var(--g600)' : 'var(--n100)',
+                      color: inventoryFilter === 'all' ? 'var(--fixed-white)' : 'var(--text-muted)',
+                    }}
+                  >
+                    ทั้งหมด
+                  </button>
+                  {groupedInventory.map((group) => (
+                    <button
+                      key={group.category}
+                      onClick={() => setInventoryFilter(group.category)}
+                      className="tag"
+                      style={{
+                        cursor: 'pointer', border: 'none',
+                        background: inventoryFilter === group.category ? 'var(--g600)' : 'var(--n100)',
+                        color: inventoryFilter === group.category ? 'var(--fixed-white)' : 'var(--text-muted)',
+                      }}
+                    >
+                      {CATEGORY_LABELS[group.category]}
+                    </button>
+                  ))}
+                </div>
+                {visibleInventoryGroups.map((group) => (
                 <div key={group.category} style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--text-sub)', marginBottom: 8 }}>
                     {CATEGORY_LABELS[group.category]}
@@ -255,7 +299,8 @@ export default function ProfilePage({
                     })}
                   </div>
                 </div>
-              ))
+              ))}
+              </>
             )}
           </div>
 
@@ -397,6 +442,37 @@ export default function ProfilePage({
             </div>
           </div>
 
+          {/* ═══ [ย้ายตามที่ระบุ — ข้อ 12] ประวัติการเขียนบันทึก — เดิมเป็นป้ายลอยมุมซ้ายบน
+              ของ ReframerJournalPage.tsx/GratitudeShieldPage.tsx ย้ายมาเป็นการ์ดที่นี่แทน
+              กดแล้วเปิด JournalHistoryModal ตัวเดิม (reuse component/logic เดิมทั้งหมด
+              ไม่ได้เขียน UI แสดงผลประวัติใหม่) ═══ */}
+          <div className="card" style={{ padding: 22 }}>
+            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>
+              📜 ประวัติการเขียนบันทึก
+            </div>
+            <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>ย้อนดูสิ่งที่เคยเขียนไว้ทั้งหมด</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                onClick={() => setOpenHistoryFor('ment-reframer-journal')}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: '1.5px solid var(--border)', background: 'var(--n50)', cursor: 'pointer', textAlign: 'left' }}
+              >
+                {QUEST_ICONS['ment-reframer-journal']
+                  ? <img src={QUEST_ICONS['ment-reframer-journal']} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                  : <span style={{ fontSize: 28, lineHeight: 1 }}>📖</span>}
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--text)' }}>ประวัติสมุดบันทึกรากไม้เรืองแสง</span>
+              </button>
+              <button
+                onClick={() => setOpenHistoryFor('ment-gratitude-shield')}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: '1.5px solid var(--border)', background: 'var(--n50)', cursor: 'pointer', textAlign: 'left' }}
+              >
+                {QUEST_ICONS['ment-gratitude-shield']
+                  ? <img src={QUEST_ICONS['ment-gratitude-shield']} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                  : <span style={{ fontSize: 28, lineHeight: 1 }}>🛡️</span>}
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--text)' }}>ประวัติเกราะแห่งความขอบคุณ</span>
+              </button>
+            </div>
+          </div>
+
           {/* ═══ [เพิ่มตามที่ระบุ] โซนความสำเร็จ — badge/achievement ตัวแรกที่มีจริงใน frontend
               เทียบกับ backend badges ใน seed.ts (BADGE_CATALOG ตอนนี้มีแค่ 2 ตัวที่ตัดสินใจ
               ให้สร้างแล้ว — Strategic Delay กับ Mirror of Truth ดู MentalContext.earnedBadges) */}
@@ -441,6 +517,25 @@ export default function ProfilePage({
           </div>
         </div>
       </div>
+
+      {openHistoryFor === 'ment-reframer-journal' && (
+        <JournalHistoryModal
+          theme="mystic"
+          accent="#9B59D0"
+          title="ประวัติสมุดบันทึกรากไม้เรืองแสง"
+          entries={journalEntries.filter((e) => e.questCode === 'ment-reframer-journal')}
+          onClose={() => setOpenHistoryFor(null)}
+        />
+      )}
+      {openHistoryFor === 'ment-gratitude-shield' && (
+        <JournalHistoryModal
+          theme="golden"
+          accent="#FFB020"
+          title="ประวัติเกราะแห่งความขอบคุณ"
+          entries={journalEntries.filter((e) => e.questCode === 'ment-gratitude-shield')}
+          onClose={() => setOpenHistoryFor(null)}
+        />
+      )}
     </div>
   )
 }

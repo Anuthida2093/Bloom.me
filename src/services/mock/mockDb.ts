@@ -44,6 +44,21 @@ export interface MockPasswordResetToken {
   expiresAt: string
 }
 
+/** [เพิ่มรอบนี้ — แยกข้อมูลเกมต่อบัญชี] ข้อมูลเกมทั้งหมดของ "หนึ่งบัญชี" — เดิมฟิลด์เหล่านี้อยู่
+ * บนสุดของ MockDb ตรงๆ และใช้ร่วมกันทุกบัญชีในเบราว์เซอร์เดียวกัน (บั๊ก: login/register เปลี่ยน
+ * แค่ d.user แต่ไม่แตะ questLogs เลย ทำให้บัญชีใหม่เห็นเควส/mood/โพสต์ของบัญชีก่อนหน้า) ตอนนี้
+ * เก็บเป็นสแนปช็อตแยกต่อ accountId ใน MockDb.profiles แทน */
+export interface MockAccountProfile {
+  user: UserData
+  questLogs: QuestLogEntry[]
+  moodEntries: MoodEntryData[]
+  inventory: InventoryItem[]
+  posts: PostData[]
+  following: string[]
+  activity: ActivityItem[]
+  privateProfileUserIds: string[]
+}
+
 export interface MockDb {
   user: UserData
   questLogs: QuestLogEntry[]
@@ -62,6 +77,15 @@ export interface MockDb {
   accounts: MockAccount[]
   /** [เพิ่มรอบนี้ — ระบบ auth จำลอง] ดู MockPasswordResetToken ด้านบน */
   passwordResetTokens: MockPasswordResetToken[]
+  /** [เพิ่มรอบนี้ — แยกข้อมูลเกมต่อบัญชี] accountId ของบัญชีที่ "active" อยู่ตอนนี้ — ฟิลด์ข้างบน
+   *  ทั้งหมด (user, questLogs, ...) คือ "มิเรอร์" ของ profiles[activeAccountId] เท่านั้น ที่ต้อง
+   *  คงรูปแบบเดิมไว้บนสุด (ไม่ย้ายเข้า profiles ทั้งหมด) เพราะไฟล์ api อื่นๆ (quest/mood/post/
+   *  social/shop.api.ts) อ่าน-เขียนฟิลด์เหล่านี้ตรงๆ อยู่แล้วจำนวนมาก การย้ายจะกระทบวงกว้างเกินจำเป็น */
+  activeAccountId: string | null
+  /** [เพิ่มรอบนี้ — แยกข้อมูลเกมต่อบัญชี] สแนปช็อตข้อมูลเกมของบัญชีที่ไม่ได้ active อยู่ ณ ขณะนี้
+   *  คีย์ด้วย MockAccount.id ห้ามแก้ตรงนี้ตรงๆ ที่อื่น ต้องผ่าน switchActiveAccount() เท่านั้น
+   *  ไม่งั้นจะไม่ sync กับมิเรอร์ด้านบน */
+  profiles: Record<string, MockAccountProfile>
 }
 
 /** [ใหม่] โพสต์ตัวอย่าง 2 อัน — ใช้ userId ตรงกับ MOCK_LEADERBOARD_PLAYERS (p1/p2 ใน
@@ -140,6 +164,73 @@ const EMPTY_DB: MockDb = {
   privateProfileUserIds: ['p4'],
   accounts: [],
   passwordResetTokens: [],
+  activeAccountId: null,
+  profiles: {},
+}
+
+/** ดึงมิเรอร์บนสุดของ db มาเป็นสแนปช็อตหนึ่งก้อน (ไว้เก็บเข้า profiles ก่อนสลับบัญชี) */
+function snapshotActiveProfile(db: MockDb): MockAccountProfile {
+  return {
+    user: db.user,
+    questLogs: db.questLogs,
+    moodEntries: db.moodEntries,
+    inventory: db.inventory,
+    posts: db.posts,
+    following: db.following,
+    activity: db.activity,
+    privateProfileUserIds: db.privateProfileUserIds,
+  }
+}
+
+/** เขียนสแนปช็อตทับมิเรอร์บนสุดของ db (ไว้ตอนสลับเข้าบัญชีที่มีข้อมูลอยู่แล้ว) */
+function applyProfileToMirror(db: MockDb, profile: MockAccountProfile) {
+  db.user = profile.user
+  db.questLogs = profile.questLogs
+  db.moodEntries = profile.moodEntries
+  db.inventory = profile.inventory
+  db.posts = profile.posts
+  db.following = profile.following
+  db.activity = profile.activity
+  db.privateProfileUserIds = profile.privateProfileUserIds
+}
+
+/** ข้อมูลเริ่มต้นของบัญชีที่ "ไม่เคยมีมาก่อน" — ใช้ posts/activity ตัวอย่างชุดเดียวกับ EMPTY_DB
+ * (โคลนใหม่ทุกครั้งกันบัญชีต่างๆ แชร์ reference อาร์เรย์เดียวกันโดยไม่ตั้งใจ) */
+function createFreshProfile(userSeed: Partial<UserData>): MockAccountProfile {
+  return {
+    user: { ...DEFAULT_USER_DATA, id: 'mock-user', username: 'ผู้มาเยือน', ...userSeed },
+    questLogs: [],
+    moodEntries: [],
+    inventory: [],
+    posts: structuredClone(SEED_POSTS),
+    following: [],
+    activity: structuredClone(SEED_ACTIVITY),
+    privateProfileUserIds: ['p4'],
+  }
+}
+
+/** [เพิ่มรอบนี้ — แก้บั๊กเควส/mood/โพสต์ "รั่ว" ข้ามบัญชี] สลับบัญชี active ให้ปลอดภัย: เซฟข้อมูล
+ * บัญชีเดิมเข้า profiles ก่อนเสมอ แล้วค่อยโหลด (หรือสร้างใหม่ถ้ายังไม่เคยมี) ข้อมูลของบัญชีปลายทาง
+ * เข้ามิเรอร์ — ต้องเรียกจาก login()/register() ใน user.api.ts เท่านั้น ห้ามแก้ d.user/d.questLogs
+ * ตรงๆ ตอนสลับบัญชีที่อื่นอีก เพราะจะย้อนกลับไปเป็นบั๊กเดิม (เซฟไฟล์เดียวใช้ร่วมกันทุกบัญชี) */
+export function switchActiveAccount(
+  db: MockDb,
+  accountId: string,
+  userSeed: Partial<UserData> = {},
+): UserData {
+  if (db.activeAccountId && db.activeAccountId !== accountId) {
+    db.profiles[db.activeAccountId] = snapshotActiveProfile(db)
+  }
+  const existing = db.profiles[accountId]
+  if (existing) {
+    applyProfileToMirror(db, existing)
+    if (Object.keys(userSeed).length > 0) db.user = { ...db.user, ...userSeed }
+  } else {
+    applyProfileToMirror(db, createFreshProfile(userSeed))
+  }
+  db.activeAccountId = accountId
+  db.profiles[accountId] = snapshotActiveProfile(db)
+  return db.user
 }
 
 function read(): MockDb {

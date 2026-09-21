@@ -164,39 +164,52 @@
   line-height: 1.5;
 }
 
+/* [แก้ตามที่ระบุ — ข้อ 9] ขยายปุ่ม/จัดกึ่งกลาง/สไตล์ทันสมัยขึ้น — width:100% + justify-content:
+   center การันตีแถวปุ่มอยู่กึ่งกลางแนวนอนของพื้นที่จริง (เดิม justify-content:center อยู่แล้ว
+   แต่ไม่มี width ชัดเจน บางจอกว้างอาจดูไม่สมดุลกับ .camera-capture__stage รอบข้าง) เพิ่ม
+   max-width กันแถวยืดกว้างเกินไปบนจอใหญ่มาก */
 .camera-capture__controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 28px;
+  gap: 32px;
+  width: 100%;
+  max-width: 420px;
 }
 
 .camera-capture__shutter-btn {
-  width: 72px;
-  height: 72px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
-  border: 4px solid var(--fixed-white);
+  border: 5px solid var(--fixed-white);
   background: var(--game-accent, var(--g600));
   cursor: pointer;
   flex-shrink: 0;
+  box-shadow: 0 8px 22px var(--glass-b-35), 0 0 0 3px var(--glass-w-20);
+  transition: transform .12s ease, box-shadow .15s ease;
 }
+.camera-capture__shutter-btn:hover { transform: scale(1.04); box-shadow: 0 10px 26px var(--glass-b-40), 0 0 0 3px var(--glass-w-25); }
 .camera-capture__shutter-btn:active { transform: scale(.92); }
 
 .camera-capture__side-btn {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   border: 2px solid var(--glass-w-40);
-  background: var(--glass-w-8);
+  background: var(--glass-w-10);
+  backdrop-filter: blur(6px);
   color: var(--fixed-white);
-  font-size: 17px;
+  font-size: 19px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 4px 14px var(--glass-b-25);
+  transition: transform .12s ease, background .15s ease;
 }
-.camera-capture__side-btn:hover { background: var(--glass-w-18); }
+.camera-capture__side-btn:hover { background: var(--glass-w-20); transform: scale(1.06); }
+.camera-capture__side-btn:active { transform: scale(.94); }
 
 /* [แก้ตามที่ระบุ — ข้อ 4] เดิม .qg-btn/.qg-btn--ghost ใช้ร่วมกัน (ปุ่ม "บันทึก" ไม่มีสีเน้น
    ชัดเจน แค่ไล่สีขาว→--game-accent-bg บางๆ) ตอนนี้แยกเป็นสไตล์เฉพาะของตัวเอง: "บันทึก" ใช้
@@ -241,6 +254,30 @@
 .camera-capture__review-btn--confirm:hover { filter: brightness(1.08); }
 
 .camera-capture__error-skip-btn {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* [ใหม่ — ข้อ 5] แนบรูปจากคลังภาพ */
+.camera-capture__gallery-input {
+  /* ซ่อนแบบเข้าถึงได้ (ไม่ใช้ display:none เพราะบางเบราว์เซอร์เก่าจะไม่ยิง click() บน input ที่
+     display:none) — ปุ่ม 🖼️ ที่มองเห็นจริงเรียก .click() ผ่าน ref แทนเสมอ ผู้ใช้ไม่เห็น/แตะ
+     input ตัวนี้ตรงๆ เลย */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.camera-capture__error-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   width: 100%;
   max-width: 420px;
 }

@@ -64,8 +64,12 @@ export default function IntroVideoSequence({ videoSrc, audioSrc, overlayText, ac
   --lc-bg-1: rgba(0,0,0,.7);
   background: linear-gradient(180deg, var(--glass-b-55) 0%, transparent 30%, transparent 65%, var(--lc-bg-1) 100%);
 }
+        /* [แก้ตามที่ระบุ — ข้อ 13] เดิม bottom:8% วัดจากขอบล่างจอเป็นสัดส่วน ไม่เผื่อ
+           ActionMenuBar (ลอยทับแยกชั้นอยู่แล้ว, z-index:1000) ที่อาจบังข้อความนี้บนจอเล็ก —
+           เปลี่ยนไปใช้ --gpf-safe-bottom (โทเคนกลางเดียวกับที่ CameraCapture.css/
+           QuestGateView.tsx ใช้กันชนจุดเดียวกัน) แทนสัดส่วนคงที่ */
         .intro-video-seq__overlay-text-wrap {
-          position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%);
+          position: absolute; bottom: calc(var(--gpf-safe-bottom, 80px) + 12px); left: 50%; transform: translateX(-50%);
           width: min(90%, 520px); text-align: center; padding: 0 16px;
         }
         .intro-video-seq__overlay-text {

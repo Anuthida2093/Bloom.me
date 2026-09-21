@@ -1,8 +1,6 @@
-import { useEffect, useRef } from 'react'
 import { isQuestFullyDoneToday, type QuestDef } from '../../config/questCatalog'
 import { SAFETY_NET_CONTACTS } from '../../config/screening'
 import { QUEST_ICONS } from '../../config/iconAssets'
-import { useIsLowPowerMode } from '../../hooks/useMediaQuery'
 
 const C_4 = '#9b59d0'
 const BORDER_5 = '#b785f5'
@@ -24,11 +22,6 @@ interface QuestGateViewProps {
    * โดยไม่มีสัญลักษณ์อะไรบอกล่วงหน้าที่เมนูนี้เลย ดูเหมือนเควสพัง จึงเพิ่ม badge/tooltip บอก
    * ชัดเจนตรงนี้แทน — ไม่ใช่ isLocked จริง (ยังกดเข้าไปได้ แค่จะเจอหน้าชวนไปเช็คอินก่อน) */
   needsMoodCheckin?: (questCode: string) => boolean
-  /** [ใหม่] มี modal/popup อื่นลอยทับเต็มจอ (เช่น QuestConfirmModal/QuestPlayModal/
-   * ScreeningPage — ดู GameplayFrame.tsx) — ใช้หยุดวิดีโอพื้นหลังหมวดสุขภาพกายชั่วคราว
-   * ตอนมองไม่เห็นอยู่แล้ว (ประหยัดแบต/พลังงานตาม pattern เดียวกับ Dashboard.tsx) ไม่มีผล
-   * กับหมวดสุขภาพจิตที่ไม่มีวิดีโอพื้นหลัง */
-  obscured?: boolean
 }
 
 /* [แก้ธีมสี — รอบก่อนหน้า ไม่แตะซ้ำรอบนี้] พื้นหลังมืดของทั้งสองหมวดใช้โทเคนกลาง --ae-*
@@ -62,45 +55,32 @@ const THEME = {
  */
 export default function QuestGateView({
   category, quests, isCompleted, isLocked, getTodayCompletionCount = () => 0, onSelectQuest, onOpenSafetyNet,
-  needsMoodCheckin = () => false, obscured = false,
+  needsMoodCheckin = () => false,
 }: QuestGateViewProps) {
   const theme = THEME[category]
 
-  /* [ใหม่ — วิดีโอพื้นหลังหมวดสุขภาพกาย] เฉพาะ category==='physical' เท่านั้น (หมวดสุขภาพจิต
-     ยังใช้ theme.bg เดิมทุกประการ ไม่แตะ) — pattern เดียวกับ videoRef+useIsLowPowerMode+
-     document.hidden ของ Dashboard.tsx (ดู videoRef/lowPower ใน Dashboard.tsx) ต่างกันตรงที่
-     ที่นี่ไม่มี "anyModalOpen" ของทั้งแอปให้เช็ค (อยู่ลึกเข้ามาใน gameplay-frame แล้ว) จึงรับ
-     obscured จาก GameplayFrame.tsx แทน (true เมื่อ QuestConfirmModal/QuestPlayModal/
-     ScreeningPage ลอยทับอยู่) */
-  const lowPower = useIsLowPowerMode()
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const showVideo = category === 'physical' && !lowPower
-
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
-    const sync = () => {
-      const shouldPause = obscured || document.hidden || lowPower
-      if (shouldPause) video.pause()
-      else video.play().catch(() => {})
-    }
-    sync()
-    document.addEventListener('visibilitychange', sync)
-    return () => document.removeEventListener('visibilitychange', sync)
-  }, [obscured, lowPower])
-
   return (
     <div className="quest-gate-view" style={{ background: theme.bg }}>
-      {showVideo && (
-        <video
-          ref={videoRef}
-          className="quest-gate-view__bg-video"
-          src="/assets/videos/quest-physical/Physical-intro.mp4"
-          autoPlay loop muted playsInline preload="metadata"
-          aria-hidden="true"
-        />
-      )}
-      {showVideo && <div className="quest-gate-view__bg-overlay" aria-hidden="true" />}
+      {/* [ใหม่ — ตามที่ระบุ] ดาวกระพริบลอย — โครงสร้างเอฟเฟกต์เดียวกับที่หมวดสุขภาพจิตใช้อยู่แล้ว
+          ในหน้าเควสไพ่ทิพย์ (ดู .oracle-page__star ใน OracleCardsPage.css) แต่ยกมาใช้ที่ระดับ
+          หน้าประตูเควส (QuestGateView) ทั้ง 2 หมวดเลย เพราะเดิมหน้านี้ (ต่างจาก OracleCardsPage)
+          ยังไม่มีเอฟเฟกต์ลอยตกแต่งใดๆ ทั้งที่พื้นหลังมืดเหมือนกัน — สีดาวเป็นสีขาวเดียวกันทั้ง
+          2 หมวด (ดาวไม่มีสีของตัวเอง) ส่วน "โทนเขียว" ของหมวดกายมาจาก theme.bg เดิมอยู่แล้ว
+          (--ae-mist/--ae-deep/--ae-void) ไม่ต้องแก้สีดาวแยก */}
+      <div className="quest-gate-view__stars" aria-hidden="true">
+        {Array.from({ length: 22 }).map((_, i) => (
+          <span
+            key={i}
+            className="quest-gate-view__star"
+            style={{
+              left: `${(i * 37) % 100}%`,
+              top: `${(i * 53) % 90}%`,
+              animationDelay: `${(i % 10) * 0.3}s`,
+            }}
+          />
+        ))}
+      </div>
+
       <div className="quest-gate-view__list">
         {quests.map((q) => {
           const locked = isLocked(q)
@@ -186,20 +166,25 @@ export default function QuestGateView({
         .quest-gate-view {
           position: absolute; inset: 0; z-index: 10; overflow: hidden;
         }
-        /* [ใหม่ — วิดีโอพื้นหลังหมวดสุขภาพกาย] อยู่ล่างสุดในกอง (z-index:0) ใต้ overlay มืด
-           (z-index:1) ใต้ .quest-gate-view__list ทั้งก้อน (z-index:20 เดิม ครอบคลุมทั้งลิสต์
-           เควส+พื้นหลังไล่เฉดมืดของมันเองที่ท้ายลิสต์อยู่แล้ว) — object-fit:cover ให้เต็มพื้นที่
-           โดยไม่บิดเบี้ยว, overlay สีดำโปร่งแสง .45 กันตัวหนังสือ/ปุ่มด้านบนกลืนกับวิดีโอสว่างๆ
-           (ทดสอบแล้วปุ่มเควสเองทึบอยู่แล้ว (background: ${theme.itemBg}) ไม่ได้พึ่ง overlay
-           นี้เพื่ออ่านออก — overlay นี้ช่วยเฉพาะพื้นที่ว่างระหว่าง/เหนือปุ่ม เช่นป้ายชื่อโซนที่ลอย
-           อยู่ด้านบนสุดจาก QuestSection.tsx) */
-        .quest-gate-view__bg-video {
-          position: absolute; inset: 0; width: 100%; height: 100%;
-          object-fit: cover; z-index: 0; pointer-events: none;
+        /* [แก้ตามที่ระบุ — ยกเลิกงานรอบก่อน] เคยเพิ่มวิดีโอพื้นหลัง (Physical-intro.mp4) +
+           overlay มืดทับให้หมวดสุขภาพกาย — ยกเลิกแล้วตามที่ระบุ กลับไปใช้ theme.bg (gradient/
+           สีทึบ) ตรงๆ เหมือนโครงสร้างเดิมของ QuestGateView ก่อนเพิ่มวิดีโอ (โทนเขียวของหมวด
+           สุขภาพกายมาจาก --ae-mist/--ae-deep/--ae-void ใน theme.bg อยู่แล้ว แยกจากโทนม่วง
+           ของหมวดสุขภาพจิตอย่างชัดเจน ไม่ต้องเพิ่มรูป/วิดีโอใดๆ อีก) ดาวกระพริบด้านล่างยังคง
+           ไว้ตามเดิม (ไม่ได้อยู่ในขอบเขตที่ขอให้ยกเลิกรอบนี้) */
+        /* [ใหม่ — ดาวกระพริบ] อยู่เหนือพื้นหลัง (z-index:2) แต่ใต้ลิสต์เควส (z-index:20) —
+           ใช้โครงเดียวกับ .oracle-page__star (OracleCardsPage.css): จุดเล็กสีขาว กระพริบด้วย
+           opacity อย่างเดียว (ไม่แตะ layout/transform หนักๆ กันเปลือง performance) */
+        .quest-gate-view__stars { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+        .quest-gate-view__star {
+          position: absolute;
+          width: 3px; height: 3px; border-radius: 50%;
+          background: var(--fixed-white);
+          animation: questGateStarTwinkle 2.4s ease-in-out infinite;
         }
-        .quest-gate-view__bg-overlay {
-          position: absolute; inset: 0; z-index: 1; pointer-events: none;
-          background: rgba(0,0,0,.45);
+        @keyframes questGateStarTwinkle {
+          0%, 100% { opacity: 0.2; }
+          50% { opacity: 1; }
         }
         /* [แก้ตามที่ระบุ — ลบลิงก์ "ต้องการความช่วยเหลือด่วน?"] ซ้ำซ้อนกับแถบศูนย์ฉุกเฉิน
            (.quest-gate-view__safety-banner) ที่อยู่ท้ายลิสต์อยู่แล้ว (เบอร์ 1323 เดียวกัน)
@@ -241,7 +226,7 @@ export default function QuestGateView({
           width: 100%; height: 100%; object-fit: contain;
         }
         .quest-gate-view__row-title {
-          flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-sm);
+          flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 700; font-size: 20px;
         }
         .quest-gate-view__row-status {
           flex-shrink: 0; font-size: 10.5px; font-weight: 800; padding: 6px 10px; border-radius: var(--r-pill);
@@ -295,7 +280,7 @@ export default function QuestGateView({
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .quest-gate-view__icon, .quest-gate-view__shadow { animation: none; }
+          .quest-gate-view__icon, .quest-gate-view__shadow, .quest-gate-view__star { animation: none; }
         }
       `}</style>
     </div>

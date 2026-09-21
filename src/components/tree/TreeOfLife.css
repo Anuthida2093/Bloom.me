@@ -15,8 +15,10 @@
   height: 100%;
 }
 
-/* ทั้ง 3 layer วางซ้อนเต็มพื้นที่เดียวกันแบบ absolute — ลำดับ z-index กำหนดที่ inline
-   style (zIndex prop ของ TreeLayer) ตามลำดับภาพจริง: หญ้า(1) < ลำต้น(2) < ใบ/ดอก(3) */
+/* [แก้ตามที่ระบุรอบนี้] เดิมใช้คลาสนี้ร่วมกับ trunk/leaf/grass ทั้ง 3 อย่าง แต่ ground
+   เปลี่ยนไปใช้ระบบ "ปั๊มหลายก้อน" (.tree-of-life__stamp--ground) แล้ว และ leaf ก็เปลี่ยนไป
+   ใช้ .tree-of-life__stamp--leaf ไปก่อนหน้านี้แล้วเช่นกัน (ดู TreeOfLife.tsx) ตอนนี้เหลือ
+   เฉพาะลำต้น (.tree-of-life__layer--trunk) ที่ยังใช้คลาสนี้เป็นฐานอยู่จุดเดียว */
 .tree-of-life__layer {
   position: absolute;
   inset: 0;
@@ -53,11 +55,19 @@
 }
 
 /* [ใหม่ — ลำต้นชุดใหม่] ทับ animation ของ .tree-of-life__layer ด้านบน (0.7s scale+fade)
-   เฉพาะลำต้น ให้เป็น crossfade ล้วนๆ สั้นกว่า (0.4s ตามที่ระบุ ช่วง 300-500ms) แยกจากหญ้า/
-   ราก (grass) ที่ยังใช้ 0.7s เดิมไม่เปลี่ยน — มาทีหลังในไฟล์ ชนะ specificity เท่ากันด้วย
-   ลำดับประกาศ (source order) */
+   เฉพาะลำต้น ให้เป็น crossfade ล้วนๆ สั้นกว่า (0.4s ตามที่ระบุ ช่วง 300-500ms) — มาทีหลังใน
+   ไฟล์ ชนะ specificity เท่ากันด้วยลำดับประกาศ (source order)
+
+   [ใหม่ — ตามที่ระบุรอบนี้ "ทำลำต้นให้เล็กลง"] เพิ่ม transform: scale() หด body ของลำต้นเข้า
+   หาจุดกึ่งกลาง-ล่างสุด (50% 100%) — ค่า scale มาจาก CSS var --trunk-visual-scale ที่ตั้งไว้
+   ที่ .tree-of-life__stack (TreeOfLife.tsx, ผูกกับค่าคงที่ TRUNK_VISUAL_SCALE จุดเดียวกับที่
+   ใช้หดทรงพุ่ม/ตำแหน่งใบ-ดอกให้สัดส่วนตรงกัน — ดู scaleCanopyTowardTrunkBase ใน .tsx) จุดหมุน
+   50% 100% ทำให้โคนต้น/รากยังแนบขอบล่างเดิมของ .tree-of-life__layer เป๊ะ ไม่ขยับตำแหน่ง
+   มีแต่ตัวลำต้นที่หดเล็กลงเข้าหาจุดนั้น */
 .tree-of-life__layer--trunk {
   animation: treeOfLifeTrunkFade 0.4s ease-in-out both;
+  transform: scale(var(--trunk-visual-scale, 1));
+  transform-origin: 50% 100%;
 }
 
 @keyframes treeOfLifeTrunkFade {
@@ -96,17 +106,158 @@
   filter: drop-shadow(0 1px 3px var(--glass-b-18));
 }
 
-/* ไอเทมตกแต่งที่สวมใส่อยู่ (จาก InventoryModal) */
+/* [แก้ตามที่ระบุรอบนี้] ใบไม้แต่ละใบ — position/size/rotation มาจาก inline style ต่อใบใน .tsx
+   เหมือนเดิม แต่เงาย้ายไปอยู่ที่ .tree-of-life__leaf-group (ครอบทั้งกลุ่ม) แทนแล้ว เพราะตาม
+   ที่ระบุรอบนี้อยากได้ "เงาใต้แต่ละกลุ่ม" ไม่ใช่เงาต่อใบ (ทั้งดูเป็นธรรมชาติกว่าและถูกกว่า —
+   filter drop-shadow ต่อ container เดียวถูกกว่าต่อใบย่อยหลายสิบใบ) */
+.tree-of-life__stamp--leaf {
+  filter: none;
+}
+
+/* [ใหม่ — ตามที่ระบุรอบนี้] container ของ "1 กลุ่มใบที่เกาะปลายกิ่งจริง 1 จุด" — ครอบเต็มกล่อง
+   เหมือน .tree-of-life__foliage (ใบย่อยข้างในกำหนดตำแหน่งเป็น % ของกล่องเต็มเช่นกัน ไม่ใช่
+   ของกล่องนี้) จุดสำคัญคือ transform-origin ที่ตั้งไปที่พิกัดปลายกิ่งจริงของกลุ่มนั้น (inline
+   style จาก .tsx) ทำให้แอนิเมชันไหวตามลม (rotate) หมุนรอบปลายกิ่งจริง ไม่ใช่รอบกึ่งกลางจอ
+   แม้ตัว div เองจะครอบเต็มกล่องก็ตาม — will-change:transform ลดภาระ repaint ตอนไหว/โผล่ขึ้นมา
+   (กลุ่มเดียวไหวพร้อมกันทั้งกลุ่ม ถูกกว่าการ animate ใบทีละรูปแยกกันหลายสิบตัว) */
+/* [แก้ตามที่ระบุรอบนี้ ข้อ 5] mount ใช้ keyframe แยกของใบเอง (treeOfLifeLeafBloom) แทน
+   treeOfLifeLayerGrow ที่ใช้ร่วมกับ ground/ดอกไม้ — เพราะระบุชัดว่า "ห้ามมีการเลื่อนตำแหน่ง
+   เลยแม้แต่น้อย" (from opacity:0 scale:0.5 → to opacity:1 scale:1 เท่านั้น ไม่มี translate)
+   ตำแหน่งจริง (left/top ของ <img> ข้างใน + transformOrigin ของ div นี้) มาจาก leaf.xPct/
+   yPct ตรงๆ ตั้งแต่เฟรมแรกอยู่แล้ว ไม่ได้ขยับเข้าที่ทีหลัง */
+.tree-of-life__leaf-group {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  will-change: transform;
+  filter: drop-shadow(0 2px 3px var(--glass-b-15));
+  animation:
+    treeOfLifeLeafBloom 0.5s cubic-bezier(0.22, 1, 0.36, 1) both,
+    treeOfLifeLeafSway 4s ease-in-out infinite;
+}
+
+@keyframes treeOfLifeLeafBloom {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* [ใหม่ — ตามที่ระบุ] ไหวเบาๆ ตามลม ±2.5 องศา คาบ 3-5s (สุ่มต่อกลุ่มผ่าน animationDuration/
+   Delay inline) ไม่ให้ทุกกลุ่มไหวพร้อมกันหมดทั้งต้น ดูเป็นธรรมชาติ */
+@keyframes treeOfLifeLeafSway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-of-life__leaf-group {
+    animation: treeOfLifeLeafBloom 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 5] สายลมพัดเป็นระยะ — สลับ "ชื่อ" อนิเมชันของ slot ไหว
+   (slot ที่ 2 ในรายการ) จาก treeOfLifeLeafSway ปกติเป็นแรงขึ้นชั่วคราว โดยไม่แตะ slot แรก
+   (treeOfLifeLeafBloom) เลย — ใช้ animation-name แบบยาว (longhand) แทน shorthand `animation`
+   เพราะถ้าประกาศ shorthand ใหม่ทั้งก้อน จะทำให้ slot แรก (มี state 'both' ค้างอยู่แล้ว) รีสตาร์ท
+   ไปด้วยทุกครั้งที่มีลมพัด (เห็นเป็นต้นไม้ "กระพริบ" opacity/scale ทั้งต้นพร้อมกันโดยไม่ตั้งใจ) */
+.tree-of-life__leaf-group--gust {
+  animation-name: treeOfLifeLeafBloom, treeOfLifeLeafGust;
+}
+
+@keyframes treeOfLifeLeafGust {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(8deg); }
+}
+
+/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] กลุ่มใบที่กำลังร่วง (dying, ~30-50% ของ tip แบบสุ่มคงที่) —
+   ทับ animation ทั้งก้อนแบบเจาะจง (ผสม 2 คลาสให้ specificity สูงกว่า .tree-of-life__leaf-group
+   เฉยๆ พอที่จะชนะโดยไม่ต้องใช้ !important) ช่วงร่วงไม่ต้องมี sway ต่อ (กำลังร่วงอยู่แล้ว) —
+   ตัว .tsx เองก็เว้น animationDuration/Delay inline ไว้ตอนร่วง (ไม่งั้น inline จะชนะ
+   ค่าที่ตั้งไว้ที่นี่เสมอไม่ว่า specificity ของ class จะเท่าไหร่ก็ตาม) */
+.tree-of-life__leaf-group.tree-of-life__leaf-group--falling {
+  animation: treeOfLifeLeafFallOut 1.8s ease-in forwards;
+}
+
+@keyframes treeOfLifeLeafFallOut {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(46px) rotate(55deg); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-of-life__leaf-group.tree-of-life__leaf-group--falling {
+    animation: treeOfLifeLeafFallOutReduced 1.8s ease-in forwards;
+  }
+}
+
+@keyframes treeOfLifeLeafFallOutReduced {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] เลเยอร์ครอบใบทั้งหมด (ทุกกลุ่ม) — filter สีเดียวสำหรับทั้ง
+   ต้นตอนใบเหี่ยว/ร่วง (LEAF_HEALTH_FILTER ใน .tsx) transition ช้าๆ ให้ความรู้สึก "ค่อยๆ เหี่ยว"
+   สมจริง ไม่ใช่เปลี่ยนสีทันทีแบบตัดภาพ */
+.tree-of-life__leaf-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transition: filter 3s ease;
+}
+
+/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] เลเยอร์ patch หญ้า/ดอกหญ้า (variant 2/3) ที่ซ้อนทับฐาน
+   variant 1 — opacity/filter คุมจาก .tsx (groundVariant2/3Opacity, GRASS_HEALTH_FILTER)
+   transition นุ่มนวลตอนเปลี่ยน healthVisualLevel หรือ decay/ฟื้นตัว ไม่กระตุก */
+.tree-of-life__ground-overlay {
+  transition: opacity 3s ease, filter 3s ease;
+}
+
+/* [ใหม่ — ตามที่ระบุรอบนี้] ดิน/หญ้าปั๊มซ้ำหลายก้อนคาบเกี่ยวกัน (generateGroundClumps ใน
+   .tsx) ใช้โครง .tree-of-life__stamp เดียวกัน แทนภาพวงกลมดินเดี่ยวๆ เดิม — ไม่ใส่เงาแบบใบ/
+   ดอก เพราะเป็นพื้นผิวแนบพื้น ใส่เงาจะดูลอยเกินจริง */
+.tree-of-life__stamp--ground {
+  filter: none;
+}
+
+/* ไอเทมตกแต่งที่สวมใส่อยู่ (จาก InventoryModal)
+   [แก้บั๊ก — ไอเทมโซน "กระถาง" (pot, top:85% ดู DECORATION_ZONE_POSITION) ลากไม่ได้]
+   เดิม z-index:5 ต่ำกว่า .tree-of-life__hint-hotspot (z-index:6 ด้านล่าง ซึ่งวางอยู่แถว
+   โคนต้น bottom:2% สูง 10% = ครอบคลุมพื้นที่ y ~88-98% ที่ทับกับตำแหน่งไอเทมโซนกระถางพอดี)
+   สอง element นี้เป็น sibling ในบริบทซ้อนทับเดียวกัน hint-hotspot ที่ z-index สูงกว่าจึง
+   ดักจับ pointerdown ของไอเทมกระถางที่อยู่ข้างใต้ไปหมด ทั้งที่ไม่มีการล็อกตำแหน่งไอเทม
+   กระถางไว้จริงในโค้ดที่ไหนเลย (handlePointerDown ใน TreeOfLife.tsx ไม่มีเงื่อนไขแยกตาม
+   zone/category) — เป็นบั๊กจาก z-index ชนกันล้วนๆ ไม่ใช่การออกแบบตั้งใจ แก้โดยยกเลเยอร์นี้
+   ขึ้นเหนือ hint-hotspot แทน (ไอเทมตกแต่งควรมีสิทธิ์เหนือ tooltip hotspot อยู่แล้วเพราะเป็น
+   UI ที่ผู้ใช้ต้องโต้ตอบด้วยมือโดยตรง) */
 .tree-of-life__decorations {
   position: absolute;
   inset: 0;
-  z-index: 5;
+  z-index: 7;
   pointer-events: none;
 }
 
+/* [แก้บั๊ก — ตามที่ระบุ] เดิมกำหนดแค่ font-size (ไว้คุมขนาด emoji ตัวอักษร) ไม่เคยกำหนด
+   width/height จริงเลย — ตอนนี้ span นี้ไม่มีรูปจริงโหลดสำเร็จมาก่อน (getDecorationImage()
+   404 เสมอ ดู commit ก่อนหน้า) จึงไม่มีใครเคยสังเกตเห็นปัญหานี้ พอเปลี่ยนมาใช้ ITEM_ICONS
+   (รูปจริงโหลดสำเร็จ) แล้ว .tree-of-life__decoration-img ที่ตั้ง width/height:100% ไว้
+   (ดูด้านล่าง) ไม่มี % ของอะไรให้อ้างอิง เพราะ span นี้ position:absolute ไม่มี width/height
+   ของตัวเอง (shrink-to-fit) — เบราว์เซอร์จึงเรนเดอร์ตามขนาดไฟล์จริง (บางไฟล์ใหญ่เป็นพันพิกเซล
+   เช่น Magic Staff.png 1150x866) ทำให้ไอเทมตกแต่งใหญ่จนบังต้นไม้ทั้งต้น — แก้โดยกำหนด
+   width/height ตรงๆ เท่ากับขนาดที่ font-size เคยคุม emoji ไว้ (กล่องขนาดเท่าเดิม รูปจริงจึง
+   เล็กพอดีเหมือน emoji เดิมทันที ไม่ต้องแก้ที่อื่น) */
 .tree-of-life__decoration-item {
   position: absolute;
   transform: translate(-50%, -50%);
+  width: clamp(100px, 100vw, 150px);
+  height: clamp(100px, 100vw, 150px);
   font-size: clamp(20px, 6vw, 34px);
   filter: drop-shadow(0 3px 6px var(--glass-b-30));
   animation: treeOfLifeDecorationPop 0.5s cubic-bezier(0.2, 0.8, 0.4, 1) both;
@@ -246,6 +397,31 @@
   filter: drop-shadow(0 6px 14px var(--glass-b-45));
   z-index: 50;
   transition: none !important;
+}
+
+/* [ใหม่ — ตามที่ระบุ] handle ปรับขนาด — โผล่มุมขวาล่างของไอเทมเฉพาะตอนถูกเลือก (คลิก/แตะ
+   ครั้งแรก) ขนาดคงที่ไม่ผูกกับ scale ของไอเทม (อยู่นอกกล่องที่ scale ตามขนาดจริงที่คำนวณ
+   เป็น width/height ตรงๆ ใน TreeOfLife.tsx ไม่ใช่ CSS transform:scale จึงไม่กระทบ handle) */
+.tree-of-life__decoration-resize-handle {
+  position: absolute;
+  right: -9px;
+  bottom: -9px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--g600, #40916C);
+  border: 2px solid var(--fixed-white);
+  color: var(--fixed-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+  cursor: nwse-resize;
+  touch-action: none;
+  pointer-events: auto;
+  box-shadow: 0 2px 8px var(--glass-b-35);
+  z-index: 60;
 }
 
 /* พื้นที่ให้วางไอเทมตกแต่งได้อิสระ — โผล่เป็นกรอบจางๆ ตอนกำลังลากเท่านั้น */

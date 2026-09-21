@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, useLayoutEffect } from 'react'
+import { useEffect, useRef, useState, useLayoutEffect, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent } from 'react'
 import { isQuestFullyDoneToday, type QuestDef } from '../../../config/questCatalog'
 import { QUEST_ICONS } from '../../../config/iconAssets'
 import OwlAvatar from '../OwlAvatar'
 import { useAppContext } from '../../../context/AppContext'
 import { playSfx } from '../../../utils/audioPlayer'
+import { useIsLowPowerMode } from '../../../hooks/useMediaQuery'
 
 const C_13 = '#4B5563'
 const C_14 = '#374151'
@@ -95,15 +96,37 @@ interface LearningQuestMapProps {
  * เส้นทางในวิดีโอพอดี ปรับตัวเลขตรงนี้ได้ตรงๆ
  */
 const FIXED_NODE_POSITIONS: { x: number; y: number }[] = [
-  { x: 26, y: 72 },     // 1. เพ่งสมาธิ / ตั้งเป้าหมาย
-  { x: 40, y: 61 },   // 2. หยั่งรากลึก / โหมดจดจ่อ
-  { x: 55, y: 51 },   // 3. เทกระเป๋าความจำผ่านเสียง
-  { x: 55, y: 30 }, // 4. ผสมเกสรข้ามศาสตร์
-  { x: 56, y: 15 },     // 5. เช็กอินรายวัน (locked node)
+  { x: 40, y: 70 },   // 1. เพ่งสมาธิ / ตั้งเป้าหมาย (จุดเริ่มทางเดินด้านล่าง)
+  { x: 36, y: 55 },   // 2. หยั่งรากลึก / โหมดจดจ่อ
+  { x: 45, y: 45 },   // 3. เทกระเป๋าความจำผ่านเสียง
+  { x: 50, y: 35 },   // 4. ผสมเกสรข้ามศาสตร์ (โค้งซ้ายขึ้นบันไดหิน)
+  { x: 44, y: 29 },   // 5. เช็กอินรายวัน (locked node, ใกล้ปากถ้ำคริสตัล)
 ]
 
 const VIDEO_NATIVE_WIDTH = 1920
 const VIDEO_NATIVE_HEIGHT = 1080
+
+/** [ใหม่ — pan/zoom] ซูมเข้าได้สูงสุดกี่เท่าของซูมออกสุด (MIN_ZOOM) */
+const MAX_ZOOM_MULTIPLIER = 2.5
+/** [ใหม่ — pan/zoom] ความไวของ mouse wheel ต่อการซูม */
+const WHEEL_ZOOM_SPEED = 0.0015
+/** [ใหม่ — pan/zoom] ระยะทางลาก (px) ขั้นต่ำก่อนจะถือว่าเป็น "ลาก" ไม่ใช่ "แตะ" — ต่ำกว่านี้
+ * ปล่อยให้ click ของโหนดเควส/ปุ่ม FAB ทำงานตามปกติ */
+const CLICK_DRAG_THRESHOLD_PX = 5
+
+/** [ใหม่ — ตำแหน่งนกฮูก] ก่อนทำโหนดที่ 1 สำเร็จ — จุดบนเส้นทางก่อนถึงโหนด 1 (x:40,y:70)
+ * ลงไปทางล่างขวาตามแนวทางเดินจริง (ตามที่ระบุ แทน fallback {x:42,y:67} เดิมที่คาลิเบรตกับ
+ * FIXED_NODE_POSITIONS ชุดเก่าซึ่งไม่ตรงเส้นทางปัจจุบันแล้ว) */
+const FIRST_OWL_POS = { x: 51, y: 90 }
+
+/** [ใหม่ — กล้องอัตโนมัติ] ค้างโชว์แผนที่เต็มกี่ ms ก่อนเริ่มซูมเข้าไปหาโหนดล่าสุด (ข้อ 2) */
+const CAMERA_INTRO_HOLD_MS = 1000
+/** [ใหม่ — กล้องอัตโนมัติ] ระยะเวลาแอนิเมชัน pan+zoom ไปหาโหนดเป้าหมาย */
+const CAMERA_FOCUS_DURATION_MS = 1300
+/** [ใหม่ — กล้องอัตโนมัติ] ซูมตอนโฟกัสโหนด = กี่เท่าของ MIN_ZOOM (ปรับดูให้พอดีขนาดปุ่ม/โหนด
+ * บนจอจริง — 1.75 อยู่กึ่งกลางช่วง 1.5-2 ที่ระบุ และยังต่ำกว่า MAX_ZOOM_MULTIPLIER (2.5) มาก
+ * พอที่ผู้เล่นจะซูมเข้าต่อเองได้อีกหลังกล้องหยุด) */
+const FOCUS_ZOOM_MULTIPLIER = 1.75
 
 /**
  * Component สัญลักษณ์กองไฟแฟนตาซี (SVG Animated Campfire)
@@ -230,31 +253,86 @@ function FantasyCampfireIcon({ status }: { status: 'completed' | 'active' | 'loc
   )
 }
 
-/**
- * คำนวณตำแหน่ง % บนหน้าจอตามพฤติกรรม object-fit: cover ของวิดีโอ
- */
-function mapCoverCoordsToContainer(
-  origX: number,
-  origY: number,
-  containerW: number,
-  containerH: number
+/*============================================================================*\
+  [ใหม่ — pan/zoom] แผนที่ตอนนี้ครอบพื้นหลัง+โหนดในเลเยอร์ transform เดียว
+  (.learning-quest-map__canvas ขนาดคงที่ VIDEO_NATIVE_WIDTH×HEIGHT) แทนการคำนวณ %
+  ตำแหน่งใหม่ทุกครั้งแบบ mapCoverCoordsToContainer เดิม — เพราะโหนด/พื้นหลังอยู่ในเลเยอร์
+  เดียวกันแล้ว ตำแหน่ง % เดิมใน FIXED_NODE_POSITIONS ใช้ตรงๆ ได้เลยโดยไม่ต้องแปลงพิกัดอีก
+  ฟังก์ชันด้านล่างนี้ทำหน้าที่คำนวณขอบเขต zoom/pan ที่อนุญาตแทน (บริสุทธิ์ ไม่ผูกกับ closure
+  ใดๆ กันปัญหา stale closure ตอนเรียกจาก wheel/pointer handler ที่ใช้ ref เก็บค่าล่าสุด)
+\*============================================================================*/
+
+/** ซูมออกสุดได้แค่ไหน — ต้องคลุมเต็ม viewport เสมอ ไม่ว่าอัตราส่วนจอจะเป็นแบบไหน (เทียบเท่า
+ * object-fit: cover เดิม) คำนวณใหม่ทุกครั้งที่ viewport resize */
+function getZoomBounds(viewportW: number, viewportH: number): { min: number; max: number } {
+  if (viewportW <= 0 || viewportH <= 0) return { min: 1, max: 1 }
+  const min = Math.max(viewportW / VIDEO_NATIVE_WIDTH, viewportH / VIDEO_NATIVE_HEIGHT)
+  return { min, max: min * MAX_ZOOM_MULTIPLIER }
+}
+
+function clampNum(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+/** ขอบเขต pan ที่อนุญาต ณ zoom ปัจจุบัน — กันลากเลยขอบจนเห็นพื้นที่ว่างนอกแผนที่ */
+function clampPanValue(
+  panX: number,
+  panY: number,
+  zoom: number,
+  viewportW: number,
+  viewportH: number
 ): { x: number; y: number } {
-  if (containerW <= 0 || containerH <= 0) return { x: origX, y: origY }
+  const scaledW = VIDEO_NATIVE_WIDTH * zoom
+  const scaledH = VIDEO_NATIVE_HEIGHT * zoom
+  const minPanX = Math.min(0, viewportW - scaledW)
+  const minPanY = Math.min(0, viewportH - scaledH)
+  return { x: clampNum(panX, minPanX, 0), y: clampNum(panY, minPanY, 0) }
+}
 
-  const scale = Math.max(containerW / VIDEO_NATIVE_WIDTH, containerH / VIDEO_NATIVE_HEIGHT)
-  const renderedW = VIDEO_NATIVE_WIDTH * scale
-  const renderedH = VIDEO_NATIVE_HEIGHT * scale
+/** [ใหม่ — pan/zoom, พบตอนเทสต์จริง] .learning-quest-map ถูกครอบด้วย .dashboard__modal-layer
+ * ซึ่งมี CSS transform: scale(0.97) อยู่จริง (ยืนยันด้วย getComputedStyle ตอนเทสต์) — ทำให้
+ * el.clientWidth/Height (ที่ pan/zoom ทั้งหมดใช้เป็นหน่วย "พื้นที่จริงของแผนที่") กับตำแหน่งเมาส์/
+ * นิ้วที่ได้จาก event.clientX/Y (อยู่ใน "พื้นที่หน้าจอที่มองเห็น" หลังโดน scale ของ ancestor แล้ว)
+ * เป็นคนละหน่วยกัน ถ้าไม่แปลงก่อน จุดยึดซูม/ระยะทางลากจะเพี้ยนไปตามอัตราส่วน scale นั้นเสมอ
+ * (เช่นนี้คือ 3%) ฟังก์ชันนี้อ่านอัตราส่วนจริงจาก getBoundingClientRect() เทียบ clientWidth/Height
+ * ของ elementเอง จึงถูกต้องไม่ว่า ancestor จะ scale เท่าไหร่หรือไม่ scale เลยก็ตาม (ไม่ hardcode 0.97) */
+function measureVisualTransform(
+  el: HTMLElement,
+  layoutW: number,
+  layoutH: number
+): { originX: number; originY: number; scale: number } {
+  const rect = el.getBoundingClientRect()
+  const scale = layoutW > 0 && layoutH > 0 ? (rect.width / layoutW + rect.height / layoutH) / 2 : 1
+  return { originX: rect.left, originY: rect.top, scale: scale > 0 ? scale : 1 }
+}
 
-  const offsetX = (containerW - renderedW) / 2
-  const offsetY = (containerH - renderedH) / 2
+/** [ใหม่ — กล้องอัตโนมัติ] ซูมตอนโฟกัสโหนด — คูณจาก MIN_ZOOM ปัจจุบันเสมอ (ไม่ hardcode ตัวเลข
+ * ตายตัว) กัน clamp ไม่ให้เกิน MAX_ZOOM ในกรณีจอเล็กมากจน MIN_ZOOM*1.75 ดันทะลุ MAX_ZOOM */
+function getFocusZoom(viewportW: number, viewportH: number): number {
+  const { min, max } = getZoomBounds(viewportW, viewportH)
+  return clampNum(min * FOCUS_ZOOM_MULTIPLIER, min, max)
+}
 
-  const pixelX = offsetX + (origX / 100) * renderedW
-  const pixelY = offsetY + (origY / 100) * renderedH
+/** easeInOutCubic — โค้ง ease-in-out นุ่มนวลมาตรฐานสำหรับแอนิเมชันกล้อง (ข้อ 2,3) */
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+}
 
-  return {
-    x: (pixelX / containerW) * 100,
-    y: (pixelY / containerH) * 100,
-  }
+/** [ใหม่ — กล้องอัตโนมัติ] คำนวณ pan ที่ทำให้จุด (rawX,rawY) % บนแผนที่ (0-100) ไปอยู่กึ่งกลาง
+ * viewport พอดีที่ zoom ที่กำหนด — ใช้ clampPanValue เดิมกันไม่ให้จุดที่อยู่ใกล้ขอบแผนที่ทำให้
+ * เห็นพื้นที่ว่างนอกแผนที่ตอนกล้องเลื่อนไปโฟกัส */
+function computeFocusPan(
+  rawX: number,
+  rawY: number,
+  zoom: number,
+  viewportW: number,
+  viewportH: number
+): { x: number; y: number } {
+  const targetWorldX = (rawX / 100) * VIDEO_NATIVE_WIDTH
+  const targetWorldY = (rawY / 100) * VIDEO_NATIVE_HEIGHT
+  const panX = viewportW / 2 - targetWorldX * zoom
+  const panY = viewportH / 2 - targetWorldY * zoom
+  return clampPanValue(panX, panY, zoom, viewportW, viewportH)
 }
 
 export default function LearningQuestMap({
@@ -267,14 +345,149 @@ export default function LearningQuestMap({
   selectedQuestCode,
 }: LearningQuestMapProps) {
   const { settings } = useAppContext()
+  const lowPower = useIsLowPowerMode()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
+
+  /*==========================================================================*\
+    [ใหม่ — pan/zoom] zoom/pan เป็น "state สำหรับ render" — แหล่งความจริงจริงๆ ระหว่างลาก/ซูม
+    คือ refs ด้านล่าง (panXRef/panYRef/zoomRef) ที่ handler ทุกตัวอ่าน-เขียนตรงๆ แบบ imperative
+    แล้วค่อย flush เข้า state ผ่าน requestAnimationFrame (throttle ไม่ให้ setState ถี่เกินเฟรม
+    เรตตอนมือถือส่ง pointermove รัวๆ) — containerSizeRef เก็บขนาด viewport ล่าสุดไว้ให้ wheel
+    listener แบบ native (ผูก effect ครั้งเดียว) อ่านค่าปัจจุบันได้เสมอโดยไม่ต้อง resubscribe
+  \*==========================================================================*/
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const zoomRef = useRef(zoom)
+  const panXRef = useRef(pan.x)
+  const panYRef = useRef(pan.y)
+  const containerSizeRef = useRef(containerSize)
+  useEffect(() => { containerSizeRef.current = containerSize }, [containerSize])
+  const didInitZoomRef = useRef(false)
+  const rafIdRef = useRef<number | null>(null)
+
+  // ตัวติดตามท่าทางลาก/บีบซูม — ทั้งหมดเป็น ref ล้วน (ไม่ใช่ state) เพราะอัปเดตทุกเฟรมของ
+  // pointermove ซึ่งถี่เกินกว่าจะผ่าน setState ได้โดยตรง
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map())
+  const panLastRef = useRef<{ x: number; y: number } | null>(null)
+  const pinchLastRef = useRef<{ distance: number; midX: number; midY: number } | null>(null)
+  const dragMovedRef = useRef(0)
+  const suppressNextClickRef = useRef(false)
+  // [แก้บั๊ก — เควสกดเล่นไม่ได้] เดิม setPointerCapture ทันทีตอน pointerdown ทุกครั้ง (แม้แค่
+  // แตะเฉยๆ) — ตาม Pointer Events spec พอ element มี pointer capture แล้ว browser จะ retarget
+  // compatibility mouse event รวมถึง "click" ไปที่ตัวที่ capture (ในที่นี้คือ div ครอบนอกสุด)
+  // แทนที่จะเป็นปุ่มโหนดเควสที่อยู่ลึกเข้าไปข้างใน ทำให้ onClick ของปุ่มไม่เคยถูกเรียกเลยแม้แต่
+  // ตอนแตะเบาๆ ไม่ได้ลาก (เทสต์รอบก่อนพลาดจุดนี้เพราะใช้ dispatchEvent(new MouseEvent('click'))
+  // ยิงตรงเข้าปุ่มเอง ซึ่งข้าม native retargeting ไปเลย ไม่ใช่การทดสอบคลิกจริงจากเมาส์/นิ้ว) —
+  // แก้โดยเลื่อนการ capture ไปทำตอนยืนยันแล้วว่าเป็น "ลาก" จริง (เกิน threshold เดียวกับที่ใช้
+  // แยกแตะ/ลากอยู่แล้ว) แทน ตอนแตะเฉยๆ (ไม่เกิน threshold) จะไม่มีการ capture เลย click จึงตกถึง
+  // ปุ่มตามปกติ
+  const hasCapturedPointerRef = useRef(false)
+  // [ใหม่ — pan/zoom] แปลงพิกัดหน้าจอ (clientX/Y, มี ancestor scale ปนอยู่) กลับเป็นหน่วยเดียวกับ
+  // pan/zoom (clientWidth/Height) — วัดครั้งเดียวตอนเริ่มท่าทางแล้ว cache ไว้ทั้งท่าทาง (ระหว่าง
+  // ลาก/บีบซูมค้างไว้ ancestor ไม่มีทางเปลี่ยน scale เอง จึงไม่ต้องวัดซ้ำทุกเฟรม)
+  const visualTransformRef = useRef({ originX: 0, originY: 0, scale: 1 })
+
+  /*==========================================================================*\
+    [ใหม่ — กล้องอัตโนมัติ ข้อ 2,3,4] แยกจากระบบ pan/zoom แบบ manual ข้างบนโดยสิ้นเชิง —
+    ใช้ zoomRef/panXRef/panYRef "ก้อนเดียวกัน" เป็นปลายทางเขียนค่า (เพราะเป็นแหล่งความจริง
+    เดียวกัน) แต่ขับเคลื่อนด้วย rAF tween ของตัวเอง (cameraTweenCancelRef เก็บฟังก์ชันยกเลิก
+    tween ที่กำลังเล่นอยู่ — เรียกตอนผู้เล่นเริ่มลาก/หมุนล้อเมาส์เองเพื่อคืนการควบคุมทันที
+    ตามข้อ 4) pendingCameraFocusRef เก็บคำขอโฟกัสที่ "รอผู้เล่นปล่อยมือ/นิ้วก่อน" ถ้าเหตุการณ์
+    ที่ควรเลื่อนกล้อง (ทำโหนดสำเร็จ) เกิดขึ้นระหว่างที่ผู้เล่นกำลังลาก/บีบซูมค้างอยู่พอดี
+  \*==========================================================================*/
+  const cameraAnimFrameRef = useRef<number | null>(null)
+  const cameraTweenCancelRef = useRef<(() => void) | null>(null)
+  const pendingCameraFocusRef = useRef<{ x: number; y: number; zoom: number; duration: number } | null>(null)
+
+  // [ย้ายขึ้นมาจากท้ายไฟล์รอบนี้] ต้องรู้ตำแหน่งนกฮูก (owlPos) ก่อนถึง effect ตั้งกล้องเริ่มต้น
+  // ด้านล่าง (ข้อ 2) ที่ต้องใช้ตำแหน่งนี้เป็นเป้าหมายซูมตอนเข้าหน้าครั้งแรก
+  const rawNodePositions = pathQuests.map((_, i) => FIXED_NODE_POSITIONS[i] ?? generateFallbackPosition(i, pathQuests.length))
+
+  const nodes: PathNode[] = pathQuests.map((quest, i) => ({
+    quest,
+    xPct: rawNodePositions[i].x,
+    yPct: rawNodePositions[i].y,
+  }))
+
+  const completedPathCount = pathQuests.filter((q) => isCompleted(q.code)).length
+  // [แก้ตามที่ระบุ — ข้อ 1] เดิม offset คงที่จากโหนดที่ 1 (x-9, y+7) คาลิเบรตกับ
+  // FIXED_NODE_POSITIONS ชุดเก่าที่ไม่ตรงเส้นทางปัจจุบันแล้ว (โหนด 1 ย้ายจาก {26,72} เป็น
+  // {40,70}) นกฮูกเลยหลุดออกนอกเส้นทางไปตกพุ่มไม้ — ตอนนี้: ยังไม่ทำโหนดไหนสำเร็จ ใช้ FIRST_OWL_POS
+  // (จุดคงที่บนเส้นทางก่อนถึงโหนด 1 ที่ตรวจสอบด้วยตาแล้วว่าตรงเส้นทางจริง) ทำโหนด N สำเร็จแล้ว
+  // ใช้ตำแหน่งของโหนด N "พอดี" แทนการบวก offset เดา — รับประกันว่าอยู่บนเส้นทางเสมอเพราะพิกัด
+  // โหนดเองคือพิกัดที่คาลิเบรตกับเส้นทางในวิดีโอไว้แล้ว
+  const owlPos = completedPathCount === 0 || rawNodePositions.length === 0
+    ? FIRST_OWL_POS
+    : rawNodePositions[Math.min(completedPathCount - 1, rawNodePositions.length - 1)]
+
+  const scheduleFlush = () => {
+    if (rafIdRef.current != null) return
+    rafIdRef.current = window.requestAnimationFrame(() => {
+      rafIdRef.current = null
+      setZoom(zoomRef.current)
+      setPan({ x: panXRef.current, y: panYRef.current })
+    })
+  }
 
   const handlePickSideQuest = (q: QuestDef) => {
     setIsSideMenuOpen(false)
     onSelectQuest(q)
   }
+
+  /** [ใหม่ — กล้องอัตโนมัติ ข้อ 2,3,4] เลื่อน+ซูมกล้องไปโฟกัสจุด (rawX,rawY) % บนแผนที่แบบมี
+   * แอนิเมชันนุ่มนวล — ถ้าผู้เล่นกำลังลาก/บีบซูมค้างอยู่พอดี (pointersRef ไม่ว่าง) ให้ "รอ" แค่
+   * เก็บคำขอไว้ใน pendingCameraFocusRef ก่อน (ข้อ 4: ห้ามตัดจังหวะการลากที่ทำอยู่กลางคัน) แล้ว
+   * handlePointerUpOrCancel จะเป็นคนเรียกซ้ำให้เองตอนปล่อยมือ/นิ้วหมดจริง */
+  const startCameraFocus = (rawX: number, rawY: number, targetZoom: number, durationMs: number) => {
+    if (pointersRef.current.size > 0) {
+      pendingCameraFocusRef.current = { x: rawX, y: rawY, zoom: targetZoom, duration: durationMs }
+      return
+    }
+    const { width, height } = containerSizeRef.current
+    if (width <= 0 || height <= 0) return
+
+    cameraTweenCancelRef.current?.()
+    const from = { zoom: zoomRef.current, x: panXRef.current, y: panYRef.current }
+    const to = computeFocusPan(rawX, rawY, targetZoom, width, height)
+    // [หมายเหตุ react-hooks/purity] startCameraFocus ถูกเรียกจาก event handler/effect เท่านั้น
+    // (ไม่เคยถูกเรียกระหว่าง render จริง) เหมือน useCountdown.ts ที่ใช้ performance.now() แบบ
+    // เดียวกันนี้อยู่แล้ว แต่ตัว linter วิเคราะห์ตามตำแหน่งซินแทกซ์ในบอดี้ component ไม่รู้จังหวะ
+    // การเรียกจริง จึงต้อง disable ตรงนี้
+    // eslint-disable-next-line react-hooks/purity
+    const start = performance.now()
+
+    const tick = (now: number) => {
+      const t = clampNum((now - start) / durationMs, 0, 1)
+      const eased = easeInOutCubic(t)
+      const z = from.zoom + (targetZoom - from.zoom) * eased
+      const x = from.x + (to.x - from.x) * eased
+      const y = from.y + (to.y - from.y) * eased
+      zoomRef.current = z
+      panXRef.current = x
+      panYRef.current = y
+      setZoom(z)
+      setPan({ x, y })
+      if (t < 1) {
+        cameraAnimFrameRef.current = window.requestAnimationFrame(tick)
+      } else {
+        cameraAnimFrameRef.current = null
+        cameraTweenCancelRef.current = null
+      }
+    }
+    cameraAnimFrameRef.current = window.requestAnimationFrame(tick)
+    cameraTweenCancelRef.current = () => {
+      if (cameraAnimFrameRef.current != null) window.cancelAnimationFrame(cameraAnimFrameRef.current)
+      cameraAnimFrameRef.current = null
+    }
+  }
+
+  // [ใหม่ — กล้องอัตโนมัติ] ยกเลิก tween ค้างเมื่อ component unmount กลางแอนิเมชัน (เช่นปิด
+  // หน้าเควสระหว่างกล้องกำลังเลื่อน) กัน setState หลัง unmount
+  useEffect(() => {
+    return () => { cameraTweenCancelRef.current?.() }
+  }, [])
 
   useLayoutEffect(() => {
     const el = containerRef.current
@@ -291,28 +504,216 @@ export default function LearningQuestMap({
     return () => observer.disconnect()
   }, [])
 
-  const rawNodePositions = pathQuests.map((_, i) => FIXED_NODE_POSITIONS[i] ?? generateFallbackPosition(i, pathQuests.length))
+  /** [ใหม่ — pan/zoom] ตั้ง zoom เริ่มต้น = MIN_ZOOM (คลุมเต็ม viewport พอดี จุดกึ่งกลางแผนที่
+   * เหมือน object-fit: cover เดิม) ตอนรู้ขนาด viewport ครั้งแรก แล้วคำนวณใหม่/clamp ค่าที่ผู้ใช้
+   * ซูม-ลากไว้แล้วทุกครั้งที่ viewport resize จริง (ไม่ใช่คำนวณครั้งเดียวตอน mount) */
+  useEffect(() => {
+    const { width, height } = containerSize
+    if (width <= 0 || height <= 0) return
+    const { min: newMinZoom, max: newMaxZoom } = getZoomBounds(width, height)
 
-  const mappedNodePositions = rawNodePositions.map((pos) =>
-    mapCoverCoordsToContainer(pos.x, pos.y, containerSize.width, containerSize.height)
-  )
+    if (!didInitZoomRef.current) {
+      didInitZoomRef.current = true
+      const scaledW = VIDEO_NATIVE_WIDTH * newMinZoom
+      const scaledH = VIDEO_NATIVE_HEIGHT * newMinZoom
+      const initX = Math.min(0, (width - scaledW) / 2)
+      const initY = Math.min(0, (height - scaledH) / 2)
+      zoomRef.current = newMinZoom
+      panXRef.current = initX
+      panYRef.current = initY
+      setZoom(newMinZoom)
+      setPan({ x: initX, y: initY })
 
-  const nodes: PathNode[] = pathQuests.map((quest, i) => ({
-    quest,
-    xPct: mappedNodePositions[i].x,
-    yPct: mappedNodePositions[i].y,
-  }))
+      // [ใหม่ — กล้องอัตโนมัติ ข้อ 2] เห็นแผนที่เต็มก่อนสั้นๆ (ตั้งไว้ข้างบนแล้ว) แล้วค่อยซูมไป
+      // โฟกัส owlPos ปัจจุบัน (โหนดล่าสุดที่เล่นถึงจริง ไม่ใช่โหนด 1 ตายตัว — ดูคอมเมนต์ owlPos
+      // ด้านบน) ผูกกับ didInitZoomRef เดียวกันจึงรับประกันว่าเล่นแค่ครั้งเดียวตอน mount จริงๆ
+      const introTimer = window.setTimeout(() => {
+        startCameraFocus(owlPos.x, owlPos.y, getFocusZoom(width, height), CAMERA_FOCUS_DURATION_MS)
+      }, CAMERA_INTRO_HOLD_MS)
+      return () => window.clearTimeout(introTimer)
+    }
 
-  const completedPathCount = pathQuests.filter((q) => isCompleted(q.code)).length
-  const rawStartPos = rawNodePositions.length > 0
-    ? { x: rawNodePositions[0].x - 9, y: Math.min(97, rawNodePositions[0].y + 7) }
-    : { x: 42, y: 67 }
+    const newZoom = clampNum(zoomRef.current, newMinZoom, newMaxZoom)
+    const newPan = clampPanValue(panXRef.current, panYRef.current, newZoom, width, height)
+    zoomRef.current = newZoom
+    panXRef.current = newPan.x
+    panYRef.current = newPan.y
+    setZoom(newZoom)
+    setPan(newPan)
+    // [หมายเหตุ react-hooks/exhaustive-deps] owlPos/startCameraFocus ไม่ใส่ใน deps โดยตั้งใจ —
+    // effect นี้ต้อง trigger จาก "viewport resize จริง" เท่านั้น (containerSize) ไม่ใช่ทุกครั้งที่
+    // owlPos เปลี่ยน reference (คำนวณใหม่ทุก render) การอ่านค่าล่าสุดผ่าน closure ตอน effect
+    // ทำงานจริงถูกต้องอยู่แล้วเพราะ branch ที่ใช้ owlPos ทำงานแค่ครั้งเดียวตอน mount (ผูกกับ
+    // didInitZoomRef) ซึ่ง owlPos ตอนนั้นสะท้อนความคืบหน้าจริงจาก props ที่ส่งเข้ามาแล้ว
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerSize])
 
-  const rawOwlPos = completedPathCount === 0
-    ? rawStartPos
-    : rawNodePositions[Math.min(completedPathCount - 1, rawNodePositions.length - 1)]
+  /** [ใหม่ — pan/zoom] mouse wheel ต้องผูกแบบ native { passive: false } ถึงจะเรียก
+   * preventDefault ได้จริง — React's onWheel (synthetic) เป็น passive listener โดย default
+   * เรียก preventDefault แล้วจะโดนเบราว์เซอร์เตือนและไม่มีผลอะไร ผูก effect ครั้งเดียว
+   * (deps ว่าง) เพราะ handler อ่านค่าทั้งหมดผ่าน ref ล้วนๆ ไม่มีปัญหา stale closure */
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
 
-  const owlPos = mapCoverCoordsToContainer(rawOwlPos.x, rawOwlPos.y, containerSize.width, containerSize.height)
+    const handleWheelNative = (e: WheelEvent) => {
+      e.preventDefault()
+      // [ใหม่ — ข้อ 4] ผู้เล่นหมุนล้อเมาส์เอง = ต้องการควบคุมกล้องเอง ยกเลิกแอนิเมชันอัตโนมัติ
+      // ที่กำลังเล่นอยู่ (ถ้ามี) ทันทีไม่ให้แย่งค่ากัน
+      if (cameraTweenCancelRef.current) {
+        cameraTweenCancelRef.current()
+        cameraTweenCancelRef.current = null
+      }
+      const { width, height } = containerSizeRef.current
+      const { originX, originY, scale } = measureVisualTransform(el, width, height)
+      const anchorX = (e.clientX - originX) / scale
+      const anchorY = (e.clientY - originY) / scale
+      const { min, max } = getZoomBounds(width, height)
+      const proposedZoom = zoomRef.current * (1 - e.deltaY * WHEEL_ZOOM_SPEED)
+      const newZoom = clampNum(proposedZoom, min, max)
+      const ratio = newZoom / zoomRef.current
+      const newPanX = anchorX - (anchorX - panXRef.current) * ratio
+      const newPanY = anchorY - (anchorY - panYRef.current) * ratio
+      const clamped = clampPanValue(newPanX, newPanY, newZoom, width, height)
+      zoomRef.current = newZoom
+      panXRef.current = clamped.x
+      panYRef.current = clamped.y
+      scheduleFlush()
+    }
+
+    el.addEventListener('wheel', handleWheelNative, { passive: false })
+    return () => el.removeEventListener('wheel', handleWheelNative)
+  }, [])
+
+  /** [ใหม่ — pan/zoom] ลากด้วยเมาส์/สไลด์นิ้ว — Pointer Events ตัวเดียวรองรับทั้งคู่ */
+  const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    // [ใหม่ — ข้อ 4] ผู้เล่นเริ่มลาก/แตะเอง = ต้องการควบคุมกล้องเอง คืนการควบคุมทันทีถ้ากล้อง
+    // อัตโนมัติกำลังเลื่อนอยู่พอดี (ไม่ปล่อยให้สู้กันระหว่าง tween กับนิ้ว/เมาส์ผู้เล่น)
+    if (cameraTweenCancelRef.current) {
+      cameraTweenCancelRef.current()
+      cameraTweenCancelRef.current = null
+    }
+    // [แก้บั๊ก — เควสกดเล่นไม่ได้] ไม่ setPointerCapture ตรงนี้อีกแล้ว (ดูคอมเมนต์ที่
+    // hasCapturedPointerRef ด้านบน) — เลื่อนไปทำใน handlePointerMove ตอนยืนยันว่าเป็นการลากจริง
+    // เท่านั้น ตอนแตะเฉยๆ (ปล่อยมือโดยไม่เกิน threshold) จะไม่มี capture เลย ปล่อยให้เบราว์เซอร์
+    // จัดการ click ปกติทั้งหมด
+    hasCapturedPointerRef.current = false
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+    if (pointersRef.current.size === 1) {
+      dragMovedRef.current = 0
+      panLastRef.current = { x: e.clientX, y: e.clientY }
+      pinchLastRef.current = null
+      visualTransformRef.current = measureVisualTransform(e.currentTarget, containerSizeRef.current.width, containerSizeRef.current.height)
+    } else if (pointersRef.current.size === 2) {
+      panLastRef.current = null
+      visualTransformRef.current = measureVisualTransform(e.currentTarget, containerSizeRef.current.width, containerSizeRef.current.height)
+      const { originX, originY, scale } = visualTransformRef.current
+      const pts = Array.from(pointersRef.current.values())
+      const distance = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y)
+      const midX = ((pts[0].x + pts[1].x) / 2 - originX) / scale
+      const midY = ((pts[0].y + pts[1].y) / 2 - originY) / scale
+      pinchLastRef.current = { distance, midX, midY }
+    }
+  }
+
+  const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!pointersRef.current.has(e.pointerId)) return
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    const { width, height } = containerSizeRef.current
+    const { originX, originY, scale } = visualTransformRef.current
+
+    if (pointersRef.current.size === 1 && panLastRef.current) {
+      const last = panLastRef.current
+      // [แก้ — พบตอนเทสต์จริง] dx/dy ดิบเป็นพิกัด "หน้าจอที่มองเห็น" ซึ่งโดน ancestor
+      // transform: scale(0.97) ของ .dashboard__modal-layer ปนอยู่ (ดู measureVisualTransform)
+      // ต้องหารด้วย scale ก่อนบวกเข้า panXRef/panYRef ที่เป็นหน่วย clientWidth/Height เดิม
+      // ไม่งั้นแผนที่จะเลื่อนช้ากว่านิ้ว/เมาส์จริงอยู่ ~3% ตลอดเวลา
+      const dxVisual = e.clientX - last.x
+      const dyVisual = e.clientY - last.y
+      dragMovedRef.current += Math.hypot(dxVisual, dyVisual)
+      // [แก้บั๊ก — เควสกดเล่นไม่ได้] ยืนยันแล้วว่าเป็นการลากจริง (เกิน threshold) ค่อย
+      // setPointerCapture ตอนนี้ — ก่อนหน้านี้ (ยังไม่เกิน threshold) ไม่ capture เลย กัน
+      // browser retarget click ของปุ่มโหนดเควสไปที่ div ครอบนอกสุดตั้งแต่แค่แตะเบาๆ
+      if (!hasCapturedPointerRef.current && dragMovedRef.current > CLICK_DRAG_THRESHOLD_PX) {
+        hasCapturedPointerRef.current = true
+        try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* noop */ }
+      }
+      panLastRef.current = { x: e.clientX, y: e.clientY }
+      const dx = dxVisual / scale
+      const dy = dyVisual / scale
+      const clamped = clampPanValue(panXRef.current + dx, panYRef.current + dy, zoomRef.current, width, height)
+      panXRef.current = clamped.x
+      panYRef.current = clamped.y
+      scheduleFlush()
+    } else if (pointersRef.current.size === 2 && pinchLastRef.current) {
+      const pts = Array.from(pointersRef.current.values())
+      const distance = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y)
+      // midX/midY แปลงเป็นหน่วยเดียวกับ pan/zoom ทันที (เหมือน wheel anchor) — ส่วน distance
+      // ใช้แค่เป็นอัตราส่วน (distance/last.distance) หน่วย screen-space ล้วนไม่กระทบผล จึงไม่ต้องแปลง
+      const midX = ((pts[0].x + pts[1].x) / 2 - originX) / scale
+      const midY = ((pts[0].y + pts[1].y) / 2 - originY) / scale
+      const last = pinchLastRef.current
+      dragMovedRef.current += Math.hypot(midX - last.midX, midY - last.midY) * scale
+      if (!hasCapturedPointerRef.current && dragMovedRef.current > CLICK_DRAG_THRESHOLD_PX) {
+        hasCapturedPointerRef.current = true
+        try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* noop */ }
+      }
+
+      const { min, max } = getZoomBounds(width, height)
+      const scaleFactor = last.distance > 0 ? distance / last.distance : 1
+      const newZoom = clampNum(zoomRef.current * scaleFactor, min, max)
+      const ratio = newZoom / zoomRef.current
+      // ขยับตาม midpoint ก่อน (รองรับลาก 2 นิ้วพร้อมบีบซูมพร้อมกัน) แล้วค่อยซูมยึดจุด
+      // midpoint ปัจจุบันเป็นศูนย์กลาง (สูตร zoom-to-point มาตรฐาน)
+      const shiftedX = panXRef.current + (midX - last.midX)
+      const shiftedY = panYRef.current + (midY - last.midY)
+      const newPanX = midX - (midX - shiftedX) * ratio
+      const newPanY = midY - (midY - shiftedY) * ratio
+      const clamped = clampPanValue(newPanX, newPanY, newZoom, width, height)
+
+      zoomRef.current = newZoom
+      panXRef.current = clamped.x
+      panYRef.current = clamped.y
+      pinchLastRef.current = { distance, midX, midY }
+      scheduleFlush()
+    }
+  }
+
+  const handlePointerUpOrCancel = (e: ReactPointerEvent<HTMLDivElement>) => {
+    pointersRef.current.delete(e.pointerId)
+    try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* noop */ }
+
+    if (pointersRef.current.size === 0) {
+      if (dragMovedRef.current > CLICK_DRAG_THRESHOLD_PX) {
+        // [กันคลิกพลาด] ลากเกิน threshold แล้ว → ตีความว่าเป็นการ "ลาก" ไม่ใช่ "แตะ" กัน
+        // click ทะลุไปโดนโหนดเควส/ปุ่ม FAB ใต้จุดที่ปล่อยนิ้ว/เมาส์โดยไม่ตั้งใจ
+        suppressNextClickRef.current = true
+        window.setTimeout(() => { suppressNextClickRef.current = false }, 200)
+      }
+      panLastRef.current = null
+      pinchLastRef.current = null
+      // [ใหม่ — ข้อ 4] ปล่อยมือ/นิ้วสุดท้ายแล้ว — ถ้ามีคำขอโฟกัสกล้องที่ค้างรอไว้ตอนกำลังลากอยู่
+      // (เช่น ทำโหนดสำเร็จระหว่างที่กำลังลากแผนที่พอดี) ค่อยเริ่มเลื่อนกล้องตอนนี้
+      if (pendingCameraFocusRef.current) {
+        const req = pendingCameraFocusRef.current
+        pendingCameraFocusRef.current = null
+        startCameraFocus(req.x, req.y, req.zoom, req.duration)
+      }
+    } else if (pointersRef.current.size === 1) {
+      // ปล่อยนิ้วนึงระหว่างบีบซูม 2 นิ้ว → กลับไปโหมดลากนิ้วเดียวด้วยนิ้วที่เหลือ
+      const remaining = Array.from(pointersRef.current.values())[0]
+      panLastRef.current = { x: remaining.x, y: remaining.y }
+      pinchLastRef.current = null
+    }
+  }
+
+  const handleClickCapture = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (suppressNextClickRef.current) {
+      suppressNextClickRef.current = false
+      e.stopPropagation()
+    }
+  }
 
   /** [ปรับรอบนี้ — เอาวิดีโอ "เดินเปลี่ยนฉาก" เต็มจอออก] ระบบเดิม (TransitionOverlay.tsx) เล่น
    *  วิดีโอตัวละครเดินคั่นทุกครั้งที่ทำเควสความรู้สำเร็จ — แต่ไฟล์วิดีโอ (Girl.mp4/Boy.mp4)
@@ -339,16 +740,67 @@ export default function LearningQuestMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWalking])
 
+  /** [ใหม่ — กล้องอัตโนมัติ ข้อ 3] ทำโหนดใหม่สำเร็จ (จุดเดียวกับที่ isWalking sync ทันทีข้างบน
+   * ไม่ต้องกด 2 ครั้ง) → เลื่อนกล้องไปหาตำแหน่งนกฮูกใหม่อัตโนมัติ — hasMountedCameraRef กัน
+   * ไม่ให้ effect นี้ยิงซ้ำตอน mount ครั้งแรก (จังหวะนั้นมี "ค้างโชว์แผนที่เต็มก่อน" ที่ effect
+   * ตั้งกล้องเริ่มต้นด้านบนจัดการแยกไปแล้ว ไม่ต้องซ้อนกัน) ทำงานเฉพาะตอน completedPathCount
+   * เปลี่ยนจริงเท่านั้น (ไม่ใช่ทุก re-render) เพราะเป็น dependency เดียวของ effect นี้
+   * [แก้รอบนี้ — ข้อ 2] ถ้าโหนดที่เพิ่งสำเร็จคือโหนดสุดท้ายจริง (เช็คจาก pathQuests.length
+   * ไม่ hardcode เลข 5 — รองรับถ้าอนาคตเพิ่ม/ลดจำนวนฐาน) ไม่มีโหนดถัดไปให้ซูมเข้าหาแล้ว จึง
+   * ทำตรงข้าม: ซูมออกกลับไป MIN_ZOOM (จุดกึ่งกลางแผนที่ x:50,y:50 — สูตรเดียวกับที่ effect
+   * ตั้งกล้องเริ่มต้นใช้คำนวณกรอบเต็มแผนที่ พิสูจน์แล้วว่าให้ผลตรงกันทุกประการ) ด้วย
+   * startCameraFocus ฟังก์ชันเดิมตัวเดียวกัน (เอฟเฟกต์/ระยะเวลาเดียวกันทุกจุดตามที่ระบุ "เอฟเฟกต์
+   * เดียวกัน" — ไม่สร้างค่าคงที่ easing/duration แยกใหม่อีกชุด) */
+  const hasMountedCameraRef = useRef(false)
+  useEffect(() => {
+    if (!hasMountedCameraRef.current) {
+      hasMountedCameraRef.current = true
+      return
+    }
+    const { width, height } = containerSizeRef.current
+    const isLastNodeJustCompleted = pathQuests.length > 0 && completedPathCount >= pathQuests.length
+    if (isLastNodeJustCompleted) {
+      const { min: minZoom } = getZoomBounds(width, height)
+      startCameraFocus(50, 50, minZoom, CAMERA_FOCUS_DURATION_MS)
+    } else {
+      startCameraFocus(owlPos.x, owlPos.y, getFocusZoom(width, height), CAMERA_FOCUS_DURATION_MS)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedPathCount])
+
   return (
-    <div ref={containerRef} className="learning-quest-map">
-      {/* วิดีโอพื้นหลังเส้นทางป่าเวทมนตร์ วนลูป */}
-      <video className="learning-quest-map__video" autoPlay loop muted playsInline>
-        <source src="/assets/videos/quest-learning/QuestPathMap.mp4" type="video/mp4" />
-      </video>
+    <div
+      ref={containerRef}
+      className="learning-quest-map"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUpOrCancel}
+      onPointerCancel={handlePointerUpOrCancel}
+      onClickCapture={handleClickCapture}
+    >
+      {/* [ใหม่ — pan/zoom] เลเยอร์เดียวที่ถูก pan/zoom ร่วมกัน ขนาดคงที่เท่าเฟรมวิดีโอต้นฉบับ
+          (VIDEO_NATIVE_WIDTH×HEIGHT) — พื้นหลัง+โหนดเควสทั้งหมดอยู่ในนี้ ตำแหน่ง % เดิมของ
+          โหนด (FIXED_NODE_POSITIONS) จึงใช้ตรงๆ ได้โดยไม่ต้องแปลงพิกัดแบบเดิมอีก */}
+      <div
+        className="learning-quest-map__canvas"
+        style={{
+          width: VIDEO_NATIVE_WIDTH,
+          height: VIDEO_NATIVE_HEIGHT,
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+        }}
+      >
+        {/* วิดีโอพื้นหลังเส้นทางป่าเวทมนตร์ วนลูป — โหมด low-power ใช้พื้นหลังสีทึบเดิมของ
+            .learning-quest-map (--lc-bg-12) แทน ไม่เล่นวิดีโอ (แพทเทิร์นเดียวกับ
+            Dashboard.tsx/VitalityStepsQuest.tsx) */}
+        {!lowPower && (
+          <video className="learning-quest-map__video" autoPlay loop muted playsInline>
+            <source src="/assets/videos/quest-learning/QuestPathMap.mp4" type="video/mp4" />
+          </video>
+        )}
 
-      <div className="learning-quest-map__scrim" />
+        <div className="learning-quest-map__scrim" />
 
-      {nodes.map((node, i) => {
+        {nodes.map((node, i) => {
         const locked = isLocked(node.quest)
         // [แก้บั๊ก — พบจากรีวิวโค้ด] เดิม isCompleted(node.quest.code) ตรงๆ — ถ้าอนาคตมีเควส
         // maxPerDay ในหมวดความรู้ (isRepeatable/maxPerDay เป็น field ทั่วไป ไม่ได้ผูกกับหมวด
@@ -393,14 +845,16 @@ export default function LearningQuestMap({
         )
       })}
 
-      {/* ตัวละครนกฮูกน้อย — เลื่อนตำแหน่งลื่นๆ ด้วย CSS transition (ดู .learning-quest-map__owl)
-          พร้อมแอนิเมชันเดิน (ขาสลับ/ปีกกระพือ) ช่วงที่ตำแหน่งกำลังเลื่อนจริง */}
-      <div className="learning-quest-map__owl" style={{ left: `${owlPos.x}%`, top: `${owlPos.y}%` }}>
-        <OwlAvatar walking={isWalking} size={46} />
+        {/* ตัวละครนกฮูกน้อย — เลื่อนตำแหน่งลื่นๆ ด้วย CSS transition (ดู .learning-quest-map__owl)
+            พร้อมแอนิเมชันเดิน (ขาสลับ/ปีกกระพือ) ช่วงที่ตำแหน่งกำลังเลื่อนจริง */}
+        <div className="learning-quest-map__owl" style={{ left: `${owlPos.x}%`, top: `${owlPos.y}%` }}>
+          <OwlAvatar walking={isWalking} size={46} />
+        </div>
       </div>
 
-      {/* [ใหม่] ทางเข้าเควสเสริม (side quests) — แพทเทิร์นเดียวกับ FAB ของ QuestGateView
-          (หมวดกาย/ใจ) เพื่อให้กดเข้าถึงได้จริง ไม่ใช่แค่มีอยู่ใน catalog เฉยๆ */}
+      {/* [ใหม่] ทางเข้าเควสเสริม (side quests) — แพทเทิร์นเดียวกับ FAB ของ QuestGateView (หมวดกาย/
+          ใจ) เพื่อให้กดเข้าถึงได้จริง ไม่ใช่แค่มีอยู่ใน catalog เฉยๆ — อยู่นอกเลเยอร์ pan/zoom
+          โดยตั้งใจ (ปุ่มลอยติดจอ ไม่ใช่ส่วนหนึ่งของแผนที่ที่ควรเลื่อน/ซูมตามไปด้วย) */}
       {sideQuests.length > 0 && (
         <div className={`learning-quest-map__fab${isSideMenuOpen ? ' open' : ''}`}>
           <div className="learning-quest-map__fab-menu">
@@ -458,7 +912,16 @@ export default function LearningQuestMap({
   overflow: hidden;
   --lc-bg-12: #0b1f16;
   background: var(--lc-bg-12);
+  /* [ใหม่ — pan/zoom] กันเบราว์เซอร์ตีความลาก/บีบนิ้วเป็น scroll/native-pinch-zoom ของหน้า
+     ไปเอง ต้องปิดก่อน ไม่งั้น pointer-events ที่เขียนเองจะชนกับ gesture เดิมของเบราว์เซอร์
+     บนมือถือ (ลากแล้วหน้าเลื่อนแทน/บีบซูมทั้งหน้าเว็บแทนที่จะซูมแค่แผนที่) */
+  touch-action: none;
 }
+        .learning-quest-map__canvas {
+          position: relative;
+          transform-origin: 0 0;
+          will-change: transform;
+        }
         .learning-quest-map__video {
           position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center;
         }

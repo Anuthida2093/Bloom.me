@@ -36,6 +36,16 @@ interface ParchmentJournalEditorProps {
   /** บันทึกลงประวัติจริง (AppContext.handleAddJournalEntry) */
   onSaveEntry: (originalText: string, aiReframedText: string) => void
   onComplete: () => void
+  /** [เพิ่มตามที่ระบุ — ข้อ 10] ไอคอนรูปจริงของเควส (QUEST_ICONS) แทนอิโมจิ 📖/🛡️ เดิมบน
+   *  popup แนะนำก่อนเข้า — ไม่ใส่ = fallback เป็นอิโมจิเดิมตาม theme */
+  askIconSrc?: string
+  /** [เพิ่มตามที่ระบุ — ข้อ 10] สีปุ่ม "เริ่มเขียน" เฉพาะจุด — แยกสีต่อเควส (เขียวพาสเทลสำหรับ
+   *  สมุดบันทึกรากไม้เรืองแสง, เหลืองพาสเทลสำหรับเกราะแห่งความขอบคุณ) แทน gradient ส้ม-ม่วง
+   *  เดิมที่ใช้ theme.gold+accent ร่วมกันทั้ง 2 เควส ไม่ใส่ = ใช้ค่าเดิม (theme.gold→accent) */
+  askButtonBg?: string
+  /** [เพิ่มตามที่ระบุ — ข้อ 11] สีปุ่มส่ง (stage 'writing') เฉพาะจุด — ใช้เฉพาะ Reframer Journal
+   *  (เปลี่ยนเป็นเขียวพาสเทล) Gratitude Shield ไม่ส่งค่านี้มา จึงใช้สีเดิมต่อไป */
+  submitButtonBg?: string
 }
 
 /**
@@ -46,6 +56,7 @@ interface ParchmentJournalEditorProps {
  */
 export default function ParchmentJournalEditor({
   theme, accent, askQuestion, placeholder, submitLabel, generateReflection, onSaveEntry, onComplete,
+  askIconSrc, askButtonBg, submitButtonBg,
 }: ParchmentJournalEditorProps) {
   const colors = THEME_COLORS[theme]
   const [stage, setStage] = useState<Stage>('ask')
@@ -78,9 +89,11 @@ export default function ParchmentJournalEditor({
       <AnimatePresence mode="wait">
         {stage === 'ask' && (
           <motion.div key="ask" className="parchment-editor__ask-panel" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>{theme === 'golden' ? '🛡️' : '📖'}</div>
+            {askIconSrc
+              ? <img src={askIconSrc} alt="" style={{ width: 56, height: 56, objectFit: 'contain', marginBottom: 12 }} />
+              : <div style={{ fontSize: 48, marginBottom: 12 }}>{theme === 'golden' ? '🛡️' : '📖'}</div>}
             <p className="parchment-editor__ask-text">{askQuestion}</p>
-            <button className="parchment-editor__btn" style={{ background: `linear-gradient(135deg, ${colors.gold}, ${accent})` }} onClick={() => setStage('writing')}>
+            <button className="parchment-editor__btn" style={{ background: askButtonBg ?? `linear-gradient(135deg, ${colors.gold}, ${accent})` }} onClick={() => setStage('writing')}>
               🖋️ เริ่มเขียน
             </button>
           </motion.div>
@@ -109,8 +122,8 @@ export default function ParchmentJournalEditor({
               />
               <button
                 className="parchment-editor__btn"
-                style={{ 
-                  background: `linear-gradient(135deg, ${colors.gold}, ${accent})`,
+                style={{
+                  background: submitButtonBg ?? `linear-gradient(135deg, ${colors.gold}, ${accent})`,
                   width: 'auto',        /* ยกเลิกการขยายเต็มกว้าง */
                   padding: '16px 16px',  /* ลดขนาดขอบบนล่างซ้ายขวาให้เล็กลง */
                   whiteSpace: 'nowrap', /* ป้องกันข้อความตกบรรทัด */
@@ -179,12 +192,12 @@ export default function ParchmentJournalEditor({
         .parchment-editor__btn:active:not(:disabled) { transform: scale(.98); }
         .parchment-editor__btn:disabled { opacity: .55; cursor: default; }
 
-        .parchment-editor__writing { width: 100%; max-width: 650px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
+        .parchment-editor__writing { width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
 
         .parchment-editor__paper {
   position: relative;
   width: 100%;
-  min-height: 220px;
+  min-height: 300px;
   border-radius: 8px;
   border: 3px solid;
   --lc-shadow-4: rgba(120,90,40,.15);

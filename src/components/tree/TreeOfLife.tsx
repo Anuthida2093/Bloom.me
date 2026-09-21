@@ -1,9 +1,14 @@
 import { memo, useMemo, useRef, useState, useEffect, type PointerEvent as ReactPointerEvent } from 'react'
 import type { MbtiType, RiskLevel, PlacedItem, DecorationPositionMap, QuestCategory } from '../../types'
-import { DECORATION_EMOJI, DECORATION_ZONE_POSITION, getDecorationImage } from '../../config/decorationItems'
+import { DECORATION_EMOJI, DECORATION_ZONE_POSITION } from '../../config/decorationItems'
+import { ITEM_ICONS } from '../../config/iconAssets'
 import { useIsSmallScreen, usePrefersReducedMotion } from '../../hooks/useMediaQuery'
-import { getCanopyShape, sampleCanopyPoint } from '../../config/canopyShape'
-import { getTrunkImagePath, toVisualLevel } from '../../config/treeAssets'
+import { getCanopyShape, sampleCanopyPoint, type CanopyShape } from '../../config/canopyShape'
+import {
+  getTrunkImagePath, getLeafImagePath, getGroundImagePath,
+  toTrunkVisualLevel, getLeafPool, toGroundVariant, getShapeLetter,
+} from '../../config/treeAssets'
+import { CANOPY_TIP_POINTS } from '../../config/canopyTipPoints'
 import { seededRandom } from '../../utils/seededRandom'
 import GroundScene from './GroundScene'
 import { useAudio } from '../../context/AudioContext'
@@ -24,8 +29,9 @@ import './TreeOfLife.css'
  *  3. ครอบด้วย memo() — เดิมต้นไม้ re-render ทุกครั้งที่ state ใดก็ตามในแอปเปลี่ยน
  *  4. เลิกใช้ emoji เป็นอาร์ตเวิร์ก (💨 🍂 🌸 🏥) เปลี่ยนเป็นรูปทรงที่วาดด้วย CSS
  *     และไอคอน SVG — emoji เรนเดอร์คนละแบบทุก OS ทำให้ภาพไม่นิ่งข้ามเครื่อง
- *  5. ไอเทมตกแต่งรองรับไฟล์ภาพจริงแล้ว (เห็น getDecorationImage) โดยยังมี emoji
- *     เป็นตัวสำรองสำหรับชิ้นที่ยังไม่มีภาพ → ทยอยเปลี่ยนทีละชิ้นได้
+ *  5. ไอเทมตกแต่งใช้ไฟล์ภาพจริงจาก ITEM_ICONS (config/iconAssets.ts) — จุดเดียวกับที่
+ *     ShopSection.tsx/ProfilePage.tsx ใช้อยู่แล้ว โดยยังมี emoji เป็นตัวสำรองสำหรับชิ้น
+ *     ที่ยังไม่มีไฟล์ภาพจริงให้ (ดู DecorationVisual ด้านล่าง)
  *
  * [รอบก่อน]
  *  - onTreeClick: คลิกที่ต้นไม้ (นอกเหนือจาก hotspot โคนต้นที่โชว์ tooltip เลเวล) →
@@ -53,7 +59,7 @@ for (const [modulePath, url] of Object.entries(treeAssetModules)) {
 type TreeAssetFolder = MbtiType | 'BALANCED'
 const ASSET_EXTENSIONS = ['webp', 'gif', 'png'] as const
 
-function findLeveledAsset(folder: string, prefix: 'trunk' | 'grass', level: number): string | null {
+function findLeveledAsset(folder: string, prefix: 'trunk', level: number): string | null {
   const clampedLevel = Math.min(100, Math.max(1, Math.round(level)))
   for (let lv = clampedLevel; lv >= 1; lv--) {
     for (const ext of ASSET_EXTENSIONS) {
@@ -109,7 +115,7 @@ interface GenerateStampsOptions {
   seedKey: string
   brushUrls: string[]
   count: number
-  canopyShape: ReturnType<typeof getCanopyShape>
+  canopyShape: CanopyShape
   baseSizePct: number
   keyPrefix: string
 }
@@ -141,10 +147,293 @@ function generateFoliageStamps({ seedKey, brushUrls, count, canopyShape, baseSiz
   return stamps.sort((a, b) => a.order - b.order)
 }
 
+/** [ใหม่ — ตามที่ระบุรอบนี้ "ทำลำต้นให้เล็กลง"] ย่อภาพลำต้นด้วย CSS scale() (ดู
+ *  .tree-of-life__layer--trunk ใน .css ที่อ่านค่านี้ผ่าน CSS var --trunk-visual-scale)
+ *  โดย pivot ที่ 50% 100% (กึ่งกลาง-ล่างสุด) ให้โคนต้น/รากยังแนบขอบล่างเดิมเป๊ะ ไม่ขยับ
+ *  ตำแหน่ง มีแต่ตัวลำต้นที่หดเข้าหาจุดนั้น — ทรงพุ่ม (canopy) ต้องหดตามสัดส่วนเดียวกันด้วย
+ *  ไม่งั้นใบ/ดอกจะลอยห่างจากลำต้นที่เล็กลงไปแล้ว (ดู scaleCanopyTowardTrunkBase ด้านล่าง) */
+const TRUNK_VISUAL_SCALE = 0.6
+
+/** หด CanopyShape เข้าหาจุดหมุนเดียวกับที่ลำต้นหด (กึ่งกลางแนวนอน x=centerXPct เดิม,
+ *  ขอบล่างสุด y=100%) ด้วยอัตราส่วนเดียวกัน — topPct/bottomPct คือระยะจากขอบบนของกล่อง จึง
+ *  ต้องคำนวณกลับจาก "ระยะห่างจากขอบล่าง (100 - pct)" คูณ scale ก่อนแปลงกลับ ส่วนความกว้าง
+ *  (topWidthPct/baseWidthPct) คูณ scale ตรงๆ ได้เลยเพราะ centerXPct คือจุดหมุนแนวนอนอยู่แล้ว */
+function scaleCanopyTowardTrunkBase(shape: CanopyShape, scale: number): CanopyShape {
+  return {
+    centerXPct: shape.centerXPct,
+    topPct: 100 - (100 - shape.topPct) * scale,
+    bottomPct: 100 - (100 - shape.bottomPct) * scale,
+    topWidthPct: shape.topWidthPct * scale,
+    baseWidthPct: shape.baseWidthPct * scale,
+  }
+}
+
+/* [เขียนใหม่ทั้งบล็อกตามที่ระบุรอบนี้ — ข้อ 1] ยกเลิกระบบ tip-detection/skeletonize สำหรับ
+ * "ตำแหน่งวางใบ" ทั้งหมด (scripts/extract-branch-tips.mjs ยังเก็บไว้เฉยๆ ไม่ลบไฟล์ทิ้ง
+ * ตามที่ระบุ แค่เลิกเรียกใช้ที่นี่) เปลี่ยนไปใช้วิธีใหม่: หา "จุดปลายสุดของลำต้น" (จุดเดียว
+ * ต่อไฟล์ ไม่ใช่หลายสิบจุดจากกิ่งจริงแบบเดิม) แล้วสุ่มวางใบแบบ uniform ภายในวงกลมรอบจุดนั้น
+ *
+ * ที่มาของจุดปลายสุด: scripts/extract-canopy-tip.mjs (สคริปต์ใหม่ เบากว่า extract-branch-tips
+ * มาก — แค่สแกนหาพิกเซลแรกที่ alpha > threshold จากขอบบนของภาพลงมา ไม่ skeletonize ทั้งภาพ)
+ * บันทึกผลเป็นค่าคงที่ตรงๆ ใน src/config/canopyTipPoints.ts (แค่ 32 จุด ไม่คุ้มเปิด async
+ * fetch loading state แบบระบบ branch-tips เดิม — import ตรงๆ ใช้ได้ทันทีไม่ต้องรอโหลด) */
+interface ImageNaturalSize {
+  w: number
+  h: number
+}
+
+interface ContainerSize {
+  w: number
+  h: number
+}
+
+/** [สำคัญ] แปลงพิกัด % ของ "ภาพต้นฉบับ" ให้เป็น % ของกล่อง .tree-of-life โดยจำลอง
+ *  object-fit:contain + object-position:center bottom (CSS ของ .tree-of-life__layer) บวก
+ *  transform:scale จุดหมุน 50% 100% (CSS ของ .tree-of-life__layer--trunk) ทีละขั้นตรงตาม
+ *  สูตร CSS จริง — ยังใช้อยู่ (ไม่ได้ยกเลิกไปกับระบบ tip-detection) เพราะยังต้องแปลงจุดปลาย
+ *  สุดของลำต้น/ขอบล่างลำต้นจาก % ของภาพ ให้เป็น % ของกล่องเหมือนเดิมทุกประการ */
+function mapImagePointToContainerPct(
+  point: { x: number; y: number },
+  imgSize: ImageNaturalSize,
+  containerSize: ContainerSize,
+  trunkScale: number,
+): { xPct: number; yPct: number } {
+  const containerAspect = containerSize.w / containerSize.h
+  const imgAspect = imgSize.w / imgSize.h
+
+  let renderedW: number
+  let renderedH: number
+  let offsetX: number
+  let offsetY: number
+
+  if (imgAspect > containerAspect) {
+    // ภาพกว้างกว่ากล่อง (เทียบสัดส่วน) → contain ด้วยความกว้างเต็มกล่อง เหลือช่องว่างบน/ล่าง
+    renderedW = containerSize.w
+    renderedH = renderedW / imgAspect
+    offsetX = 0
+    offsetY = containerSize.h - renderedH // object-position: bottom → ชิดขอบล่าง
+  } else {
+    // ภาพสูงกว่ากล่อง (เทียบสัดส่วน) → contain ด้วยความสูงเต็มกล่อง เหลือช่องว่างซ้าย/ขวา
+    renderedH = containerSize.h
+    renderedW = renderedH * imgAspect
+    offsetY = 0
+    offsetX = (containerSize.w - renderedW) / 2 // object-position: center → กึ่งกลางแนวนอน
+  }
+
+  const preScaleX = offsetX + (point.x / 100) * renderedW
+  const preScaleY = offsetY + (point.y / 100) * renderedH
+
+  // transform-origin: 50% 100% ของกล่องเต็ม (ไม่ใช่ของ contain-box) — ดู .tree-of-life__layer--trunk
+  const pivotX = containerSize.w / 2
+  const pivotY = containerSize.h
+
+  const postScaleX = pivotX + (preScaleX - pivotX) * trunkScale
+  const postScaleY = pivotY + (preScaleY - pivotY) * trunkScale
+
+  return {
+    xPct: (postScaleX / containerSize.w) * 100,
+    yPct: (postScaleY / containerSize.h) * 100,
+  }
+}
+
+/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 2] offset ลงจากจุดปลายสุดของลำต้น (% ของกล่อง .tree-of-life)
+ *  — เทียบเท่า "ต่ำกว่าจุดปลายสุดเล็กน้อย" ตามที่ระบุ ปรับจนสัดส่วนดูสวยที่สุดหลังทดสอบจริง */
+const CANOPY_CENTER_OFFSET_DOWN_PCT = 2.5
+
+/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] รัศมีวงกลมที่ต้องการ (% ของความสูงกล่อง) ก่อนถูกจำกัดไม่ให้
+ *  เกินครึ่งลำต้น (ดู computeCanopyCircle) — ปรับจนทรงพุ่มดูสวยได้สัดส่วนหลังทดสอบจริง */
+const DESIRED_CANOPY_RADIUS_PCT = 15
+
+interface CanopyCircle {
+  centerXPct: number
+  centerYPct: number
+  /** % ของความสูงกล่อง (ไม่ใช่ความกว้าง) — ใช้เป็นหน่วยฐานเดียวกันทั้งแกน x/y ตอนสุ่มจุดใน
+   *  generateLeafInstances เพื่อให้ได้ "วงกลมจริง" บนจอ ไม่ใช่วงรี (กล่องไม่ได้เป็นสี่เหลี่ยม
+   *  จัตุรัสเสมอไป ถ้าใช้ % ของความกว้างกับความสูงปนกันโดยตรงจะได้วงรีที่บิดเบี้ยวตามอัตราส่วน
+   *  จอ ไม่ใช่วงกลมจริงตามที่ระบุ) */
+  radiusPctOfHeight: number
+}
+
+/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 2+3] หาจุดศูนย์กลาง+รัศมีวงกลมทรงพุ่ม จาก
+ *  CANOPY_TIP_POINTS (จุดปลายสุด/ขอบล่างสุดของลำต้น ตรวจจริงจาก scripts/extract-canopy-tip.mjs)
+ *  คืน null ถ้าไม่มีข้อมูลจุดสำหรับ shape+level นี้ (ไม่ควรเกิดขึ้นจริง มีครบ 32 ไฟล์แล้ว
+ *  แต่กันไว้เผื่อ asset เพิ่มทีหลังแล้วยังไม่ได้รันสคริปต์ใหม่) */
+function computeCanopyCircle(
+  shapeLetter: string,
+  visualLevel: number,
+  imgSize: ImageNaturalSize,
+  containerSize: ContainerSize,
+  trunkScale: number,
+): CanopyCircle | null {
+  const point = CANOPY_TIP_POINTS[shapeLetter]?.[visualLevel]
+  if (!point) return null
+
+  const tipContainer = mapImagePointToContainerPct(
+    { x: point.tipXPct, y: point.tipYPct }, imgSize, containerSize, trunkScale,
+  )
+  const groundContainer = mapImagePointToContainerPct(
+    { x: point.tipXPct, y: point.groundYPct }, imgSize, containerSize, trunkScale,
+  )
+
+  const centerYPct = tipContainer.yPct + CANOPY_CENTER_OFFSET_DOWN_PCT
+  // trunkMidpointY = (tipY + groundY) / 2 — ตามที่ระบุ ห้ามให้รัศมีเกินระยะจากจุดศูนย์กลาง
+  // วงกลมลงไปถึงจุดกึ่งกลางลำต้นนี้เด็ดขาด (กันทรงพุ่มใหญ่จนครอบคลุมเกินครึ่งบนของลำต้น)
+  const trunkMidpointYPct = (tipContainer.yPct + groundContainer.yPct) / 2
+  const maxRadiusPct = Math.max(0, trunkMidpointYPct - centerYPct)
+  const radiusPctOfHeight = Math.min(DESIRED_CANOPY_RADIUS_PCT, maxRadiusPct)
+
+  return { centerXPct: tipContainer.xPct, centerYPct, radiusPctOfHeight }
+}
+
+interface LeafInstance {
+  key: string
+  xPct: number
+  yPct: number
+  leafImageUrl: string
+  scale: number
+  rotationDeg: number
+  swayDurationS: number
+  swayDelayS: number
+  mountDelayMs: number
+}
+
+/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] จำนวนใบรวมทั้งต้น ต่อ visual level ของลำต้น (1-8) —
+ *  ระบบ tip-based เดิมได้จำนวนรวมจาก "จำนวน tip จริง × ใบ/tip" ซึ่งผันผวนมากตาม shape
+ *  (เคยเจอตั้งแต่ 4 ถึง 208 tip) พอยกเลิกระบบ tip ไปแล้วไม่มี "จำนวน tip" ให้อ้างอิงอีก จึง
+ *  กำหนดจำนวนรวมตรงๆ ต่อ visual level แทน (ปรับได้ตามความสวยงามที่ทดสอบจริงต่อไป) */
+const LEAF_COUNT_BY_VISUAL_LEVEL_DESKTOP = [10, 16, 24, 34, 46, 58, 72, 88]
+const LEAF_COUNT_BY_VISUAL_LEVEL_MOBILE = [6, 10, 15, 21, 29, 37, 46, 56]
+
+/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] สุ่มตำแหน่งใบ "ภายในวงกลม" แบบ uniform distribution จริง
+ *  (มุมสุ่ม 0-360°, ระยะจากศูนย์กลางสุ่มด้วย sqrt(random)×radius กันกระจุกตัวกลางวงเกินไป —
+ *  สูตรมาตรฐานสำหรับสุ่มจุดสม่ำเสมอในวงกลม) ไม่เช็ค collision กับลำต้น/กิ่งใดๆ ทั้งสิ้น
+ *  (ทับลำต้นได้ตามที่ระบุ) และไม่มีเงื่อนไข "ต้องเชื่อมกับกิ่งจริง/ห้ามลอยเดี่ยว" จากรอบก่อน
+ *  อีกต่อไป (ยกเลิกพร้อมการยกเลิก tip-detection) — deterministic ตาม seedKey เหมือนเดิม
+ *  ทุกอย่าง (offset/scale/rotation/sway/delay/ไฟล์ใบ) จึงเสถียรตำแหน่งตลอด ไม่สุ่มใหม่ทุก
+ *  re-render */
+function generateLeafInstances(
+  seedKey: string,
+  count: number,
+  circle: CanopyCircle,
+  containerSize: ContainerSize,
+  mbtiType: MbtiType | null | undefined,
+  leafPool: number[],
+): LeafInstance[] {
+  const rng = seededRandom(seedKey)
+  // ใช้ความสูงกล่องเป็นหน่วยฐานทั้งแกน x/y (ดูคอมเมนต์ CanopyCircle.radiusPctOfHeight)
+  // แปลงเป็น px ของแต่ละแกนแยกกันตอนคำนวณ offset จริง เพื่อให้ได้วงกลมจริงบนจอเสมอไม่ว่า
+  // container จะเป็นสี่เหลี่ยมอัตราส่วนไหนก็ตาม
+  const radiusPx = (circle.radiusPctOfHeight / 100) * containerSize.h
+  const instances: LeafInstance[] = []
+
+  for (let i = 0; i < count; i++) {
+    const angle = rng() * Math.PI * 2
+    const r = Math.sqrt(rng()) * radiusPx
+    const dxPx = Math.cos(angle) * r
+    const dyPx = Math.sin(angle) * r
+    const leafLevel = leafPool[Math.floor(rng() * leafPool.length)]
+
+    instances.push({
+      key: `leaf-${seedKey}-${i}`,
+      xPct: circle.centerXPct + (dxPx / containerSize.w) * 100,
+      yPct: circle.centerYPct + (dyPx / containerSize.h) * 100,
+      leafImageUrl: getLeafImagePath(mbtiType, leafLevel),
+      scale: 0.7 + rng() * 0.4, // 0.7x - 1.1x เหมือนระบบเดิม
+      rotationDeg: (rng() - 0.5) * 60, // -30deg..30deg เหมือนระบบเดิม
+      swayDurationS: 3 + rng() * 2, // 3-5s เหมือนระบบเดิม
+      swayDelayS: rng() * 3,
+      mountDelayMs: i * 40,
+    })
+  }
+
+  return instances
+}
+
+/* [ใหม่ — ตามที่ระบุรอบนี้ "ดินและหญ้าต้องวางซ้อนๆกันตั้งแต่รากไปยังข้างล่าง ActionMenuBar
+ * เต็มตลอดแนวยาวหลายๆก้อน"] เดิม ground ใช้ภาพวงกลมดินเดี่ยวๆ ภาพเดียว (LeveledLayer) —
+ * เปลี่ยนมาใช้ pattern เดียวกับใบ/ดอก (stamp ซ้ำหลายชิ้นตำแหน่งสุ่มแบบ deterministic) แทน
+ * เพื่อปั๊มภาพดิน/หญ้าเดียวกันซ้ำเป็นก้อนเล็กๆ หลายก้อนเรียงคาบเกี่ยวกันเต็มความกว้างจอ
+ * ในแถบตั้งแต่โคนต้น (ประมาณ 78%) ลงไปจนถึงขอบล่างสุด (97%) ซึ่งเป็นแถบเดียวกับที่
+ * ActionMenuBar ลอยอยู่ (position:fixed เต็มจอเดียวกับ .tree-of-life) */
+interface GroundClump {
+  key: string
+  leftPct: number
+  topPct: number
+  scale: number
+  rotationDeg: number
+  delayMs: number
+}
+
+/* [แก้ตามที่ระบุรอบนี้ — "ดินต้องคงขนาดเท่าเดิมนะ"] แก้บั๊กก้อนดินใหญ่เกินจริง (ดู
+ * groundClumpBasePx ใน component) ด้วยการอิงขนาดจากความสูงกล่องแทนความกว้าง — ทำให้แต่ละ
+ * ก้อน "เล็กลง" กว่าเดิมมาก (จากที่เคยบวมจนล้นจอ) จึงเพิ่มจำนวนก้อนขึ้นชดเชย (~1.85 เท่า)
+ * เพื่อให้ "พื้นที่รวมที่ดินปกคลุม" (ความต่อเนื่อง/ความหนาแน่นของแถบดินทั้งแนว) ยังเท่าเดิม
+ * ไม่ใช่ดูบางลง แค่แต่ละก้อนไม่บวมจนล้นเฟรมเหมือนก่อน */
+const GROUND_CLUMP_COUNT_DESKTOP = 26
+const GROUND_CLUMP_COUNT_MOBILE = 16
+const GROUND_BAND_TOP_PCT = 78
+const GROUND_BAND_BOTTOM_PCT = 97
+
+function generateGroundClumps(seedKey: string, count: number): GroundClump[] {
+  const rng = seededRandom(seedKey)
+  const clumps: GroundClump[] = []
+
+  for (let i = 0; i < count; i++) {
+    const slotCenterPct = ((i + 0.5) / count) * 100
+    // jitter แคบกว่าช่องของตัวเอง (0.6 เท่า) — ทำให้ก้อนเรียงชิดกันสม่ำเสมอตลอดแนว ไม่มีช่วง
+    // ห่างผิดปกติแบบสุ่มเต็มช่วง (ตอนแรกใช้ 1.4 เท่าแล้วบางเคสมีช่องว่างตรงกลางให้เห็น) รวมกับ
+    // ขนาดก้อนที่กว้างกว่าระยะห่างของ slot มาก (baseSizePct 32% ต่อ slot ~7%) ก้อนข้างเคียงจึง
+    // คาบเกี่ยว/ซ้อนกันแน่นอนทุกจุดตลอดความกว้างจอ ("เต็มตลอดแนวยาว" ตามที่ระบุ)
+    const jitterPct = (rng() - 0.5) * (100 / count) * 0.6
+    clumps.push({
+      key: `ground-${seedKey}-${i}`,
+      leftPct: Math.min(99, Math.max(1, slotCenterPct + jitterPct)),
+      topPct: GROUND_BAND_TOP_PCT + rng() * (GROUND_BAND_BOTTOM_PCT - GROUND_BAND_TOP_PCT),
+      scale: 0.8 + rng() * 0.5,
+      rotationDeg: (rng() - 0.5) * 14,
+      delayMs: i * 35,
+    })
+  }
+
+  // เรียงตาม topPct: ก้อนที่อยู่สูงกว่า (ไกลกว่า) วาดก่อน ก้อนที่อยู่ต่ำกว่า (ใกล้ผู้ดูกว่า) วาดทับทีหลัง
+  return clumps.sort((a, b) => a.topPct - b.topPct)
+}
+
 const RISK_FILTER: Record<RiskLevel, string> = {
   LOW: 'none',
   MODERATE: 'saturate(0.55) brightness(0.97) contrast(0.96)',
   HIGH: 'grayscale(0.85) sepia(0.25) brightness(0.85) contrast(0.92)',
+}
+
+/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3+4] "state overlay" (healthy/wilting/dying) — ไม่เคยมีระบบนี้
+ * มาก่อนจริงๆ (ตรวจโค้ดจริงแล้ว ไม่ใช่แค่ riskLevel/hasSoot/daysSinceLastOracle ที่มีอยู่
+ * ซึ่งผูกกับเควสเฉพาะจุดคนละเรื่อง) — สร้างใหม่ทั้งหมด ผูกกับ "จำนวนวันที่ไม่ได้ทำเควสสำเร็จ
+ * ในหมวดนั้นๆ ล่าสุด" (คำนวณจริงจาก questLogs ใน Dashboard.tsx ส่งเป็น prop เข้ามา
+ * เหมือน daysSinceLastOracle เดิม) N=5 เริ่ม wilting, N=10 เริ่ม dying ตามที่ระบุ
+ * ใบไม้ผูกกับหมวดจิตใจ (EMOTION), พื้นดิน/หญ้าผูกกับหมวดสุขภาพกาย (HEALTH) ตามที่ระบุ */
+type HealthPhase = 'healthy' | 'wilting' | 'dying'
+
+function toHealthPhase(daysSinceLastQuest: number | null): HealthPhase {
+  if (daysSinceLastQuest === null) return 'healthy'
+  if (daysSinceLastQuest >= 10) return 'dying'
+  if (daysSinceLastQuest >= 5) return 'wilting'
+  return 'healthy'
+}
+
+/** ใบไม้ไล่สีเขียว→เหลือง/น้ำตาลอ่อนตอน wilting, เข้มขึ้นตอน dying — transition หลายวินาที
+ *  (ดู .tree-of-life__leaf-layer ใน .css) ให้ความรู้สึก "ค่อยๆ เหี่ยว" ไม่ใช่เปลี่ยนทันที */
+const LEAF_HEALTH_FILTER: Record<HealthPhase, string> = {
+  healthy: 'none',
+  wilting: 'sepia(0.45) saturate(0.7) hue-rotate(-12deg) brightness(0.97)',
+  dying: 'sepia(0.7) saturate(0.45) hue-rotate(-20deg) brightness(0.88)',
+}
+
+/** หญ้า (ground variant 2) ไล่สีเหลือง/น้ำตาลแห้งแบบเดียวกับใบตอน decay ก่อนจะจางหายไป
+ *  (ลด opacity — ดู groundVariant2Opacity ใน component) */
+const GRASS_HEALTH_FILTER: Record<HealthPhase, string> = {
+  healthy: 'none',
+  wilting: 'sepia(0.5) saturate(0.65) hue-rotate(-10deg)',
+  dying: 'sepia(0.75) saturate(0.4) hue-rotate(-18deg) brightness(0.85)',
 }
 
 /** พิกัดกำหนดเอง (%) ของไอเทมตกแต่งแต่ละชิ้น — key = itemId (type อยู่ที่ types.ts ใช้ร่วมกับ AppContext.tsx) */
@@ -174,6 +463,14 @@ interface TreeOfLifeProps {
   /** [ใหม่] จำนวนวันที่ไม่ได้สุ่มไพ่ทิพย์ (คำนวณจาก questLogs จริง ไม่ใช่ field ใน backend
    *  โดยตรง) — ตั้งแต่ 2 วันขึ้นไป จะมีใบไม้/กลีบดอกร่วงหล่นปลิวตามลมเบาๆ */
   daysSinceLastOracle?: number | null
+  /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] จำนวนวันตั้งแต่ทำเควสหมวด "จิตใจ" (EMOTION) สำเร็จ
+   *  ล่าสุด (คำนวณจาก questLogs จริงใน Dashboard.tsx เหมือน daysSinceLastOracle) — N=5 ใบ
+   *  เริ่มเหี่ยว (wilting), N=10 ใบเริ่มร่วง (dying) null = ไม่มีข้อมูล/ยังไม่เคยทำ → ถือว่า
+   *  healthy (ไม่ลงโทษผู้เล่นใหม่ที่ยังไม่มีประวัติ) */
+  daysSinceLastMentalQuest?: number | null
+  /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] เหมือนกันแต่ผูกกับหมวด "สุขภาพกาย" (HEALTH) — คุมการ
+   *  จางหาย/เปลี่ยนสีของหญ้า (ground variant 2/3) แทนใบ */
+  daysSinceLastPhysicalQuest?: number | null
   showHint?: boolean
   className?: string
 }
@@ -191,6 +488,8 @@ function TreeOfLifeBase({
   growthPulse,
   hasSoot = false,
   daysSinceLastOracle = null,
+  daysSinceLastMentalQuest = null,
+  daysSinceLastPhysicalQuest = null,
   showHint = true,
   className,
 }: TreeOfLifeProps) {
@@ -198,43 +497,198 @@ function TreeOfLifeBase({
   const { folder } = useMemo(() => resolveFolder(preferredFolder), [preferredFolder])
   const canopyShape = useMemo(() => getCanopyShape(mbtiType), [mbtiType])
 
-  /* [ใหม่ — ลำต้นชุดใหม่] เลเวลระบบจริง (trunkBranchLevel ไม่มีเพดานบน) → visual level 1-8
-     (มีเพดาน เท่าจำนวนภาพที่มีจริง) คำนวณสดทุก render จาก trunkBranchLevel ตรงๆ ผ่าน
-     useMemo (ไม่ใช่ state แยกที่ sync ทีหลังด้วย effect — แพทเทิร์นเดียวกับที่แก้บั๊ก
-     "ไอคอนนกฮูกขยับช้ากว่า level จริง" ไปแล้วก่อนหน้านี้ กันปัญหาซิงก์ช้าแบบเดียวกัน)
-     shapeTrunkUrl คือชุดภาพใหม่ (ดู treeAssets.ts) — trunkUrl (ระบบเก่า ด้านล่าง) กลายเป็น
-     แค่ fallback ให้ TrunkLayer ตอนชุดใหม่ยังไม่มีไฟล์จริงสำหรับ shape นั้น */
-  const visualLevel = useMemo(() => toVisualLevel(trunkBranchLevel), [trunkBranchLevel])
+  /* [ใหม่ — ตามที่ระบุรอบนี้] ทรงพุ่มที่ใบ/ดอกใช้จริงต้องหดตามลำต้นที่เล็กลง (ดู
+     TRUNK_VISUAL_SCALE ด้านบน) ไม่งั้นใบ/ดอกจะลอยห่างจากลำต้นเล็กที่หดแล้ว */
+  const scaledCanopyShape = useMemo(
+    () => scaleCanopyTowardTrunkBase(canopyShape, TRUNK_VISUAL_SCALE),
+    [canopyShape],
+  )
+
+  /* [เขียนใหม่ตามที่ระบุรอบนี้ ข้อ 1] เลิกใช้สูตร progressive เดิม (toVisualLevel) เปลี่ยนเป็น
+     ตาราง fix ตามที่ระบุเป๊ะผ่าน toTrunkVisualLevel — trunkBranchLevel ที่ได้มาคือ "เกมเลเวล"
+     ที่คำนวณจาก knowledgeStack ไว้แล้วที่ UserContext.tsx (ดูคอมเมนต์ยาวใน treeAssets.ts) */
+  const visualLevel = useMemo(() => toTrunkVisualLevel(trunkBranchLevel), [trunkBranchLevel])
   const shapeTrunkUrl = useMemo(() => getTrunkImagePath(mbtiType, visualLevel), [mbtiType, visualLevel])
 
   const trunkUrl = useMemo(() => findLeveledAsset(folder, 'trunk', trunkBranchLevel), [folder, trunkBranchLevel])
-  const grassUrl = useMemo(() => findLeveledAsset(folder, 'grass', grassSoilLevel), [folder, grassSoilLevel])
 
-  const leafBrushUrls = useMemo(() => findBrushVariants(folder, 'leaf_brush'), [folder])
+  /* ใบไม่ผูกกับ emotionStack อีกต่อไป ผูกกับ "เกมเลเวลเดียวกับ trunk" ตรงๆ (trunkBranchLevel
+     ตัวเดียวกับที่ป้อน toTrunkVisualLevel ด้านบน) — getLeafPool คืน null ก่อนเกมเลเวล 21
+     (trunk lv1-2 ยังไม่มีใบเลยตามที่ระบุ) */
+  const leafPool = useMemo(() => getLeafPool(trunkBranchLevel), [trunkBranchLevel])
+
+  /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] ใบเหี่ยว/ร่วงตามจำนวนวันที่ไม่ได้ทำเควสหมวดจิตใจ */
+  const leafHealthPhase = useMemo(() => toHealthPhase(daysSinceLastMentalQuest), [daysSinceLastMentalQuest])
+
+  /* [เขียนใหม่ตามที่ระบุรอบนี้ ข้อ 3] พื้นดิน — เลิกใช้ getGroundImagePath เดี่ยวๆ (สลับภาพ
+     ตาม variant เดียว) เปลี่ยนเป็นผสม 3 variant ซ้อนกัน: variant 1 คือ "ฐาน" เต็มพื้นที่เสมอ
+     ไม่มีเงื่อนไข, variant 2/3 คือ patch หญ้า/ดอกหญ้าซ้อนทับด้วย opacity เพิ่มตาม
+     healthVisualLevel (เดิมเรียก groundVariant — เปลี่ยนชื่อให้ตรงความหมายใหม่ที่ไม่ใช่
+     "เลือก 1 ใน 3" แล้ว แต่เป็น "ระดับผสม 1-3" ของทั้ง 3 ชั้นพร้อมกัน) */
+  const groundHealthVisualLevel = useMemo(() => toGroundVariant(grassSoilLevel), [grassSoilLevel])
+  const groundVariant1Url = useMemo(() => getGroundImagePath(1), [])
+  const groundVariant2Url = useMemo(() => getGroundImagePath(2), [])
+  const groundVariant3Url = useMemo(() => getGroundImagePath(3), [])
+
+  /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] Decay ย้อนกลับของหญ้า — ผูกกับจำนวนวันที่ไม่ได้ทำเควส
+     หมวดสุขภาพกาย (คนละหมวดกับใบซึ่งผูกหมวดจิตใจ) */
+  const groundHealthPhase = useMemo(() => toHealthPhase(daysSinceLastPhysicalQuest), [daysSinceLastPhysicalQuest])
+
+  /* target opacity ตาม healthVisualLevel (1: มีแค่ฐาน, 2: หญ้าเริ่มขึ้น, 3: หญ้า+ดอกหญ้าเต็ม)
+     คูณด้วย decay multiplier (wilting ลดลงครึ่งหนึ่ง, dying จางจนเกือบหมด) — ค่อยๆ นุ่มนวล
+     ด้วย CSS transition บน opacity/filter ที่ container (ดู render ด้านล่าง) ไม่กระตุก */
+  const groundDecayMultiplier = groundHealthPhase === 'dying' ? 0.08 : groundHealthPhase === 'wilting' ? 0.55 : 1
+  const groundVariant2TargetOpacity = groundHealthVisualLevel === 1 ? 0 : groundHealthVisualLevel === 2 ? 0.55 : 1
+  const groundVariant3TargetOpacity = groundHealthVisualLevel === 3 ? 0.65 : 0
+  const groundVariant2Opacity = groundVariant2TargetOpacity * groundDecayMultiplier
+  const groundVariant3Opacity = groundVariant3TargetOpacity * groundDecayMultiplier
+
   const flowerBrushUrls = useMemo(() => findBrushVariants(folder, 'flower_brush'), [folder])
 
-  /* [ใหม่] เพดานจำนวนใบตามขนาดจอ — เรื่องจำนวน DOM node ต้องตัดสินใจใน JS
+  /* [ใหม่] เพดานจำนวนดอกตามขนาดจอ — เรื่องจำนวน DOM node ต้องตัดสินใจใน JS
      ไม่ใช่ซ่อนด้วย CSS (ซ่อนด้วย CSS = สร้าง element ครบแล้วค่อยซ่อน
      ซึ่งจ่ายค่า layout/paint ไปแล้วเรียบร้อย) */
   const isSmallScreen = useIsSmallScreen()
   const reducedMotion = usePrefersReducedMotion()
-  const maxLeaves = isSmallScreen ? 28 : 70
   const maxFlowers = isSmallScreen ? 6 : 14
 
-  const leafStampCount = Math.min(maxLeaves, Math.round(8 + (leafFlowerLevel / 100) * 62))
   const flowerStampCount = Math.min(maxFlowers, Math.round((leafFlowerLevel / 100) * 14))
 
-  const leafStamps = useMemo(
-    () => generateFoliageStamps({ seedKey: `${folder}-leaf-${leafFlowerLevel}`, brushUrls: leafBrushUrls, count: leafStampCount, canopyShape, baseSizePct: 22, keyPrefix: 'leaf' }),
-    [folder, leafFlowerLevel, leafBrushUrls, leafStampCount, canopyShape],
-  )
   const flowerStamps = useMemo(
-    () => generateFoliageStamps({ seedKey: `${folder}-flower-${leafFlowerLevel}`, brushUrls: flowerBrushUrls, count: flowerStampCount, canopyShape, baseSizePct: 9, keyPrefix: 'flower' }),
-    [folder, leafFlowerLevel, flowerBrushUrls, flowerStampCount, canopyShape],
+    () => generateFoliageStamps({ seedKey: `${folder}-flower-${leafFlowerLevel}`, brushUrls: flowerBrushUrls, count: flowerStampCount, canopyShape: scaledCanopyShape, baseSizePct: 9, keyPrefix: 'flower' }),
+    [folder, leafFlowerLevel, flowerBrushUrls, flowerStampCount, scaledCanopyShape],
+  )
+
+  /* [แก้ตามที่ระบุรอบนี้] จำนวนก้อนดิน/หญ้าตามขนาดจอ — seed ผูกกับ folder เท่านั้น (ไม่ผูกกับ
+     healthVisualLevel/variant อีกต่อไป เพราะตอนนี้ทั้ง 3 variant ใช้ตำแหน่ง "ชุดเดียวกัน"
+     ซ้อนทับกันเป๊ะเสมอ — เปลี่ยนแค่ opacity ต่อ variant ไม่ใช่สลับตำแหน่งไปมา) */
+  const groundClumpCount = isSmallScreen ? GROUND_CLUMP_COUNT_MOBILE : GROUND_CLUMP_COUNT_DESKTOP
+  const groundClumps = useMemo(
+    () => generateGroundClumps(`${folder}-ground`, groundClumpCount),
+    [folder, groundClumpCount],
   )
 
   const [hintVisible, setHintVisible] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
+
+  /* [ใหม่ — ตามที่ระบุรอบนี้] ต้องรู้ขนาดกล่อง .tree-of-life จริง (px) เพื่อจำลอง
+     object-fit:contain ของภาพลำต้นให้แปลงพิกัด branch-tip ได้ถูกต้อง (ดู
+     mapImagePointToContainerPct ด้านบน) — วัดจริงด้วย ResizeObserver แทนการเดา เพราะขนาด
+     กล่องเปลี่ยนได้ตามอุปกรณ์/orientation จริง ไม่ใช่ค่าคงที่ */
+  const [containerSize, setContainerSize] = useState<ContainerSize | null>(null)
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const update = () => setContainerSize({ w: el.clientWidth, h: el.clientHeight })
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  /* [ใหม่ — ตามที่ระบุรอบนี้] ขนาดจริง (naturalWidth/Height) ของไฟล์ภาพลำต้นที่โหลดสำเร็จ
+     ล่าสุด — จำเป็นสำหรับสูตร object-fit:contain เช่นกัน อัปเดตผ่าน callback ที่ TrunkLayer
+     เรียกตอน <img onLoad> (ดู TrunkLayer ด้านล่าง) */
+  const [trunkNaturalSize, setTrunkNaturalSize] = useState<ImageNaturalSize | null>(null)
+
+  /* [เขียนใหม่ตามที่ระบุรอบนี้ ข้อ 2+3] จุดศูนย์กลาง+รัศมีวงกลมทรงพุ่ม — คำนวณจาก
+     CANOPY_TIP_POINTS (ค่าคงที่ import ตรงๆ ไม่ต้อง fetch) ตาม shape (getShapeLetter) +
+     visualLevel ปัจจุบัน ต้องรอ containerSize/trunkNaturalSize พร้อมก่อน (เหมือนระบบเดิม) */
+  const shapeLetter = useMemo(() => getShapeLetter(mbtiType), [mbtiType])
+  const canopyCircle = useMemo(() => {
+    if (!containerSize || !trunkNaturalSize) return null
+    return computeCanopyCircle(shapeLetter, visualLevel, trunkNaturalSize, containerSize, TRUNK_VISUAL_SCALE)
+  }, [shapeLetter, visualLevel, containerSize, trunkNaturalSize])
+
+  /* [เขียนใหม่ตามที่ระบุรอบนี้ ข้อ 4] ใบทั้งหมดสุ่มอยู่ในวงกลม — leafPool เป็น null
+     (เกมเลเวล ≤20) → ไม่มีใบเลย จำนวนรวมมาจาก LEAF_COUNT_BY_VISUAL_LEVEL_* ตาม visualLevel */
+  const leafInstances = useMemo(() => {
+    if (!canopyCircle || !containerSize || !leafPool) return []
+    const countTable = isSmallScreen ? LEAF_COUNT_BY_VISUAL_LEVEL_MOBILE : LEAF_COUNT_BY_VISUAL_LEVEL_DESKTOP
+    const count = countTable[visualLevel - 1] ?? countTable[countTable.length - 1]
+    return generateLeafInstances(`${folder}-leaf-instances-${visualLevel}`, count, canopyCircle, containerSize, mbtiType, leafPool)
+  }, [canopyCircle, containerSize, leafPool, isSmallScreen, visualLevel, folder, mbtiType])
+
+  /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] เลือกใบที่ "จะร่วง" ตอน dying แบบคงที่ต่อ shape+level
+     (~40% ของใบทั้งหมด อยู่ในช่วง 30-50% ตามที่ระบุ) — สุ่มครั้งเดียวด้วย seed ไม่ผูกกับ
+     สถานะ dying เอง กันเลือกจุดร่วงใหม่ทุกครั้งที่ dying/healthy สลับไปมา (ระบบเดิมทำงานกับ
+     "กลุ่มใบต่อ tip" — ตอนนี้ใบแต่ละใบเป็นอิสระจากกันแล้ว จึงเลือกร่วงเป็นรายใบตรงๆ) */
+  const fallCandidateKeys = useMemo(() => {
+    if (leafInstances.length === 0) return new Set<string>()
+    const rng = seededRandom(`${folder}-leaf-fall-${visualLevel}`)
+    const keys = leafInstances.filter(() => rng() < 0.4).map((leaf) => leaf.key)
+    return new Set(keys)
+  }, [leafInstances, folder, visualLevel])
+
+  /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] จุดที่ "กำลังเล่นอนิเมชันร่วง" (ชั่วคราว ~1.8s)
+   *  แยกจาก "ร่วงแล้วถาวร" (fallenKeys — หายจาก DOM จนกว่าจะกลับมาเล่นเควสหมวดจิตใจ)
+   *  ตรรกะ "เริ่ม/เลิกร่วง" ตัดสินใจระหว่าง render (ตามแพทเทิร์น prevPulseKey ด้านล่าง —
+   *  กัน react-hooks/set-state-in-effect) ส่วน useEffect ด้านล่างมีหน้าที่แค่ตั้งเวลา
+   *  (ของจริงที่ผูกกับระบบภายนอก คือ setTimeout) แปลง "กำลังร่วง" → "ร่วงแล้ว" เท่านั้น */
+  const [fallingKeys, setFallingKeys] = useState<Set<string>>(new Set())
+  const [fallenKeys, setFallenKeys] = useState<Set<string>>(new Set())
+
+  const needsFallStart = leafHealthPhase === 'dying' && fallingKeys.size === 0 && fallenKeys.size === 0 && fallCandidateKeys.size > 0
+  const needsRecovery = leafHealthPhase !== 'dying' && (fallingKeys.size > 0 || fallenKeys.size > 0)
+  if (needsFallStart) {
+    setFallingKeys(fallCandidateKeys)
+  } else if (needsRecovery) {
+    // ฟื้นจาก dying (กลับมาเล่นเควสแล้ว) — เคลียร์ทั้งคู่ให้ใบกลับมาโชว์ครบ
+    // (mount ใหม่ตาม mountDelayMs เดิมของแต่ละใบ = fade+scale-in stagger อัตโนมัติ)
+    setFallingKeys(new Set())
+    setFallenKeys(new Set())
+  }
+
+  useEffect(() => {
+    if (fallingKeys.size === 0) return
+    const keysToFall = fallingKeys
+    const timeoutId = window.setTimeout(() => {
+      setFallenKeys(keysToFall)
+      setFallingKeys(new Set())
+    }, 1800)
+    return () => window.clearTimeout(timeoutId)
+  }, [fallingKeys])
+
+  const visibleLeafInstances = useMemo(
+    () => leafInstances.filter((leaf) => !fallenKeys.has(leaf.key)),
+    [leafInstances, fallenKeys],
+  )
+
+  /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 5] สายลมพัดเป็นระยะ — สุ่มช่วงเวลา 15-30s ไม่ตายตัว ทุกครั้ง
+     ที่ถึงกำหนด toggle class เอฟเฟกต์ไหวแรงชั่วคราว ~2.5s แล้วกลับสู่ปกติ ไม่ sync กับ state
+     ไหนเป็นพิเศษ (ปิดทั้งหมดถ้า reducedMotion) */
+  const [windGusting, setWindGusting] = useState(false)
+  useEffect(() => {
+    if (reducedMotion) return
+    let gustTimeoutId: number
+    let scheduleTimeoutId: number
+    const scheduleNextGust = () => {
+      const delay = 15000 + Math.random() * 15000
+      scheduleTimeoutId = window.setTimeout(() => {
+        setWindGusting(true)
+        gustTimeoutId = window.setTimeout(() => {
+          setWindGusting(false)
+          scheduleNextGust()
+        }, 2500)
+      }, delay)
+    }
+    scheduleNextGust()
+    return () => {
+      window.clearTimeout(scheduleTimeoutId)
+      window.clearTimeout(gustTimeoutId)
+    }
+  }, [reducedMotion])
+
+  /* [แก้ตามที่ระบุรอบนี้ ข้อ 2 — root cause จริงของ "ดินจางๆ/ฝั่งซ้ายไม่มีดิน"] เดิมกำหนด
+     ขนาดก้อนดินเป็น "% ของความกว้างกล่อง" (`${scale*32}%`) แล้วปล่อย height:auto ตามสัดส่วน
+     ภาพจริง (ground_variant_*.png เป็นภาพเกือบสี่เหลี่ยมจัตุรัส 435×435) — บนจอกว้าง (เช่น
+     2304px) 32% ของความกว้างกลายเป็นก้อนดิน ~750px ทั้งกว้างและสูง (เพราะภาพสี่เหลี่ยมจัตุรัส)
+     ใหญ่กว่าแถบพื้นที่ตั้งใจไว้ (GROUND_BAND สูงแค่ ~19% ของความสูงกล่อง) หลายเท่า ทำให้ก้อน
+     ดินส่วนใหญ่ยื่นล้นพ้นขอบบน/ล่างของ viewport ที่มองเห็นจริงไป เห็นแค่บางส่วนที่โผล่พ้นขอบ
+     แบบสุ่มๆ ตามตำแหน่ง (ดูเหมือน "จาง"/"ขาดไปฝั่งหนึ่ง" ทั้งที่จริงคือก้อนใหญ่เกินจนโดนตัดขอบ)
+     แก้โดยคำนวณขนาดเป็น "px ตรงๆ" อิงจากความสูงกล่อง (ซึ่งสอดคล้องกับความสูงของ GROUND_BAND
+     ที่ตั้งใจไว้จริง) แทนการอิงความกว้างกล่องที่ไม่เกี่ยวกับแถบพื้นที่นี้เลย */
+  const groundClumpBasePx = containerSize ? containerSize.h * 0.22 : 0
 
   // [ใหม่] เล่น burst effect ทุกครั้งที่ growthPulse.key เปลี่ยน (เควสสำเร็จ) แล้วเคลียร์เอง
   // อัตโนมัติหลัง 1.8s — ไม่ต้องให้ AppContext เป็นคนจับเวลาเคลียร์ค่าทิ้ง กัน stale closure
@@ -281,22 +735,132 @@ function TreeOfLifeBase({
           filter: hasSoot
             ? [RISK_FILTER[riskLevel] === 'none' ? '' : RISK_FILTER[riskLevel], 'sepia(0.3)', 'saturate(0.7)', 'brightness(0.92)'].filter(Boolean).join(' ')
             : RISK_FILTER[riskLevel],
-        }}
+          '--trunk-visual-scale': TRUNK_VISUAL_SCALE,
+        } as React.CSSProperties}
       >
-        <LeveledLayer url={grassUrl} kind="grass" zIndex={1} />
+        {/* [เขียนใหม่ตามที่ระบุรอบนี้ ข้อ 3] variant 1 = ฐานเต็มพื้นที่เสมอ ไม่มีเงื่อนไข
+            ("ปั๊ม" ตำแหน่งเดียวกับ variant 2/3 ด้านล่างเป๊ะ ให้ 3 ชั้นซ้อนทับตรงกันพอดี) */}
+        <div className="tree-of-life__foliage" style={{ zIndex: 1 }} aria-hidden="true">
+          {groundClumps.map((c, i) => (
+            <img
+              key={c.key} src={groundVariant1Url} alt=""
+              className="tree-of-life__stamp tree-of-life__stamp--ground"
+              style={{
+                left: `${c.leftPct}%`,
+                top: `${c.topPct}%`,
+                width: `${c.scale * groundClumpBasePx}px`,
+                transform: `translate(-50%, -50%) rotate(${c.rotationDeg}deg)`,
+                animationDelay: reducedMotion ? '0ms' : `${c.delayMs}ms`,
+                zIndex: i,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] variant 2 (หญ้าเริ่มขึ้น) — opacity/filter ทั้งชั้น
+            คุมที่ container เดียว (ไม่ใช่ต่อก้อน) transition นุ่มนวลตอนเปลี่ยน
+            healthVisualLevel หรือตอน decay/ฟื้นตัว ไม่กระตุก */}
+        <div
+          className="tree-of-life__foliage tree-of-life__ground-overlay"
+          style={{ zIndex: 1, opacity: groundVariant2Opacity, filter: GRASS_HEALTH_FILTER[groundHealthPhase] }}
+          aria-hidden="true"
+        >
+          {groundClumps.map((c, i) => (
+            <img
+              key={c.key} src={groundVariant2Url} alt=""
+              className="tree-of-life__stamp tree-of-life__stamp--ground"
+              style={{
+                left: `${c.leftPct}%`,
+                top: `${c.topPct}%`,
+                width: `${c.scale * groundClumpBasePx}px`,
+                transform: `translate(-50%, -50%) rotate(${c.rotationDeg}deg)`,
+                animationDelay: reducedMotion ? '0ms' : `${c.delayMs}ms`,
+                zIndex: i,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] variant 3 (ดอกหญ้าแซม) — โผล่เฉพาะ healthVisualLevel
+            สูงสุด (3) เท่านั้น ก่อน decay multiplier เดียวกับ variant 2 */}
+        <div
+          className="tree-of-life__foliage tree-of-life__ground-overlay"
+          style={{ zIndex: 1, opacity: groundVariant3Opacity }}
+          aria-hidden="true"
+        >
+          {groundClumps.map((c, i) => (
+            <img
+              key={c.key} src={groundVariant3Url} alt=""
+              className="tree-of-life__stamp tree-of-life__stamp--ground"
+              style={{
+                left: `${c.leftPct}%`,
+                top: `${c.topPct}%`,
+                width: `${c.scale * groundClumpBasePx}px`,
+                transform: `translate(-50%, -50%) rotate(${c.rotationDeg}deg)`,
+                animationDelay: reducedMotion ? '0ms' : `${c.delayMs}ms`,
+                zIndex: i,
+              }}
+            />
+          ))}
+        </div>
 
         {/* [ข้อกำหนดข้อ 4] หญ้า/ดอกไม้มีมิติ ซ้อนทับภาพพื้นหญ้าเดิม */}
         <GroundScene grassSoilLevel={grassSoilLevel} seedKey={`${folder}-ground`} />
 
-        <TrunkLayer primaryUrl={shapeTrunkUrl} fallbackUrl={trunkUrl} zIndex={2} />
+        <TrunkLayer
+          primaryUrl={shapeTrunkUrl}
+          fallbackUrl={trunkUrl}
+          zIndex={2}
+          onNaturalSize={setTrunkNaturalSize}
+        />
 
-        <div className="tree-of-life__foliage" style={{ zIndex: 3 }} aria-hidden="true">
-          {leafStamps.map((s) => (
-            <img
-              key={s.key} src={s.url} alt="" className="tree-of-life__stamp tree-of-life__stamp--leaf"
-              style={{ left: `${s.leftPct}%`, top: `${s.topPct}%`, width: `${s.scale * 100}%`, transform: `translate(-50%, -50%) rotate(${s.rotationDeg}deg)`, animationDelay: reducedMotion ? '0ms' : `${s.delayMs}ms` }}
-            />
-          ))}
+        {/* [เขียนใหม่ตามที่ระบุรอบนี้] วางใบแบบสุ่มสม่ำเสมอในวงกลมทรงพุ่ม (ดู generateLeafInstances)
+            แทนระบบ tip-detection เดิม — ใบแต่ละใบเป็นอิสระจากกันแล้ว ไม่มี "กลุ่มต่อปลายกิ่ง"
+            อีกต่อไป จึง 1 <div> ครอบ = 1 ใบ ตั้ง transform-origin ไปที่ตำแหน่งใบนั้นเป๊ะ
+
+            [ใหม่ — ข้อ 4] ไฟล์ใบ + จำนวนใบ มาจาก LEAF_COUNT_BY_VISUAL_LEVEL_* + leafPool
+            สุ่มตำแหน่งในวงกลม (canopyCircle) — ดู generateLeafInstances
+            [คงเดิม] ใบที่กำลังร่วง (fallingKeys) เล่นอนิเมชันร่วงแล้วหายจาก DOM จริง
+            (ไม่ตั้ง animationDuration/Delay inline ตอนร่วง ให้ class .{'-'}-falling คุมเองเต็มๆ)
+            [คงเดิม] windGusting → เพิ่ม modifier class ให้ไหวแรงขึ้นชั่วคราว
+            [แก้ตามที่ระบุรอบนี้ ข้อ 5] bloom ตอน mount ไม่มีการเลื่อนตำแหน่งอีกแล้ว (ดู
+            keyframes treeOfLifeLeafBloom ใน TreeOfLife.css — มีแค่ opacity+scale) ตำแหน่งสุดท้าย
+            คือ leaf.xPct/leaf.yPct ตั้งแต่เฟรมแรก */}
+        <div
+          className="tree-of-life__leaf-layer"
+          style={{ filter: LEAF_HEALTH_FILTER[leafHealthPhase] }}
+        >
+          {visibleLeafInstances.map((leaf) => {
+            const isFalling = fallingKeys.has(leaf.key)
+            return (
+              <div
+                key={leaf.key}
+                className={[
+                  'tree-of-life__leaf-group',
+                  isFalling ? 'tree-of-life__leaf-group--falling' : '',
+                  windGusting ? 'tree-of-life__leaf-group--gust' : '',
+                ].filter(Boolean).join(' ')}
+                style={{
+                  zIndex: 3,
+                  transformOrigin: `${leaf.xPct}% ${leaf.yPct}%`,
+                  animationDuration: isFalling ? undefined : `0.5s, ${leaf.swayDurationS}s`,
+                  animationDelay: isFalling ? undefined : (reducedMotion ? '0ms, 0s' : `${leaf.mountDelayMs}ms, ${leaf.swayDelayS}s`),
+                }}
+                aria-hidden="true"
+              >
+                <img
+                  src={leaf.leafImageUrl} alt=""
+                  className="tree-of-life__stamp tree-of-life__stamp--leaf"
+                  style={{
+                    left: `${leaf.xPct}%`,
+                    top: `${leaf.yPct}%`,
+                    width: `${leaf.scale * 9}%`,
+                    transform: `translate(-50%, -50%) rotate(${leaf.rotationDeg}deg)`,
+                  }}
+                />
+              </div>
+            )
+          })}
         </div>
 
         <div className="tree-of-life__foliage" style={{ zIndex: 4 }} aria-hidden="true">
@@ -400,9 +964,15 @@ function TreeOfLifeBase({
           {hintVisible && (
             <div className="tree-of-life__tooltip">
               <div className="tree-of-life__tooltip-title">🌳 {folder}</div>
-              <div>🪵 ลำต้น/กิ่ง (ความรู้): Lv.{trunkBranchLevel}</div>
-              <div>🌸 ใบ/ดอก (จิตใจ): Lv.{leafFlowerLevel} · ปั๊ม {leafStamps.length + flowerStamps.length} จุด</div>
-              <div>🌱 หญ้า/ราก (สุขภาพ): Lv.{grassSoilLevel}</div>
+              <div>🪵 ลำต้น/ใบ (ความรู้): Lv.{trunkBranchLevel} (ภาพ {visualLevel}/8) · {visibleLeafInstances.length} ใบ</div>
+              <div>🌸 ดอก (จิตใจ): Lv.{leafFlowerLevel} · ดอกปั๊ม {flowerStamps.length} จุด</div>
+              <div>🌱 หญ้า/ราก (สุขภาพ): Lv.{grassSoilLevel} (ผสม {groundHealthVisualLevel}/3)</div>
+              {leafHealthPhase !== 'healthy' && (
+                <div className="tree-of-life__tooltip-warn">🍂 ใบ: {leafHealthPhase === 'dying' ? 'กำลังร่วง' : 'เริ่มเหี่ยว'}</div>
+              )}
+              {groundHealthPhase !== 'healthy' && (
+                <div className="tree-of-life__tooltip-warn">🌾 หญ้า: {groundHealthPhase === 'dying' ? 'แห้งเกือบหมด' : 'เริ่มแห้ง'}</div>
+              )}
               {riskLevel !== 'LOW' && (
                 <div className="tree-of-life__tooltip-warn">⚠️ สุขภาพต้นไม้: {riskLevel === 'HIGH' ? 'เหี่ยวมาก' : 'เริ่มซีด'}</div>
               )}
@@ -414,40 +984,6 @@ function TreeOfLifeBase({
   )
 }
 
-interface LeveledLayerProps {
-  url: string | null
-  kind: 'trunk' | 'grass'
-  zIndex: number
-}
-
-function LeveledLayer({ url, kind, zIndex }: LeveledLayerProps) {
-  // [แก้] รีเซ็ต errored ระหว่าง render ทันทีที่ url เปลี่ยน แทนการใช้ effect
-  // (react-hooks/set-state-in-effect) — เป็นแพทเทิร์น "ปรับ state เมื่อ prop เปลี่ยน"
-  const [prevUrl, setPrevUrl] = useState(url)
-  const [errored, setErrored] = useState(false)
-  if (url !== prevUrl) {
-    setPrevUrl(url)
-    setErrored(false)
-  }
-
-  if (!url || errored) {
-    return (
-      <div className="tree-of-life__layer tree-of-life__layer--placeholder" style={{ zIndex }} aria-hidden="true">
-        {kind === 'trunk' && '🌱'}
-      </div>
-    )
-  }
-
-  return (
-    <img
-      key={url} src={url} alt="" aria-hidden="true"
-      className={`tree-of-life__layer tree-of-life__layer--${kind}`}
-      style={{ zIndex }}
-      onError={() => setErrored(true)}
-    />
-  )
-}
-
 interface TrunkLayerProps {
   /** ชุดภาพใหม่ (shape-based ตาม MBTI/visual level — ดู treeAssets.ts) ลองก่อนเสมอ */
   primaryUrl: string
@@ -455,21 +991,25 @@ interface TrunkLayerProps {
    *  ไม่ขึ้นเท่านั้น (shape ที่ยังไม่มี asset จริง) */
   fallbackUrl: string | null
   zIndex: number
+  /** [ใหม่ — ตามที่ระบุรอบนี้] แจ้งขนาดจริง (naturalWidth/Height) ของไฟล์ภาพที่โหลดสำเร็จ
+   *  กลับขึ้นไปให้ parent ใช้แปลงพิกัด branch-tip (ดู mapImagePointToContainerPct) */
+  onNaturalSize?: (size: ImageNaturalSize) => void
 }
 
 /*============================================================================*\
   TrunkLayer — [ใหม่] เรนเดอร์ลำต้นจากชุดภาพใหม่ (shape-based) เป็นหลัก มี fallback 2 ชั้น:
   primaryUrl (ชุดใหม่) โหลดไม่ขึ้น → fallbackUrl (ชุดเก่า) → ไม่มีทั้งคู่ → placeholder 🌱
-  เดียวกับ LeveledLayer ทุกจุด (เช็คจาก onError จริง ไม่ใช่เดาว่าไฟล์มีไหม กันโชว์ broken image)
+  (เช็คจาก onError จริง ไม่ใช่เดาว่าไฟล์มีไหม กันโชว์ broken image)
 
   ใช้ key={resolvedUrl} ให้ <img> ถูก remount ทุกครั้งที่ level/MBTI เปลี่ยนจน src เปลี่ยนจริง
   แล้วปล่อยให้ CSS animation ของ .tree-of-life__layer--trunk (TreeOfLife.css) เล่น fade เข้า
   เอง — ไม่ใช้ framer-motion AnimatePresence เพราะ pattern "key เปลี่ยน + CSS @keyframes
-  เล่นตอน mount" นี้มีอยู่แล้วในระบบ (LeveledLayer เดิมข้างบนใช้แบบเดียวกันกับ 0.7s ของ grass)
+  เล่นตอน mount" นี้มีอยู่แล้วในระบบ (ground/leaf/flower ใช้ pattern เดียวกันผ่าน .tree-of-life__stamp)
   เรียบง่าย/สอดคล้องกับโค้ดเดิมกว่า — เฉพาะ trunk ปรับความยาวเป็น 0.4s ตามที่ระบุ (300-500ms)
-  แยกจาก grass ที่ยังคง 0.7s เดิม (ดู .tree-of-life__layer--trunk override ใน .css)
+  ส่วนขนาดภาพลำต้น (ตามที่ระบุรอบนี้ "ทำลำต้นให้เล็กลง") ย่อด้วย transform: scale() ผ่าน
+  CSS var --trunk-visual-scale (ดู .tree-of-life__layer--trunk ใน .css) ไม่ใช่ปรับที่นี่
 \*============================================================================*/
-function TrunkLayer({ primaryUrl, fallbackUrl, zIndex }: TrunkLayerProps) {
+function TrunkLayer({ primaryUrl, fallbackUrl, zIndex, onNaturalSize }: TrunkLayerProps) {
   const [prevPrimaryUrl, setPrevPrimaryUrl] = useState(primaryUrl)
   const [primaryFailed, setPrimaryFailed] = useState(false)
   const [fallbackFailed, setFallbackFailed] = useState(false)
@@ -494,6 +1034,7 @@ function TrunkLayer({ primaryUrl, fallbackUrl, zIndex }: TrunkLayerProps) {
       key={resolvedUrl} src={resolvedUrl} alt="" aria-hidden="true"
       className="tree-of-life__layer tree-of-life__layer--trunk"
       style={{ zIndex }}
+      onLoad={(e) => onNaturalSize?.({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
       onError={() => {
         if (!primaryFailed) setPrimaryFailed(true)
         else setFallbackFailed(true)
@@ -505,8 +1046,23 @@ function TrunkLayer({ primaryUrl, fallbackUrl, zIndex }: TrunkLayerProps) {
 interface DecorationLayerProps {
   placedItems: PlacedItem[]
   decorationPositions: DecorationPositionMap
-  onDecorationMove?: (itemId: string, xPct: number, yPct: number) => void
+  onDecorationMove?: (itemId: string, xPct: number, yPct: number, scale?: number) => void
   containerRef: React.RefObject<HTMLDivElement | null>
+}
+
+/** [ใหม่ — ตามที่ระบุ] ขอบเขต scale ที่อนุญาต กันย่อ/ขยายจนดูแปลก */
+const MIN_DECORATION_SCALE = 0.5
+const MAX_DECORATION_SCALE = 2.5
+
+/** ขนาดฐาน (px) ของกล่องไอเทมตกแต่งที่ scale:1 — ต้องคำนวณด้วยสูตรเดียวกับ
+ * clamp(20px, 6vw, 34px) ใน TreeOfLife.css (.tree-of-life__decoration-item) เพราะตอน
+ * resize เราคำนวณ width/height เป็น px ตรงๆ ด้วย JS แทนการพึ่ง CSS clamp() ล้วนๆ (ต้องรู้
+ * ขนาดฐานจริงเป็นตัวเลขก่อนคูณ scale ได้) — วัดจาก window.innerWidth ตรงๆ เหมือนที่ CSS
+ * clamp() คำนวณจาก viewport width (vw) เช่นกัน ไม่ต้องพึ่ง ResizeObserver เพราะเป็นแค่
+ * ค่าประมาณสำหรับ handle ตำแหน่ง/ขนาดกล่อง ไม่ต้องแม่นระดับพิกเซล */
+function getBaseDecorationSizePx(): number {
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1024
+  return Math.min(34, Math.max(20, vw * 0.06))
 }
 
 /**
@@ -514,10 +1070,24 @@ interface DecorationLayerProps {
  * ระหว่างลาก เก็บพิกัด "preview" ไว้ใน local state ของ component นี้เอง (ไม่ยิง
  * onDecorationMove ทุกเฟรมที่ลาก เพราะจะ re-render ต้นไม้ทั้งต้นถี่เกินจำเป็น) แล้วค่อยยิง
  * onDecorationMove ครั้งเดียวตอนปล่อยนิ้ว/เมาส์ (pointerup) ให้ AppContext เซฟค่าจริง
+ *
+ * [เพิ่มตามที่ระบุ — ปรับขนาดไอเทมตกแต่งได้อิสระ] แตะ/คลิกไอเทมเพื่อ "เลือก" (selectedId) —
+ * ตอนถูกเลือกจะโผล่ handle มุมขวาล่าง ลาก handle นั้น (แยก pointer capture ของตัวเอง คนละตัว
+ * กับการลากย้ายตำแหน่งที่ตัว item เอง) เพื่อคำนวณ scale ใหม่จาก "อัตราส่วนระยะห่างจากจุด
+ * ศูนย์กลางไอเทม" เทียบกับตอนเริ่มลาก — pattern เดียวกับระบบลากย้ายตำแหน่งเดิมด้านบน
+ * (onPointerDown/Move/Up + setPointerCapture) ไม่ได้คิดกลไกใหม่
  */
 function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, containerRef }: DecorationLayerProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [previewPos, setPreviewPos] = useState<{ xPct: number; yPct: number } | null>(null)
+
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [resizingId, setResizingId] = useState<string | null>(null)
+  const [previewScale, setPreviewScale] = useState<number | null>(null)
+  /** ระยะห่าง (px) จากจุดศูนย์กลางไอเทมถึงตำแหน่งที่กดลง handle ครั้งแรก + scale ตอนนั้น
+   *  เก็บเป็น ref ธรรมดาไม่ใช่ state เพราะไม่ต้อง re-render ระหว่างลาก อ่านอย่างเดียวใน
+   *  handlePointerMove */
+  const resizeStartRef = useRef<{ centerX: number; centerY: number; startDistance: number; baseScale: number } | null>(null)
 
   const getEffectivePosition = (item: PlacedItem): { left: string; top: string } => {
     if (draggingId === item.itemId && previewPos) {
@@ -529,7 +1099,13 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
     return zonePos
   }
 
+  const getEffectiveScale = (item: PlacedItem): number => {
+    if (resizingId === item.itemId && previewScale !== null) return previewScale
+    return decorationPositions[item.itemId]?.scale ?? 1
+  }
+
   const clampPct = (v: number) => Math.min(96, Math.max(4, v))
+  const clampScale = (v: number) => Math.min(MAX_DECORATION_SCALE, Math.max(MIN_DECORATION_SCALE, v))
 
   const handlePointerDown = (e: ReactPointerEvent<HTMLSpanElement>, itemId: string) => {
     if (!onDecorationMove) return // ไม่รองรับการลากถ้าผู้เรียกใช้ไม่ได้ผูก handler ไว้
@@ -554,26 +1130,84 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
     setPreviewPos(null)
   }
 
+  /** [ใหม่] คลิก/แตะที่ตัวไอเทม (ไม่ใช่ handle) — สลับเลือก/ยกเลิกเลือก ไม่ยุ่งกับระบบลาก
+   *  ย้ายตำแหน่งเดิมเลย (onClick ของเบราว์เซอร์จะไม่ยิงเองถ้าเพิ่งลากไปจริงๆ อยู่แล้ว) */
+  const handleItemClick = (e: React.MouseEvent<HTMLSpanElement>, itemId: string) => {
+    if (!onDecorationMove) return
+    e.stopPropagation()
+    setSelectedId((prev) => (prev === itemId ? null : itemId))
+  }
+
+  /** [ใหม่] เริ่มลาก resize handle — วัดจุดศูนย์กลางกล่องไอเทม (จาก parentElement ของ handle
+   *  เอง) แล้วจำระยะห่างเริ่มต้น + scale เดิมไว้ใน ref เพื่อคำนวณอัตราส่วนตอน pointermove */
+  const handleResizePointerDown = (e: ReactPointerEvent<HTMLSpanElement>, item: PlacedItem) => {
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    const itemEl = e.currentTarget.parentElement
+    if (!itemEl) return
+    const rect = itemEl.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    const startDistance = Math.hypot(e.clientX - centerX, e.clientY - centerY) || 1
+    resizeStartRef.current = { centerX, centerY, startDistance, baseScale: decorationPositions[item.itemId]?.scale ?? 1 }
+    setResizingId(item.itemId)
+    setPreviewScale(resizeStartRef.current.baseScale)
+  }
+
+  const handleResizePointerMove = (e: ReactPointerEvent<HTMLSpanElement>) => {
+    const start = resizeStartRef.current
+    if (!resizingId || !start) return
+    const currentDistance = Math.hypot(e.clientX - start.centerX, e.clientY - start.centerY) || 1
+    const ratio = currentDistance / start.startDistance
+    setPreviewScale(clampScale(start.baseScale * ratio))
+  }
+
+  const handleResizePointerUp = (item: PlacedItem) => {
+    if (resizingId === item.itemId && previewScale !== null && onDecorationMove) {
+      const pos = decorationPositions[item.itemId] ?? zonePositionAsPct(item)
+      onDecorationMove(item.itemId, pos.xPct, pos.yPct, previewScale)
+    }
+    setResizingId(null)
+    setPreviewScale(null)
+    resizeStartRef.current = null
+  }
+
   return (
     <>
       <div className={`tree-of-life__drop-zone-hint ${draggingId ? 'tree-of-life__drop-zone-hint--visible' : ''}`} />
       <div className="tree-of-life__decorations" aria-hidden="true">
         {placedItems.map((item) => {
           const pos = getEffectivePosition(item)
+          const scale = getEffectiveScale(item)
+          const boxSize = getBaseDecorationSizePx() * scale
           const isDraggable = !!onDecorationMove
           const isDragging = draggingId === item.itemId
+          const isSelected = selectedId === item.itemId
           return (
             <span
               key={item.itemId}
               className={`tree-of-life__decoration-item ${isDraggable ? 'tree-of-life__decoration-item--draggable' : ''} ${isDragging ? 'tree-of-life__decoration-item--dragging' : ''}`}
-              style={{ left: pos.left, top: pos.top }}
-              title={isDraggable ? `${item.itemId} — ลากเพื่อจัดวางใหม่` : item.itemId}
+              style={{ left: pos.left, top: pos.top, width: boxSize, height: boxSize }}
+              title={isDraggable ? `${item.itemId} — ลากเพื่อจัดวางใหม่ กดเพื่อปรับขนาด` : item.itemId}
               onPointerDown={(e) => handlePointerDown(e, item.itemId)}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
+              onClick={(e) => handleItemClick(e, item.itemId)}
             >
               <DecorationVisual itemId={item.itemId} />
+              {isDraggable && isSelected && (
+                <span
+                  className="tree-of-life__decoration-resize-handle"
+                  title="ลากเพื่อปรับขนาด"
+                  onPointerDown={(e) => handleResizePointerDown(e, item)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={() => handleResizePointerUp(item)}
+                  onPointerCancel={() => handleResizePointerUp(item)}
+                >
+                  ⤡
+                </span>
+              )}
             </span>
           )
         })}
@@ -582,22 +1216,38 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
   )
 }
 
+/** [ใหม่] แปลงตำแหน่งเริ่มต้นของไอเทม (โซนตายตัว % string เช่น '50%') ให้เป็นตัวเลข % ล้วนๆ
+ *  ไว้ใช้ตอนบันทึก scale ของไอเทมที่ยังไม่เคยถูกลากย้ายตำแหน่งมาก่อนเลย (ไม่มี custom
+ *  position ใน decorationPositions ยังใช้ตำแหน่งโซนเริ่มต้นอยู่) — ไม่งั้น onDecorationMove
+ *  จะได้ x/y เป็น undefined ตอนบันทึก scale ครั้งแรกก่อนเคยลากย้ายที่เลยสักครั้ง */
+function zonePositionAsPct(item: PlacedItem): { xPct: number; yPct: number } {
+  const zonePos = DECORATION_ZONE_POSITION[item.zone]
+  return { xPct: parseFloat(zonePos.left), yPct: parseFloat(zonePos.top) }
+}
+
 /*============================================================================*\
-  DecorationVisual — [ใหม่] แสดงไอเทมตกแต่งเป็นภาพจริงถ้ามีไฟล์ ถ้ายังไม่มีใช้ emoji แทน
+  DecorationVisual — [แก้บั๊ก — ตามที่ระบุ] แสดงไอเทมตกแต่งเป็นภาพจริงถ้ามีไฟล์ ถ้ายังไม่มี
+  ใช้ emoji แทน
   ────────────────────────────────────────────────────────────────────────────
-  ออกแบบให้ทยอยเปลี่ยนไปใช้อาร์ตจริงได้ทีละชิ้น: วางไฟล์ที่
-  public/assets/images/decorations/<itemId>.webp แล้วรีเฟรช — เท่านั้น
-  ไม่ต้องแก้โค้ดไฟล์ไหนเลย และไอเทมที่ยังไม่มีภาพก็ไม่พังตาม
+  [แก้บั๊ก] เดิมอ้าง getDecorationImage(itemId) → '/assets/images/decorations/<itemId>.webp'
+  แต่โฟลเดอร์ public/assets/images/decorations/ ไม่มีไฟล์ .webp ไฟล์ไหนอยู่จริงเลย (มีแค่
+  .gitkeep) — <img> จึง onError ทันทีทุกชิ้นและ fallback เป็น emoji เงียบๆ เสมอ ทั้งที่จริงๆ
+  มีรูปจริงอยู่แล้วที่ ITEM_ICONS (src/config/iconAssets.ts) ซึ่งเป็นจุดเดียวกับที่
+  ShopSection.tsx/ProfilePage.tsx ใช้แสดงไอเทมชุดเดียวกันนี้อยู่แล้ว — เปลี่ยนมาใช้ ITEM_ICONS
+  แทนเพื่อให้ทั้ง 3 จุด (ร้านค้า/คลังไอเทม/ของตกแต่งบนต้นไม้จริง) ใช้รูปชุดเดียวกันสม่ำเสมอ
+  ไอเทมที่ ITEM_ICONS ยังไม่มีไฟล์จริงให้ (เช่น jade-dragon, gold-star) ยัง fallback เป็น
+  emoji ตามเดิมผ่าน DECORATION_EMOJI เหมือนที่ ShopSection.tsx ทำ
 \*============================================================================*/
 function DecorationVisual({ itemId }: { itemId: string }) {
   const [failed, setFailed] = useState(false)
   const emoji = DECORATION_EMOJI[itemId] ?? '⭐'
+  const imageUrl: string | undefined = ITEM_ICONS[itemId]
 
-  if (failed) return <span className="tree-of-life__decoration-emoji">{emoji}</span>
+  if (!imageUrl || failed) return <span className="tree-of-life__decoration-emoji">{emoji}</span>
 
   return (
     <img
-      src={getDecorationImage(itemId)}
+      src={imageUrl}
       alt=""
       aria-hidden="true"
       className="tree-of-life__decoration-img"

@@ -61,6 +61,38 @@ describe('LearningQuestMap — sync ทันทีหลังทำเคว�
   beforeEach(() => {
     window.localStorage.clear()
     vi.stubGlobal('ResizeObserver', MockResizeObserver)
+    // [เพิ่มรอบ pan/zoom] LearningQuestMap เรียก useIsLowPowerMode() (เช็ค prefers-reduced-motion/
+    // max-width เพื่อสลับวิดีโอพื้นหลัง) ตอนนี้แล้ว — jsdom ไม่มี window.matchMedia จริง ต้อง stub
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      // framer-motion (ใช้อยู่แล้วในต้นไม้ผ่าน AnimatePresence/motion.* หลายจุด) ยังใช้ legacy
+      // addListener/removeListener ของ MediaQueryList เช็ค prefers-reduced-motion เองด้วย
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })))
+    // [ใหม่ — กล้องซูมออกตอนจบฐานสุดท้าย] jsdom ไม่มี requestAnimationFrame ทำงานจริงตามเฟรมเรต
+    // จริง — เอฟเฟกต์กล้อง (startCameraFocus) ใช้ rAF ขับ tween ถ้าไม่ stub เทสต์ที่ต้องรอ tween
+    // จบจะค้าง/ไม่จบตามเวลาที่คาดไว้ shim เป็น setTimeout(cb,0) ให้ tick ไวสุดเท่าที่ทำได้แทน —
+    // ต้องตั้งทั้ง window.* ตรงๆ ด้วย (ไม่ใช่แค่ vi.stubGlobal บน globalThis) เพราะ
+    // LearningQuestMap.tsx เรียกผ่าน window.requestAnimationFrame(...) ตรงๆ ทุกจุด
+    const rafShim = (cb: FrameRequestCallback) => window.setTimeout(() => cb(performance.now()), 0) as unknown as number
+    const cafShim = (id: number) => window.clearTimeout(id)
+    vi.stubGlobal('requestAnimationFrame', rafShim)
+    vi.stubGlobal('cancelAnimationFrame', cafShim)
+    window.requestAnimationFrame = rafShim
+    window.cancelAnimationFrame = cafShim
+    // [ใหม่ — กล้องซูมออกตอนจบฐานสุดท้าย] jsdom ไม่ทำ layout จริง el.clientWidth/Height จึงเป็น
+    // 0 เสมอ — LearningQuestMap's useLayoutEffect เรียก updateSize() ทันทีตอน mount (ไม่ต้องรอ
+    // ResizeObserver callback จริงเลย ดูโค้ด) แต่ init-zoom effect bail ทิ้งถ้า width/height<=0
+    // ทำให้ zoom/pan ค้างที่ค่าเริ่มต้น {1,{0,0}} ตลอดเทสต์ ไม่มีทางพิสูจน์ zoom เปลี่ยนได้เลย —
+    // stub ค่าคงที่ให้ elements ทุกตัวรายงานขนาดที่ไม่เป็นศูนย์แทน
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, value: 1200 })
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, value: 500 })
   })
 
   it('เล่น "เพ่งสมาธิ / ตั้งเป้าหมาย" จบ 1 ครั้ง → ด่าน "หยั่งรากลึก" ต้องปลดล็อกโดยไม่ต้องรอ tick เพิ่ม', async () => {
@@ -77,11 +109,13 @@ describe('LearningQuestMap — sync ทันทีหลังทำเคว�
     const submitBtn = screen.getByText('ปักธงเป้าหมายวันนี้') as HTMLButtonElement
     expect(submitBtn.disabled).toBe(false)
 
-    // owl ก่อนทำเควส — ยืนอยู่ที่ตำแหน่งเริ่มต้น (ก่อนโหนดที่ 1) ตาม FIXED_NODE_POSITIONS[0]
-    // = {x:42,y:69} → rawStartPos = {x:33, y:76} (ดู LearningQuestMap.tsx) เพราะยังไม่ทำอะไรสำเร็จ
+    // owl ก่อนทำเควส — ยืนอยู่ที่ FIRST_OWL_POS ({x:51,y:90}, จุดคงที่ก่อนถึงโหนด 1 บนเส้นทาง —
+    // ดู LearningQuestMap.tsx) เพราะยังไม่ทำอะไรสำเร็จ [แก้รอบกล้องอัตโนมัติ] เดิมทดสอบด้วยสูตร
+    // offset จากโหนด 1 (rawStartPos) ซึ่งถูกตัดออกไปแล้วตามที่ระบุ (ข้อ 1: นกฮูกต้องอยู่บน
+    // เส้นทางจริง ไม่ใช่ offset เดา) แทนที่ด้วย FIRST_OWL_POS คงที่
     const owlBefore = document.querySelector('.learning-quest-map__owl') as HTMLElement
-    expect(owlBefore.style.left).toBe('33%')
-    expect(owlBefore.style.top).toBe('76%')
+    expect(owlBefore.style.left).toBe('51%')
+    expect(owlBefore.style.top).toBe('90%')
 
     // ── จุดวัดผลจริง — กดครั้งเดียว แล้วเช็คทันที ไม่มี await/waitFor คั่นกลางเลย ──
     fireEvent.click(submitBtn)
@@ -90,9 +124,10 @@ describe('LearningQuestMap — sync ทันทีหลังทำเคว�
     const deepRootNode = screen.getByTitle('หยั่งรากลึก / โหมดจดจ่อ')
     expect(deepRootNode.className).not.toContain('learning-quest-map__node--locked')
 
-    // 2) นกฮูกต้องขยับไปที่โหนดที่ 1 (FIXED_NODE_POSITIONS[0] = {x:42,y:69}) ทันทีเช่นกัน
+    // 2) นกฮูกต้องขยับไปที่ตำแหน่งโหนดที่ 1 "พอดี" ทันที (FIXED_NODE_POSITIONS[0] = {x:40,y:70}
+    // — รอบกล้องอัตโนมัตินี้เปลี่ยนสูตรจาก offset เดาเป็น "ตำแหน่งโหนดพอดี" กันนกฮูกหลุดเส้นทาง)
     const owlAfter = document.querySelector('.learning-quest-map__owl') as HTMLElement
-    expect(owlAfter.style.left).toBe('42%')
-    expect(owlAfter.style.top).toBe('69%')
+    expect(owlAfter.style.left).toBe('40%')
+    expect(owlAfter.style.top).toBe('70%')
   }, 10000)
 })

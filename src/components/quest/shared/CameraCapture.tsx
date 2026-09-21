@@ -45,6 +45,11 @@ export default function CameraCapture({ hint, onConfirm, onSkip, skipLabel = '�
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  /** [ใหม่ — แนบรูปจากคลังภาพ] input ที่แท้จริงถูกซ่อนไว้ (ดู .camera-capture__gallery-input)
+   *  ปุ่ม 🖼️ ที่ผู้ใช้เห็นแค่เรียก .click() ผ่าน ref นี้ — ไม่ใส่ attribute `capture` (ต่างจาก
+   *  input กล้องสดที่ browser เปิดเองผ่าน getUserMedia อยู่แล้ว) เพื่อให้เบราว์เซอร์เปิดตัว
+   *  เลือกไฟล์/คลังภาพแทนกล้องโดยตรง */
+  const galleryInputRef = useRef<HTMLInputElement | null>(null)
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment')
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [cameraError, setCameraError] = useState<string | null>(null)
@@ -118,6 +123,30 @@ export default function CameraCapture({ hint, onConfirm, onSkip, skipLabel = '�
     onConfirm(capturedImage)
   }
 
+  /** [ใหม่ — ข้อ 5] เปิดตัวเลือกไฟล์จากคลังภาพ — ไม่แตะกล้องสด (ยังเปิดค้างอยู่ได้ถ้าผู้ใช้
+   *  กดยกเลิก dialog เลือกไฟล์ ไม่เลือกอะไรเลย) ปิดกล้องสดจริงเฉพาะตอนเลือกไฟล์สำเร็จแล้ว
+   *  (ดู handleGalleryFileChange) เพื่อไม่ให้ไฟกล้องค้างเบื้องหลังทั้งที่ใช้รูปจากคลังแทนแล้ว */
+  const handlePickFromGallery = () => {
+    galleryInputRef.current?.click()
+  }
+
+  const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    // เคลียร์ value ทันทีกันเลือกไฟล์ชื่อ/พาธเดิมซ้ำแล้ว onChange ไม่ยิงอีกครั้งในอนาคต
+    e.target.value = ''
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') return
+      stopCameraStream()
+      setCameraError(null)
+      // เข้ารีวิว/ยืนยันร่วมกับรูปที่ถ่ายสดเส้นทางเดียวกันทุกประการ (ปุ่มถ่ายใหม่/ยืนยันด้านล่าง
+      // ทำงานเหมือนกันไม่ว่ารูปจะมาจากกล้องหรือคลังภาพ)
+      setCapturedImage(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
   return (
     <div className="camera-capture" style={{ zIndex: Z_INDEX.cameraFullscreen }}>
       {onExit && (
@@ -134,6 +163,18 @@ export default function CameraCapture({ hint, onConfirm, onSkip, skipLabel = '�
       <p className="camera-capture__hint">
         {cameraError ? cameraError : hint}
       </p>
+
+      {/* [ใหม่ — ข้อ 5] input จริงซ่อนไว้เสมอ ไม่ผูกกับสถานะกล้อง/error ใดๆ — ปุ่ม 🖼️ ที่มองเห็น
+          ในทั้งสองสถานะด้านล่าง (ปกติ/error) เรียก .click() ผ่าน ref เดียวกันนี้ */}
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleGalleryFileChange}
+        className="camera-capture__gallery-input"
+        aria-hidden="true"
+        tabIndex={-1}
+      />
 
       {/* [แก้ตามที่ระบุ — ข้อ 4] เดิมกรอบรูปลอยอยู่คนเดียวกึ่งกลาง "เวที" เต็มจอ (align-items/
           justify-content:center บน .camera-capture) ส่วนปุ่มควบคุมเป็น position:absolute แปะ
@@ -157,6 +198,9 @@ export default function CameraCapture({ hint, onConfirm, onSkip, skipLabel = '�
         {!cameraError && !capturedImage && (
           <div className="camera-capture__controls">
             {onSkip && <button className="camera-capture__side-btn" onClick={onSkip} title={skipLabel}>✕</button>}
+            {/* [ใหม่ — ข้อ 5] แนบรูปจากคลังภาพ — วางคู่กับปุ่มชัตเตอร์เดิม แยกจากถ่ายสด
+                (input ไม่มี capture attribute จึงเปิดตัวเลือกไฟล์/คลังภาพแทนกล้องโดยตรง) */}
+            <button className="camera-capture__side-btn" onClick={handlePickFromGallery} title="แนบรูปจากคลังภาพ" aria-label="แนบรูปจากคลังภาพ">🖼️</button>
             <button className="camera-capture__shutter-btn" onClick={handleCapturePhoto} title="ถ่ายรูป" />
             <button className="camera-capture__side-btn" onClick={handleFlipCamera} title="สลับกล้องหน้า/หลัง">🔄</button>
           </div>
@@ -173,8 +217,13 @@ export default function CameraCapture({ hint, onConfirm, onSkip, skipLabel = '�
           </div>
         )}
 
-        {cameraError && onSkip && (
-          <button className="qg-btn qg-btn--ghost camera-capture__error-skip-btn" onClick={onSkip}>{skipLabel}</button>
+        {/* [ใหม่ — ข้อ 5] เข้ากล้องไม่ได้ (ปฏิเสธสิทธิ์/ไม่มีกล้อง) ยังแนบรูปจากคลังภาพแทนได้เสมอ
+            แทนที่จะติดค้างมีแค่ปุ่มข้าม (ถ้ามี onSkip) เท่านั้นแบบเดิม */}
+        {cameraError && (
+          <div className="camera-capture__error-actions">
+            <button className="qg-btn qg-btn--ghost" onClick={handlePickFromGallery}>🖼️ แนบรูปจากคลังภาพ</button>
+            {onSkip && <button className="qg-btn qg-btn--ghost camera-capture__error-skip-btn" onClick={onSkip}>{skipLabel}</button>}
+          </div>
         )}
       </div>
     </div>

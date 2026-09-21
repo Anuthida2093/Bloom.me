@@ -7,6 +7,7 @@ import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import IntroVideoSequence from './shared/IntroVideoSequence'
 import ParchmentJournalEditor from './shared/ParchmentJournalEditor'
 import JournalHistoryModal from './shared/JournalHistoryModal'
+import { QUEST_ICONS } from '../../../config/iconAssets'
 
 import './ReframerJournalPage.css'
 
@@ -14,6 +15,10 @@ const C_1 = '#9B59D0'
 const C_2 = '#9B59D0'
 const C_3 = '#9B59D0'
 const C_4 = '#9B59D0'
+/** [เพิ่มตามที่ระบุ — ข้อ 10/11] ปุ่ม "เริ่มเขียน"/"ส่งให้รากไม้อ่าน" ของเควสนี้ ใช้เขียว
+ *  พาสเทลของตัวเอง แทน gradient ส้ม-ม่วง (theme.gold + accent เดิม) ที่ใช้ร่วมกับ Gratitude
+ *  Shield — ให้แต่ละเควสมีสีเป็นของตัวเองตามที่ระบุ */
+const GREEN_PASTEL_BTN = 'linear-gradient(135deg, var(--g100), var(--g400))'
 
 const QUEST_CODE = 'ment-reframer-journal'
 
@@ -103,13 +108,15 @@ export default function ReframerJournalPage({ moodEntry, alreadyCompleted, onCom
   return (
     <div className="reframer-journal-page">
       <button onClick={onClose} title="ปิด" className="reframer-journal-page__close">✕</button>
-      <button onClick={() => setShowHistory(true)} className="reframer-journal-page__history-btn">
-        📜 ประวัติสมุดบันทึกรากไม้เรืองแสง
-      </button>
+      {/* [ย้ายตามที่ระบุ — ข้อ 12] ป้ายลอยมุมซ้ายบน "ประวัติสมุดบันทึกรากไม้เรืองแสง" ย้ายไป
+          เป็นการ์ดเปิด modal ที่หน้าโปรไฟล์แล้ว (ดู ProfilePage.tsx) — ลบปุ่มซ้ำจากหน้าเควสนี้ */}
 
       <ParchmentJournalEditor
         theme="mystic"
         accent={C_3}
+        askIconSrc={QUEST_ICONS[QUEST_CODE]}
+        askButtonBg={GREEN_PASTEL_BTN}
+        submitButtonBg={GREEN_PASTEL_BTN}
         askQuestion={alreadyCompleted
           ? 'มีอะไรอยากเล่าให้ฉันฟังเพิ่มอีกไหม?'
           : 'วันนี้คุณรู้สึกอย่างไร มีอะไรอยากบอกกับฉันไหม?'}

@@ -211,7 +211,7 @@ export const PHYSICAL_DAILY: QuestDef[] = [
     // [เพิ่มรอบนี้ — เควสสุขภาพใหม่] ยังไม่มีไอคอนไฟล์รูปเฉพาะในตาราง badges/quests ที่มีอยู่
     // ใช้ emoji 🦶 ไปก่อนตามที่ระบุ จนกว่าจะมี asset จริง (ดู QUEST_ICONS ใน iconAssets.ts —
     // ไม่มี key 'phys-vitality-steps' จึงfallback เป็น quest.icon นี้เองอัตโนมัติ)
-    code: 'phys-vitality-steps', icon: '🦶', title: 'Vitality Steps', titleTh: 'จังหวะแห่งรากแก้ว',
+    code: 'phys-vitality-steps', icon: '🦶', title: 'Vitality Steps', titleTh: 'ก้าวเพื่อสุขภาพ',
     desc: 'เดินให้ครบเป้าหมายก้าวที่ปรับตาม BMI ของคุณ',
     howTo: 'เดินสะสมก้าวให้ครบเป้าหมายของวันนี้ (ปรับเพิ่มอัตโนมัติถ้า BMI สูง) กรอกจำนวนก้าวเอง หรือถ่ายรูปยืนยัน (เช่นหน้าจอแอปนับก้าว) แล้วดูนกฮูกเดินตามเส้นทางไปเรื่อยๆ ตามสัดส่วนที่เดินได้',
     theory: 'Physical Activity Guidelines — เดิน 8,000+ ก้าว/วัน ลดความเสี่ยงโรคหัวใจและเบาหวานชนิดที่ 2 ได้อย่างมีนัยสำคัญ',
@@ -228,7 +228,7 @@ export const PHYSICAL_DAILY: QuestDef[] = [
     },
   },
   {
-    code: 'phys-balanced-nutrients', icon: '🍽️', title: 'Balanced Nutrients', titleTh: 'สารอาหารแห่งผืนดิน',
+    code: 'phys-balanced-nutrients', icon: '🍽️', title: 'Balanced Nutrients', titleTh: 'แคลอรี่ตาม BMI',
     desc: 'ถ่ายรูปมื้ออาหาร ให้ระบบช่วยดูแลเป้าหมายแคลอรี่ตามรูปร่างของคุณ',
     howTo: 'ถ่ายรูปมื้ออาหารก่อนทานทุกมื้อ (ครบ 3 มื้อ/วันถือว่าสำเร็จ) ระบบจะคำนวณเป้าหมายแคลอรี่วันนี้ให้จาก BMI ของคุณ และช่วยตรวจสอบรูปเบื้องต้น',
     theory: 'Mifflin-St Jeor Equation (TDEE) ปรับตามเกณฑ์ BMI — ต่ำ/ปกติ/เกิน กำหนดส่วนเกิน/สมดุล/ส่วนขาดของพลังงานที่ต่างกัน',

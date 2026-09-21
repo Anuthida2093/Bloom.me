@@ -7,6 +7,9 @@ import LeaderboardPanel from '../leaderboard/LeaderboardPanel'
 import PlayerTreeCard from '../leaderboard/PlayerTreeCard'
 import TreeStatsPanel from '../tree/TreeStatsPanel'
 import NotificationPanel from './NotificationPanel'
+import WateringCanFx from './WateringCanFx'
+import MedicalBoxAlert from './MedicalBoxAlert'
+import RankUpModal from './RankUpModal'
 import ActionMenuBar from '../layout/ActionMenuBar'
 import type { NavKey } from '../layout/ActionMenuBar'
 import ErrorBoundary from '../common/ErrorBoundary'
@@ -18,8 +21,9 @@ import { useMental } from '../../context/MentalContext'
 import { useAudio } from '../../context/AudioContext'
 import { useIsLowPowerMode } from '../../hooks/useMediaQuery'
 import { useNotifications } from '../../hooks/useNotifications'
+import { usePersistentState } from '../../hooks/usePersistentState'
 import { sceneEnter } from '../../config/motion'
-import { EXP_PER_LEVEL, STACK_PER_VISUAL_LEVEL, type MbtiType } from '../../types'
+import { EXP_PER_LEVEL, STACK_PER_VISUAL_LEVEL, type MbtiType, type QuestCategory } from '../../types'
 import type { LeaderboardPlayer } from '../../config/leaderboardData'
 import type { QuestTabId } from '../../config/questCatalog'
 import { BADGE_ICONS } from '../../config/iconAssets'
@@ -59,7 +63,7 @@ export default function Dashboard() {
 
   const {
     questLogs, moodEntries, journalEntries, treeGrowthPulse, hasSoot, completedQuestCount,
-    handleToggleQuest, markIncineratorFailed,
+    waterPulseKey, handleToggleQuest, markIncineratorFailed,
   } = useProgress()
 
   const { handleMoodSubmit, earnedBadges } = useMental()
@@ -108,6 +112,45 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/purity
     return latest === 0 ? null : Math.floor((Date.now() - latest) / DAY_MS)
   }, [questLogs])
+
+  /* [ใหม่ — ตามที่ระบุรอบนี้] "state overlay" (healthy/wilting/dying) ของต้นไม้ต้องใช้จำนวน
+     วันที่ไม่ได้ทำเควสสำเร็จ "ต่อหมวด" — ระบบนี้ไม่เคยมีมาก่อน (ตรวจโค้ดจริงแล้ว มีแค่
+     daysSinceLastOracle ด้านบนซึ่งผูกกับเควสเดียวเจาะจง) จึง generalize เป็นฟังก์ชันเดียว
+     ใช้ pattern เดียวกับ daysSinceLastOracle เป๊ะ แต่หาต่อ "หมวดเควส" แทน "quest code เดียว" */
+  const daysSinceLastQuestByCategory = useMemo(() => {
+    const latestByCategory: Partial<Record<QuestCategory, number>> = {}
+    for (const log of questLogs) {
+      const category = log.quest?.category
+      if (!category || log.status !== 'COMPLETED' || !log.completedAt) continue
+      const t = new Date(log.completedAt).getTime()
+      if (!latestByCategory[category] || t > latestByCategory[category]!) latestByCategory[category] = t
+    }
+    const toDays = (t: number | undefined) => (t === undefined ? null : Math.floor((now - t) / DAY_MS))
+    // eslint-disable-next-line react-hooks/purity
+    const now = Date.now()
+    return {
+      EMOTION: toDays(latestByCategory.EMOTION),
+      HEALTH: toDays(latestByCategory.HEALTH),
+    }
+  }, [questLogs])
+
+  /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 8] ป๊อปอัพแจ้งเลื่อนอันดับ — เก็บ "อันดับก่อนหน้า" ไว้ใน
+     localStorage (client state ล้วนๆ ไม่ใช่ข้อมูล backend — ตรงตาม convention ของ
+     usePersistentState) เทียบกับอันดับปัจจุบันที่ LeaderboardPanel คำนวณจริงแล้วส่งขึ้นมา
+     ผ่าน onMyRankChange ทุกครั้งที่ leaderboard คำนวณใหม่ (ดู handleMyRankChange ด้านล่าง) */
+  const [lastKnownRank, setLastKnownRank] = usePersistentState<number | null>('last-known-rank', null)
+  const [rankUpInfo, setRankUpInfo] = useState<{ from: number; to: number } | null>(null)
+
+  const handleMyRankChange = (rank: number) => {
+    // อันดับดีขึ้น (เลขน้อยลง) เทียบกับครั้งก่อน และไม่ใช่ครั้งแรกที่ยังไม่เคยมีข้อมูลเก่า
+    // (lastKnownRank === null) → เปิด popup แจ้ง
+    if (lastKnownRank !== null && rank < lastKnownRank) {
+      setRankUpInfo({ from: lastKnownRank, to: rank })
+    }
+    if (rank !== lastKnownRank) {
+      setLastKnownRank(rank)
+    }
+  }
 
   useEffect(() => {
     const video = videoRef.current
@@ -366,10 +409,17 @@ export default function Dashboard() {
                 growthPulse={treeGrowthPulse}
                 hasSoot={hasSoot}
                 daysSinceLastOracle={daysSinceLastOracle}
+                daysSinceLastMentalQuest={daysSinceLastQuestByCategory.EMOTION}
+                daysSinceLastPhysicalQuest={daysSinceLastQuestByCategory.HEALTH}
               />
             </ErrorBoundary>
           </div>
         )}
+
+        {/* [เพิ่มรอบนี้ — เควส "แคลอรี่ตาม BMI"] แอนิเมชันบัวรดน้ำ — เล่นเองตอนกลับมาที่นี่
+            หลังปิดเควสสำเร็จ (เช็ค treeGrowthPulse.questCode ในตัวคอมโพเนนต์เอง) ไม่โชว์ตอน
+            กำลังดูต้นไม้ของคนอื่น (viewingPlayer) เพราะ pulse เป็นของบัญชีเราเองเสมอ */}
+        {!viewingPlayer && <WateringCanFx pulse={treeGrowthPulse} waterPulseKey={waterPulseKey} />}
 
         {!viewingPlayer && daysSinceLastOracle !== null && daysSinceLastOracle >= 2 && (
           <button className="dashboard__oracle-nudge" onClick={handleOpenOracleFromTooltip}>
@@ -386,6 +436,11 @@ export default function Dashboard() {
             onToggle={() => setLeaderboardCollapsed((c) => !c)}
             myMbti={userData.mbtiType as MbtiType}
             myName={userData.username}
+            myLevel={userData.level}
+            myKnowledgeStack={userData.knowledgeStack}
+            myHealthStack={userData.healthStack}
+            myEmotionStack={userData.emotionStack}
+            onMyRankChange={handleMyRankChange}
             onPlayerClick={setViewingPlayer}
             glass
           />
@@ -462,6 +517,9 @@ export default function Dashboard() {
               <button className="game-icon-btn sound-btn" onClick={toggleMute} title={isMuted ? 'เปิดเสียง' : 'ปิดเสียง'}>
                 {isMuted ? '🔇' : '🔊'}
               </button>
+              {/* [ใหม่ — ตามที่ระบุ] กล่องพยาบาลลอย — โผล่เองเฉพาะตอนตรวจพบอารมณ์กลุ่มลบติดต่อกัน
+                  ≥3 วัน (ดู MedicalBoxAlert.tsx) คืน null เงียบๆ ถ้ายังไม่เข้าเงื่อนไข */}
+              <MedicalBoxAlert moodEntries={moodEntries} onOpenMentalQuests={() => handleOpenQuestCategory('mental')} />
             </div>
           </>
         )}
@@ -673,6 +731,16 @@ export default function Dashboard() {
 
       {/* แจ้งผลปุ่มแชร์ (copy link fallback ตอนเบราว์เซอร์ไม่รองรับ navigator.share) */}
       <GameAlert open={infoAlert !== null} message={infoAlert ?? ''} icon="✨" onClose={() => setInfoAlert(null)} />
+
+      {/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 8] ป๊อปอัพแจ้งเลื่อนอันดับ — ปิดแล้วเคลียร์ rankUpInfo
+          (lastKnownRank เองอัปเดตไปแล้วตั้งแต่ตอน handleMyRankChange เห็นอันดับใหม่ ไม่ต้อง
+          อัปเดตซ้ำตรงนี้ กันโชว์ popup ซ้ำจนกว่าจะเลื่อนอันดับขึ้นจริงอีกครั้ง) */}
+      <RankUpModal
+        open={rankUpInfo !== null}
+        fromRank={rankUpInfo?.from ?? null}
+        toRank={rankUpInfo?.to ?? 0}
+        onClose={() => setRankUpInfo(null)}
+      />
     </div>
   )
 }

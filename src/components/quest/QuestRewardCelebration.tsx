@@ -58,9 +58,10 @@ export default function QuestRewardCelebration({ data, onDone }: QuestRewardCele
           <div className="quest-celebration__title">
             {skipped ? `${quest.titleTh} สำเร็จ (ข้ามตัวจับเวลา)` : `${quest.titleTh} สำเร็จ!`}
           </div>
+          {/* [แก้ตามที่ระบุรอบนี้ — ข้อ 7] ตัวเลขไว้หน้ารูป + รูปใหญ่ชัดเจนขึ้น */}
           <div className="quest-celebration__rewards">
-            <span><img src={BADGE_ICONS.coins} className="icon-img" alt="" /> +{coin}</span>
-            <span><img src={BADGE_ICONS.exp} className="icon-img" alt="" /> +{exp} EXP</span>
+            <span>+{coin} <img src={BADGE_ICONS.coins} className="icon-img--reward" alt="" /></span>
+            <span>+{exp} EXP <img src={BADGE_ICONS.exp} className="icon-img--reward" alt="" /></span>
           </div>
         </div>
       </div>

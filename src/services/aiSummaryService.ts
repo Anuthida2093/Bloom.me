@@ -124,3 +124,136 @@ export async function getGratitudeReflection(request: GratitudeReflectionRequest
 
   return { reflection, generatedAt: new Date().toISOString() }
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// [ใหม่รอบนี้ — เควส "แคลอรี่ตาม BMI"] analyzeFoodPhoto — วิเคราะห์รูปมื้ออาหารจริง
+// ═══════════════════════════════════════════════════════════════════════
+// [สำคัญ — ต่างจากทุกฟังก์ชันด้านบนในไฟล์นี้] getOracleActionPlan/getJournalReflection/
+// getGratitudeReflection ทั้งหมดข้างบนเป็น mock ล้วน (สุ่มเลือกข้อความจากเทมเพลตคงที่ ไม่มี
+// การเรียก network ใดๆ เลย) — ฟังก์ชันนี้ต่างออกไปโดยสิ้นเชิง: เป็นการเรียก AI vision API
+// "จริง" (OpenAI Chat Completions แบบส่งรูปภาพ) ไม่ใช่ mock อีกต่อไปตามที่ระบุ
+//
+// [ข้อจำกัดด้านความปลอดภัยที่ต้องแจ้งชัดเจน] โปรเจกต์นี้ยังไม่มี backend ของตัวเองที่รับคำขอ
+// จริงได้เลย (ดู http.ts — API_MODE ยังเป็น mock เสมอ ไม่มี endpoint ฝั่งเซิร์ฟเวอร์รองรับจริง)
+// ฟังก์ชันนี้จึงเรียก OpenAI ตรงจากฝั่ง client โดยแนบ API key ไว้ใน bundle — เหมาะสำหรับ
+// เดโม/ทดสอบเท่านั้น "ห้ามใช้แบบนี้ในโปรดักชันจริง" เพราะใครก็ตามที่เปิด dev tools ดู network
+// request หรือแกะ JS bundle จะเห็น API key แล้วเอาไปใช้แทนได้ (ถูกเรียกเก็บเงินแทนเจ้าของ key)
+// ก่อนขึ้นโปรดักชันจริงต้องย้ายการเรียกนี้ไปอยู่หลัง backend endpoint ของตัวเอง (เช่น
+// POST /api/ai/analyze-food-photo ผ่าน http.ts เหมือน service อื่นๆ) แล้วเก็บ API key ไว้ฝั่ง
+// เซิร์ฟเวอร์เท่านั้น
+//
+// ตั้งค่าที่ต้องทำก่อนใช้งานจริง (ดูสรุปท้ายบทสนทนา):
+//   VITE_AI_VISION_API_KEY=<OpenAI API key ของคุณ>   (ต้องขึ้นต้น sk-... จาก platform.openai.com)
+//   VITE_AI_VISION_MODEL=gpt-4o-mini                  (ไม่ตั้ง = ใช้ค่าเริ่มต้นนี้ — ต้องเป็น
+//                                                       โมเดลที่รองรับ image input เท่านั้น)
+// ถ้าไม่ตั้งค่า VITE_AI_VISION_API_KEY เลย analyzeFoodPhoto() จะโยน error
+// 'AI_VISION_NOT_CONFIGURED' ทันที ไม่เรียก network ไม่ auto-approve เงียบๆ — ฝั่งเรียกใช้
+// (BalancedNutrientsQuest.tsx) ต้อง catch แล้วแจ้งผู้ใช้ว่าตรวจสอบไม่ได้ตอนนี้
+
+export interface FoodPhotoAnalysis {
+  /** false = AI มองว่ารูปนี้ไม่มีอาหารอยู่เลย (เช่น ถ่ายผิด/ไม่ชัด/เป็นสิ่งอื่น) */
+  isFood: boolean
+  /** ประมาณแคลอรี่รวมของมื้อในรูป (kcal) — 0 เสมอถ้า isFood เป็น false */
+  estimatedCalories: number
+  /** คำอธิบายสั้นๆ ว่า AI เห็นอะไรในรูป (ภาษาไทย) ให้ผู้ใช้เห็นว่าระบบตีความรูปว่าอย่างไร */
+  foodDescription: string
+}
+
+const AI_VISION_API_KEY = import.meta.env.VITE_AI_VISION_API_KEY as string | undefined
+const AI_VISION_MODEL = (import.meta.env.VITE_AI_VISION_MODEL as string | undefined)?.trim() || 'gpt-4o-mini'
+const AI_VISION_ENDPOINT = 'https://api.openai.com/v1/chat/completions'
+
+const FOOD_ANALYSIS_SYSTEM_PROMPT =
+  'คุณเป็นผู้ช่วยประเมินแคลอรี่จากรูปมื้ออาหารคร่าวๆ ตอบกลับเป็น JSON object เท่านั้น ' +
+  'ห้ามมีข้อความอื่นนอกเหนือจาก JSON รูปแบบต้องเป็น ' +
+  '{"isFood": boolean, "estimatedCalories": number, "foodDescription": string} ' +
+  'ถ้ารูปที่ได้รับไม่มีอาหารอยู่เลย ให้ isFood เป็น false และ estimatedCalories เป็น 0 ' +
+  'foodDescription ต้องเป็นภาษาไทยเสมอ สั้นกระชับไม่เกิน 1-2 ประโยค'
+
+/** true = มี OpenAI API key ตั้งค่าไว้ใน .env แล้ว (แค่ "พร้อมลอง" ไม่ได้แปลว่า key ยังใช้ได้จริง
+ * หรือไม่หมดโควต้า) */
+export function isFoodPhotoAnalysisConfigured(): boolean {
+  return typeof AI_VISION_API_KEY === 'string' && AI_VISION_API_KEY.trim().length > 0
+}
+
+function isValidFoodPhotoAnalysis(value: unknown): value is FoodPhotoAnalysis {
+  if (typeof value !== 'object' || value === null) return false
+  const v = value as Record<string, unknown>
+  return typeof v.isFood === 'boolean' && typeof v.estimatedCalories === 'number' && typeof v.foodDescription === 'string'
+}
+
+/**
+ * ส่งรูปมื้ออาหาร (data URL จาก CameraCapture.tsx — image/jpeg หรือ image/* ที่แนบจากคลังภาพ)
+ * ไปให้ OpenAI vision model วิเคราะห์จริง คืนค่าที่ AI ประเมิน (ไม่ใช่ค่าคงที่/สุ่มแบบ mock อื่น
+ * ในไฟล์นี้) โยน error ที่มีความหมายชัดเจนถ้า: ยังไม่ได้ตั้งค่า key (AI_VISION_NOT_CONFIGURED),
+ * เรียก API ไม่สำเร็จ (AI_VISION_HTTP_xxx), หรือ AI ตอบกลับมาไม่ตรงรูปแบบที่คาดไว้
+ * (AI_VISION_INVALID_RESPONSE) — ฝั่งเรียกใช้ต้อง catch ทั้งหมดนี้เอง ไม่มี fallback
+ * auto-approve ในฟังก์ชันนี้โดยตั้งใจ (ตามที่ระบุ "ไม่ mock auto-approve อีกต่อไป")
+ */
+export async function analyzeFoodPhoto(imageBase64: string): Promise<FoodPhotoAnalysis> {
+  if (!isFoodPhotoAnalysisConfigured()) {
+    throw new Error('AI_VISION_NOT_CONFIGURED')
+  }
+
+  const res = await fetch(AI_VISION_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${AI_VISION_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: AI_VISION_MODEL,
+      response_format: { type: 'json_object' },
+      max_tokens: 300,
+      messages: [
+        { role: 'system', content: FOOD_ANALYSIS_SYSTEM_PROMPT },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'นี่คือรูปมื้ออาหารมื้อหนึ่ง ช่วยประเมินว่าเป็นอาหารจริงไหม และประมาณแคลอรี่รวมของมื้อนี้' },
+            { type: 'image_url', image_url: { url: imageBase64 } },
+          ],
+        },
+      ],
+    }),
+  })
+
+  if (!res.ok) {
+    throw new Error(`AI_VISION_HTTP_${res.status}`)
+  }
+
+  const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
+  const content = data.choices?.[0]?.message?.content
+  if (typeof content !== 'string') {
+    throw new Error('AI_VISION_INVALID_RESPONSE')
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(content)
+  } catch {
+    throw new Error('AI_VISION_INVALID_RESPONSE')
+  }
+
+  if (!isValidFoodPhotoAnalysis(parsed)) {
+    throw new Error('AI_VISION_INVALID_RESPONSE')
+  }
+
+  return parsed
+}
+
+/** ข้อความ error ภาษาไทยที่แสดงให้ผู้ใช้เห็นได้ตรงๆ — รวมไว้ที่นี่ที่เดียวกันข้อความไม่ตรงกัน
+ * ระหว่างจุดที่เรียกใช้ต่างกัน (ปัจจุบันมีจุดเดียวคือ BalancedNutrientsQuest.tsx) */
+export function describeFoodAnalysisError(err: unknown): string {
+  const code = err instanceof Error ? err.message : ''
+  if (code === 'AI_VISION_NOT_CONFIGURED') {
+    return 'ระบบตรวจสอบรูปอาหารด้วย AI ยังไม่ได้ตั้งค่าในเครื่องนี้ — ตรวจสอบรูปไม่ได้ตอนนี้'
+  }
+  if (code.startsWith('AI_VISION_HTTP_')) {
+    return 'เชื่อมต่อระบบตรวจสอบรูปอาหารไม่สำเร็จ — ตรวจสอบไม่ได้ตอนนี้ ลองใหม่อีกครั้ง'
+  }
+  if (code === 'AI_VISION_INVALID_RESPONSE') {
+    return 'ระบบตรวจสอบรูปอาหารตอบกลับมาผิดปกติ — ลองถ่ายรูปใหม่อีกครั้ง'
+  }
+  return 'ตรวจสอบรูปอาหารไม่ได้ตอนนี้ — ลองใหม่อีกครั้ง'
+}

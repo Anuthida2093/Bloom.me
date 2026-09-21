@@ -131,11 +131,19 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
         </div>
       ) : (
         <div className="game-shell__reward">
+          {/* [แก้ตามที่ระบุรอบนี้ — ข้อ 3 "ยังไม่ถูกแก้จริง"] จุดนี้คือ root cause จริงที่ทำให้
+              ดูเหมือนยังไม่ได้แก้ — หน้ารางวัลนี้มี "ฝนอีโมจิ" ⭐/💧 ตกลงมา 14 จุด ซึ่งเด่นกว่า
+              การ์ดตัวเลขรางวัลด้านล่างที่แก้ไปแล้วรอบก่อนมาก (คนละจุดกัน รอบก่อนแก้แค่การ์ด
+              ด้านล่าง ไม่ได้เห็นจุดนี้เพราะ grep รอบก่อนจำกัดแค่ "จุดแสดงจำนวนรางวัล" ไม่รวม
+              เอฟเฟกต์ตกแต่งที่ไม่มีตัวเลข) เปลี่ยนเป็นรูปจริงสลับ coins/exp แทน */}
           <div className="game-shell__reward-drops" aria-hidden="true">
             {Array.from({ length: 14 }).map((_, i) => (
-              <span key={i} style={{ left: `${(i * 7.1) % 100}%`, animationDelay: `${i * 0.09}s` }}>
-                {i % 2 === 0 ? '⭐' : '💧'}
-              </span>
+              <img
+                key={i}
+                src={i % 2 === 0 ? BADGE_ICONS.coins : BADGE_ICONS.exp}
+                alt=""
+                style={{ left: `${(i * 7.1) % 100}%`, animationDelay: `${i * 0.09}s` }}
+              />
             ))}
           </div>
           <div className="game-shell__reward-icon">🎉</div>
@@ -146,8 +154,9 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
               : 'ต้นไม้ของคุณเพิ่งได้รับพลังจากสิ่งที่คุณทำเมื่อครู่'}
           </p>
           <div className="game-shell__reward-cards">
-            <div><span><img src={BADGE_ICONS.coins} className="icon-img" alt="" /></span><strong>+{awardedSkipped ? Math.round(quest.coinReward / 2) : quest.coinReward}</strong>เหรียญละอองดาว</div>
-            <div><span><img src={BADGE_ICONS.exp} className="icon-img" alt="" /></span><strong>+{awardedSkipped ? Math.round(quest.expReward / 2) : quest.expReward}</strong>EXP</div>
+            {/* [แก้ตามที่ระบุรอบนี้ — ข้อ 7] ตัวเลขไว้หน้ารูป + รูปใหญ่ชัดเจนขึ้น */}
+            <div><strong>+{awardedSkipped ? Math.round(quest.coinReward / 2) : quest.coinReward}</strong><img src={BADGE_ICONS.coins} className="icon-img--reward" alt="" />เหรียญละอองดาว</div>
+            <div><strong>+{awardedSkipped ? Math.round(quest.expReward / 2) : quest.expReward}</strong><img src={BADGE_ICONS.exp} className="icon-img--reward" alt="" />EXP</div>
           </div>
           <button className="game-shell__claim" onClick={claim}>รับรางวัล</button>
         </div>

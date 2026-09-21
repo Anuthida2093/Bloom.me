@@ -57,6 +57,9 @@ export const BADGE_ICONS = {
   // [เพิ่มรอบนี้ — เควส Balanced Nutrients] ยืนยันแล้วว่ามีไฟล์จริง (ls badges/) ใช้เล่นแอนิเมชัน
   // "บัวรดน้ำบินเข้าต้นไม้" ตอนกลับมา Dashboard หลังปิดเควสสำเร็จ (ดู WateringCanFx.tsx)
   wateringCan: '/assets/images/icons/badges/Watering Can.png',
+  // [เพิ่มรอบนี้ — แจ้งเตือนอารมณ์ลบต่อเนื่อง] ยืนยันแล้วว่ามีไฟล์จริง (ls badges/) ใช้เป็นไอคอน
+  // กล่องพยาบาลลอยมุมจอ (ดู MedicalBoxAlert.tsx) แทน emoji 🏥 ชั่วคราว
+  medicalBox: '/assets/images/icons/badges/Medical Box.png',
 } as const
 
 /** ไอคอนหมวดเควส (QUEST_TABS[].emoji) — ครบทั้ง 3 หมวดแล้ว (รอบก่อนหน้าหมวดสุขภาพกายยังไม่มี

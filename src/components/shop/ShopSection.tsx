@@ -190,7 +190,7 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
                 key={item.id}
                 style={{
                   background: owned ? 'linear-gradient(135deg, var(--g50), var(--g100))' : 'var(--fixed-white)',
-                  borderRadius: 20, padding: '20px 14px', textAlign: 'center',
+                  borderRadius: 20, padding: '16px 10px', textAlign: 'center',
                   boxShadow: item.rarity === '🟡 พิเศษ' ? `0 0 0 2px var(--coin), var(--sh-card)` : item.rarity === '🟣 หายาก' ? `0 0 0 2px var(--purple), var(--sh-card)` : 'var(--sh-card)',
                   transition: 'transform .15s', cursor: 'pointer', position: 'relative',
                 }}
@@ -200,11 +200,12 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
                 <span className="tag" style={{ position: 'absolute', top: 10, right: 10, background: item.rarityBg, color: item.rarityColor, fontSize: 9 }}>{item.rarity}</span>
                 {equipped && <span style={{ position: 'absolute', top: 10, left: 10, fontSize: 9, fontWeight: 700, background: 'var(--g600)', color: 'var(--fixed-white)', borderRadius: 99, padding: '2px 7px' }}>ใช้อยู่</span>}
 
-                {/* [แก้ตามที่ระบุ] ใช้ไฟล์ภาพจริงถ้ามี (จับคู่ตาม item.id ใน ITEM_ICONS) ไม่มี
-                    ก็ fallback เป็น emoji เดิม — ดู src/config/iconAssets.ts สำหรับที่มาการจับคู่ */}
-                <div style={{ fontSize: 50, marginBottom: 10, filter: 'drop-shadow(0 5px 10px var(--glass-b-18)) drop-shadow(0 2px 4px var(--glass-b-12))', lineHeight: 1.1 }}>
+                {/* [แก้ตามที่ระบุ — ข้อ 14] ขยายรูปไอเทม 50px→72px ให้เด่นชัดขึ้น (ลด padding
+                    การ์ดลงเล็กน้อยเพื่อชดเชยพื้นที่) ใช้ไฟล์ภาพจริงถ้ามี (จับคู่ตาม item.id ใน
+                    ITEM_ICONS) ไม่มีก็ fallback เป็น emoji เดิม — ดู src/config/iconAssets.ts */}
+                <div style={{ fontSize: 72, marginBottom: 8, filter: 'drop-shadow(0 5px 10px var(--glass-b-18)) drop-shadow(0 2px 4px var(--glass-b-12))', lineHeight: 1.1 }}>
                   {ITEM_ICONS[item.id]
-                    ? <img src={ITEM_ICONS[item.id]} alt={item.nameTh} style={{ width: 50, height: 50, objectFit: 'contain', margin: '0 auto' }} />
+                    ? <img src={ITEM_ICONS[item.id]} alt={item.nameTh} style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto' }} />
                     : item.emoji}
                 </div>
 

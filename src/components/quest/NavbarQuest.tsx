@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { QUEST_TABS, type QuestTabId } from '../../config/questCatalog'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 interface NavbarQuestProps {
   zoneTitle: string
@@ -57,7 +58,11 @@ export default function NavbarQuest({
 
         <div className="navbar-quest__right">
           <span className="navbar-quest__stat-pill">🔥 {streak}วัน</span>
-          <span className="navbar-quest__stat-pill">🪙 {coins.toLocaleString()}</span>
+          {/* [แก้ตามที่ระบุรอบนี้ — ข้อ 3] อีก root cause ที่รอบก่อน grep ไม่เจอ — ป้ายยอดเหรียญนี้
+              ลอยอยู่บน navbar ของ "ทุกหน้าเควส" (จุดแรกที่เห็นทันทีตอนเปิดเควสไหนก็ได้) เป็น
+              balance display เหมือน HUD บน Dashboard จึงคงลำดับ "รูปนำหน้าตัวเลข" ไว้เหมือน HUD
+              (ต่างจาก popup รางวัลที่เพิ่งได้รับซึ่งให้ตัวเลขนำหน้ารูปตามที่ระบุ) */}
+          <span className="navbar-quest__stat-pill"><img src={BADGE_ICONS.coins} className="icon-img" alt="" /> {coins.toLocaleString()}</span>
           {onClose && (
             <button onClick={onClose} title="ปิด" className="navbar-quest__close-btn">✕</button>
           )}
