@@ -114,17 +114,22 @@
   filter: none;
 }
 
-/* [ใหม่ — ตามที่ระบุรอบนี้] container ของ "1 กลุ่มใบที่เกาะปลายกิ่งจริง 1 จุด" — ครอบเต็มกล่อง
-   เหมือน .tree-of-life__foliage (ใบย่อยข้างในกำหนดตำแหน่งเป็น % ของกล่องเต็มเช่นกัน ไม่ใช่
-   ของกล่องนี้) จุดสำคัญคือ transform-origin ที่ตั้งไปที่พิกัดปลายกิ่งจริงของกลุ่มนั้น (inline
-   style จาก .tsx) ทำให้แอนิเมชันไหวตามลม (rotate) หมุนรอบปลายกิ่งจริง ไม่ใช่รอบกึ่งกลางจอ
-   แม้ตัว div เองจะครอบเต็มกล่องก็ตาม — will-change:transform ลดภาระ repaint ตอนไหว/โผล่ขึ้นมา
-   (กลุ่มเดียวไหวพร้อมกันทั้งกลุ่ม ถูกกว่าการ animate ใบทีละรูปแยกกันหลายสิบตัว) */
-/* [แก้ตามที่ระบุรอบนี้ ข้อ 5] mount ใช้ keyframe แยกของใบเอง (treeOfLifeLeafBloom) แทน
-   treeOfLifeLayerGrow ที่ใช้ร่วมกับ ground/ดอกไม้ — เพราะระบุชัดว่า "ห้ามมีการเลื่อนตำแหน่ง
-   เลยแม้แต่น้อย" (from opacity:0 scale:0.5 → to opacity:1 scale:1 เท่านั้น ไม่มี translate)
-   ตำแหน่งจริง (left/top ของ <img> ข้างใน + transformOrigin ของ div นี้) มาจาก leaf.xPct/
-   yPct ตรงๆ ตั้งแต่เฟรมแรกอยู่แล้ว ไม่ได้ขยับเข้าที่ทีหลัง */
+/* [เขียนใหม่ตามที่ระบุรอบนี้ ข้อ 3] container ของ "1 สำเนาใบเล็ก" ที่วางอยู่บน 1 จุดยึด —
+   ครอบเต็มกล่องเหมือน .tree-of-life__foliage (ใบข้างในกำหนดตำแหน่งเป็น % ของกล่องเต็มเช่นกัน
+   ไม่ใช่ของกล่องนี้) จุดสำคัญคือ transform-origin ที่ตั้งไปที่ "ขอบบนกึ่งกลาง" ของสำเนานั้น
+   (originXPct/originYPct จาก .tsx — ใกล้กิ่ง/anchor ที่สุด ไม่ใช่ center ของภาพ) ทำให้แอนิเมชัน
+   ไหว (rotate) ดูเหมือนแกว่งจากจุดที่ติดกับกิ่งจริง ไม่ใช่หมุนรอบตัวเอง — will-change:transform
+   ลดภาระ repaint ตอนไหว/โผล่ขึ้นมา
+
+   [แก้จากรอบก่อน — ต้นเหตุ "ลูกบอลติดไม้เสียบส่ายไปมา"] เดิมคลาสนี้ครอบภาพใบก้อนใหญ่ก้อนเดียว
+   ทั้งต้น ไหว (sway) พร้อมกันทั้งก้อนด้วย amplitude/จังหวะเดียวกันหมด ดูเหมือนลูกบอลทั้งลูก
+   แกว่งเป็นก้อนเดียว — ตอนนี้ 1 คลาสนี้ = 1 สำเนาใบเล็กเท่านั้น (มีหลายสิบ instance ต่อต้น)
+   แต่ละอันไหวอิสระด้วย amplitude/duration/delay ของตัวเอง (สุ่มจาก .tsx ผ่าน --sway-amp +
+   animationDuration/Delay inline) จึงดูเหมือนใบไหวไม่พร้อมกันแบบต้นไม้จริง ไม่ใช่ก้อนเดียวส่าย
+   mount ใช้ keyframe แยกของใบเอง (treeOfLifeLeafBloom) แทน treeOfLifeLayerGrow ที่ใช้ร่วมกับ
+   ground/ดอกไม้ — เพราะระบุชัดว่า "ห้ามมีการเลื่อนตำแหน่งเลยแม้แต่น้อย" (from opacity:0
+   scale:0.5 → to opacity:1 scale:1 เท่านั้น ไม่มี translate) ตำแหน่งจริง (left/top ของ <img>
+   ข้างใน + transformOrigin ของ div นี้) มาจาก leaf.leftPct/topPct ตรงๆ ตั้งแต่เฟรมแรกอยู่แล้ว */
 .tree-of-life__leaf-group {
   position: absolute;
   inset: 0;
@@ -135,7 +140,7 @@
   filter: drop-shadow(0 2px 3px var(--glass-b-15));
   animation:
     treeOfLifeLeafBloom 0.5s cubic-bezier(0.22, 1, 0.36, 1) both,
-    treeOfLifeLeafSway 4s ease-in-out infinite;
+    treeOfLifeLeafInstanceSway 5s ease-in-out infinite;
 }
 
 @keyframes treeOfLifeLeafBloom {
@@ -149,11 +154,12 @@
   }
 }
 
-/* [ใหม่ — ตามที่ระบุ] ไหวเบาๆ ตามลม ±2.5 องศา คาบ 3-5s (สุ่มต่อกลุ่มผ่าน animationDuration/
-   Delay inline) ไม่ให้ทุกกลุ่มไหวพร้อมกันหมดทั้งต้น ดูเป็นธรรมชาติ */
-@keyframes treeOfLifeLeafSway {
-  0%, 100% { transform: rotate(-2.5deg); }
-  50% { transform: rotate(2.5deg); }
+/* [แก้ตามที่ระบุรอบนี้ ข้อ 3] ไหวเบาๆ มาก (±1.5-2° ตามที่ระบุ ต่างจาก ±2.5° เดิมที่ใช้กับก้อน
+   ใหญ่ก้อนเดียว) amplitude สุ่มต่อชิ้นผ่าน --sway-amp (ตั้งจาก .tsx) — ค่า 2deg คือ fallback
+   เฉยๆ เผื่อ .tsx ลืมตั้งตัวแปรนี้ ปกติจะถูก override เสมอ */
+@keyframes treeOfLifeLeafInstanceSway {
+  0%, 100% { transform: rotate(calc(-1 * var(--sway-amp, 2deg))); }
+  50% { transform: rotate(var(--sway-amp, 2deg)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -162,11 +168,13 @@
   }
 }
 
-/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 5] สายลมพัดเป็นระยะ — สลับ "ชื่อ" อนิเมชันของ slot ไหว
-   (slot ที่ 2 ในรายการ) จาก treeOfLifeLeafSway ปกติเป็นแรงขึ้นชั่วคราว โดยไม่แตะ slot แรก
-   (treeOfLifeLeafBloom) เลย — ใช้ animation-name แบบยาว (longhand) แทน shorthand `animation`
-   เพราะถ้าประกาศ shorthand ใหม่ทั้งก้อน จะทำให้ slot แรก (มี state 'both' ค้างอยู่แล้ว) รีสตาร์ท
-   ไปด้วยทุกครั้งที่มีลมพัด (เห็นเป็นต้นไม้ "กระพริบ" opacity/scale ทั้งต้นพร้อมกันโดยไม่ตั้งใจ) */
+/* [คงพฤติกรรมเดิมจากรอบก่อน] สายลมพัดเป็นระยะ — สลับ "ชื่อ" อนิเมชันของ slot ไหว (slot ที่ 2
+   ในรายการ) จาก treeOfLifeLeafInstanceSway ปกติ (amplitude เล็กต่อชิ้น) เป็น
+   treeOfLifeLeafGust (amplitude ใหญ่คงที่ ใช้ร่วมกันชั่วคราวทุกชิ้นตอน trigger เท่านั้น ไม่ใช่
+   ทำงานตลอดเวลา) โดยไม่แตะ slot แรก (treeOfLifeLeafBloom) เลย — ใช้ animation-name แบบยาว
+   (longhand) แทน shorthand `animation` เพราะถ้าประกาศ shorthand ใหม่ทั้งก้อน จะทำให้ slot แรก
+   (มี state 'both' ค้างอยู่แล้ว) รีสตาร์ทไปด้วยทุกครั้งที่มีลมพัด (เห็นเป็นใบ "กระพริบ"
+   opacity/scale โดยไม่ตั้งใจ) */
 .tree-of-life__leaf-group--gust {
   animation-name: treeOfLifeLeafBloom, treeOfLifeLeafGust;
 }
@@ -176,41 +184,17 @@
   50% { transform: rotate(8deg); }
 }
 
-/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] กลุ่มใบที่กำลังร่วง (dying, ~30-50% ของ tip แบบสุ่มคงที่) —
-   ทับ animation ทั้งก้อนแบบเจาะจง (ผสม 2 คลาสให้ specificity สูงกว่า .tree-of-life__leaf-group
-   เฉยๆ พอที่จะชนะโดยไม่ต้องใช้ !important) ช่วงร่วงไม่ต้องมี sway ต่อ (กำลังร่วงอยู่แล้ว) —
-   ตัว .tsx เองก็เว้น animationDuration/Delay inline ไว้ตอนร่วง (ไม่งั้น inline จะชนะ
-   ค่าที่ตั้งไว้ที่นี่เสมอไม่ว่า specificity ของ class จะเท่าไหร่ก็ตาม) */
-.tree-of-life__leaf-group.tree-of-life__leaf-group--falling {
-  animation: treeOfLifeLeafFallOut 1.8s ease-in forwards;
-}
-
-@keyframes treeOfLifeLeafFallOut {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(46px) rotate(55deg); opacity: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tree-of-life__leaf-group.tree-of-life__leaf-group--falling {
-    animation: treeOfLifeLeafFallOutReduced 1.8s ease-in forwards;
-  }
-}
-
-@keyframes treeOfLifeLeafFallOutReduced {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] เลเยอร์ครอบใบทั้งหมด (ทุกกลุ่ม) — filter สีเดียวสำหรับทั้ง
-   ต้นตอนใบเหี่ยว/ร่วง (LEAF_HEALTH_FILTER ใน .tsx) transition ช้าๆ ให้ความรู้สึก "ค่อยๆ เหี่ยว"
-   สมจริง ไม่ใช่เปลี่ยนสีทันทีแบบตัดภาพ */
+/* [คงเดิมจากรอบก่อน] เลเยอร์ครอบสำเนาใบเล็กทั้งหมด — filter สีเดียวสำหรับทั้งต้นตอนใบเหี่ยว
+   (LEAF_HEALTH_FILTER ใน .tsx) + opacity ลดลงตอน dying (แทนการเล่น fall animation ทีละใบ —
+   ทำไม่ได้เพราะใบมีหลายสิบชิ้นอิสระต่อกัน ลด opacity รวมง่ายกว่ามาก) transition ช้าๆ ทั้งคู่
+   ให้ความรู้สึก "ค่อยๆ เหี่ยว/บางลง" สมจริง ไม่ใช่เปลี่ยนทันทีแบบตัดภาพ */
 .tree-of-life__leaf-layer {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
-  transition: filter 3s ease;
+  transition: filter 3s ease, opacity 3s ease;
 }
 
 /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] เลเยอร์ patch หญ้า/ดอกหญ้า (variant 2/3) ที่ซ้อนทับฐาน

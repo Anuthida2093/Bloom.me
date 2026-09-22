@@ -8,7 +8,7 @@ import {
   getTrunkImagePath, getLeafImagePath, getGroundImagePath,
   toTrunkVisualLevel, getLeafPool, toGroundVariant, getShapeLetter,
 } from '../../config/treeAssets'
-import { CANOPY_TIP_POINTS } from '../../config/canopyTipPoints'
+import { LEAF_ANCHORS } from '../../config/leafAnchors'
 import { seededRandom } from '../../utils/seededRandom'
 import GroundScene from './GroundScene'
 import { useAudio } from '../../context/AudioContext'
@@ -168,15 +168,18 @@ function scaleCanopyTowardTrunkBase(shape: CanopyShape, scale: number): CanopySh
   }
 }
 
-/* [เขียนใหม่ทั้งบล็อกตามที่ระบุรอบนี้ — ข้อ 1] ยกเลิกระบบ tip-detection/skeletonize สำหรับ
- * "ตำแหน่งวางใบ" ทั้งหมด (scripts/extract-branch-tips.mjs ยังเก็บไว้เฉยๆ ไม่ลบไฟล์ทิ้ง
- * ตามที่ระบุ แค่เลิกเรียกใช้ที่นี่) เปลี่ยนไปใช้วิธีใหม่: หา "จุดปลายสุดของลำต้น" (จุดเดียว
- * ต่อไฟล์ ไม่ใช่หลายสิบจุดจากกิ่งจริงแบบเดิม) แล้วสุ่มวางใบแบบ uniform ภายในวงกลมรอบจุดนั้น
+/* [เขียนใหม่ทั้งบล็อกตามที่ระบุรอบนี้] ยกเลิกระบบวางใบทั้งหมดที่ทำมาก่อนหน้านี้ — ทั้ง
+ * tip-detection/skeletonize (scripts/extract-branch-tips.mjs), random-in-circle scatter
+ * (scripts/extract-canopy-tip.mjs + canopyTipPoints.ts) และ "ภาพใบก้อนใหญ่ก้อนเดียวต่อ
+ * trunk level" (leaf-transforms.json/leafTransforms.ts รอบก่อนหน้า) ทั้งหมดยังเก็บไฟล์ไว้
+ * เฉยๆ ไม่ลบทิ้งตามธรรมเนียมที่ยึดมาตลอด แค่เลิกเรียกใช้ในไฟล์นี้แล้ว
  *
- * ที่มาของจุดปลายสุด: scripts/extract-canopy-tip.mjs (สคริปต์ใหม่ เบากว่า extract-branch-tips
- * มาก — แค่สแกนหาพิกเซลแรกที่ alpha > threshold จากขอบบนของภาพลงมา ไม่ skeletonize ทั้งภาพ)
- * บันทึกผลเป็นค่าคงที่ตรงๆ ใน src/config/canopyTipPoints.ts (แค่ 32 จุด ไม่คุ้มเปิด async
- * fetch loading state แบบระบบ branch-tips เดิม — import ตรงๆ ใช้ได้ทันทีไม่ต้องรอโหลด) */
+ * แทนที่ด้วยวิธีใหม่: "หลายจุดยึด (anchor) x หลายสำเนาภาพใบขนาดเล็ก" — หาจุดยึดหลายจุดทั่ว
+ * โครงกิ่งของ trunk แต่ละ shape+level ไว้ล่วงหน้า (scripts/compute-leaf-transform.mjs →
+ * src/config/leafAnchors.ts) แล้ววาง "สำเนาเล็กๆ" ของภาพ LeafCanopy เดียวกันซ้อนที่แต่ละจุด
+ * ยึด (ขนาด/หมุน/ไหวสุ่มเล็กน้อยต่อชิ้นที่ runtime) แทนภาพก้อนใหญ่ก้อนเดียว — แก้ปัญหาที่
+ * ภาพก้อนเดียวไม่ว่าปรับ K/offset เท่าไหร่ก็ยังดู "เป็นลูกบอลกลมแข็งๆ ติดปลายไม้เสียบ" ไม่ใช่
+ * ใบไม้กระจายตามกิ่งแบบต้นไม้จริง */
 interface ImageNaturalSize {
   w: number
   h: number
@@ -187,11 +190,12 @@ interface ContainerSize {
   h: number
 }
 
-/** [สำคัญ] แปลงพิกัด % ของ "ภาพต้นฉบับ" ให้เป็น % ของกล่อง .tree-of-life โดยจำลอง
+/** [สำคัญ] แปลงพิกัด % ของ "ภาพต้นฉบับ" (ของลำต้น) ให้เป็น % ของกล่อง .tree-of-life โดยจำลอง
  *  object-fit:contain + object-position:center bottom (CSS ของ .tree-of-life__layer) บวก
  *  transform:scale จุดหมุน 50% 100% (CSS ของ .tree-of-life__layer--trunk) ทีละขั้นตรงตาม
- *  สูตร CSS จริง — ยังใช้อยู่ (ไม่ได้ยกเลิกไปกับระบบ tip-detection) เพราะยังต้องแปลงจุดปลาย
- *  สุดของลำต้น/ขอบล่างลำต้นจาก % ของภาพ ให้เป็น % ของกล่องเหมือนเดิมทุกประการ */
+ *  สูตร CSS จริง — ตอนนี้ใช้แปลง "มุมกล่องสำเนาใบเล็กแต่ละชิ้น" (จาก LEAF_ANCHORS ซึ่งเป็น
+ *  พิกเซลบน canvas เดียวกับภาพ trunk) แทนจุดปลายกิ่งเดี่ยวๆ/กล่องใบก้อนใหญ่แบบเดิม (ดู
+ *  computeInstanceRect ด้านล่าง) */
 function mapImagePointToContainerPct(
   point: { x: number; y: number },
   imgSize: ImageNaturalSize,
@@ -236,118 +240,181 @@ function mapImagePointToContainerPct(
   }
 }
 
-/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 2] offset ลงจากจุดปลายสุดของลำต้น (% ของกล่อง .tree-of-life)
- *  — เทียบเท่า "ต่ำกว่าจุดปลายสุดเล็กน้อย" ตามที่ระบุ ปรับจนสัดส่วนดูสวยที่สุดหลังทดสอบจริง */
-const CANOPY_CENTER_OFFSET_DOWN_PCT = 2.5
+/** ขนาดไฟล์ต้นฉบับของภาพ LeafCanopy ทุกไฟล์ (435×435 พิกเซล เท่ากันทั้ง 32 ไฟล์ — ตรวจสอบ
+ *  แล้วตอนรัน scripts/compute-leaf-transform.mjs) ใช้แปลงเป็นขนาดจริงตอนคำนวณกล่องใบแต่ละชิ้น
+ *  ด้านล่าง ไม่ต้องรอ onLoad วัดขนาดจริงแบบภาพลำต้น (ทุกไฟล์คงที่แล้ว) */
+const LEAF_NATIVE_SIZE_PX = 435
 
-/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] รัศมีวงกลมที่ต้องการ (% ของความสูงกล่อง) ก่อนถูกจำกัดไม่ให้
- *  เกินครึ่งลำต้น (ดู computeCanopyCircle) — ปรับจนทรงพุ่มดูสวยได้สัดส่วนหลังทดสอบจริง */
-const DESIRED_CANOPY_RADIUS_PCT = 15
-
-interface CanopyCircle {
-  centerXPct: number
-  centerYPct: number
-  /** % ของความสูงกล่อง (ไม่ใช่ความกว้าง) — ใช้เป็นหน่วยฐานเดียวกันทั้งแกน x/y ตอนสุ่มจุดใน
-   *  generateLeafInstances เพื่อให้ได้ "วงกลมจริง" บนจอ ไม่ใช่วงรี (กล่องไม่ได้เป็นสี่เหลี่ยม
-   *  จัตุรัสเสมอไป ถ้าใช้ % ของความกว้างกับความสูงปนกันโดยตรงจะได้วงรีที่บิดเบี้ยวตามอัตราส่วน
-   *  จอ ไม่ใช่วงกลมจริงตามที่ระบุ) */
-  radiusPctOfHeight: number
+/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 2] ขนาดเป้าหมายของ "สำเนาใบเล็ก" 1 ชิ้น บน canvas ต้นฉบับ
+ *  432px ของภาพ trunk (~25% ของความกว้าง canvas ที่ level ต่ำ-กลาง) — เล็กลงมากจากภาพก้อนใหญ่
+ *  ก้อนเดียวรอบก่อนที่ทำให้ดูเป็น "ลูกบอลติดปลายไม้เสียบ" ตอนนี้วางกระจายหลายชิ้นเล็กๆ ตาม
+ *  จุดยึดแทน
+ *
+ * [แก้ระหว่างตรวจ preview จริง — ขั้นตอน 4] level 7-8 ยังดูมีช่องว่างระหว่างกลุ่มใบเยอะเกินไป
+ * (ดูไม่ "ครึ้มเต็มต้น" ตามที่ระบุ) ทั้งที่ใช้ anchor ครบทุกจุดแล้ว — เพิ่มขนาดต่อชิ้นขึ้นเล็กน้อย
+ * เฉพาะ level สูง (จุดยึดที่มีอยู่ไม่พอเติมช่องว่างด้วยจำนวนอย่างเดียว ต้องให้แต่ละชิ้นกว้างขึ้น
+ * ด้วยเพื่อให้ชนกัน/คาบเกี่ยวกันปิดช่องว่างระหว่างกิ่ง) level 1-5 คงค่าเดิมไว้ (ดูสวยแล้วจาก
+ * preview จริง ไม่ต้องแตะ) */
+function baseTargetWidthForLevel(visualLevel: number): number {
+  if (visualLevel <= 5) return 110
+  if (visualLevel === 6) return 125
+  if (visualLevel === 7) return 145
+  return 160 // level 8
 }
 
-/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 2+3] หาจุดศูนย์กลาง+รัศมีวงกลมทรงพุ่ม จาก
- *  CANOPY_TIP_POINTS (จุดปลายสุด/ขอบล่างสุดของลำต้น ตรวจจริงจาก scripts/extract-canopy-tip.mjs)
- *  คืน null ถ้าไม่มีข้อมูลจุดสำหรับ shape+level นี้ (ไม่ควรเกิดขึ้นจริง มีครบ 32 ไฟล์แล้ว
- *  แต่กันไว้เผื่อ asset เพิ่มทีหลังแล้วยังไม่ได้รันสคริปต์ใหม่) */
-function computeCanopyCircle(
-  shapeLetter: string,
-  visualLevel: number,
-  imgSize: ImageNaturalSize,
-  containerSize: ContainerSize,
-  trunkScale: number,
-): CanopyCircle | null {
-  const point = CANOPY_TIP_POINTS[shapeLetter]?.[visualLevel]
-  if (!point) return null
-
-  const tipContainer = mapImagePointToContainerPct(
-    { x: point.tipXPct, y: point.tipYPct }, imgSize, containerSize, trunkScale,
-  )
-  const groundContainer = mapImagePointToContainerPct(
-    { x: point.tipXPct, y: point.groundYPct }, imgSize, containerSize, trunkScale,
-  )
-
-  const centerYPct = tipContainer.yPct + CANOPY_CENTER_OFFSET_DOWN_PCT
-  // trunkMidpointY = (tipY + groundY) / 2 — ตามที่ระบุ ห้ามให้รัศมีเกินระยะจากจุดศูนย์กลาง
-  // วงกลมลงไปถึงจุดกึ่งกลางลำต้นนี้เด็ดขาด (กันทรงพุ่มใหญ่จนครอบคลุมเกินครึ่งบนของลำต้น)
-  const trunkMidpointYPct = (tipContainer.yPct + groundContainer.yPct) / 2
-  const maxRadiusPct = Math.max(0, trunkMidpointYPct - centerYPct)
-  const radiusPctOfHeight = Math.min(DESIRED_CANOPY_RADIUS_PCT, maxRadiusPct)
-
-  return { centerXPct: tipContainer.xPct, centerYPct, radiusPctOfHeight }
+interface LeafInstanceRect {
+  leftPct: number
+  topPct: number
+  widthPct: number
+  heightPct: number
 }
 
-interface LeafInstance {
+interface LeafInstance extends LeafInstanceRect {
   key: string
-  xPct: number
-  yPct: number
-  leafImageUrl: string
-  scale: number
+  /** จุดหมุนสำหรับ sway — ขอบบนกึ่งกลางของ instance (ใกล้กิ่ง/anchor ที่สุด) ไม่ใช่ center
+   *  ของภาพ ให้ดูเหมือนใบแกว่งจากจุดที่ติดกับกิ่งจริง (ดูคอมเมนต์ข้อ 3 ที่จุดเรียกใช้) */
+  originXPct: number
+  originYPct: number
   rotationDeg: number
+  swayAmpDeg: number
   swayDurationS: number
   swayDelayS: number
   mountDelayMs: number
 }
 
-/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] จำนวนใบรวมทั้งต้น ต่อ visual level ของลำต้น (1-8) —
- *  ระบบ tip-based เดิมได้จำนวนรวมจาก "จำนวน tip จริง × ใบ/tip" ซึ่งผันผวนมากตาม shape
- *  (เคยเจอตั้งแต่ 4 ถึง 208 tip) พอยกเลิกระบบ tip ไปแล้วไม่มี "จำนวน tip" ให้อ้างอิงอีก จึง
- *  กำหนดจำนวนรวมตรงๆ ต่อ visual level แทน (ปรับได้ตามความสวยงามที่ทดสอบจริงต่อไป) */
-const LEAF_COUNT_BY_VISUAL_LEVEL_DESKTOP = [10, 16, 24, 34, 46, 58, 72, 88]
-const LEAF_COUNT_BY_VISUAL_LEVEL_MOBILE = [6, 10, 15, 21, 29, 37, 46, 56]
-
-/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] สุ่มตำแหน่งใบ "ภายในวงกลม" แบบ uniform distribution จริง
- *  (มุมสุ่ม 0-360°, ระยะจากศูนย์กลางสุ่มด้วย sqrt(random)×radius กันกระจุกตัวกลางวงเกินไป —
- *  สูตรมาตรฐานสำหรับสุ่มจุดสม่ำเสมอในวงกลม) ไม่เช็ค collision กับลำต้น/กิ่งใดๆ ทั้งสิ้น
- *  (ทับลำต้นได้ตามที่ระบุ) และไม่มีเงื่อนไข "ต้องเชื่อมกับกิ่งจริง/ห้ามลอยเดี่ยว" จากรอบก่อน
- *  อีกต่อไป (ยกเลิกพร้อมการยกเลิก tip-detection) — deterministic ตาม seedKey เหมือนเดิม
- *  ทุกอย่าง (offset/scale/rotation/sway/delay/ไฟล์ใบ) จึงเสถียรตำแหน่งตลอด ไม่สุ่มใหม่ทุก
- *  re-render */
-function generateLeafInstances(
-  seedKey: string,
-  count: number,
-  circle: CanopyCircle,
+/** คำนวณกล่อง (ตำแหน่ง+ขนาด เป็น % ของกล่อง .tree-of-life) ของ "สำเนาใบเล็ก" 1 ชิ้นที่มี
+ *  จุดศูนย์กลางตรงกับ anchor point พอดี (ตามสูตรที่ระบุ: pasteX = ax - scaledW/2) — แปลงมุม
+ *  บนซ้าย/ล่างขวาของกล่อง (หลัง scale) จาก % ของภาพ trunk ผ่าน mapImagePointToContainerPct
+ *  เหมือนที่ระบบภาพก้อนใหญ่รอบก่อนทำ (ดูคอมเมนต์ฟังก์ชันนั้นในรอบก่อน — logic เดิมทุกประการ
+ *  แค่เปลี่ยนมาคำนวณต่อ "จุดยึด" แทนที่จะเป็นกล่องเดียวของทั้งต้น) */
+function computeInstanceRect(
+  anchor: { x: number; y: number },
+  scaledSizePx: number,
+  imgSize: ImageNaturalSize,
   containerSize: ContainerSize,
-  mbtiType: MbtiType | null | undefined,
-  leafPool: number[],
+  trunkScale: number,
+): LeafInstanceRect {
+  const halfPx = scaledSizePx / 2
+  const topLeftImgPct = { x: ((anchor.x - halfPx) / imgSize.w) * 100, y: ((anchor.y - halfPx) / imgSize.h) * 100 }
+  const bottomRightImgPct = { x: ((anchor.x + halfPx) / imgSize.w) * 100, y: ((anchor.y + halfPx) / imgSize.h) * 100 }
+
+  const topLeft = mapImagePointToContainerPct(topLeftImgPct, imgSize, containerSize, trunkScale)
+  const bottomRight = mapImagePointToContainerPct(bottomRightImgPct, imgSize, containerSize, trunkScale)
+
+  return {
+    leftPct: topLeft.xPct,
+    topPct: topLeft.yPct,
+    widthPct: bottomRight.xPct - topLeft.xPct,
+    heightPct: bottomRight.yPct - topLeft.yPct,
+  }
+}
+
+/** [แก้ระหว่างตรวจ preview จริง — ขั้นตอน 4] สเปกเดิมบอกให้ "เรียง anchor ตาม y (จุดสูงสุด/
+ *  เด่นสุดก่อน) แล้ว slice" ตรงๆ — แต่ทดสอบจริงแล้วพัง: ถ้าจุดที่ y น้อยที่สุด 2-3 จุดแรก
+ *  ดันอยู่ฝั่งเดียวกันหมด (เช่น shape A level 3 มีจุดกิ่งขวาสูงกว่าซ้ายทั้งคู่) การ slice ตาม y
+ *  ล้วนๆ จะได้ใบกระจุกอยู่ข้างเดียว ทิ้งอีกฝั่งของกิ่งให้โล่งเปล่าไม่มีใบเลยแม้จะมี anchor
+ *  รออยู่ก็ตาม (เห็นชัดจาก preview จริง) แก้โดยเรียงแบบ "สลับฝั่งซ้าย-ขวา" แทน: แบ่งจุดเป็น 2
+ *  ฝั่งตามเส้นกึ่งกลางของกลุ่ม anchor ทั้งหมด แต่ละฝั่งเรียงตาม y (บนสุดก่อน) ในตัวเอง แล้ว
+ *  สลับหยิบทีละฝั่ง (เริ่มจากฝั่งที่มีจุดสูงสุดโดยรวมก่อน) — ทำให้ทุก prefix length (ตั้งแต่
+ *  slice 2 จุดขึ้นไป) มีตัวแทนทั้งสองฝั่งเสมอ ไม่กระจุกข้างเดียว ในขณะที่ยังคงหลักการ "จุดเด่น/
+ *  สูงสุดมาก่อน" ตามที่ระบุไว้เดิมทุกประการ (แค่แยกพิจารณาเป็น 2 คิวย่อยแทนคิวเดียว) */
+function buildBalancedAnchorOrder(anchors: { x: number; y: number }[]): { x: number; y: number }[] {
+  if (anchors.length === 0) return []
+  const xs = anchors.map((a) => a.x)
+  const centerX = (Math.min(...xs) + Math.max(...xs)) / 2
+  const left = anchors.filter((a) => a.x < centerX).sort((a, b) => a.y - b.y)
+  const right = anchors.filter((a) => a.x >= centerX).sort((a, b) => a.y - b.y)
+
+  const ordered: { x: number; y: number }[] = []
+  let li = 0
+  let ri = 0
+  let takeLeftNext = (left[0]?.y ?? Infinity) <= (right[0]?.y ?? Infinity)
+  while (li < left.length || ri < right.length) {
+    if (takeLeftNext && li < left.length) {
+      ordered.push(left[li++])
+      takeLeftNext = false
+    } else if (ri < right.length) {
+      ordered.push(right[ri++])
+      takeLeftNext = true
+    } else if (li < left.length) {
+      ordered.push(left[li++])
+    }
+  }
+  return ordered
+}
+
+/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 2] จำนวน anchor point ที่ "ใช้จริง" ต่อ trunkVisualLevel —
+ *  slice จาก buildBalancedAnchorOrder (จุดเด่น/สูงสุดก่อน แต่กระจายซ้าย-ขวาเสมอ — ดูหมายเหตุ
+ *  ด้านบน) level ต่ำใช้แค่ 2-3 จุดบนสุด (ใบเพิ่งขึ้นครั้งแรก บางสมเหตุสมผล) level สูงใช้ครบ
+ *  ทุกจุดที่ตรวจเจอ */
+function anchorUsageCountForLevel(visualLevel: number, totalAnchors: number): number {
+  if (visualLevel <= 3) return Math.min(2, totalAnchors)
+  if (visualLevel === 4) return Math.min(3, totalAnchors)
+  if (visualLevel === 5) return Math.min(4, totalAnchors)
+  if (visualLevel === 6) return Math.min(5, totalAnchors)
+  return totalAnchors // 7-8 ใช้ครบทุกจุดที่มี
+}
+
+/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 2] วางสำเนาใบเล็กที่แต่ละจุดยึด (LEAF_ANCHORS ของ shape+level
+ *  นี้) — ระดับสูงสุด (8) เพิ่มความหนาแน่นด้วยการวาง 2 ชิ้นซ้อนกันต่อจุดยึด 1 จุด ตามที่ระบุ
+ *  ทุกอย่าง (ขนาด/หมุน/sway amplitude/duration/delay) สุ่มด้วย seed เดียวกันทุกครั้งที่ level/
+ *  shape เดิม (deterministic ต่อ user เหมือนระบบก่อนหน้าทุกตัว) ไม่สุ่มใหม่ทุก re-render */
+function generateLeafAnchorInstances(
+  seedKey: string,
+  shapeLetter: string,
+  visualLevel: number,
+  imgSize: ImageNaturalSize,
+  containerSize: ContainerSize,
+  trunkScale: number,
 ): LeafInstance[] {
+  const allAnchors = LEAF_ANCHORS[`${shapeLetter}-lv${visualLevel}`] ?? []
+  if (allAnchors.length === 0) return []
+
+  const balancedOrder = buildBalancedAnchorOrder(allAnchors)
+  const useCount = anchorUsageCountForLevel(visualLevel, balancedOrder.length)
+  const usedAnchors = balancedOrder.slice(0, useCount)
+  const doubleUp = visualLevel >= 8
+
+  const baseTargetWidthPx = baseTargetWidthForLevel(visualLevel)
   const rng = seededRandom(seedKey)
-  // ใช้ความสูงกล่องเป็นหน่วยฐานทั้งแกน x/y (ดูคอมเมนต์ CanopyCircle.radiusPctOfHeight)
-  // แปลงเป็น px ของแต่ละแกนแยกกันตอนคำนวณ offset จริง เพื่อให้ได้วงกลมจริงบนจอเสมอไม่ว่า
-  // container จะเป็นสี่เหลี่ยมอัตราส่วนไหนก็ตาม
-  const radiusPx = (circle.radiusPctOfHeight / 100) * containerSize.h
   const instances: LeafInstance[] = []
+  let i = 0
+  for (const anchor of usedAnchors) {
+    const copies = doubleUp ? 2 : 1
+    for (let c = 0; c < copies; c++) {
+      const sizeScale = (baseTargetWidthPx / LEAF_NATIVE_SIZE_PX) * (0.8 + rng() * 0.35)
+      const scaledSizePx = LEAF_NATIVE_SIZE_PX * sizeScale
+      // [แก้ระหว่างตรวจ preview จริง] สำเนาที่ 2 ของ anchor เดียวกัน (doubleUp ที่ level 8)
+      // ขยับเล็กน้อยแบบสุ่ม (±18px บน canvas 432 ต้นฉบับ) แทนที่จะซ้อนตำแหน่งเป๊ะกับชิ้นแรก —
+      // ไม่งั้นจะบังกันเองเกือบสนิท ไม่ช่วยปิดช่องว่างระหว่างกิ่งเลยตามที่ตั้งใจ ("เพิ่มความ
+      // หนาแน่น" ต้องกระจายพื้นที่ครอบคลุมเพิ่ม ไม่ใช่แค่ซ้อนสีเข้มขึ้นตรงจุดเดิม)
+      const jitteredAnchor = c === 0
+        ? anchor
+        : { x: anchor.x + (rng() - 0.5) * 36, y: anchor.y + (rng() - 0.5) * 36 }
+      const rect = computeInstanceRect(jitteredAnchor, scaledSizePx, imgSize, containerSize, trunkScale)
 
-  for (let i = 0; i < count; i++) {
-    const angle = rng() * Math.PI * 2
-    const r = Math.sqrt(rng()) * radiusPx
-    const dxPx = Math.cos(angle) * r
-    const dyPx = Math.sin(angle) * r
-    const leafLevel = leafPool[Math.floor(rng() * leafPool.length)]
-
-    instances.push({
-      key: `leaf-${seedKey}-${i}`,
-      xPct: circle.centerXPct + (dxPx / containerSize.w) * 100,
-      yPct: circle.centerYPct + (dyPx / containerSize.h) * 100,
-      leafImageUrl: getLeafImagePath(mbtiType, leafLevel),
-      scale: 0.7 + rng() * 0.4, // 0.7x - 1.1x เหมือนระบบเดิม
-      rotationDeg: (rng() - 0.5) * 60, // -30deg..30deg เหมือนระบบเดิม
-      swayDurationS: 3 + rng() * 2, // 3-5s เหมือนระบบเดิม
-      swayDelayS: rng() * 3,
-      mountDelayMs: i * 40,
-    })
+      instances.push({
+        key: `leaf-${seedKey}-${i}`,
+        ...rect,
+        originXPct: rect.leftPct + rect.widthPct / 2,
+        originYPct: rect.topPct,
+        rotationDeg: (rng() - 0.5) * 30, // -15..15deg
+        swayAmpDeg: 1.5 + rng() * 0.5, // 1.5-2deg (เล็กมาก ตามที่ระบุ)
+        swayDurationS: 4 + rng() * 3, // 4-7s
+        swayDelayS: rng() * 4,
+        mountDelayMs: i * 30,
+      })
+      i++
+    }
   }
 
   return instances
 }
+
+/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 5] ตอน "dying" (ไม่ได้เล่นเควสหมวดจิตใจมานาน) ลด opacity ของ
+ *  เลเยอร์ใบทั้งหมดลงมา ให้ความรู้สึก "ใบร่วงไปเยอะ บางลง" แบบง่ายๆ (คงพฤติกรรมเดิมจากรอบก่อน
+ *  ไว้ — ไม่เปลี่ยน แค่ตอนนี้ครอบสำเนาใบเล็กหลายชิ้นแทนภาพก้อนเดียว) */
+const LEAF_DYING_OPACITY = 0.25
 
 /* [ใหม่ — ตามที่ระบุรอบนี้ "ดินและหญ้าต้องวางซ้อนๆกันตั้งแต่รากไปยังข้างล่าง ActionMenuBar
  * เต็มตลอดแนวยาวหลายๆก้อน"] เดิม ground ใช้ภาพวงกลมดินเดี่ยวๆ ภาพเดียว (LeveledLayer) —
@@ -591,68 +658,22 @@ function TreeOfLifeBase({
      เรียกตอน <img onLoad> (ดู TrunkLayer ด้านล่าง) */
   const [trunkNaturalSize, setTrunkNaturalSize] = useState<ImageNaturalSize | null>(null)
 
-  /* [เขียนใหม่ตามที่ระบุรอบนี้ ข้อ 2+3] จุดศูนย์กลาง+รัศมีวงกลมทรงพุ่ม — คำนวณจาก
-     CANOPY_TIP_POINTS (ค่าคงที่ import ตรงๆ ไม่ต้อง fetch) ตาม shape (getShapeLetter) +
-     visualLevel ปัจจุบัน ต้องรอ containerSize/trunkNaturalSize พร้อมก่อน (เหมือนระบบเดิม) */
+  /* [เขียนใหม่ตามที่ระบุรอบนี้] สำเนาใบเล็กหลายชิ้นที่แต่ละจุดยึด (LEAF_ANCHORS ของ shape+
+     level นี้ — ค่าคงที่ baked ไว้แล้ว ไม่ต้อง fetch) ต้องรอ containerSize/trunkNaturalSize
+     พร้อมก่อนเหมือนระบบเดิม — array ว่างถ้า leafPool ยังไม่มี (เกมเลเวล ≤20 ยังไม่มีใบเลย
+     ตามตารางเดิมที่ไม่เปลี่ยน) seed ผูกกับ folder+visualLevel เดียวกับที่ระบบเดิมใช้เสมอมา */
   const shapeLetter = useMemo(() => getShapeLetter(mbtiType), [mbtiType])
-  const canopyCircle = useMemo(() => {
-    if (!containerSize || !trunkNaturalSize) return null
-    return computeCanopyCircle(shapeLetter, visualLevel, trunkNaturalSize, containerSize, TRUNK_VISUAL_SCALE)
-  }, [shapeLetter, visualLevel, containerSize, trunkNaturalSize])
-
-  /* [เขียนใหม่ตามที่ระบุรอบนี้ ข้อ 4] ใบทั้งหมดสุ่มอยู่ในวงกลม — leafPool เป็น null
-     (เกมเลเวล ≤20) → ไม่มีใบเลย จำนวนรวมมาจาก LEAF_COUNT_BY_VISUAL_LEVEL_* ตาม visualLevel */
   const leafInstances = useMemo(() => {
-    if (!canopyCircle || !containerSize || !leafPool) return []
-    const countTable = isSmallScreen ? LEAF_COUNT_BY_VISUAL_LEVEL_MOBILE : LEAF_COUNT_BY_VISUAL_LEVEL_DESKTOP
-    const count = countTable[visualLevel - 1] ?? countTable[countTable.length - 1]
-    return generateLeafInstances(`${folder}-leaf-instances-${visualLevel}`, count, canopyCircle, containerSize, mbtiType, leafPool)
-  }, [canopyCircle, containerSize, leafPool, isSmallScreen, visualLevel, folder, mbtiType])
+    if (!containerSize || !trunkNaturalSize || !leafPool) return []
+    return generateLeafAnchorInstances(
+      `${folder}-leaf-anchors-${visualLevel}`, shapeLetter, visualLevel,
+      trunkNaturalSize, containerSize, TRUNK_VISUAL_SCALE,
+    )
+  }, [containerSize, trunkNaturalSize, leafPool, folder, shapeLetter, visualLevel])
 
-  /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] เลือกใบที่ "จะร่วง" ตอน dying แบบคงที่ต่อ shape+level
-     (~40% ของใบทั้งหมด อยู่ในช่วง 30-50% ตามที่ระบุ) — สุ่มครั้งเดียวด้วย seed ไม่ผูกกับ
-     สถานะ dying เอง กันเลือกจุดร่วงใหม่ทุกครั้งที่ dying/healthy สลับไปมา (ระบบเดิมทำงานกับ
-     "กลุ่มใบต่อ tip" — ตอนนี้ใบแต่ละใบเป็นอิสระจากกันแล้ว จึงเลือกร่วงเป็นรายใบตรงๆ) */
-  const fallCandidateKeys = useMemo(() => {
-    if (leafInstances.length === 0) return new Set<string>()
-    const rng = seededRandom(`${folder}-leaf-fall-${visualLevel}`)
-    const keys = leafInstances.filter(() => rng() < 0.4).map((leaf) => leaf.key)
-    return new Set(keys)
-  }, [leafInstances, folder, visualLevel])
-
-  /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] จุดที่ "กำลังเล่นอนิเมชันร่วง" (ชั่วคราว ~1.8s)
-   *  แยกจาก "ร่วงแล้วถาวร" (fallenKeys — หายจาก DOM จนกว่าจะกลับมาเล่นเควสหมวดจิตใจ)
-   *  ตรรกะ "เริ่ม/เลิกร่วง" ตัดสินใจระหว่าง render (ตามแพทเทิร์น prevPulseKey ด้านล่าง —
-   *  กัน react-hooks/set-state-in-effect) ส่วน useEffect ด้านล่างมีหน้าที่แค่ตั้งเวลา
-   *  (ของจริงที่ผูกกับระบบภายนอก คือ setTimeout) แปลง "กำลังร่วง" → "ร่วงแล้ว" เท่านั้น */
-  const [fallingKeys, setFallingKeys] = useState<Set<string>>(new Set())
-  const [fallenKeys, setFallenKeys] = useState<Set<string>>(new Set())
-
-  const needsFallStart = leafHealthPhase === 'dying' && fallingKeys.size === 0 && fallenKeys.size === 0 && fallCandidateKeys.size > 0
-  const needsRecovery = leafHealthPhase !== 'dying' && (fallingKeys.size > 0 || fallenKeys.size > 0)
-  if (needsFallStart) {
-    setFallingKeys(fallCandidateKeys)
-  } else if (needsRecovery) {
-    // ฟื้นจาก dying (กลับมาเล่นเควสแล้ว) — เคลียร์ทั้งคู่ให้ใบกลับมาโชว์ครบ
-    // (mount ใหม่ตาม mountDelayMs เดิมของแต่ละใบ = fade+scale-in stagger อัตโนมัติ)
-    setFallingKeys(new Set())
-    setFallenKeys(new Set())
-  }
-
-  useEffect(() => {
-    if (fallingKeys.size === 0) return
-    const keysToFall = fallingKeys
-    const timeoutId = window.setTimeout(() => {
-      setFallenKeys(keysToFall)
-      setFallingKeys(new Set())
-    }, 1800)
-    return () => window.clearTimeout(timeoutId)
-  }, [fallingKeys])
-
-  const visibleLeafInstances = useMemo(
-    () => leafInstances.filter((leaf) => !fallenKeys.has(leaf.key)),
-    [leafInstances, fallenKeys],
-  )
+  /* ไฟล์ใบเดียวกันทุกสำเนา (ตามที่ระบุ — ไม่มีเลเยอร์คละสี/สุ่มไฟล์แยกอีกต่อไปในระบบ
+     multi-anchor นี้ ความหลากหลายมาจากขนาด/มุมหมุน/จังหวะไหวที่สุ่มต่อชิ้นแทน) */
+  const primaryLeafUrl = useMemo(() => getLeafImagePath(mbtiType, visualLevel), [mbtiType, visualLevel])
 
   /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 5] สายลมพัดเป็นระยะ — สุ่มช่วงเวลา 15-30s ไม่ตายตัว ทุกครั้ง
      ที่ถึงกำหนด toggle class เอฟเฟกต์ไหวแรงชั่วคราว ~2.5s แล้วกลับสู่ปกติ ไม่ sync กับ state
@@ -814,53 +835,57 @@ function TreeOfLifeBase({
           onNaturalSize={setTrunkNaturalSize}
         />
 
-        {/* [เขียนใหม่ตามที่ระบุรอบนี้] วางใบแบบสุ่มสม่ำเสมอในวงกลมทรงพุ่ม (ดู generateLeafInstances)
-            แทนระบบ tip-detection เดิม — ใบแต่ละใบเป็นอิสระจากกันแล้ว ไม่มี "กลุ่มต่อปลายกิ่ง"
-            อีกต่อไป จึง 1 <div> ครอบ = 1 ใบ ตั้ง transform-origin ไปที่ตำแหน่งใบนั้นเป๊ะ
+        {/* [เขียนใหม่ทั้งบล็อกตามที่ระบุรอบนี้] วางสำเนาภาพ LeafCanopy ขนาดเล็กหลายชิ้นที่แต่ละ
+            จุดยึด (leafInstances — คำนวณจาก LEAF_ANCHORS ที่ทำ offline ไว้แล้ว ดู
+            generateLeafAnchorInstances) แทนภาพก้อนใหญ่ก้อนเดียวรอบก่อน — 1 <div> ครอบ = 1
+            สำเนาใบ ตั้ง transform-origin ไปที่ "ขอบบนกึ่งกลาง" ของสำเนานั้น (ใกล้กิ่ง/anchor
+            ที่สุด ไม่ใช่ center ของภาพ) ให้ไหวเหมือนแกว่งจากจุดที่ติดกิ่งจริง แต่ละชิ้นไหวอิสระ
+            ต่อกัน (amplitude/duration/delay สุ่มต่อชิ้น) แทนที่จะไหวทั้งก้อนพร้อมกันแบบเดิม
+            (ต้นเหตุที่ดูเหมือน "ลูกบอลติดไม้เสียบส่ายไปมา")
 
-            [ใหม่ — ข้อ 4] ไฟล์ใบ + จำนวนใบ มาจาก LEAF_COUNT_BY_VISUAL_LEVEL_* + leafPool
-            สุ่มตำแหน่งในวงกลม (canopyCircle) — ดู generateLeafInstances
-            [คงเดิม] ใบที่กำลังร่วง (fallingKeys) เล่นอนิเมชันร่วงแล้วหายจาก DOM จริง
-            (ไม่ตั้ง animationDuration/Delay inline ตอนร่วง ให้ class .{'-'}-falling คุมเองเต็มๆ)
-            [คงเดิม] windGusting → เพิ่ม modifier class ให้ไหวแรงขึ้นชั่วคราว
-            [แก้ตามที่ระบุรอบนี้ ข้อ 5] bloom ตอน mount ไม่มีการเลื่อนตำแหน่งอีกแล้ว (ดู
-            keyframes treeOfLifeLeafBloom ใน TreeOfLife.css — มีแค่ opacity+scale) ตำแหน่งสุดท้าย
-            คือ leaf.xPct/leaf.yPct ตั้งแต่เฟรมแรก */}
+            [ใหม่] key ต่อชิ้นผูกกับ folder+visualLevel (จาก generateLeafAnchorInstances) —
+            เลเวลเปลี่ยน = จุดยึด/จำนวนชิ้นเปลี่ยนทั้งชุด ทุกชิ้นจึง remount+เล่น bloom ใหม่พร้อม
+            กัน (cross-fade ตามที่ระบุไว้แต่เดิม) ใบเก่าที่ mount ค้างอยู่แล้วไม่ขยับตำแหน่งเอง
+            [คงเดิมจากรอบก่อน] leafHealthPhase==='dying' → ลด opacity ของทั้งเลเยอร์ (ครอบทุก
+            สำเนา) แทนการเล่น fall animation ทีละใบ
+            [แก้ตามที่ระบุรอบนี้ ข้อ 3] windGusting → เพิ่ม amplitude ของทุกชิ้นพร้อมกันชั่วคราว
+            ผ่านการสลับชื่อ keyframe sway (เหมือนเดิม ไม่ใช่ effect ที่ทำงานตลอดเวลา) */}
         <div
           className="tree-of-life__leaf-layer"
-          style={{ filter: LEAF_HEALTH_FILTER[leafHealthPhase] }}
+          style={{
+            filter: LEAF_HEALTH_FILTER[leafHealthPhase],
+            opacity: leafHealthPhase === 'dying' ? LEAF_DYING_OPACITY : 1,
+          }}
         >
-          {visibleLeafInstances.map((leaf) => {
-            const isFalling = fallingKeys.has(leaf.key)
-            return (
-              <div
-                key={leaf.key}
-                className={[
-                  'tree-of-life__leaf-group',
-                  isFalling ? 'tree-of-life__leaf-group--falling' : '',
-                  windGusting ? 'tree-of-life__leaf-group--gust' : '',
-                ].filter(Boolean).join(' ')}
+          {leafInstances.map((leaf) => (
+            <div
+              key={leaf.key}
+              className={[
+                'tree-of-life__leaf-group',
+                windGusting ? 'tree-of-life__leaf-group--gust' : '',
+              ].filter(Boolean).join(' ')}
+              style={{
+                zIndex: 3,
+                transformOrigin: `${leaf.originXPct}% ${leaf.originYPct}%`,
+                '--sway-amp': `${leaf.swayAmpDeg}deg`,
+                animationDuration: `0.5s, ${leaf.swayDurationS}s`,
+                animationDelay: reducedMotion ? '0ms, 0s' : `${leaf.mountDelayMs}ms, ${leaf.swayDelayS}s`,
+              } as React.CSSProperties}
+              aria-hidden="true"
+            >
+              <img
+                src={primaryLeafUrl} alt=""
+                className="tree-of-life__stamp tree-of-life__stamp--leaf"
                 style={{
-                  zIndex: 3,
-                  transformOrigin: `${leaf.xPct}% ${leaf.yPct}%`,
-                  animationDuration: isFalling ? undefined : `0.5s, ${leaf.swayDurationS}s`,
-                  animationDelay: isFalling ? undefined : (reducedMotion ? '0ms, 0s' : `${leaf.mountDelayMs}ms, ${leaf.swayDelayS}s`),
+                  left: `${leaf.leftPct}%`,
+                  top: `${leaf.topPct}%`,
+                  width: `${leaf.widthPct}%`,
+                  height: `${leaf.heightPct}%`,
+                  transform: `rotate(${leaf.rotationDeg}deg)`,
                 }}
-                aria-hidden="true"
-              >
-                <img
-                  src={leaf.leafImageUrl} alt=""
-                  className="tree-of-life__stamp tree-of-life__stamp--leaf"
-                  style={{
-                    left: `${leaf.xPct}%`,
-                    top: `${leaf.yPct}%`,
-                    width: `${leaf.scale * 9}%`,
-                    transform: `translate(-50%, -50%) rotate(${leaf.rotationDeg}deg)`,
-                  }}
-                />
-              </div>
-            )
-          })}
+              />
+            </div>
+          ))}
         </div>
 
         <div className="tree-of-life__foliage" style={{ zIndex: 4 }} aria-hidden="true">
@@ -964,7 +989,7 @@ function TreeOfLifeBase({
           {hintVisible && (
             <div className="tree-of-life__tooltip">
               <div className="tree-of-life__tooltip-title">🌳 {folder}</div>
-              <div>🪵 ลำต้น/ใบ (ความรู้): Lv.{trunkBranchLevel} (ภาพ {visualLevel}/8) · {visibleLeafInstances.length} ใบ</div>
+              <div>🪵 ลำต้น/ใบ (ความรู้): Lv.{trunkBranchLevel} (ภาพ {visualLevel}/8){leafInstances.length > 0 ? ` · ใบ ${leafInstances.length} ชิ้น` : ' · ยังไม่มีใบ'}</div>
               <div>🌸 ดอก (จิตใจ): Lv.{leafFlowerLevel} · ดอกปั๊ม {flowerStamps.length} จุด</div>
               <div>🌱 หญ้า/ราก (สุขภาพ): Lv.{grassSoilLevel} (ผสม {groundHealthVisualLevel}/3)</div>
               {leafHealthPhase !== 'healthy' && (
