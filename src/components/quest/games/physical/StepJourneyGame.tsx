@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { QuestGameProps } from '../../../../types.mental'
-import type { JourneyRecord, JourneyStatus } from '../../../../types.journey'
+import type { JourneyRecord } from '../../../../types.journey'
 import { useAppContext } from '../../../../context/AppContext'
 import { useStepTracker } from '../../../../hooks/useStepTracker'
 import { useMapPanZoom } from '../../../../hooks/useMapPanZoom'
 import { JOURNEY_MAPS } from '../../../../config/journeyMaps'
-import { calcDailyStepTarget, calcMapTotalStepsTarget } from '../../../../config/journeyRules'
+import { calcDailyStepTarget, calcMapTotalStepsTarget, calcProportionalRewards } from '../../../../config/journeyRules'
 import { getMockWeather } from '../../../../config/weatherMock'
 import { getActiveJourney, startJourney, addSteps } from '../../../../services/api/journey.api'
 import {
@@ -16,91 +16,72 @@ import {
   startDeviceMotionTracking,
   describeStepSyncError,
 } from '../../../../services/stepTracking'
-import { getPointAtProgress, MAP_NATIVE_SIZE } from './journeyPathMath'
+import { MAP_NATIVE_SIZE } from './journeyPathMath'
 import MapPathRenderer from './MapPathRenderer'
 import CatCompanion from './CatCompanion'
 import WeatherEffectLayer from './WeatherEffectLayer'
 import StatsOverlay from './StatsOverlay'
 import MapFogTransition from './MapFogTransition'
 import DestinationPicker from './DestinationPicker'
+import { BADGE_ICONS } from '../../../../config/iconAssets'
 import '../games.css'
 import './StepJourneyGame.css'
 
-/*============================================================================*\
-  StepJourneyGame.tsx — เควส "ก้าวเพื่อสุขภาพ" โฉมใหม่ — เลือกแผนที่ปลายทางจาก 8 ใบ แล้วเดินไป
-  ถึงตามจำนวนก้าวที่เดินจริง (หรือกรอกเอง)
-  ────────────────────────────────────────────────────────────────────────────
-  [สถาปัตยกรรม] ผ่าน questGameRegistry.ts (gameKey: 'step-journey') เหมือนเกมอื่นในระบบทุกจุด
-  เล่นอยู่ใน .game-shell__stage (ไม่ใช่หน้าเต็มจอแบบ SPECIAL_QUEST อีกต่อไป — ของเดิมที่เข้าใจว่า
-  QuestPlayModal เป็นการ์ดเล็ก 460px นั้นล้าสมัยแล้ว จริงๆ GameShell ให้พื้นที่เต็มกรอบเขียวอยู่แล้ว
-  แค่ถูกจำกัดความกว้างที่ 620px + มี header/reward screen ให้แล้วในตัว จึงไม่ต้องทำหน้าจอ/ฉาก
-  รับรางวัลของตัวเองซ้ำ — เรียก finish() ครั้งเดียวตอนถึงจุดหมายแล้ว GameShell จัดการที่เหลือ)
-
-  [reward cadence] ทริปนี้ใช้เวลาหลายวันกว่าจะถึงจุดหมาย ไม่ใช่ session เดียวจบเหมือนเควสอื่น —
-  finish() จะถูกเรียกก็ต่อเมื่อ "ถึงจุดหมายจริง" เท่านั้น (progressOnCurrentMapSteps ครบตาม
-  calcMapTotalStepsTarget) เปิดเกมระหว่างทาง/ตอนยังไม่เลือกปลายทาง จะปิดด้วย exit() ของ GameShell
-  เฉยๆ (ปุ่ม ✕ มุมขวาบนของ header) ไม่มีผลอะไรกับทริปที่เดินค้างอยู่ — journey ยังคงอยู่ใน mockDb
-  รอเปิดเกมใหม่มาเดินต่อได้ ทริปที่เลย deadline ไปแล้วโดยไม่ถึงจุดหมาย (FAILED) ไม่ได้รางวัลเลย
-  (ไม่เรียก finish()) แค่เด้งกลับไปเลือกปลายทางใหม่ได้ทันที
-
-  [เหตุผลที่ตั้ง maxPerDay:1 + isRepeatable:true ใน questCatalog.ts] isCompleted() ของระบบ
-  ปัจจุบัน (QuestSection.tsx) เช็ค "เคยสำเร็จหรือยังทุกครั้งที่ผ่านมา" แบบไม่กรองวันที่เลย — เควส
-  ที่ไม่มี maxPerDay จะเล่นซ้ำไม่ได้อีกเลยหลังสำเร็จครั้งแรก (ดูสรุปท้ายบทสนทนา) ทริปนี้ต้องเริ่ม
-  ใหม่ได้เรื่อยๆ ทุกครั้งที่ถึงจุดหมาย จึงต้องมี maxPerDay กำกับไว้ (ในทางปฏิบัติจะไม่มีทาง "สำเร็จ
-  เกิน 1 ครั้ง/วัน" อยู่แล้วเพราะทริปนึงใช้เวลาหลายวัน — maxPerDay:1 แค่ใช้ปลดล็อกเงื่อนไข "เคย
-  สำเร็จแล้วเล่นซ้ำไม่ได้" เท่านั้น ไม่ได้คาดหวังว่าจะสำเร็จวันละครั้งจริงๆ)
-\*============================================================================*/
-
-const BASE_DAILY_STEP_TARGET = 8000
-
 export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
-  const { userData, logActivity } = useAppContext()
+  const { userData, logActivity, updateProfile } = useAppContext()
 
   const [journey, setJourney] = useState<JourneyRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [transitioning, setTransitioning] = useState(false)
   const [failedNotice, setFailedNotice] = useState(false)
-  const [arrivalStatus, setArrivalStatus] = useState<JourneyStatus | null>(null)
+  
+  const [visualMapIndex, setVisualMapIndex] = useState(0)
+  const [isFogging, setIsFogging] = useState(false)
+  const [showSummary, setShowSummary] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       const active = await getActiveJourney()
-      if (!cancelled) { setJourney(active); setLoading(false) }
+      if (!cancelled) {
+        setJourney(active)
+        setLoading(false)
+        if (active && active.status !== 'IN_PROGRESS') setShowSummary(true)
+      }
     })()
     return () => { cancelled = true }
   }, [])
 
-  const mapDef = useMemo(() => {
-    if (!journey) return null
-    return JOURNEY_MAPS.find((m) => m.id === journey.currentMapId) ?? null
-  }, [journey])
+  const bmi = userData.bmi ?? 0
+  const dailyStepTarget = calcDailyStepTarget(bmi)
+  const totalStepsTarget3Days = calcMapTotalStepsTarget(bmi)
+  
+  const totalProgressPct = journey ? Math.min(100, (journey.progressOnCurrentMapSteps / totalStepsTarget3Days) * 100) : 0
+  const activeMapIndex = Math.min(2, Math.floor(totalProgressPct / (100 / 3)))
+  const localProgressPct = Math.min(100, (totalProgressPct - (activeMapIndex * (100 / 3))) * 3)
 
-  const bmi = userData.bmi
-  const dailyStepTarget = calcDailyStepTarget(bmi ?? 0)
-  const mapTotalStepsTarget = calcMapTotalStepsTarget(bmi ?? 0)
-  const mapProgressPct = journey ? Math.min(100, (journey.progressOnCurrentMapSteps / mapTotalStepsTarget) * 100) : 0
+  const visualMapDef = useMemo(() => {
+    if (!journey || !journey.routeMapIds) return null
+    const mapId = journey.routeMapIds[visualMapIndex]
+    return JOURNEY_MAPS.find((m) => m.id === mapId) ?? null
+  }, [journey, visualMapIndex])
 
-  // สภาพอากาศสุ่มครั้งเดียวต่อทริป (ไม่ใช่ทุก render) — journey?.id ใช้เป็น "คีย์" ให้คำนวณใหม่
-  // เฉพาะตอนเริ่มทริปใหม่จริงๆ เท่านั้น (ไม่ได้ถูกใช้ในตัวฟังก์ชันเองเลย eslint จึงมองว่าเป็น
-  // dependency ที่ "ไม่จำเป็น" แต่จริงๆ จำเป็นสำหรับ invalidate cache ตามที่ตั้งใจ)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const weather = useMemo(() => getMockWeather(), [journey?.id])
+  const weather = useMemo(() => getMockWeather(), [journey?.id, visualMapIndex])
 
-  const catPct = useMemo(
-    () => (mapDef ? getPointAtProgress(mapDef, mapProgressPct) : { x: 50, y: 50 }),
-    [mapDef, mapProgressPct],
-  )
-  const { containerRef, zoom, pan, autoFollow, refollow, handlers } = useMapPanZoom(catPct, MAP_NATIVE_SIZE)
+  // เรียกใช้ hook ตัวใหม่
+  const { containerRef, scale, pan, handlers } = useMapPanZoom(MAP_NATIVE_SIZE)
 
-  const handlePickDestination = (mapId: string) => {
-    setFailedNotice(false)
-    setTransitioning(true)
-    startJourney(mapId).then(setJourney)
-  }
+  useEffect(() => {
+    if (journey && activeMapIndex !== visualMapIndex && !isFogging) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsFogging(true)
+      const t1 = setTimeout(() => setVisualMapIndex(activeMapIndex), 900)
+      const t2 = setTimeout(() => setIsFogging(false), 1800)
+      return () => { clearTimeout(t1); clearTimeout(t2) }
+    }
+  }, [activeMapIndex, visualMapIndex, isFogging, journey])
 
-  // ── ระบบซิงก์ก้าว — เรียงลำดับ fallback เดียวกับเฟส 3 (ก้าวเพื่อสุขภาพเดิม): Google Fit →
-  // Health Connect/HealthKit (native) → DeviceMotion → กรอกมือ ──
   const { nativePlatform, requestNativeSteps } = useStepTracker()
   const [dataSource, setDataSource] = useState<StepDataSource>(() => {
     if (isGoogleFitConfigured()) return 'google-fit'
@@ -112,9 +93,8 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
   const [isSyncing, setIsSyncing] = useState(false)
   const [isCountingMotion, setIsCountingMotion] = useState(false)
   const [syncError, setSyncError] = useState<string | null>(null)
+  
   const stopDeviceMotionRef = useRef<(() => void) | null>(null)
-  /** ก้าวสะสม "ในเซสชันนี้" ล่าสุดที่ถูกส่งเข้า addSteps() ไปแล้ว — ใช้คำนวณส่วนต่าง (delta)
-   *  ก่อนส่งเพิ่ม กัน addSteps() ถูกเรียกซ้ำด้วยยอดสะสมเดิมทุกครั้งที่ dataSource คืนค่ายอดรวม */
   const lastSyncedStepsRef = useRef(0)
   const sessionSteps = Number(stepsInput) || 0
 
@@ -127,15 +107,13 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
     const delta = absoluteSessionSteps - lastSyncedStepsRef.current
     if (delta <= 0) return
     lastSyncedStepsRef.current = absoluteSessionSteps
-    logActivity({ activityType: 'STEPS', durationSeconds: 0, meta: { steps: delta, mapId: journey.currentMapId } })
+    
+    const currentMapId = journey.routeMapIds?.[activeMapIndex] || journey.destinationMapId
+
+    logActivity({ activityType: 'STEPS', durationSeconds: 0, meta: { steps: delta, mapId: currentMapId } })
     addSteps(journey.id, delta).then((updated) => {
-      if (updated.status === 'FAILED') {
-        setJourney(null)
-        setFailedNotice(true)
-        return
-      }
       setJourney(updated)
-      if (updated.status !== 'IN_PROGRESS') setArrivalStatus(updated.status)
+      if (updated.status !== 'IN_PROGRESS') setShowSummary(true)
     })
   }
 
@@ -203,116 +181,160 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
     }
   }
 
-  // useCallback กันปัญหา identity เปลี่ยนทุก render (เช่นตอน useMapPanZoom อัปเดต size จาก
-  // ResizeObserver) ทำให้ MapFogTransition (ผูก effect กับ [onDone]) เริ่มนับเวลาใหม่ซ้ำๆ จน
-  // หมอกไม่จางออกสักที — dependency array อ้างค่าที่ "ไม่เปลี่ยนระหว่างที่หมอกกำลังแสดงอยู่" จริง
-  const handleTransitionFogDone = useCallback(() => setTransitioning(false), [])
-  const handleArrivalFogDone = useCallback(() => {
-    if (!journey || !arrivalStatus) return
-    finish({ destinationMapId: journey.destinationMapId, mapId: journey.currentMapId, status: arrivalStatus, steps: journey.progressOnCurrentMapSteps })
-  }, [journey, arrivalStatus, finish])
-
-  if (loading) {
-    return (
-      <div className="step-journey-game step-journey-game--center">
-        <div className="qg-center step-journey-game__loading">กำลังโหลดทริปของคุณ...</div>
-      </div>
-    )
+  const handlePickDestination = (mapId: string) => {
+    setFailedNotice(false)
+    setTransitioning(true)
+    startJourney(mapId).then(setJourney)
   }
 
-  if (!journey || !mapDef) {
+  const handleClaimRewards = () => {
+    if (!journey) return
+    const rewards = calcProportionalRewards(journey.progressOnCurrentMapSteps, totalStepsTarget3Days)
+    
+    updateProfile({ 
+      waterDrops: (userData.waterDrops || 0) + rewards.waterDrops,
+      coins: (userData.coins || 0) + rewards.coins 
+    })
+    
+    const currentMapId = journey.routeMapIds?.[activeMapIndex] || journey.destinationMapId
+    finish({ 
+      destinationMapId: journey.destinationMapId, 
+      mapId: currentMapId, 
+      status: journey.status, 
+      steps: journey.progressOnCurrentMapSteps 
+    })
+  }
+
+  if (loading) return <div className="step-journey-game step-journey-game--center">กำลังโหลดทริปของคุณ...</div>
+
+  if (!journey || (!visualMapDef && !showSummary)) {
     return (
       <div className="step-journey-game step-journey-game--center">
-        {failedNotice && (
-          <div className="qg-tag qg-tag--warn step-journey-game__failed-notice">
-            ⏱️ ทริปก่อนหน้าหมดเวลาแล้ว ลองเลือกจุดหมายใหม่ได้เลย
-          </div>
-        )}
+        {failedNotice && <div className="qg-tag qg-tag--warn step-journey-game__failed-notice">ลองเลือกจุดหมายใหม่ได้เลย</div>}
         <DestinationPicker onPicked={handlePickDestination} />
-        {transitioning && <MapFogTransition onDone={handleTransitionFogDone} />}
+        {transitioning && <MapFogTransition onDone={() => setTransitioning(false)} />}
       </div>
     )
   }
 
   return (
-    <div className="step-journey-game step-journey-game--map">
+    <div
+      className="step-journey-game"
+      ref={containerRef}
+      onPointerDown={handlers.onPointerDown}
+      onPointerMove={handlers.onPointerMove}
+      onPointerUp={handlers.onPointerUp}
+      onPointerCancel={handlers.onPointerUp}
+    >
       <div
-        className="step-journey-game__map-viewport"
-        ref={containerRef}
-        onPointerDown={handlers.onPointerDown}
-        onPointerMove={handlers.onPointerMove}
-        onPointerUp={handlers.onPointerUp}
+        className="step-journey-game__map-canvas"
+        style={{
+          width: MAP_NATIVE_SIZE.width,
+          height: MAP_NATIVE_SIZE.height,
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`
+        }}
       >
-        <div
-          className="step-journey-game__map-zoom"
-          style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
-        >
-          <MapPathRenderer mapDef={mapDef} progressPct={mapProgressPct} />
-          <CatCompanion mapDef={mapDef} progressPct={mapProgressPct} />
-          <WeatherEffectLayer weather={weather} />
-        </div>
-
-        {!autoFollow && (
-          <button className="step-journey-game__refollow-btn" onClick={refollow}>📍 กลับไปตามแมว</button>
-        )}
-
-        {(transitioning || arrivalStatus) && (
-          <MapFogTransition onDone={transitioning ? handleTransitionFogDone : handleArrivalFogDone} />
+        {visualMapDef && (
+          <>
+            <MapPathRenderer mapDef={visualMapDef} progressPct={localProgressPct} />
+            <CatCompanion mapDef={visualMapDef} progressPct={localProgressPct} />
+            <WeatherEffectLayer weather={weather} />
+          </>
         )}
       </div>
 
-      {/* [แก้รอบนี้ — ปรับ layout] แผงสถิติ+ปุ่มควบคุมชิดขวา แนวเดียวกัน (เดิมเป็นบล็อกเต็มความ
-          กว้างลอยอยู่ใต้แผนที่ทั้งหมด) — ดู step-journey-game__side-panel ใน .css สำหรับ
-          breakpoint มือถือ (สลับมาเรียงเต็มความกว้างใต้แผนที่แทนการวางทับขวาบน) */}
-      <div className="step-journey-game__side-panel">
-        <StatsOverlay
-          todaySteps={sessionSteps}
-          dailyStepTarget={dailyStepTarget}
-          bmi={bmi}
-          mapName={mapDef.name}
-          mapProgressPct={mapProgressPct}
-        />
+      <div className="step-journey-game__pill-header">
+        <span aria-hidden="true">🚶</span>
+        <span>ก้าวเพื่อสุขภาพ</span>
+      </div>
 
-        <div className="step-journey-game__controls">
-          {/* [แก้รอบนี้ — feedback รอบ 2: แผงถูก action menu bar บัง] ย่อ layout ให้กระชับขึ้น
-              ตามที่ระบุ — ปุ่มซิงก์ + ช่องกรอกก้าวอยู่แถวเดียวกัน (ปุ่มเหลือแค่ไอคอน ใช้ title/
-              aria-label บอกความหมายแทนข้อความยาวเดิม) และตัดพารากราฟอธิบายแหล่งข้อมูลที่แสดง
-              ตลอดเวลาออก (โชว์เฉพาะตอน error จริงๆ) — ประหยัดพื้นที่แนวตั้งไปมากพอที่จะไม่โดน
-              action menu bar บังแล้วในทุกความสูงจอที่ทดสอบ */}
-          <div className="step-journey-game__sync-row">
-            {dataSource !== 'manual' && (
-              <button
-                className="step-journey-game__sync-btn"
-                onClick={handleSyncClick}
-                disabled={isSyncing}
-                title={
-                  isSyncing ? 'กำลังซิงก์...'
-                    : dataSource === 'google-fit' ? 'ซิงก์จาก Google Fit'
-                    : dataSource === 'health-connect' ? 'ซิงก์จาก Health Connect'
-                    : dataSource === 'healthkit' ? 'ซิงก์จาก Apple Health'
-                    : isCountingMotion ? 'หยุดนับก้าว' : 'เริ่มนับก้าวจากเซ็นเซอร์'
-                }
-              >
-                {isSyncing ? '⏳' : dataSource === 'device-motion' ? (isCountingMotion ? '⏸️' : '▶️') : '🔄'}
-              </button>
-            )}
-            <input
-              id="step-journey-input"
-              type="text"
-              inputMode="numeric"
-              value={stepsInput}
-              onChange={(e) => handleStepsChange(e.target.value)}
-              placeholder={`ก้าววันนี้ เช่น ${BASE_DAILY_STEP_TARGET}`}
-              aria-label="กรอกจำนวนก้าวที่เดินได้วันนี้"
-              className="qg-input step-journey-game__step-input"
-            />
+      {(transitioning || isFogging) && (
+        <MapFogTransition onDone={() => { if (transitioning) setTransitioning(false) }} />
+      )}
+
+      {!showSummary && (
+        <div className="step-journey-game__side-panel">
+          <StatsOverlay
+            todaySteps={sessionSteps}
+            dailyStepTarget={dailyStepTarget}
+            bmi={bmi}
+            mapName={visualMapDef?.name || ''}
+            mapProgressPct={totalProgressPct}
+          />
+
+          <div className="step-journey-game__controls">
+            <div className="step-journey-game__sync-row">
+              {dataSource !== 'manual' && (
+                <button
+                  className="step-journey-game__sync-btn"
+                  onClick={handleSyncClick}
+                  disabled={isSyncing}
+                >
+                  {isSyncing ? '⏳' : '🔄'}
+                </button>
+              )}
+              <input
+                id="step-journey-input"
+                type="text"
+                inputMode="numeric"
+                value={stepsInput}
+                onChange={(e) => handleStepsChange(e.target.value)}
+                placeholder={`เช่น ${dailyStepTarget}`}
+                className="qg-input step-journey-game__step-input"
+              />
+            </div>
+            {syncError && <p className="qg-tag qg-tag--danger step-journey-game__sync-error">⚠️ {syncError}</p>}
           </div>
 
-          {syncError && <p className="qg-tag qg-tag--danger step-journey-game__sync-error">⚠️ {syncError}</p>}
-
-          <button className="step-journey-game__exit-btn" onClick={exit}>ออกก่อน (เดินต่อทีหลังได้)</button>
+          <button 
+            className="step-journey-game__reset-btn" 
+            onClick={() => {
+              if (window.confirm('คุณต้องการยกเลิกทริปนี้และเลือกจุดหมายใหม่หรือไม่? ความคืบหน้าจะหายไป')) {
+                setJourney(null)
+              }
+            }}
+          >
+            เปลี่ยนจุดหมาย (เริ่มใหม่)
+          </button>
         </div>
-      </div>
+      )}
+
+      {showSummary && journey && (
+        <div className="sjg-summary-overlay">
+          <div className="sjg-summary-card">
+            <h2 className="sjg-summary-title">🌟 สรุปทริปการเดินทาง 🌟</h2>
+            <p className="sjg-summary-desc">คุณเดินทางมาถึงจุดหมายหรือครบกำหนดเวลาแล้ว!</p>
+            
+            <div className="sjg-summary-progress">
+              <span>ความคืบหน้าภาพรวม</span>
+              <div className="sjg-progress-bar">
+                <div className="sjg-progress-fill" style={{ width: `${totalProgressPct}%` }}></div>
+              </div>
+              <span className="sjg-progress-text">{Math.round(totalProgressPct)}%</span>
+            </div>
+
+            <div className="sjg-reward-box">
+              <span>ได้รับรางวัลตามสัดส่วน:</span>
+              <div className="sjg-reward-items">
+                <span className="sjg-reward-item">
+                  <img src={BADGE_ICONS.water} alt="Water" className="icon-img--reward" /> 
+                  +{calcProportionalRewards(journey.progressOnCurrentMapSteps, totalStepsTarget3Days).waterDrops}
+                </span>
+                <span className="sjg-reward-item">
+                  <img src={BADGE_ICONS.coins} alt="Coins" className="icon-img--reward" /> 
+                  +{calcProportionalRewards(journey.progressOnCurrentMapSteps, totalStepsTarget3Days).coins}
+                </span>
+              </div>
+            </div>
+
+            <button className="sjg-summary-btn" onClick={handleClaimRewards}>
+              รับรางวัลและเลือกจุดหมายใหม่
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!showSummary && <button className="step-journey-game__close-btn" onClick={exit}>✕</button>}
     </div>
   )
 }

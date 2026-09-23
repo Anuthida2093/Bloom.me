@@ -1,88 +1,103 @@
 /* ═══════════════════════════════════════════════════════════════
-   StepJourneyGame.css — layout เต็มจอ (fullscreenGame ผ่าน GameShell.tsx)
-   ───────────────────────────────────────────────────────────────
-   .step-journey-game คือ children ตัวเดียวใน .game-shell__stage ซึ่งตอนนี้ (fullscreenGame)
-   ไม่มี max-width/padding แล้ว (ดู GameShell.css .game-shell__body--fullscreen) จึงต้องขยาย
-   เต็ม 100% เองที่นี่
+   StepJourneyGame.css — layout เต็มจอ
    ═══════════════════════════════════════════════════════════════ */
 
 .step-journey-game {
   position: relative;
   width: 100%;
-  /* min-height ไม่ใช่ height ตายตัว — เผื่อจอแคบที่เนื้อหาเรียงต่อกันแนวตั้งสูงเกิน 100% ได้
-     (ดู .game-shell__body--fullscreen ใน GameShell.css ที่ scroll ให้แทนการตัดทิ้ง) */
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: #0b1f16;
+  touch-action: none;
+  /* 3. ไม่ให้ขึ้นไฮไลต์สีฟ้าเวลาลากแผนที่ */
+  user-select: none; 
+  -webkit-user-select: none;
 }
 
-/* ── สถานะโหลด/เลือกจุดหมาย (ยังไม่มีแผนที่เต็มจอให้แสดง) — เว้น padding เองเพราะ
-   .game-shell__stage แบบเต็มจอไม่มี padding ให้แล้ว ── */
+.step-journey-game__map-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+  z-index: 1;
+}
+
+/* ── สถานะโหลด/เลือกจุดหมาย (หน้า Destination Picker) ── */
 .step-journey-game--center {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 24px;
   overflow-y: auto;
   box-sizing: border-box;
   gap: 12px;
+  width: 100%;
+  height: 100%;
 }
 
 .step-journey-game__loading { padding: 24px 0; font-size: 13px; color: var(--glass-w-72); }
 .step-journey-game__failed-notice { margin-bottom: 4px; }
 
-/* ── สถานะแผนที่ — เต็มจอจริง ── */
-.step-journey-game__map-viewport {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  touch-action: none;
-}
-
-.step-journey-game__map-zoom {
+/* ── UI ต่างๆ ที่จะลอยทับอยู่บนแผนที่ (z-index สูงๆ) ── */
+.step-journey-game__pill-header {
   position: absolute;
-  inset: 0;
-  transform-origin: 0 0;
-  transition: transform 0.4s ease;
-}
-
-.step-journey-game__refollow-btn {
-  position: absolute;
-  bottom: 16px;
+  top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 8;
-  padding: 7px 16px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 22, 16, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 99px;
-  border: none;
-  background: rgba(10, 22, 16, 0.65);
+  padding: 8px 20px;
+  color: var(--fixed-white);
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.step-journey-game__close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(10, 22, 16, 0.6);
   backdrop-filter: blur(6px);
   color: var(--fixed-white);
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
-.step-journey-game__refollow-btn:hover { background: rgba(10, 22, 16, 0.8); }
+.step-journey-game__close-btn:hover { background: rgba(10, 22, 16, 0.9); }
 
-/* ── แผงสถิติ + ปุ่มควบคุม ชิดขวา แนวเดียวกัน (ลอยทับมุมขวาบนของแผนที่) ──
-   [แก้รอบนี้ — feedback รอบ 2] top เดิมคือ 12px ชนกับปุ่มปิดลอย (.game-shell__close--floating,
-   top:12px เหมือนกัน) พอดี ตั้งแต่เปลี่ยนแถบหัวเป็น pill ลอย (ไม่กินพื้นที่ layout อีกต่อไป —
-   ดู GameShell.css) ต้องเว้น top ให้พ้นปุ่มปิด 44px + ระยะห่างเอง แทนที่จะพึ่ง header bar เดิม
-   เว้นให้อัตโนมัติ — bottom เพิ่ม buffer จาก +12px เป็น +20px กันชนขอบบนของ action menu bar
-   แน่นเกินไปในบางความสูงจอ */
 .step-journey-game__side-panel {
   position: absolute;
-  top: 64px;
+  top: 72px;
   right: 12px;
-  bottom: calc(var(--gpf-safe-bottom, 100px) + 20px);
-  z-index: 7;
+  bottom: calc(var(--gpf-safe-bottom, 20px) + 110px);
+  z-index: 20;
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: 14.2rem;
   overflow-y: auto;
+  scrollbar-width: none;
+  pointer-events: auto;
 }
+.step-journey-game__side-panel::-webkit-scrollbar { display: none; }
 
 .step-journey-game__controls {
   display: flex;
@@ -95,8 +110,6 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
-/* [แก้รอบนี้] ปุ่มซิงก์ (ไอคอนล้วน) + ช่องกรอกก้าว อยู่แถวเดียวกัน แทนการซ้อนกันเป็นบล็อก
-   ตามที่ระบุ — ประหยัดพื้นที่แนวตั้งกว่าเดิมมาก */
 .step-journey-game__sync-row { display: flex; gap: 8px; align-items: center; }
 .step-journey-game__sync-btn {
   flex-shrink: 0;
@@ -117,31 +130,159 @@
 .step-journey-game__sync-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
 .step-journey-game__step-input { flex: 1; min-width: 0; width: auto; }
-
 .step-journey-game__sync-error { margin: 0; }
 
-.step-journey-game__exit-btn {
-  align-self: center;
-  background: none;
-  border: none;
-  color: var(--glass-w-55, rgba(255, 255, 255, 0.55));
-  font-size: 11px;
-  text-decoration: underline;
+.step-journey-game__reset-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(10, 22, 16, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #F87171;
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-weight: bold;
   cursor: pointer;
-  padding: 4px;
+  transition: all 0.2s ease;
 }
-.step-journey-game__exit-btn:hover { color: var(--fixed-white); }
+.step-journey-game__reset-btn:hover { background: rgba(10, 22, 16, 0.9); }
 
-/* ── มือถือจอแคบ — ทับกันไม่ไหวถ้าลอยชิดขวาต่อ เปลี่ยนเป็นเรียงเต็มความกว้างใต้แผนที่แทน ── */
 @media (max-width: 520px) {
-  .step-journey-game__map-viewport { flex: 1 1 auto; min-height: 220px; }
-
   .step-journey-game__side-panel {
-    position: static;
+    position: absolute;
+    top: auto;
+    bottom: calc(var(--gpf-safe-bottom, 0px) + 20px);
+    right: 0;
+    left: 0;
     width: 100%;
-    max-height: none;
-    overflow-y: visible;
-    padding: 12px;
+    padding: 0 16px;
     box-sizing: border-box;
   }
+}
+
+/* ── Overlay หน้าสรุปผล ── */
+.sjg-summary-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: rgba(10, 22, 16, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: sjgFadeIn 0.4s ease-out;
+}
+
+@keyframes sjgFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.sjg-summary-card {
+  background: linear-gradient(160deg, var(--g700), var(--g800));
+  border: 2px solid var(--g400);
+  border-radius: 24px;
+  padding: 32px 24px;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--fixed-white);
+  font-family: 'Nunito', 'Mali', sans-serif;
+}
+
+.sjg-summary-title {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  color: #fde047;
+  font-size: 22px;
+  margin: 0;
+}
+
+.sjg-summary-desc {
+  font-size: 14px;
+  color: var(--g200);
+  margin: 0;
+}
+
+.sjg-summary-progress {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sjg-progress-bar {
+  width: 100%;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.sjg-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #74C69D, #52B788);
+  border-radius: 99px;
+  transition: width 1s ease-out;
+}
+
+.sjg-progress-text {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 18px;
+  color: #74C69D;
+}
+
+.sjg-reward-box {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.sjg-reward-items {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.sjg-reward-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 20px;
+  color: #FFD166;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px 16px;
+  border-radius: 99px;
+  border: 1px solid rgba(255, 209, 102, 0.3);
+}
+
+.sjg-summary-btn {
+  background: linear-gradient(135deg, var(--g400), var(--g600));
+  color: var(--fixed-white);
+  border: none;
+  padding: 16px;
+  border-radius: 99px;
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(64, 145, 108, 0.4);
+  transition: transform 0.15s ease;
+  margin-top: 8px;
+}
+
+.sjg-summary-btn:active {
+  transform: scale(0.96);
 }

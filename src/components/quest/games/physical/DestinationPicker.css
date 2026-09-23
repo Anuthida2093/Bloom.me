@@ -1,87 +1,147 @@
 /* ═══════════════════════════════════════════════════════════════
-   DestinationPicker.css — การ์ดเลือกจุดหมาย 8 แผนที่ (scroll แนวนอน)
+   DestinationPicker.css
    ═══════════════════════════════════════════════════════════════ */
 
 .destination-picker {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 100%;
-}
-
-.destination-picker__title {
-  font-family: 'Fredoka One', 'Mali', sans-serif;
-  font-size: 19px;
-  margin: 0;
-  text-align: center;
-  color: var(--fixed-white);
-}
-
-.destination-picker__flavor {
-  font-size: 12.5px;
-  opacity: 0.85;
-  max-width: 340px;
-  text-align: center;
-  margin: 6px 0 14px;
-}
-
-.destination-picker__row {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding: 4px 4px 12px;
-  width: 100%;
-  box-sizing: border-box;
-  scrollbar-width: thin;
-}
-
-.destination-picker__card {
-  flex: 0 0 auto;
-  scroll-snap-align: center;
-  width: 132px;
-  border-radius: 18px;
-  border: 1.5px solid var(--glass-w-20, rgba(255, 255, 255, 0.22));
-  background: var(--glass-w-7, rgba(255, 255, 255, 0.08));
-  color: var(--fixed-white);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease;
-  font-family: 'Nunito', sans-serif;
-  padding: 0;
-  position: relative;
-}
-.destination-picker__card:hover:not(:disabled) {
-  transform: translateY(-3px);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-.destination-picker__card:disabled { opacity: 0.6; cursor: default; }
-
-.destination-picker__card-art {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
-  display: block;
-}
-
-.destination-picker__card-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px 10px;
-}
-.destination-picker__card-order { font-size: 10px; opacity: 0.7; font-weight: 700; }
-.destination-picker__card-name { font-size: 13px; font-weight: 800; }
-
-.destination-picker__card-loading {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  background: rgba(5, 18, 13, 0.55);
-  font-size: 11px;
+  gap: 24px;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; 
+  padding: 40px 0;
+}
+
+.destination-picker__header {
+  text-align: center;
+  padding: 0 20px;
+}
+
+.destination-picker__header h2 {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 28px;
+  color: var(--fixed-white);
+  margin: 0 0 8px 0;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.destination-picker__header p {
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-size: 18px;
+  color: var(--g200);
+  margin: 0;
+}
+
+.destination-picker__slider {
+  width: 100%;
+  max-width: 1200px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  padding: 20px;
+  box-sizing: border-box;
+  cursor: grab; /* เพิ่มรูปมือเพื่อให้รู้ว่าลากได้ */
+}
+
+.destination-picker__slider:active {
+  cursor: grabbing; /* รูปมือกำตอนกำลังลาก */
+}
+
+.destination-picker__slider::-webkit-scrollbar {
+  display: none;
+}
+.destination-picker__slider {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.destination-picker__track {
+  display: flex;
+  gap: 24px;
+  padding: 0 24px;
+  /* นำ width: max-content และ margin: 0 auto ออก เพื่อให้เลื่อนขวาได้สุด */
+}
+
+.destination-picker__item {
+  scroll-snap-align: center;
+  flex: 0 0 auto;
+  width: 280px;
+  background: var(--glass-b-40);
+  border: 2px solid var(--glass-w-20);
+  border-radius: 20px;
+  padding: 12px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+  user-select: none; /* ห้ามคลุมดำข้อความเวลาลาก */
+}
+
+.destination-picker__item:hover:not(:disabled) {
+  transform: translateY(-8px);
+  border-color: var(--g400);
+  background: var(--glass-b-60);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+}
+
+.destination-picker__item:active:not(:disabled) {
+  transform: translateY(-2px) scale(0.98);
+}
+
+.destination-picker__item--picking {
+  border-color: var(--g400);
+  background: var(--glass-b-60);
+  box-shadow: 0 0 0 4px rgba(82, 183, 136, 0.4);
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+.destination-picker__img-wrapper {
+  width: 100%;
+  height: 360px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--glass-b-60);
+  pointer-events: none; /* ห้ามลากเฉพาะตัวรูปภาพ */
+}
+
+.destination-picker__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+  user-select: none;
+  -webkit-user-drag: none; /* ป้องกันเบราว์เซอร์พยายามเซฟรูปตอนลาก */
+}
+
+.destination-picker__item:hover:not(:disabled) .destination-picker__img {
+  transform: scale(1.05);
+}
+
+.destination-picker__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  pointer-events: none;
+}
+
+.destination-picker__order {
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-size: 14px;
   font-weight: 700;
+  color: var(--g300);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.destination-picker__name {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 22px;
+  color: var(--fixed-white);
+  margin: 0;
 }
