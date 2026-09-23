@@ -228,3 +228,71 @@ model Session {
 - **ส่งอีเมลจริง**: ต้องต่อผู้ให้บริการอีเมล (SES/SendGrid/Postmark) แล้ว "ลบ" แผงจำลองอีเมลใน
   `ForgotPassword.tsx` (ดูคอมเมนต์ในไฟล์นั้น) และลบ field `devToken` ออกจาก response ของ
   `requestPasswordReset` ทันที
+
+---
+
+## 9) เควส "ก้าวเพื่อสุขภาพ" โฉมใหม่ (Step Journey) — ตารางใหม่ทั้งหมด
+
+> เตรียมฝั่ง frontend ไว้แล้วด้วย mockDb (`src/services/mock/mockDb.ts`, field `activeJourney`)
+> ชนิดข้อมูลอยู่ที่ `src/types.journey.ts` (แยกจาก `types.ts` ตามแพทเทิร์นเดียวกับ
+> `types.mental.ts` — ยังไม่มีตารางนี้ใน backend จริง) logic คำนวณเป้าหมายก้าว/สถานะทริปอยู่ที่
+> `src/config/journeyRules.ts` ข้อมูลแผนที่ 8 ใบ (มีภาพจริงแล้วที่
+> `public/assets/images/mini-game/vitality-steps/map-01.jpg` ... `map-08.jpg` — พิกัด
+> waypoints/entry/exit ยังเป็นค่าประมาณจากตาเปล่า รอวัดละเอียดจาก Figma) อยู่ที่
+> `src/config/journeyMaps.ts` **contract ที่ frontend เรียกจริงตอนนี้อยู่ที่
+> `src/services/api/journey.api.ts`** — ทีม backend เปิดไฟล์นั้นดู request/response จริงเพิ่มได้เลย
+>
+> [ตัดสินใจเรื่องโมเดล] เควสนี้คือ "เลือกแผนที่ปลายทาง 1 ใบจาก 8 ใบ แล้วเดินข้ามแผนที่ใบนั้นใบเดียว
+> จนถึง exitPct" ไม่ใช่การไล่เดินข้ามหลายแผนที่ตามลำดับ (`currentMapId` จึงเท่ากับ
+> `destinationMapId` เสมอในเฟสนี้ — เก็บ 2 field แยกกันไว้เผื่ออนาคตอยากทำ "ทริปหลายด่านต่อกัน"
+> จะได้ไม่ต้อง migrate ชนิดข้อมูลใหม่อีกรอบ)
+
+### 9.1 ตารางใหม่ `journeys`
+
+```prisma
+model Journey {
+  id                        String        @id @default(uuid())
+  userId                    String
+  destinationMapId          String
+  currentMapId              String        // เฟสนี้เท่ากับ destinationMapId เสมอ
+  progressOnCurrentMapSteps Int           @default(0)
+  startedAt                 DateTime      @default(now())
+  deadlineAt                DateTime
+  status                    JourneyStatus @default(IN_PROGRESS)
+  user                      User          @relation(fields: [userId], references: [id])
+  @@index([userId, status])
+}
+
+enum JourneyStatus {
+  IN_PROGRESS
+  COMPLETED_EARLY
+  COMPLETED_ON_TIME
+  COMPLETED_LATE
+  FAILED
+}
+```
+
+**ทำไมต้องมี:** ตอนนี้เป็น mock ฝั่ง client ล้วนๆ (localStorage ผ่าน `mockDb.activeJourney`)
+ปิดแอปที่เครื่องอื่นหรือล้างเบราว์เซอร์แล้วหายหมด และไม่มีที่เก็บสถานะเดินทางแบบข้ามอุปกรณ์เลย
+
+> **dailyStepTarget ไม่ได้เก็บในตารางนี้โดยตั้งใจ** — เป็นค่าที่คำนวณสดจาก BMI ปัจจุบันของ user
+> ทุกครั้งที่แสดงผล (`calcDailyStepTarget()` ใน `journeyRules.ts`, อ่านจาก `userData.bmi`) ไม่ใช่
+> ค่าที่ผูกตายตัวกับตอนเริ่มทริป เพราะ BMI ผู้เล่นอาจเปลี่ยนระหว่างทางได้ (แก้ส่วนสูง/น้ำหนักใหม่)
+
+### 9.2 Endpoint ที่ต้องมีให้ตรงกับที่ frontend เรียกไว้แล้ว (`src/services/api/journey.api.ts`)
+
+| Endpoint | Method | Body | หมายเหตุ |
+|---|---|---|---|
+| `/journeys/active` | GET | — | คืน journey ที่ `status === IN_PROGRESS` ของ user ปัจจุบัน หรือ `null` ถ้ายังไม่เริ่ม/จบไปแล้ว (server ต้องเช็ค `deadlineAt` แล้วตั้งเป็น `FAILED` เองถ้าเลยเวลาไปแล้วโดยยังไม่ถึงจุดหมาย ก่อนตอบกลับ — ดู `resolveJourneyStatus()` ใน `journeyRules.ts` สำหรับ logic ที่ frontend ใช้ตัดสินฝั่ง mock) |
+| `/journeys` | POST | `{ destinationMapId: string }` | เริ่มทริปใหม่ไปยังแผนที่ `destinationMapId` — ต้องคืน journey ที่สร้างเสร็จกลับมาทันที (`deadlineAt` = ตอนนี้ + 3 วัน ตาม `DEFAULT_JOURNEY_DEADLINE_DAYS`) |
+| `/journeys/:id/steps` | PATCH | `{ steps: number }` | บวก `steps` (เป็นส่วนต่างที่เพิ่มมาใหม่ ไม่ใช่ยอดสะสมทั้งหมด) เข้ากับ `progressOnCurrentMapSteps` ของ journey นั้น แล้วคำนวณ/อัปเดต `status` ใหม่ก่อนคืนค่ากลับ (ถึง exitPct แล้ว → `COMPLETED_EARLY`/`COMPLETED_ON_TIME`/`COMPLETED_LATE` ตามสัดส่วนเวลาที่ใช้ไปเทียบกับ `deadlineAt`, ยังไม่ถึงแต่เลย `deadlineAt` แล้ว → `FAILED`) |
+
+**ข้อจำกัดที่ backend ต้องแก้เพิ่มเติม (ไม่ใช่แค่สร้างตาราง):**
+- ต้องรู้ "ระยะทางรวม" ของแต่ละแผนที่เพื่อตัดสินว่าถึง exitPct หรือยัง — เฟสนี้ frontend ประมาณจาก
+  `calcMapTotalStepsTarget(bmi)` = `dailyStepTarget × 3 วัน` (placeholder ล้วนๆ ไม่ใช่ระยะทางจริง
+  ที่วัดจากภาพแผนที่) backend ควรมีคอลัมน์ `totalStepsRequired` ต่อแผนที่ (ผูกกับ `journeyMaps.ts`
+  แต่ละใบ) แทนการคำนวณลอยแบบนี้เมื่อออกแบบจริง
+- reward ให้เมื่อ `finish()` ถูกเรียก (front-end อ่าน `quest.coinReward/expReward` ของ
+  `phys-vitality-steps` ตรงๆ ผ่าน `GameShell.tsx`/`quest.api.ts` เดิม ไม่มีระบบคำนวณโบนัส
+  "มาถึงก่อนกำหนด" แยกต่างหากในเฟสนี้ — ตัวเลข 60 coins/50 EXP ใน `questCatalog.ts` เป็น
+  placeholder รอ balance จริงเช่นกัน) `FAILED` ไม่เรียก `finish()` เลย จึงไม่ได้รางวัลอะไร

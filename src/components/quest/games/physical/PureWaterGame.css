@@ -1,10 +1,159 @@
-/* PureWaterGame — [เปลี่ยนรอบนี้] เลิกใช้กราฟิกแก้วน้ำแบบกดค้าง เปลี่ยนเป็นถ่ายรูปยืนยัน
-   2 จังหวะแทน (ดู PureWaterGame.tsx) — เหลือแค่ thumbnail โชว์รูปแก้วเต็มระหว่างรอถ่ายรูปที่ 2 */
-.pure-water__thumb {
-  width: 96px;
-  height: 96px;
+.pure-water-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 16px;
+  color: var(--fixed-white, #ffffff);
+  width: 100%;
+}
+
+.pure-water-title {
+  font-family: 'Mali', 'Fredoka One', sans-serif;
+  font-size: 22px;
+  margin: 0 0 8px 0;
+  color: #a3e635; /* สีเขียวอ่อนให้เข้ากับธีมต้นไม้ */
+}
+
+.pure-water-desc {
+  font-size: 13px;
+  opacity: 0.85;
+  margin: 0 0 24px 0;
+  max-width: 90%;
+  line-height: 1.5;
+}
+
+/* วงกลม Progress */
+.pure-water-progress-container {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin-bottom: 32px;
+}
+
+.pure-water-progress-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg); /* ให้จุดเริ่มต้นอยู่ด้านบน */
+}
+
+.pure-water-ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 8;
+}
+
+.pure-water-ring-fill {
+  fill: none;
+  stroke: #38bdf8; /* สีฟ้าน้ำ */
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s ease-in-out;
+}
+
+.pure-water-progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: baseline;
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+}
+
+.pure-water-progress-current {
+  font-size: 24px;
+  color: #38bdf8;
+}
+
+.pure-water-progress-max {
+  font-size: 14px;
+  opacity: 0.6;
+  margin-left: 2px;
+}
+
+/* กรอบรูปถ่าย 2 กรอบ */
+.pure-water-frames-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+  width: 100%;
+  justify-content: center;
+}
+
+.pure-water-frame-box {
+  width: 130px;
+  height: 130px;
+  border-radius: 16px;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.pure-water-frame-box:hover {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.05);
+}
+
+.pure-water-frame-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.pure-water-frame-icon {
+  font-size: 32px;
+}
+
+.pure-water-frame-label {
+  font-size: 11px;
+  opacity: 0.7;
+  font-weight: bold;
+}
+
+.pure-water-photo {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border-radius: 14px;
-  border: 2px solid var(--glass-w-22);
-  margin: 0 auto;
+}
+
+/* ปุ่มกด */
+.pure-water-submit-btn {
+  background: linear-gradient(135deg, #38bdf8, #0284c7);
+  color: #fff;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 99px;
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.4);
+  transition: transform 0.15s ease;
+  animation: popIn 0.3s ease-out;
+}
+
+.pure-water-submit-btn:active {
+  transform: scale(0.95);
+}
+
+.pure-water-cancel-btn {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  border: none;
+  padding: 8px;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }

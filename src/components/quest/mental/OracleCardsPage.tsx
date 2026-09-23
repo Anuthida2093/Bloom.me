@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import type { MoodEntryData } from '../../../types'
 import { ORACLE_CARDS, selectOracleCards, type OracleCard } from './oracleCardData'
 import { generateOracleMessage } from './oracleMessageGenerator'
@@ -8,19 +7,12 @@ import { useAppContext } from '../../../context/AppContext'
 import { playSfx, stopSfx } from '../../../utils/audioPlayer'
 import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import CameraCapture from '../shared/CameraCapture'
-import { BADGE_ICONS } from '../../../config/iconAssets'
 import { MOOD_TYPE_INFO } from '../../../config/moodTypes'
 import './OracleCardsPage.css'
 
-type Stage = 'intro' | 'spread' | 'reading' | 'camera' | 'done'
+type Stage = 'intro' | 'spread' | 'reading' | 'camera'
 
-/** [เพิ่มรอบนี้] ถ่ายรูปยืนยันภารกิจสำเร็จได้รางวัลพิเศษ "หยดน้ำแห่งชีวิต" เท่านี้ตายตัว
- *  แยกจากเหรียญ/EXP ปกติของเควส — ถ้ากดข้ามภารกิจจะไม่ได้รางวัลนี้ (แต่เควสไพ่ทิพย์โดยรวม
- *  ยังนับว่าสำเร็จเหมือนเดิม ดู handleSkip/handleClaimReward ด้านล่าง) */
 const WATER_DROP_REWARD = 20
-
-// [แก้ตามที่ระบุ] ย้ายไปเป็นแหล่งข้อมูลกลางที่ src/config/moodTypes.ts แทนการประกาศซ้ำ
-// ที่นี่ — MoodCheckIn.tsx (bottom sheet เลือกอารมณ์ 8 ค่า) ใช้ไฟล์เดียวกันนี้ด้วย
 
 interface OracleCardsPageProps {
   moodEntry: MoodEntryData
@@ -30,8 +22,7 @@ interface OracleCardsPageProps {
 
 export default function OracleCardsPage({ moodEntry, onComplete, onClose }: OracleCardsPageProps) {
   const { settings, userData, updateProfile, triggerWateringEffect } = useAppContext()
-  // [แก้] ตรึง identity ของ sfxOpts ด้วย useMemo — เดิมสร้าง object ใหม่ทุก render ทำให้
-  // effect ที่พึ่งพา sfxOpts (เล่น/หยุดเสียงพิมพ์ดีด) รีรันโดยไม่จำเป็นทุกครั้งที่คอมโพเนนต์วาดใหม่
+  
   const sfxOpts = useMemo(
     () => ({ volume: settings.sfxVolume, enabled: settings.soundEnabled }),
     [settings.sfxVolume, settings.soundEnabled],
@@ -40,56 +31,18 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
   const [stage, setStage] = useState<Stage>('intro')
   const [spreadDeck] = useState<OracleCard[]>(() => buildDeck(moodEntry))
   const [selectedCard, setSelectedCard] = useState<OracleCard | null>(null)
-  /** [เพิ่มรอบนี้] ใช้จับคู่ layoutId ระหว่างไพ่ใบที่ถูกกดในกองพัด กับไพ่ใบใหญ่ในหน้าอ่านคำทำนาย
-   *  เพื่อให้ framer-motion เล่นแอนิเมชัน "ขยายจากตำแหน่งเดิม" อัตโนมัติ (shared layout transition) */
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
-  // [เปลี่ยนรอบนี้] เดิมมีแค่ "ประโยคเปิด 1 แบบ/อารมณ์" ต่อด้วย affirmation ตายตัวของไพ่ —
-  // ตอนนี้ปั้นข้อความจริงจากคลัง Combinatorics ที่ผูกกับอารมณ์ "ทั้งหมด 8 แบบ" ของผู้ใช้
-  // (ดู oracleMessageGenerator.ts — เกิน 1,000 ชุดค่าผสมต่ออารมณ์) seedKey ผูกกับทั้งรอบ
-  // เช็กอินอารมณ์และไพ่ที่จับได้ ทำให้ข้อความเดิมเป๊ะถ้าเปิดซ้ำ แต่ต่างกันทุกครั้งที่มู้ด/ไพ่เปลี่ยน
-  //
-  // [แก้ตามที่ระบุ] เดิมต่อท้าย "⚡ ภารกิจ 2 นาทีวันนี้:" + twoMinuteTask เข้าไปในสตริงเดียวกัน
-  // แล้วพิมพ์ทีละตัวเป็นพารากราฟเดียว ทำให้ affirmation กับภารกิจอ่านปนกันเป็นก้อนเดียว
-  // ตอนนี้พิมพ์เฉพาะ affirmation ด้วย typewriter แล้วค่อยโชว์ภารกิจเป็นกล่องแยกทีหลัง
-  // (ดู .oracle-card__mission-block ใน JSX ด้านล่าง — โผล่พร้อมปุ่ม action ตอน typewriter จบ)
   const affirmationText = selectedCard
     ? generateOracleMessage(selectedCard, moodEntry.mood, `${moodEntry.id}-${selectedCard.id}`)
     : ''
 
   const { displayedText, isDone: isTypewriterDone } = useTypewriter(affirmationText, 25)
 
-  /** [แก้ตามที่ระบุ — ข้อ 4] เดิมไฟล์นี้มีโค้ดกล้อง (getUserMedia/video/canvas/facingMode)
-   *  แยกเป็นชุดของตัวเอง ซ้ำกับ CameraCapture.tsx ที่ phys-pure-water/phys-photosynthesis
-   *  ใช้อยู่แล้ว ตอนนี้ตัดโค้ดกล้องซ้ำทั้งหมดออก เปลี่ยนไปเรียก <CameraCapture> ตัวเดียวกัน
-   *  แทน (ดู JSX ด้านล่าง) — คง state/logic เฉพาะของเควสนี้ไว้: หลังถ่ายรูปยืนยันแล้ว ต้องมี
-   *  ช่วง "สแกน" 1.4 วิ ก่อนขึ้น "สำเร็จ" แล้วค่อยให้รางวัลหยดน้ำ ซึ่ง CameraCapture ไม่รู้จัก
-   *  concept นี้ (มันจบหน้าที่แค่ตอนได้ dataUrl ยืนยันแล้ว) จึงยังคุมช่วงต่อจากนั้นเองที่นี่ */
-  const [cameraPhase, setCameraPhase] = useState<'capturing' | 'scanning' | 'success'>('capturing')
-  const [gotWaterDrop, setGotWaterDrop] = useState(false)
-  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null)
-
-  const handleConfirmPhoto = (dataUrl: string) => {
-    setCapturedPhoto(dataUrl)
-    setCameraPhase('scanning')
-    window.setTimeout(() => {
-      setCameraPhase('success')
-      setGotWaterDrop(true)
-      playSfx('WATER_DROP', sfxOpts)
-      // [เพิ่มรอบนี้] ถ่ายรูปยืนยันภารกิจสำเร็จจริง → ได้รางวัลพิเศษ +20 หยดน้ำแห่งชีวิต
-      // แยกจากเหรียญ/EXP ปกติของเควส อัปเดตเข้า global state จริง (ผ่าน userApi.updateProfile
-      // ที่มีอยู่แล้ว) ไม่ใช่แค่ badge สวยๆ — ถ้ากดข้ามภารกิจ (handleSkip) จะไม่ได้รางวัลนี้
-      updateProfile({ waterDrops: (userData.waterDrops ?? 0) + WATER_DROP_REWARD })
-      window.setTimeout(() => setStage('done'), 1200)
-    }, 1400)
-  }
-
   useEscapeKey(() => {
     stopSfx('KEYPRESS')
     onClose()
   })
 
-  // สั่งเล่นเสียงพิมพ์ข้อความ และสั่งตัดเสียงทันทีเมื่อพิมพ์จบหรือเปลี่ยนหน้า
   useEffect(() => {
     if (stage === 'reading') {
       if (isTypewriterDone) {
@@ -102,24 +55,30 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
     }
   }, [displayedText, stage, isTypewriterDone, sfxOpts])
 
-  const handleSelectCard = (card: OracleCard, index: number) => {
+  const handleSelectCard = (card: OracleCard) => {
     playSfx('CARD_FLIP', sfxOpts)
     setSelectedCard(card)
-    setSelectedIndex(index)
     setStage('reading')
   }
 
   const handleStartCamera = () => {
     stopSfx('KEYPRESS')
     setStage('camera')
-    setCameraPhase('capturing')
-    setCapturedPhoto(null)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleConfirmPhoto = (dataUrl: string) => {
+    playSfx('WATER_DROP', sfxOpts)
+    updateProfile({ waterDrops: (userData.waterDrops ?? 0) + WATER_DROP_REWARD })
+    triggerWateringEffect()
+    onComplete()
+    handleClose()
   }
 
   const handleSkip = () => {
     stopSfx('KEYPRESS')
-    setGotWaterDrop(false)
-    setStage('done')
+    onComplete()
+    handleClose()
   }
 
   const handleClose = () => {
@@ -129,10 +88,8 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
 
   return (
     <div className="oracle-game-container">
-      {/* ปุ่มปิดมุมขวาบน */}
       <button onClick={handleClose} title="ปิด" className="oracle-page__close">✕</button>
 
-      {/* แบ็กกราวด์ดาว */}
       <div className="oracle-page__bg" />
       {Array.from({ length: 25 }).map((_, i) => (
         <span
@@ -147,6 +104,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
       ))}
 
       <div className="oracle-page__content">
+        
         <div className="oracle-page__mood-recap">
           <span style={{ fontSize: 22 }}>{MOOD_TYPE_INFO[moodEntry.mood].emoji}</span>
           <span>วันนี้คุณรู้สึก{moodEntry.note ? `: "${moodEntry.note}"` : 'แบบนี้อยู่นะ'}</span>
@@ -171,163 +129,73 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
           </div>
         )}
 
-        {/* [แก้ตามที่ระบุ — กางไพ่สวยงามด้วยแอนิเมชัน + กดไพ่แล้วขยายจากตำแหน่งเดิม]
-            ห่อ spread↔reading ด้วย AnimatePresence เดียวกัน เพื่อให้ framer-motion จับคู่
-            layoutId ระหว่างไพ่ใบที่ถูกกด (ตอนกางพัด) กับไพ่ใบใหญ่ (ตอนอ่านคำทำนาย) ได้ถูกต้อง
-            (ถ้าไม่มี AnimatePresence ห่อไว้ องค์ประกอบเก่าจะถูกถอดออกจาก DOM ทันทีในตอนที่
-            องค์ประกอบใหม่เข้ามาแทนที่ framer-motion จะจับคู่ตำแหน่งเริ่ม-จบของ FLIP ไม่ได้) */}
-        <AnimatePresence mode="sync">
-          {stage === 'spread' && (
-            <motion.div key="spread" className="oracle-page__spread-view" exit={{ opacity: 0 }}>
-              <p className="oracle-page__hint">แตะเลือกไพ่ 1 ใบที่คุณรู้สึกสะดุดตา</p>
-              <div className="oracle-page__fan">
-                {spreadDeck.map((card, i) => {
-                  const t = getFanTransform(i, spreadDeck.length)
-                  return (
-                    // เดิมตั้ง transform สุดท้ายตรงๆ ทันทีที่ mount ไม่มีอนิเมชันกางไพ่เลย ตอนนี้
-                    // ใช้ framer-motion ไล่จากกองไพ่ตรงกลาง (scale 0) กระจายออกทีละใบ (delay
-                    // ตาม index) เหมือนการ "แจกไพ่" จริง
-                    <motion.button
-                      key={card.id + i}
-                      layoutId={`oracle-card-${card.id}-${i}`}
-                      className="oracle-card"
-                      style={{ zIndex: t.zIndex }}
-                      initial={{ opacity: 0, scale: 0.3, x: 0, y: 40, rotate: 0 }}
-                      animate={{ opacity: 1, scale: 1, x: t.x, y: t.y, rotate: t.rotate }}
-                      transition={{ type: 'spring', stiffness: 260, damping: 22, delay: i * 0.05 }}
-                      whileHover={{ scale: 1.08, y: t.y - 10, transition: { duration: 0.15 } }}
-                      whileTap={{ scale: 0.94 }}
-                      onClick={() => handleSelectCard(card, i)}
-                    >
-                      <div className="oracle-card__inner">
-                        <div className="oracle-card__face--back">🔮</div>
-                      </div>
-                    </motion.button>
-                  )
-                })}
+        {stage === 'spread' && (
+          <div className="oracle-page__spread-view">
+            <p className="oracle-page__hint">แตะเลือกไพ่ 1 ใบที่คุณรู้สึกสะดุดตา</p>
+            <div className="oracle-page__fan">
+              {spreadDeck.map((card, i) => {
+                const t = getFanTransform(i, spreadDeck.length)
+                return (
+                  <button
+                    key={card.id + i}
+                    className="oracle-card"
+                    style={{ 
+                      zIndex: t.zIndex,
+                      transform: `translate(${t.x}px, ${t.y}px) rotate(${t.rotate}deg)`
+                    }}
+                    onClick={() => handleSelectCard(card)}
+                  >
+                    <div className="oracle-card__inner">
+                      <div className="oracle-card__face--back">🔮</div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {stage === 'reading' && selectedCard && (
+          <div className="oracle-page__reading-view">
+            <div className="oracle-card--large">
+              <div className="oracle-card__header">
+                <span className="oracle-card__large-icon">{selectedCard.icon}</span>
+                <h2 className="oracle-card__large-title">{selectedCard.title}</h2>
               </div>
-            </motion.div>
-          )}
 
-          {stage === 'reading' && selectedCard && (
-            <div key="reading" className="oracle-page__reading-view">
-              <motion.div
-                layoutId={`oracle-card-${selectedCard.id}-${selectedIndex}`}
-                className="oracle-card--large"
-                transition={{ type: 'spring', stiffness: 220, damping: 26 }}
-              >
-                <div className="oracle-card__header">
-                  <span className="oracle-card__large-icon">{selectedCard.icon}</span>
-                  <h2 className="oracle-card__large-title">{selectedCard.title}</h2>
+              <div className="oracle-card__large-body">
+                <p className="oracle-card__typewriter-text oracle-card__affirmation-block">
+                  {displayedText}
+                  {!isTypewriterDone && <span className="oracle-page__caret">▍</span>}
+                </p>
+
+                {isTypewriterDone && (
+                  <div className="oracle-card__mission-block">
+                    <span className="oracle-card__mission-label">⚡ ภารกิจ 2 นาทีวันนี้</span>
+                    <p className="oracle-card__mission-text">{selectedCard.twoMinuteTask}</p>
+                  </div>
+                )}
+              </div>
+
+              {isTypewriterDone && (
+                <div className="oracle-card__actions">
+                  <button className="oracle-btn oracle-btn--ghost" onClick={handleSkip}>
+                    ข้ามภารกิจ
+                  </button>
+                  <button className="oracle-btn oracle-btn--primary" onClick={handleStartCamera}>
+                    📸 ทำภารกิจ
+                  </button>
                 </div>
-
-                <div className="oracle-card__large-body">
-                  <p className="oracle-card__typewriter-text oracle-card__affirmation-block">
-                    {displayedText}
-                    {!isTypewriterDone && <span className="oracle-page__caret">▍</span>}
-                  </p>
-
-                  <AnimatePresence>
-                    {isTypewriterDone && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="oracle-card__mission-block"
-                      >
-                        <span className="oracle-card__mission-label">⚡ ภารกิจ 2 นาทีวันนี้</span>
-                        <p className="oracle-card__mission-text">{selectedCard.twoMinuteTask}</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                <AnimatePresence>
-                  {isTypewriterDone && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="oracle-card__actions"
-                    >
-                      <button className="oracle-btn oracle-btn--ghost" onClick={handleSkip}>
-                        ข้ามภารกิจ
-                      </button>
-                      <button className="oracle-btn oracle-btn--primary" onClick={handleStartCamera}>
-                        📸 ทำภารกิจ (รับ +{WATER_DROP_REWARD} <img src={BADGE_ICONS.water} className="icon-img--reward" alt="" />)
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-
-        {/* [แก้ตามที่ระบุ — ข้อ 4] ขั้นถ่ายรูปยืนยัน — ใช้ <CameraCapture> ตัวกลางร่วมกับ
-            phys-pure-water/phys-photosynthesis แทนโค้ดกล้องแยกของตัวเอง (เต็มจอ/ปุ่มชัตเตอร์/
-            ถ่ายใหม่-ยืนยัน หน้าตาเหมือนกันทุกเควสกล้องในระบบแล้ว) — onExit พาไปที่ handleClose
-            (ปิดทั้งเควสไพ่ทิพย์เลย ไม่นับสำเร็จ) เพราะ CameraCapture เต็มจอจะบังปุ่ม "✕" มุมขวาบน
-            ของหน้านี้จนกดไม่ถึง (ปัญหาเดียวกับที่ comment ใน CameraCapture.tsx อธิบายไว้) */}
-        {stage === 'camera' && cameraPhase === 'capturing' && (
-          <CameraCapture
-            hint="ถ่ายรูปยืนยันว่าคุณทำภารกิจ 2 นาทีเสร็จแล้ว"
-            onConfirm={handleConfirmPhoto}
-            onSkip={handleSkip}
-            skipLabel="ข้าม"
-            onExit={handleClose}
-          />
-        )}
-
-        {/* ช่วงสแกน/สำเร็จหลังยืนยันรูปแล้ว — เฉพาะของเควสนี้ (ดู comment เหนือ cameraPhase) */}
-        {stage === 'camera' && cameraPhase !== 'capturing' && (
-          <div className="oracle-page__camera">
-            <div className={`oracle-page__viewfinder ${cameraPhase === 'scanning' ? 'oracle-page__viewfinder--scanning' : ''}`}>
-              {capturedPhoto && <img src={capturedPhoto} alt="ภาพที่ถ่าย" className="oracle-page__captured-img" />}
-              {cameraPhase === 'success' && (
-                <motion.div
-                  initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                  className="oracle-page__capture-success-overlay"
-                  style={{ fontSize: 60 }}
-                >
-                  ✅
-                </motion.div>
               )}
-              {cameraPhase === 'scanning' && <div className="oracle-page__scan-ring" />}
             </div>
-
-            <p className="oracle-page__desc">
-              {cameraPhase === 'scanning' && 'กำลังสแกนยืนยัน...'}
-              {cameraPhase === 'success' && <>ยืนยันสำเร็จ! ได้รับ <img src={BADGE_ICONS.water} className="icon-img" alt="" /> หยดน้ำรดต้นไม้</>}
-            </p>
           </div>
         )}
 
-        {stage === 'done' && (
-          <div className="oracle-page__done-box">
-            <div style={{ fontSize: 52, marginBottom: 8 }}>🌟</div>
-            <h2 className="oracle-page__summary-title">รับพลังใจเรียบร้อย!</h2>
-            {gotWaterDrop ? (
-              <div className="oracle-page__water-badge">+{WATER_DROP_REWARD} <img src={BADGE_ICONS.water} className="icon-img--reward" alt="" /> หยดน้ำแห่งชีวิต</div>
-            ) : (
-              // [เพิ่มรอบนี้] กดข้ามภารกิจ → ไม่ได้หยดน้ำโบนัส แต่เควสไพ่ทิพย์โดยรวมยังสำเร็จปกติ
-              // (ปุ่ม "เสร็จสิ้น" ด้านล่างเรียก onComplete() เหมือนกันทั้งสองเส้นทาง)
-              <p className="oracle-page__skip-note">ข้ามภารกิจไปแล้ว — เควสไพ่ทิพย์วันนี้ยังสำเร็จอยู่นะ</p>
-            )}
-            <button
-              className="oracle-btn oracle-btn--primary"
-              style={{ width: '100%', marginTop: 20 }}
-              onClick={() => {
-                // [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 6] trigger เอฟเฟกต์บัวรดน้ำ "ตอนกลับไปหน้า Home"
-                // (คลิกปุ่มนี้ = จุดที่ผู้ใช้ออกจากเควสจริง) ไม่ใช่ตอนได้รางวัลตอนอยู่กลางเควส
-                // (handleConfirmPhoto ก่อนหน้านี้) เพราะตอนนั้นยัง cover เต็มจอ ต้นไม้จริงมองไม่
-                // เห็นอยู่ดี ต่อให้ trigger ไปก่อนแอนิเมชันก็จะเล่นจบไปเปล่าๆ ก่อนกลับมาเห็น
-                if (gotWaterDrop) triggerWateringEffect()
-                onComplete()
-                handleClose()
-              }}
-            >
-              เสร็จสิ้น
-            </button>
-          </div>
+        {stage === 'camera' && (
+          <CameraCapture
+            onSave={handleConfirmPhoto}
+            onCancel={() => setStage('reading')} 
+          />
         )}
       </div>
     </div>
@@ -354,8 +222,6 @@ function seededShuffleRandom(seedKey: string): () => number {
   }
 }
 
-/** [แก้รอบนี้] เดิมคืน CSS transform string ตรงๆ — framer-motion ต้องการค่า x/y/rotate
- *  แยกเป็นตัวเลข (motion values) เพื่อ animate แต่ละแกนอิสระได้ (ดูจุดใช้งานใน JSX) */
 function getFanTransform(index: number, total: number): { x: number; y: number; rotate: number; zIndex: number } {
   const mid = (total - 1) / 2
   const rotate = (index - mid) * (60 / total)

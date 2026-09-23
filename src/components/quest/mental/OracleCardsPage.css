@@ -1,19 +1,9 @@
 /* ==========================================
-   ORACLE CARDS PAGE STYLES (Sharp Edges Version)
+   ORACLE CARDS PAGE STYLES
    ========================================== */
 
-/* กรอบเกมหลักแบบขอบเหลี่ยมเต็มพื้นที่ */
+/* กรอบเกมหลักแบบขอบเหลี่ยมเต็มพื้นที่ และตั้งค่า Font แบบเดียวกับเควสอื่นๆ */
 .oracle-game-container {
-  /* [แก้บั๊กร้ายแรง — เควสนี้เล่นไม่ได้เลย] คอมเมนต์อธิบายตรงนี้เดิมตกหล่นเครื่องหมายเปิดคอมเมนต์ไป
-     ทำให้ข้อความ "position: relative ซึ่งทำให้ ... ใช้ position:absolute" กลายเป็นค่า (value)
-     ขยะของ property เดียวกัน แล้วถูก CSS parser ทิ้งทั้งประกาศ (รวม "position: absolute;" ตัวจริง
-     ที่ตามมาไปด้วย เพราะไม่มี ; คั่นให้จบก่อน) container เลยไม่มี position ที่แท้จริง (เหลือค่า
-     เริ่มต้น static) ทำให้ "inset: 0;" และ "z-index: 800;" ด้านล่างไม่มีผลอะไรเลย (ใช้ได้เฉพาะ
-     element ที่ positioned เท่านั้น) — คอนเทนเนอร์เลยหลุดจาก overlay เต็มจอไปอยู่ในลำดับ flow
-     ปกติของ .gameplay-frame แทน ปุ่ม/การ์ดทั้งหน้าจึงบีบอยู่ในแถบเล็กๆ ด้านบนแทนที่จะเต็มกรอบ
-     เขียว (เหมือน "เล่นไม่ได้") ทั้งที่ตรรกะ JS ของเกมทำงานถูกต้องทุกจุด แก้ให้เหลือ
-     position:absolute; inset:0 ตรงๆ ตัวเดียว เหมือนอีก 3 หน้าเควสสุขภาพจิต (Incinerator/
-     GratitudeShield/MindfulAnchor) */
   position: absolute;
   inset: 0;
   z-index: 800;
@@ -21,20 +11,13 @@
   height: 100%;
   border-radius: 0;
   overflow: hidden;
-  /* [แก้ธีมสี] ใช้โทเคนกลาง --ae-mental-* (นิยามที่ src/index.css) แทนสีม่วงที่ฮาร์ดโค้ดเฉพาะ
-     ไฟล์นี้ — หน้าเควสสุขภาพจิตที่ใช้โทนม่วง/มืดเดียวกัน (QuestGateView หมวดจิตใจ) จะปรับสี
-     พร้อมกันได้จากจุดเดียว ดูค่าที่เลือกใช้ที่ index.css */
+  font-family: 'Nunito', 'Mali', sans-serif; /* ใช้ฟอนต์ Nunito + Mali */
   background: radial-gradient(circle at 50% 20%, var(--ae-mental-glow) 0%, var(--ae-mental-mid) 60%, var(--ae-mental-deep) 100%);
   border: 2px solid var(--g500);
   --lc-shadow-22: rgba(16, 18, 17, 0.878);
   box-shadow: inset 0 0 25px var(--lc-shadow-22), 0 8px 32px var(--glass-b-40);
   display: flex;
   flex-direction: column;
-  /* [เพิ่มรอบนี้] หน้านี้เรียก <CameraCapture> ตรงๆ โดยไม่ผ่าน .game-shell (ดู
-     CameraCapture.css บรรทัดบนสุด) ซึ่งปกติเป็นคนกำหนด --game-accent/--game-accent-bg —
-     ประกาศไว้เองที่นี่ให้ตรงกับสีปุ่มหลัก (.oracle-btn--primary ใช้ --g500/--g700 เดียวกัน)
-     ไม่งั้นปุ่มชัตเตอร์/ปุ่มยืนยันของกล้องจะไม่มีสีพื้นหลังเลย (custom property ไม่มี fallback
-     และไม่มีใครประกาศไว้ = ค่านั้นไม่ถูกใช้) */
   --game-accent: var(--g600);
   --game-accent-bg: var(--glass-w-10);
 }
@@ -61,9 +44,8 @@
   50% { opacity: 1; }
 }
 
-/* ปุ่มปิดมุมขวาบน (สี่เหลี่ยม กากบาท) */
+/* ปุ่มปิดมุมขวาบน */
 .oracle-page__close {
-  /* [แก้] มาตรฐานปุ่มปิดทั้งระบบ: วงกลม ลอยมุมขวาบน อย่างน้อย 44x44px (เดิมเหลี่ยม+เล็กไป) */
   position: absolute;
   top: 14px;
   right: 14px;
@@ -81,11 +63,16 @@
   justify-content: center;
   transition: all 0.2s ease;
 }
+
 .oracle-page__close:hover {
   background: var(--glass-w-20);
   transform: scale(1.05);
 }
 
+/* 
+  จัด Layout ให้ต่ำลงมา 95px จาก Navbar 
+  และใช้ gap: 16px (เท่ากับ 4 gap) เพื่อไม่ให้ซ้อนกัน 
+*/
 .oracle-page__content {
   position: relative;
   z-index: 2;
@@ -93,28 +80,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 24px;
+  justify-content: flex-start;
+  padding: 95px 24px 24px;
+  gap: 16px;
   text-align: center;
   overflow-y: auto;
 }
 
-/* สรุปอารมณ์ — [แก้ตามที่ระบุ] เดิมขอบมนแค่ 10px แบนกลืนกับพื้นหลังฉาก ตอนนี้ทำเป็น pill
-   เต็มรูปแบบ (border-radius: var(--r-pill)) เพิ่มความทึบพื้นหลัง + เงาลอยให้แยกจากพื้นหลัง
-   ฉากชัดเจนขึ้น และเพิ่ม padding แนวตั้งให้สมส่วนกับ font-size 18px มากกว่าเดิม (8px แน่นไป)
-
-   [แก้ตามที่ระบุ — รอบนี้] เดิมเป็น flex child ตัวแรกของ .oracle-page__content ที่ตั้ง
-   justify-content:center ไว้ — พอเนื้อหาส่วนอื่น (กองไพ่/การ์ด) สั้น ทั้งก้อนจะลอยกึ่งกลาง
-   จอพอดี ทำให้ป้ายนี้ดู "ต่ำเกินไป กลางจอ" แทนที่จะติดใกล้ Navbar ด้านบน — ดึงออกจาก flow
-   ปกติมาเป็น position:absolute ยึด top ตรงๆ แทน ไม่ขึ้นกับความสูงของเนื้อหาอื่นอีกต่อไป
-   (.oracle-page__content เป็น position:relative; height:100% อยู่แล้ว จึงอ้างอิง top จาก
-   ขอบบนสุดของกรอบเควสได้ตรงๆ) */
+/* สรุปอารมณ์ */
 .oracle-page__mood-recap {
-  position: absolute;
-  top: 90px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -126,19 +100,21 @@
   padding: 11px 22px;
   --lc-text-18: #D8F3DC;
   color: var(--lc-text-18);
-  font-size: 20px;
+  font-size: 18px; /* ปรับให้พอดีกับฟอนต์ Mali */
   white-space: nowrap;
   box-shadow: 0 6px 18px var(--glass-b-30), 0 2px 6px var(--glass-b-20);
+  flex-shrink: 0;
 }
+
 @media (max-width: 480px) {
   .oracle-page__mood-recap { white-space: normal; max-width: calc(100% - 32px); text-align: center; }
 }
 
-/* หัวข้อหลักทั้งหมด (20px) */
+/* หัวข้อหลักทั้งหมด */
 .oracle-page__title,
-.oracle-card__large-title,
-.oracle-page__summary-title {
-  font-size: 20px !important;
+.oracle-card__large-title {
+  font-family: 'Fredoka One', 'Mali', sans-serif; /* ใช้ Fredoka One / Mali สำหรับหัวข้อ */
+  font-size: 22px !important;
   font-weight: 700;
   color: var(--g400);
   --lc-c-15: rgba(230, 243, 236, 0.5);
@@ -146,13 +122,14 @@
   margin-bottom: 8px;
 }
 
-/* ข้อความบรรยาย (20px) */
+/* ข้อความบรรยาย */
 .oracle-page__subtitle,
 .oracle-page__desc,
 .oracle-card__typewriter-text,
 .oracle-page__tap-hint,
 .oracle-page__hint {
-  font-size: 20px !important;
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-size: 16px !important; /* ปรับลดขนาดเพราะ Mali ตัวใหญ่กว่า Sarabun */
   color: var(--g200);
   line-height: 1.6;
 }
@@ -230,9 +207,6 @@
   background: none;
   cursor: pointer;
   perspective: 1000px;
-  /* [แก้รอบนี้] transform ตอนนี้ควบคุมโดย framer-motion (spring physics ผ่าน x/y/rotate
-     motion values) ล้วนๆ — เอา CSS transition บน transform ออกกันชนกับ animation engine
-     ของ framer-motion ที่เขียนทับ style.transform ตรงๆ ทุกเฟรม (ยังคง filter ไว้ได้ปกติ) */
   transition: filter 0.2s;
 }
 
@@ -244,7 +218,7 @@
 .oracle-card__inner {
   width: 100%;
   height: 100%;
-  border-radius: 10px; /* ขอบเหลี่ยมคือ 0 */
+  border-radius: 10px;
   box-shadow: 0 8px 20px var(--glass-b-50);
 }
 
@@ -269,18 +243,14 @@
   max-width: 440px;
 }
 
-/* [แก้ตามที่ระบุ] เดิมไล่จาก --g800 (#1B4332) ไปเกือบดำสนิท (#081C15) เข้มจัดและ contrast
-   ระหว่างจุดเริ่ม-จบสูงเกินไปดูไม่ minimal เปลี่ยนเป็นไล่ระหว่าง --g700/--g800 (ทั้งคู่เป็น
-   เฉดเขียวกลางที่มีอยู่แล้วในโทเคนกลาง) ห่างกันน้อยลงมาก ภาพรวมสว่างขึ้นแต่ยังเข้มพอให้ตัวหนังสือ
-   สีอ่อน (--g200/--g400/--fixed-white) อ่านผ่าน WCAG AA สบายๆ เหมือนเดิม */
+/* กรอบสีเขียวของคำทำนาย (ขอบเส้นประ) */
 .oracle-card--large {
   width: 100%;
   background: linear-gradient(160deg, var(--g700), var(--g800));
-  border: 2px solid var(--g400);
-  border-radius: 10px;
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+  border-radius: 20px;
   padding: 24px;
-  --lc-shadow-11: rgba(198, 230, 215, 0.25);
-  box-shadow: 0 0 30px var(--lc-shadow-11);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
 .oracle-card__header {
@@ -307,9 +277,6 @@
   text-align: left;
 }
 
-/* [เพิ่มตามที่ระบุ] เดิม affirmation กับภารกิจ 2 นาทีพิมพ์ต่อกันเป็นพารากราฟเดียว อ่านปนกัน
-   ตอนนี้แยกเป็น 2 บล็อกชัดเจน: affirmation เป็นข้อความเปล่าด้านบน ส่วนภารกิจอยู่ในกล่องมีขอบ/
-   พื้นหลังของตัวเองด้านล่าง (โผล่มาพร้อมปุ่ม action ตอน typewriter พิมพ์จบ) */
 .oracle-card__affirmation-block {
   margin-bottom: 14px;
 }
@@ -323,17 +290,19 @@
 
 .oracle-card__mission-label {
   display: block;
-  font-size: var(--fs-sm);
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: .02em;
   color: var(--g300);
   margin-bottom: 4px;
+  font-family: 'Nunito', 'Mali', sans-serif;
 }
 
 .oracle-card__mission-text {
-  font-size: 20px;
+  font-size: 15px; /* ปรับลดขนาดลงให้พอดีกับ Mali */
   color: var(--g100);
   line-height: 1.6;
+  font-family: 'Nunito', 'Mali', sans-serif;
 }
 
 .oracle-page__caret {
@@ -355,9 +324,10 @@
 .oracle-btn {
   flex: 1;
   padding: 12px 16px;
-  border-radius: 10px; /* ขอบเหลี่ยมคือ 0 */
+  border-radius: 10px;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 16px; /* ขนาดฟอนต์ปุ่มพอดีๆ */
+  font-family: 'Nunito', 'Mali', sans-serif;
   cursor: pointer;
   border: none;
   transition: transform 0.1s ease;
@@ -378,117 +348,4 @@
   background: var(--glass-w-10);
   --lc-text-7: #D8F3DC;
   color: var(--lc-text-7);
-}
-
-/* กล้องภารกิจ */
-.oracle-page__camera {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* [แก้บั๊ก — ตามที่ระบุ] เดิม 200x200px ตายตัว — เล็กกว่าตอนพรีวิวกล้องสดใน CameraCapture.tsx
-   (ซึ่งเป็นกรอบ 4:3 ขนาด clamp(280px, calc(100% - 440px), 480px) ชัดเจน) มาก ผู้ใช้ถ่ายรูป
-   เสร็จแล้วเห็นภาพหดเล็กลงทันทีตอนเข้าสู่ช่วงสแกน/สำเร็จ ใช้ขนาด/สัดส่วนชุดเดียวกับ
-   CameraCapture.css เป๊ะ เพื่อให้ภาพต่อเนื่องไม่กระตุกขนาดระหว่าง 2 stage
-   [แก้เพิ่ม — พบจากการทดสอบจริงในเบราว์เซอร์] ใช้ calc(100% - 440px) ตรงๆ ก่อน วัดจริงได้
-   280x373px เท่านั้น (ชนขอบล่าง clamp พอดี) ไม่เท่ากับ CameraCapture ที่วัดได้ 480x640px จริง
-   ทั้งที่สูตรเดียวกัน — เพราะ "100%" ตรงนี้อ้างอิงความกว้างของ .oracle-page__content (flex
-   column ที่มี padding 24px และไม่เต็มจอเท่า .camera-capture ซึ่งเป็นเวทีเต็มจอโดยตรง)
-   ไม่ใช่ความกว้างจอจริง — เปลี่ยนไปอ้างอิง 100vw ตรงๆ แทน (จอจริงเสมอ ไม่ขึ้นกับ container
-   ที่ห่ออยู่กี่ชั้น) ยืนยันด้วยการวัดจริงหลังแก้แล้วว่าได้ 480x640px เท่ากับ CameraCapture เป๊ะ */
-/* [แก้บั๊ก — พบจากรีวิวโค้ด] เดิมไม่มี max-height กันไว้เลย ต่างจาก .camera-capture__viewfinder
-   (ที่มี max-height:calc(100% - 24px) กันกรอบสูงล้นจอเตี้ย เช่น มือถือแนวนอน) — ที่นี่ใช้ 100vh
-   ตรงๆ แทน 100% ด้วยเหตุผลเดียวกับ width ด้านบน (ancestor เป็น auto-height ทำให้ % ใช้ไม่ได้)
-   90px + 24px คือค่าเดียวกับ .camera-capture (top:90px เว้น navbar + buffer 24px) */
-.oracle-page__viewfinder {
-  position: relative;
-  width: clamp(280px, calc(100vw - 440px), 480px);
-  max-height: calc(100vh - 114px);
-  aspect-ratio: 3 / 4;
-  border-radius: 20px;
-  --lc-bg-5: #000;
-  background: var(--lc-bg-5);
-  border: 3px solid var(--g500);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  --lc-shadow-6: rgba(82, 183, 136, 0.4);
-  box-shadow: 0 0 25px var(--lc-shadow-6);
-}
-
-.oracle-page__viewfinder--scanning {
-  animation: oracleViewfinderPulse 1s ease-in-out infinite;
-}
-
-@keyframes oracleViewfinderPulse {
-  0%, 100% {
-  --lc-shadow-4: rgba(82, 183, 136, 0.4);
-  box-shadow: 0 0 20px var(--lc-shadow-4);
-}
-  50% {
-  --lc-shadow-3: rgba(82, 183, 136, 0.8);
-  box-shadow: 0 0 40px var(--lc-shadow-3);
-}
-}
-
-.oracle-page__scan-ring {
-  position: absolute;
-  inset: -8px;
-  border-radius: 20px;
-  border: 2px solid var(--g500);
-  animation: oracleScanRing 1s ease-in-out infinite;
-}
-
-@keyframes oracleScanRing {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.15); opacity: 0; }
-}
-
-.oracle-page__captured-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 17px;
-}
-.oracle-page__capture-success-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--glass-b-35);
-  border-radius: 17px;
-}
-
-
-/* หน้าจบ */
-.oracle-page__done-box {
-  background: var(--glass-w-5);
-  --lc-border-2: rgba(116, 198, 157, 0.3);
-  border: 1px solid var(--lc-border-2);
-  border-radius: 10px;
-  padding: 28px;
-  width: 100%;
-  max-width: 360px;
-}
-
-.oracle-page__water-badge {
-  display: inline-block;
-  padding: 8px 16px;
-  border-radius: 10px;
-  --lc-bg-1: rgba(82, 183, 136, 0.2);
-  background: var(--lc-bg-1);
-  border: 1px solid var(--g500);
-  color: var(--g400);
-  font-weight: 700;
-  font-size: 16px;
-  margin-top: 8px;
-}
-
-/* [เพิ่มรอบนี้] ข้อความตอนกดข้ามภารกิจ — ไม่ได้หยดน้ำ แต่เควสโดยรวมยังสำเร็จ */
-.oracle-page__skip-note {
-  font-size: var(--fs-sm);
-  color: var(--glass-w-60);
-  margin-top: 8px;
 }

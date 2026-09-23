@@ -14,6 +14,7 @@ import PhotosynthesisGame from '../components/quest/games/physical/Photosynthesi
 import GreenVisionGame from '../components/quest/games/physical/GreenVisionGame'
 import PureWaterGame from '../components/quest/games/physical/PureWaterGame'
 import SoilRestorationGame from '../components/quest/games/physical/SoilRestorationGame'
+import StepJourneyGame from '../components/quest/games/physical/StepJourneyGame'
 
 import GenericConfirmGame from '../components/quest/games/GenericConfirmGame'
 
@@ -46,6 +47,13 @@ import GenericConfirmGame from '../components/quest/games/GenericConfirmGame'
   รอคอย" เดิมถูกแยกกลับเป็นเควส content-review (Time Capsule) + badge Strategic Delay
   แยกต่างหากตามที่ backend ออกแบบไว้จริง (ดู questCatalog.ts ข้อ 1) StrategicDelayGame.tsx
   ถูกลบทิ้ง แทนที่ด้วย ContentReviewGame.tsx
+
+  [แก้รอบนี้ — Step Journey] เพิ่ม 'step-journey' สำหรับเควส 'phys-vitality-steps' (ก้าวเพื่อ
+  สุขภาพ) — เดิมเป็น SPECIAL_QUEST เต็มจอ (VitalityStepsQuest.tsx, ไม่ผ่าน registry นี้เลย)
+  เปลี่ยนมาผ่าน registry ปกติแล้ว เพราะเนื้อหาใหม่ (เลือกแผนที่ปลายทาง 8 ใบ + เดินตามก้าวจริง)
+  ไม่จำเป็นต้องมีฉาก/วิดีโอพื้นหลังเป็นของตัวเองอีกต่อไป อยู่ใน .game-shell__stage ได้พอดี —
+  ตัด 'phys-vitality-steps' ออกจาก SPECIAL_QUEST_CODES ใน questCatalog.ts แล้วด้วย
+  VitalityStepsQuest.tsx เดิม (เลิกใช้แล้วตั้งแต่รอบก่อน) ยังไม่ได้ลบไฟล์ทิ้ง
 \*============================================================================*/
 
 export const QUEST_GAME_REGISTRY: Record<string, ComponentType<QuestGameProps>> = {
@@ -64,6 +72,7 @@ export const QUEST_GAME_REGISTRY: Record<string, ComponentType<QuestGameProps>> 
   'green-vision': GreenVisionGame,
   'pure-water': PureWaterGame,
   'soil-restoration': SoilRestorationGame,
+  'step-journey': StepJourneyGame,
 }
 
 export function getQuestGame(gameKey?: string): ComponentType<QuestGameProps> {

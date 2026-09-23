@@ -1,0 +1,87 @@
+/* ═══════════════════════════════════════════════════════════════
+   DestinationPicker.css — การ์ดเลือกจุดหมาย 8 แผนที่ (scroll แนวนอน)
+   ═══════════════════════════════════════════════════════════════ */
+
+.destination-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.destination-picker__title {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 19px;
+  margin: 0;
+  text-align: center;
+  color: var(--fixed-white);
+}
+
+.destination-picker__flavor {
+  font-size: 12.5px;
+  opacity: 0.85;
+  max-width: 340px;
+  text-align: center;
+  margin: 6px 0 14px;
+}
+
+.destination-picker__row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 4px 4px 12px;
+  width: 100%;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+}
+
+.destination-picker__card {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+  width: 132px;
+  border-radius: 18px;
+  border: 1.5px solid var(--glass-w-20, rgba(255, 255, 255, 0.22));
+  background: var(--glass-w-7, rgba(255, 255, 255, 0.08));
+  color: var(--fixed-white);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  font-family: 'Nunito', sans-serif;
+  padding: 0;
+  position: relative;
+}
+.destination-picker__card:hover:not(:disabled) {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.destination-picker__card:disabled { opacity: 0.6; cursor: default; }
+
+.destination-picker__card-art {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+}
+
+.destination-picker__card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 10px;
+}
+.destination-picker__card-order { font-size: 10px; opacity: 0.7; font-weight: 700; }
+.destination-picker__card-name { font-size: 13px; font-weight: 800; }
+
+.destination-picker__card-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 18, 13, 0.55);
+  font-size: 11px;
+  font-weight: 700;
+}

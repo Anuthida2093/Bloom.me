@@ -44,10 +44,19 @@ interface GameShellProps {
   onClose: () => void
   /** true = เควสบังคับ (ความเสี่ยงปานกลาง/สูง) ต้องยืนยันก่อนออกกลางคัน */
   forced?: boolean
+  /** [แก้รอบนี้ — feedback รอบ 2] true = แสดงชื่อเควสเป็นปุ่ม pill ลอย (สไตล์เดียวกับปุ่ม
+   *  "เควสด้านการเรียนรู้"/quest-section-title-pill ใน QuestSection.tsx — พื้นหลังโปร่งแสงเข้ม
+   *  ขอบโค้งมนเต็ม ไอคอนเล็กหน้าข้อความ ขนาดพอดีตัวไม่เต็มความกว้างจอ) แทน header ปกติ
+   *  (ไอคอน+ชื่อ+คำบรรยายเต็มแถบ) ไม่แสดงกล่อง howTo/theory และ .game-shell__stage เต็มพื้นที่
+   *  ทั้งหมดของ .game-shell จริงๆ (ปุ่ม pill + ปุ่มปิดลอยทับด้านบนด้วย z-index แยกจากกันเหมือน
+   *  quest-section-title-pill/quest-section-close-btn ต้นแบบ ไม่ใช่แถบเต็มความกว้างที่กิน
+   *  พื้นที่ layout เหมือนรอบก่อน) — ใช้กับเกมที่ต้องแสดงภาพ/แผนที่เต็มจอจริงๆ เท่านั้น ไม่ใส่ =
+   *  พฤติกรรมเดิมทุกประการ */
+  fullscreenGame?: boolean
   children: (api: GameShellApi) => ReactNode
 }
 
-export default function GameShell({ quest, accent, accentBg, onComplete, onClose, forced = false, children }: GameShellProps) {
+export default function GameShell({ quest, accent, accentBg, onComplete, onClose, forced = false, fullscreenGame = false, children }: GameShellProps) {
   useLockBodyScroll()
   const { settings } = useAppContext()
   const sfxOpts = { volume: settings.sfxVolume, enabled: settings.soundEnabled }
@@ -107,23 +116,42 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
     <div className="game-shell" style={{ '--game-accent': accent, '--game-accent-bg': accentBg } as React.CSSProperties}>
       <div className="game-shell__scenery" aria-hidden="true" />
 
-      <header className="game-shell__header">
-        <div className="game-shell__heading">
-          <span className="game-shell__icon">{quest.icon}</span>
-          <div>
-            <div className="game-shell__title">{quest.titleTh}</div>
-            <div className="game-shell__subtitle">{quest.title}</div>
+      {fullscreenGame ? (
+        <>
+          <div className="game-shell__pill-header">
+            <span className="game-shell__pill-icon" aria-hidden="true">{quest.icon}</span>
+            <span className="game-shell__pill-title">{quest.titleTh}</span>
           </div>
-        </div>
-        <button className="game-shell__close" onClick={requestClose} title="ปิด" aria-label={`ปิดเควส ${quest.titleTh}`}>✕</button>
-      </header>
+          <button
+            className="game-shell__close game-shell__close--floating"
+            onClick={requestClose}
+            title="ปิด"
+            aria-label={`ปิดเควส ${quest.titleTh}`}
+          >
+            ✕
+          </button>
+        </>
+      ) : (
+        <header className="game-shell__header">
+          <div className="game-shell__heading">
+            <span className="game-shell__icon">{quest.icon}</span>
+            <div>
+              <div className="game-shell__title">{quest.titleTh}</div>
+              <div className="game-shell__subtitle">{quest.title}</div>
+            </div>
+          </div>
+          <button className="game-shell__close" onClick={requestClose} title="ปิด" aria-label={`ปิดเควส ${quest.titleTh}`}>✕</button>
+        </header>
+      )}
 
       {stage === 'playing' ? (
-        <div className="game-shell__body">
-          <div className="game-shell__brief">
-            <p className="game-shell__howto">{quest.howTo}</p>
-            {quest.theory && <p className="game-shell__theory">อ้างอิง: {quest.theory}</p>}
-          </div>
+        <div className={`game-shell__body${fullscreenGame ? ' game-shell__body--fullscreen' : ''}`}>
+          {!fullscreenGame && (
+            <div className="game-shell__brief">
+              <p className="game-shell__howto">{quest.howTo}</p>
+              {quest.theory && <p className="game-shell__theory">อ้างอิง: {quest.theory}</p>}
+            </div>
+          )}
 
           <div className="game-shell__stage">
             {children({ finish, accent, accentBg, strictMode: settings.strictMode, skip, exit: requestClose })}

@@ -53,7 +53,6 @@ import GratitudeShieldPage from './mental/GratitudeShieldPage'
 import MindfulAnchorPage from './mental/MindfulAnchorPage'
 import ScreeningPage from './mental/ScreeningPage'
 import SafetyNetPage from './mental/SafetyNetPage'
-import VitalityStepsQuest from './health/VitalityStepsQuest'
 import BalancedNutrientsQuest from './health/BalancedNutrientsQuest'
 import './GameplayFrame.css'
 
@@ -63,8 +62,9 @@ const INCINERATOR_QUEST_CODE = 'ment-cognitive-incinerator'
 const GRATITUDE_SHIELD_QUEST_CODE = 'ment-gratitude-shield'
 /** [ใหม่] เควสที่มีหน้าจอเต็มของตัวเอง ไม่ผ่าน questGameRegistry */
 const MINDFUL_ANCHOR_QUEST_CODE = 'ment-mindful-anchor'
-/** [เพิ่มรอบนี้ — เควสสุขภาพใหม่] มีฉาก/เสียง/VFX เป็นของตัวเองเหมือนกลุ่มเควสสุขภาพจิตด้านบน */
-const VITALITY_STEPS_QUEST_CODE = 'phys-vitality-steps'
+/** [ตัดออกรอบนี้ — Step Journey] 'phys-vitality-steps' (ก้าวเพื่อสุขภาพ) ย้ายไปผ่าน
+ *  GameShell/questGameRegistry ปกติแล้ว (gameKey: 'step-journey') ไม่ใช่หน้าเต็มจอของตัวเองที่
+ *  เรนเดอร์ตรงจากไฟล์นี้อีกต่อไป — ตัดออกจาก SPECIAL_QUEST_CODES ใน questCatalog.ts แล้วด้วย */
 const BALANCED_NUTRIENTS_QUEST_CODE = 'phys-balanced-nutrients'
 
 interface GameplayFrameProps {
@@ -253,13 +253,6 @@ export default function GameplayFrame({
       {/* [ใหม่] ทอดสมอใจ — 4-7-8 breathing 2 นาที (ไฟล์ MindfulAnchorPage.tsx ที่เขียนใหม่ทั้งไฟล์) */}
       {visibleSpecialQuest?.code === MINDFUL_ANCHOR_QUEST_CODE && (
         <MindfulAnchorPage onComplete={onCompleteSpecial} onClose={onCloseSpecial} />
-      )}
-
-      {/* [เพิ่มรอบนี้ — เควสสุขภาพใหม่] ก้าวเพื่อสุขภาพ / แคลอรี่ตาม BMI — category:'HEALTH'
-          จึงถูกกรองด้วย belongsToActiveTab ให้โผล่เฉพาะตอน activeTab==='physical' อัตโนมัติ
-          (เหมือนเควสสุขภาพจิตด้านบนที่กรองเฉพาะ activeTab==='mental') */}
-      {visibleSpecialQuest?.code === VITALITY_STEPS_QUEST_CODE && (
-        <VitalityStepsQuest onComplete={onCompleteSpecial} onClose={onCloseSpecial} />
       )}
 
       {visibleSpecialQuest?.code === BALANCED_NUTRIENTS_QUEST_CODE && (

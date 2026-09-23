@@ -1,288 +1,350 @@
-/* CameraCapture — ใช้ var(--game-accent)/var(--game-accent-bg) จาก .game-shell (ดู
-   GameShell.tsx) เมื่ออยู่ใต้ .game-shell จริง (games/*.tsx ทุกไฟล์) — [แก้รอบนี้] OracleCardsPage.tsx
-   เรียกใช้ component นี้ตรงๆ โดยไม่ผ่าน .game-shell (เป็นหน้าเควสพิเศษเต็มจอของตัวเอง ไม่ใช่
-   ผ่าน QuestPlayModal/GameShell) จึงไม่มีตัวแปรสองตัวนี้ให้ใช้ — ทุกจุดที่อ้าง --game-accent*
-   ด้านล่างต้องมี fallback เป็นโทเคนสีของระบบเสมอ ห้ามอ้างเปล่าๆ ไม่งั้นเควสไพ่ทิพย์จะได้
-   ปุ่ม/พื้นหลังที่ไม่มีสี (invalid custom property ไม่มี fallback = ค่านั้นไม่ถูกใช้เลย)
-
-   [แก้รอบนี้ — ตามที่ระบุ] เดิมช่องมองภาพเต็มจอ (edge-to-edge, ไม่มีขอบ) ตอนนี้เปลี่ยนเป็น
-   "กรอบรูป 4:3 ขนาดพอดี" ลอยอยู่กึ่งกลางพื้นที่ใต้ navbar แทน (ไม่เต็มจอสนิทอีกต่อไปโดย
-   ตั้งใจ) — .camera-capture (ชั้นนอก) ยังคงเป็นเวทีเต็มพื้นที่ใต้ navbar เหมือนเดิม (คุมปุ่ม/
-   คำแนะนำ) ส่วน .camera-capture__viewfinder (กรอบรูป) กลายเป็นกล่องขนาดคงที่ตามสัดส่วน 4:3
-   จัดกึ่งกลางในเวทีนั้นแทน */
-
-/* [แก้ตามที่ระบุ — ข้อ 4] top offset เดิม 90px/66px (navbar 80px/56px + buffer 10px) ลด buffer
-   ลงเหลือ 4px/2px (84px/58px) — ไม่ได้ลดเยอะเพราะ buffer เดิมก็ไม่ได้เกินจำเป็นมากอยู่แล้ว
-   ตัวที่ทำให้ "ทุกอย่างขยับสูงขึ้นจริง" คือการเปลี่ยน .camera-capture__stage จาก "จัดกึ่งกลาง
-   เวทีทั้งหมด" (เว้นที่ว่างเท่ากันบน-ล่าง) มาเป็น "เริ่มจากบนสุด" แทนด้านล่าง — ดู stage
-   [แก้เพิ่ม] เดิม overflow:hidden เพราะทุกอย่าง absolute ยึดตำแหน่งตายตัวพอดีเป๊ะเสมอ ตอนนี้
-   ปุ่มอยู่ใน normal flow ใต้กรอบรูปแล้ว ความสูงรวมอาจเกินพื้นที่จอเตี้ยได้ (เช่นมือถือแนวนอน)
-   เปลี่ยนเป็น overflow-y:auto กันเนื้อหาโดนตัดขาดกดไม่ถึงบนจอเตี้ยจริง */
-.camera-capture {
+/* ═══════════════════════════════════════════════════════════════
+   โหมด 1: กล้องเต็มจอ 100% (รองรับทั้งแนวตั้งมือถือ และแนวนอน Tablet/PC)
+   ═══════════════════════════════════════════════════════════════ */
+.camera-fullscreen-container {
   position: fixed;
-  top: 84px;
+  top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  overflow-y: auto;
-  /* [แก้] เดิม background:#000 (สมเหตุสมผลตอนวิดีโอเต็มจอสนิท ไม่มีพื้นที่ว่างให้เห็นสีพื้น
-     หลังเลย) ตอนนี้กรอบรูปเล็กลงมีพื้นที่ว่างรอบๆ ให้เห็นจริง เปลี่ยนเป็นโทนสีธีมหลักของระบบ
-     แทนสีดำ (ตามหลักการที่ระบุไว้ก่อนหน้า: "ไม่ใช่ดำ ใช้สีธีมหลักของระบบ") */
-  background: var(--game-accent-bg, var(--bg));
-}
-@media (max-width: 768px) {
-  .camera-capture { top: 58px; }
-}
-
-/* [เพิ่มตามที่ระบุ — ข้อ 4] คอลัมน์ที่ห่อกรอบรูป + แถวปุ่มไว้ด้วยกัน "เริ่มจากบนสุด" ของเวที
-   แทนการจัดกึ่งกลางเวทีทั้งหมดแบบเดิม (ซึ่งเว้นที่ว่างเท่าๆ กันทั้งบนและล่าง) — padding-top
-   132px กันชนกับ .camera-capture__hint/.camera-capture__exit-btn ที่ยัง position:absolute
-   ลอยอยู่ชั้นบนสุดของ .camera-capture (เผื่อกรณี hint ยาวขึ้น 2 บรรทัดบนจอแคบด้วย) */
-.camera-capture__stage {
-  min-height: 100%;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000;
+  z-index: 999999; /* เปลี่ยนเป็นเลขเยอะๆ เพื่อให้แน่ใจว่าลอยอยู่บนสุดจริงๆ */
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 18px;
-  padding: 132px 20px calc(var(--gpf-safe-bottom, 100px) + 20px);
 }
 
-/* [แก้ตามที่ระบุ — กรอบรูป 4:3 ขนาดพอดี] เดิมเต็ม .camera-capture ทั้งกล่อง (inset:0) ตอนนี้
-   เป็นกล่องขนาดคงที่ตามสัดส่วน 4:3 แนวตั้ง (aspect-ratio: 3/4 คือ กว้าง:สูง = 3:4 — แนวตั้ง
-   แบบเดียวกับโหมด "4:3" ของกล้องมือถือที่ถือตั้งตรง ซึ่งทุกเควสถ่ายรูปในระบบนี้เป็นแบบนี้หมด)
-   กว้างเว้นจากขอบซ้าย-ขวาประมาณ 220px ตามที่ระบุ (คำนวณผ่าน calc(100% - 440px))
-
-   [เหตุผลที่ใช้ clamp() แทนค่า 220px ตรงๆ] ถ้าล็อก margin ซ้าย-ขวาไว้ที่ 220px แบบตายตัว
-   จริงๆ จะพังทั้งสองด้านสุดขั้ว: จอมือถือ (~390px กว้าง) จะเหลือความกว้างติดลบทันที (390 -
-   440 < 0) ส่วนจอกว้างมากๆ (>2000px) จะได้กรอบรูปที่สูงเกินจอ (เพราะ 4:3 แนวตั้งยิ่งกว้าง
-   ยิ่งสูงตาม) ล้นออกไปนอกพื้นที่ที่มองเห็น — clamp(min, ค่าที่ต้องการ, max) แก้ทั้งสองขั้ว
-   พร้อมกัน: ช่วงจอขนาดกลาง (~880-1536px) จะได้ระยะขอบ ~220px ตรงตามที่ระบุเป๊ะ, จอเล็กกว่านั้น
-   จะไม่ต่ำกว่า 280px (ความกว้างกรอบรูปที่ยังถ่ายเห็นชัดบนมือถือ), จอใหญ่กว่านั้นจะไม่เกิน 480px
-   (ขนาดกรอบรูปที่ "พอดี" ตามที่ระบุ ไม่ใช่ลอยเบ้อเริ่มกลางจอกว้างมากๆ) — max-height กันไว้อีกชั้น
-   สำหรับจอเตี้ย (เช่น มือถือแนวนอน) ไม่ให้กรอบสูงล้นพื้นที่ใต้ navbar จนโดนแถบปุ่มด้านล่างบัง */
-.camera-capture__viewfinder {
-  position: relative;
-  width: clamp(280px, calc(100% - 440px), 480px);
-  aspect-ratio: 3 / 4;
-  max-height: calc(100% - 24px);
-  border-radius: 20px;
-  overflow: hidden;
-  background: #000;
-  box-shadow: 0 12px 32px var(--glass-b-35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-/* [แก้ตามที่ระบุ — ข้อ 4] เดิมสูตรเดียวกัน calc(100% - 440px) ใช้ทั้งจอเล็ก-จอใหญ่ บนมือถือ
-   (~360-430px กว้าง) จะชนขอบล่าง clamp พอดีเสมอ = ได้กรอบรูปกว้างแค่ 280px คงที่ ทั้งที่จอ
-   กว้างกว่านั้นเยอะ เหลือพื้นที่ว่างข้างละ ~40-75px โดยไม่จำเป็น ลดระยะขอบที่หักออกจาก 440px
-   เหลือ 48px (เว้นขอบข้างละ 24px พอมีลมหายใจ) กรอบรูปจึงขยายตามความกว้างจอจริงได้เต็มที่ */
-@media (max-width: 768px) {
-  .camera-capture__viewfinder {
-    width: clamp(280px, calc(100% - 48px), 420px);
-  }
-}
-
-/* [คงเดิม] เต็มพื้นที่ 100% ของกรอบรูป (ซึ่งตอนนี้ตัวกรอบเองสัดส่วน 3/4 แน่นอนแล้ว — ไม่ใช่
-   เต็มจอสนิทเหมือนก่อน) object-fit:cover จึงครอบตัดภาพจากกล้องให้พอดีกรอบ 4:3 เป๊ะจริง
-   (ต่างจากรอบก่อนที่ล็อก width/height:100% ของกล่องเต็มจอ ทำให้ aspect-ratio ไม่มีผลจริง —
-   ตอนนี้ตัวกรอบเองมี aspect-ratio กำหนดรูปทรงไว้แน่นอนแล้ว ไม่ขัดกันอีกต่อไป) */
-.camera-capture__live-video,
-.camera-capture__captured-img {
+.camera-fullscreen-video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
-  display: block;
+  object-fit: cover; /* บังคับให้ภาพขยายเต็มจอโดยไม่ผิดสัดส่วน */
 }
 
-/* [เพิ่มรอบนี้ — ตามที่ระบุ] เอฟเฟกแฟลชขาววาบสั้นๆ ทันทีที่กดชัตเตอร์ ก่อนภาพนิ่งจะค้างให้รีวิว
-   ให้ความรู้สึก "ถ่ายติดแล้ว" ชัดเจน (ดู justCaptured ใน CameraCapture.tsx) */
-.camera-capture__flash {
+.camera-controls-overlay {
   position: absolute;
-  inset: 0;
-  background: var(--fixed-white);
-  animation: cameraCaptureFlash .4s ease-out forwards;
-  pointer-events: none;
-}
-@keyframes cameraCaptureFlash {
-  from { opacity: .85; }
-  to { opacity: 0; }
-}
-
-/* [เพิ่มรอบนี้] ภาพที่เพิ่งถ่ายเด้งเข้ามาเบาๆ แทนการสลับจากวิดีโอสดแบบไม่มีทรานซิชันเลย */
-.camera-capture__captured-img {
-  animation: cameraCapturedPop .25s ease-out;
-}
-@keyframes cameraCapturedPop {
-  from { opacity: .4; transform: scale(.94); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.camera-capture__error-icon { font-size: 48px; }
-
-/* [แก้] เดิม top: calc(80px + 12px) เพื่อชดเชยที่ .camera-capture ตอนนั้น inset:0 ทับ navbar
-   ไปเต็มๆ — ตอนนี้ .camera-capture เองเว้นระยะจาก navbar ไว้แล้ว (top:90px/66px ด้านบน)
-   จึงเหลือแค่ระยะห่างเล็กน้อยจากขอบบนของกล่องเอง ไม่ต้องคำนวณความสูง navbar ซ้ำอีกชั้น */
-.camera-capture__exit-btn {
-  position: absolute;
-  top: 12px;
-  left: 16px;
-  z-index: 10;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: var(--glass-w-25);
-  color: var(--fixed-white);
-  font-size: var(--fs-md);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.camera-capture__exit-btn:hover { background: var(--glass-w-40); }
-
-/* [แก้บั๊ก — พบจากรีวิวโค้ด] เดิม top:12px ชนกับ .camera-capture__exit-btn (top:12px;
-   left:16px; กว้าง 40px คือ x:16-56) พอดี เพราะ hint ที่นี่กึ่งกลางด้วย max-width:calc(100%
-   - 32px) (เกือบเต็มความกว้าง) ถ้าข้อความยาวจนขึ้น 2 บรรทัดบนจอแคบ กล่อง hint จะกินพื้นที่
-   ตั้งแต่ริมซ้ายเกือบสุดจอ ทับปุ่มออกจากเควสพอดี (เช่น hint ยาวของ PhotosynthesisGame) —
-   เลื่อนลงมาอยู่ใต้แถวปุ่มออกจากเควสแทน (12+40+10 = 62px) กันชนแน่นอนไม่ว่าข้อความจะยาวแค่ไหน */
-.camera-capture__hint {
-  position: absolute;
-  top: 62px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  text-align: center;
-  color: var(--fixed-white);
-  max-width: calc(100% - 32px);
-  padding: 8px 16px;
-  border-radius: var(--r-pill, 999px);
-  background: var(--glass-b-45, rgba(0, 0, 0, .45));
-  font-size: var(--fs-xs);
-  line-height: 1.5;
-}
-
-/* [แก้ตามที่ระบุ — ข้อ 9] ขยายปุ่ม/จัดกึ่งกลาง/สไตล์ทันสมัยขึ้น — width:100% + justify-content:
-   center การันตีแถวปุ่มอยู่กึ่งกลางแนวนอนของพื้นที่จริง (เดิม justify-content:center อยู่แล้ว
-   แต่ไม่มี width ชัดเจน บางจอกว้างอาจดูไม่สมดุลกับ .camera-capture__stage รอบข้าง) เพิ่ม
-   max-width กันแถวยืดกว้างเกินไปบนจอใหญ่มาก */
-.camera-capture__controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 32px;
+  bottom: 0;
+  left: 0;
   width: 100%;
-  max-width: 420px;
+  padding: 32px 20px 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
 }
 
-.camera-capture__shutter-btn {
-  width: 84px;
-  height: 84px;
+.camera-shutter-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
-  border: 5px solid var(--fixed-white);
-  background: var(--game-accent, var(--g600));
-  cursor: pointer;
-  flex-shrink: 0;
-  box-shadow: 0 8px 22px var(--glass-b-35), 0 0 0 3px var(--glass-w-20);
-  transition: transform .12s ease, box-shadow .15s ease;
+  border: 3px solid rgba(255, 255, 255, 0.6);
 }
-.camera-capture__shutter-btn:hover { transform: scale(1.04); box-shadow: 0 10px 26px var(--glass-b-40), 0 0 0 3px var(--glass-w-25); }
-.camera-capture__shutter-btn:active { transform: scale(.92); }
 
-.camera-capture__side-btn {
+.camera-shutter-btn {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  border: 2px solid var(--glass-w-40);
-  background: var(--glass-w-10);
-  backdrop-filter: blur(6px);
-  color: var(--fixed-white);
-  font-size: 19px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 4px 14px var(--glass-b-25);
-  transition: transform .12s ease, background .15s ease;
-}
-.camera-capture__side-btn:hover { background: var(--glass-w-20); transform: scale(1.06); }
-.camera-capture__side-btn:active { transform: scale(.94); }
-
-/* [แก้ตามที่ระบุ — ข้อ 4] เดิม .qg-btn/.qg-btn--ghost ใช้ร่วมกัน (ปุ่ม "บันทึก" ไม่มีสีเน้น
-   ชัดเจน แค่ไล่สีขาว→--game-accent-bg บางๆ) ตอนนี้แยกเป็นสไตล์เฉพาะของตัวเอง: "บันทึก" ใช้
-   สีเน้น (--game-accent) เต็มพื้นหลังชัดเจน ส่วน "ถ่ายใหม่" เป็นปุ่มรอง/outline แยกความสำคัญ
-   จากปุ่มยืนยันทันทีที่เห็น — ความสูง 52px (เกณฑ์ขั้นต่ำที่ระบุคือ 48px) */
-.camera-capture__review-controls {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  max-width: 420px;
-}
-
-.camera-capture__review-btn {
-  flex: 1;
-  height: 52px;
-  border-radius: var(--r-pill);
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-size: var(--fs-md);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: transform .1s ease, filter .15s ease, background .15s ease;
-}
-.camera-capture__review-btn:active { transform: scale(.97); }
-
-.camera-capture__review-btn--retake {
-  border: 1.5px solid var(--glass-w-30);
-  background: var(--glass-w-10);
-  color: var(--fixed-white);
-}
-.camera-capture__review-btn--retake:hover { background: var(--glass-w-18); }
-
-.camera-capture__review-btn--confirm {
+  background-color: #fff;
   border: none;
-  background: var(--game-accent, var(--g600));
-  color: var(--fixed-white);
-  box-shadow: 0 6px 18px var(--glass-b-30);
-}
-.camera-capture__review-btn--confirm:hover { filter: brightness(1.08); }
-
-.camera-capture__error-skip-btn {
-  width: 100%;
-  max-width: 420px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
 }
 
-/* [ใหม่ — ข้อ 5] แนบรูปจากคลังภาพ */
-.camera-capture__gallery-input {
-  /* ซ่อนแบบเข้าถึงได้ (ไม่ใช้ display:none เพราะบางเบราว์เซอร์เก่าจะไม่ยิง click() บน input ที่
-     display:none) — ปุ่ม 🖼️ ที่มองเห็นจริงเรียก .click() ผ่าน ref แทนเสมอ ผู้ใช้ไม่เห็น/แตะ
-     input ตัวนี้ตรงๆ เลย */
+.camera-shutter-btn:active {
+  transform: scale(0.9);
+}
+
+.camera-btn-cancel {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  top: 40px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.2s ease;
 }
 
-.camera-capture__error-actions {
+.camera-btn-cancel:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   โหมด 2: หน้าพรีวิวการ์ด หลังจากถ่ายเสร็จ
+   ═══════════════════════════════════════════════════════════════ */
+.camera-preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.camera-preview-card {
+  background: var(--glass-w-7, rgba(255, 255, 255, 0.08));
+  border: 1.5px solid var(--glass-w-20, rgba(255, 255, 255, 0.22));
+  border-radius: 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
   width: 100%;
-  max-width: 420px;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .camera-capture__flash,
-  .camera-capture__captured-img { animation: none; }
+.camera-preview-image {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  object-fit: contain; /* รักษาอัตราส่วนรูปต้นฉบับ ไม่ให้ภาพที่พรีวิวบิดเบี้ยว */
+  border-radius: 12px;
+  background: #000; 
+}
+
+.camera-preview-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.camera-btn-retake {
+  flex: 1;
+  padding: 12px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--fixed-white, #fff);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.camera-btn-retake:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.camera-btn-save {
+  flex: 1;
+  padding: 12px;
+  border-radius: 99px;
+  background: linear-gradient(135deg, #d36a3f, #c55a30);
+  color: #fff;
+  border: none;
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.2s ease;
+}
+
+.camera-btn-save:hover {
+  filter: brightness(1.1);
+}
+
+.camera-btn-save:active {
+  transform: scale(0.96);
+}/* ═══════════════════════════════════════════════════════════════
+   โหมด 1: กล้องเต็มจอ 100%
+   ═══════════════════════════════════════════════════════════════ */
+.camera-fullscreen-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000;
+  z-index: 999999; /* ลอยอยู่บนสุดจริงๆ แน่นอน */
+  display: flex;
+  flex-direction: column;
+}
+
+.camera-fullscreen-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* หากเป็นกล้องหน้า ให้กลับซ้าย-ขวาเหมือนกระจก */
+.camera-mirrored {
+  transform: scaleX(-1);
+}
+
+/* ปุ่มกลับซ้ายบน */
+.camera-btn-back-top-left {
+  position: absolute;
+  top: env(safe-area-inset-top, 40px); /* รองรับขอบจอมือถือ */
+  left: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.2s ease;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+
+.camera-btn-back-top-left:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* แถบเครื่องมือด้านล่าง 3 ปุ่ม */
+.camera-controls-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 32px 36px 48px;
+  display: flex;
+  justify-content: space-between; /* กระจาย 3 คอลัมน์ (ซ้าย กลาง ขวา) */
+  align-items: center;
+  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+  box-sizing: border-box;
+}
+
+/* ปุ่มด้านข้าง (แกลเลอรี และ สลับกล้อง) */
+.camera-btn-side {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.camera-btn-side:active {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ปุ่มถ่ายรูป (ตรงกลาง) */
+.camera-shutter-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.6);
+}
+
+.camera-shutter-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.camera-shutter-btn:active {
+  transform: scale(0.9);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   โหมด 2: หน้าพรีวิวการ์ด หลังจากถ่ายเสร็จ
+   ═══════════════════════════════════════════════════════════════ */
+.camera-preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.camera-preview-card {
+  background: var(--glass-w-7, rgba(255, 255, 255, 0.08));
+  border: 1.5px solid var(--glass-w-20, rgba(255, 255, 255, 0.22));
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+}
+
+.camera-preview-image {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #000; 
+}
+
+.camera-preview-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.camera-btn-retake {
+  flex: 1;
+  padding: 12px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--fixed-white, #fff);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.camera-btn-retake:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.camera-btn-save {
+  flex: 1;
+  padding: 12px;
+  border-radius: 99px;
+  background: linear-gradient(135deg, #d36a3f, #c55a30);
+  color: #fff;
+  border: none;
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.2s ease;
+}
+
+.camera-btn-save:hover {
+  filter: brightness(1.1);
+}
+
+.camera-btn-save:active {
+  transform: scale(0.96);
 }

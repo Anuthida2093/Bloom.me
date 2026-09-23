@@ -22,7 +22,10 @@
   ตอน mount เพื่อ "ตัดสินใจว่าจะโชว์สถานะไหน" เท่านั้น ส่วนการเชื่อมต่อจริงรอปุ่มซิงค์เสมอ
 \*============================================================================*/
 
-export type StepDataSource = 'google-fit' | 'device-motion' | 'manual'
+/** [เพิ่มรอบนี้ — เฟส 3 Capacitor] 'health-connect'/'healthkit' มาจาก useStepTracker.ts
+ *  (src/hooks/useStepTracker.ts) — query จริงผ่าน @capacitor/health-fitness เฉพาะตอนรันเป็น
+ *  แอป native (Capacitor.isNativePlatform()) เท่านั้น ไม่มีทางเกิดขึ้นบนเว็บเบราว์เซอร์ปกติ */
+export type StepDataSource = 'google-fit' | 'device-motion' | 'manual' | 'health-connect' | 'healthkit'
 
 export interface StepReading {
   steps: number
@@ -318,6 +321,13 @@ export function describeStepSyncError(err: unknown): string {
   }
   if (code.startsWith('GOOGLE_FIT_HTTP_')) {
     return 'ดึงข้อมูลจาก Google Fit ไม่สำเร็จ — สลับไปกรอกจำนวนก้าวเองแทน'
+  }
+  // [เพิ่มรอบนี้ — เฟส 3 Capacitor] error code จาก useStepTracker.ts (native health API)
+  if (code === 'NATIVE_HEALTH_PERMISSION_DENIED') {
+    return 'ไม่ได้รับอนุญาตให้อ่านข้อมูลก้าวเดินจาก Health Connect/HealthKit — สลับไปแหล่งอื่นแทน'
+  }
+  if (code === 'NATIVE_HEALTH_QUERY_FAILED' || code === 'NATIVE_HEALTH_UNPARSEABLE_RESULT') {
+    return 'ดึงข้อมูลก้าวเดินจาก Health Connect/HealthKit ไม่สำเร็จ — สลับไปแหล่งอื่นแทน'
   }
   return 'เชื่อมต่อแหล่งข้อมูลก้าวเดินไม่สำเร็จ — กรอกจำนวนก้าวเองแทน'
 }

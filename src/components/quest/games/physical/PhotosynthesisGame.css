@@ -1,0 +1,104 @@
+.photosynthesis-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 16px;
+  color: var(--fixed-white, #ffffff);
+  width: 100%;
+}
+
+.photosynthesis-title {
+  font-family: 'Mali', 'Fredoka One', sans-serif;
+  font-size: 22px;
+  margin: 0 0 8px 0;
+  color: #fde047; /* สีเหลืองอ่อนสว่าง */
+}
+
+.photosynthesis-desc {
+  font-size: 13px;
+  opacity: 0.85;
+  margin: 0 0 32px 0;
+  max-width: 90%;
+  line-height: 1.5;
+}
+
+/* กรอบรูปถ่าย 1 กรอบ (ขยายให้ใหญ่กว่าเควสน้ำ) */
+.photosynthesis-frame-box {
+  width: 220px; /* ขนาดใหญ่ขึ้น */
+  height: 293px; /* อัตราส่วน 3:4 พอดีกับกล้อง */
+  border-radius: 20px;
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  margin-bottom: 32px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.photosynthesis-frame-box:hover {
+  border-color: #fde047;
+  background: rgba(253, 224, 71, 0.05); /* ไฮไลต์สีเหลืองเวลา hover */
+}
+
+.photosynthesis-frame-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.photosynthesis-frame-icon {
+  font-size: 48px; /* ไอคอนพระอาทิตย์ใหญ่ๆ */
+}
+
+.photosynthesis-frame-label {
+  font-size: 14px;
+  opacity: 0.8;
+  font-weight: bold;
+}
+
+.photosynthesis-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ปุ่มกด */
+.photosynthesis-submit-btn {
+  background: linear-gradient(135deg, #fde047, #f59e0b);
+  color: #78350f; /* ตัวหนังสือสีน้ำตาลเข้มให้อ่านง่ายบนพื้นเหลือง */
+  border: none;
+  padding: 12px 32px;
+  border-radius: 99px;
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+  transition: transform 0.15s ease;
+  animation: popIn 0.3s ease-out;
+}
+
+.photosynthesis-submit-btn:active {
+  transform: scale(0.95);
+}
+
+.photosynthesis-cancel-btn {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  border: none;
+  padding: 8px;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}

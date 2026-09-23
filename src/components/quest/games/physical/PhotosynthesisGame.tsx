@@ -1,35 +1,72 @@
-import type { QuestGameProps } from '../../../../types.mental'
-import { useAppContext } from '../../../../context/AppContext'
+import { useState } from 'react'
 import CameraCapture from '../../shared/CameraCapture'
-import '../games.css'
-
-/*  เควส Photosynthesis (สังเคราะห์แสง / รับแดดยามเช้า)
-    ทฤษฎี: Circadian Rhythm & Serotonin Hypothesis
-    ─────────────────────────────────────────────────────────────
-    [แก้รอบนี้ — ข้อ D7] เปลี่ยนจาก "จับเวลา 10-15 นาที" → "ถ่ายรูปยืนยัน" ครั้งเดียว
-    (ตามที่ระบุ) แบบเดียวกับ phys-pure-water — ถ่ายรูปตัวเอง/บรรยากาศตอนอยู่กลางแดดจริง
-    เกมนี้ยังตรวจ "ช่วงเวลาจริง" อยู่เหมือนเดิม (05:00-10:00 = ช่วงทอง) แต่เป็นแค่ข้อความ
-    แจ้งเตือน ไม่ใช่เงื่อนไขบล็อกการถ่ายรูป (ถ่ายได้ทุกช่วงเวลา)                        */
+import type { QuestGameProps } from '../../../../types.mental'
+import './PhotosynthesisGame.css'
 
 export default function PhotosynthesisGame({ finish, exit }: QuestGameProps) {
-  const { logActivity } = useAppContext()
-  const hour = new Date().getHours()
-  const isMorning = hour >= 5 && hour < 10
+  // สเตทสำหรับสลับหน้าจอระหว่าง 'intro' (หน้าหลัก) และ 'camera' (หน้ากล้อง)
+  const [step, setStep] = useState<'intro' | 'camera'>('intro')
+  
+  // สเตทเก็บรูปภาพ 1 รูป
+  const [photo, setPhoto] = useState<string | null>(null)
 
-  const handleConfirm = (dataUrl: string) => {
-    logActivity({ activityType: 'SUNLIGHT', durationSeconds: 0, meta: { startHour: hour, isMorning, method: 'photo' } })
-    finish({ isMorning, hasPhoto: true, photo: dataUrl })
+  // เมื่อถ่ายรูปเสร็จ
+  const handleSavePhoto = (imgSrc: string) => {
+    setPhoto(imgSrc)
+    setStep('intro') // กลับมาหน้าหลักของเควส
   }
 
+  // เมื่อกดยืนยันบันทึก
+  const handleSubmit = () => {
+    if (photo) {
+      // จบเควสและส่งผลลัพธ์รับรางวัล
+      finish({
+        status: 'COMPLETED',
+        steps: 1 
+      })
+    }
+  }
+
+  // ==========================================
+  // โหมดหน้าจอกล้องถ่ายรูป
+  // ==========================================
+  if (step === 'camera') {
+    // onCancel ให้กลับไปหน้า 'intro'
+    return <CameraCapture onSave={handleSavePhoto} onCancel={() => setStep('intro')} />
+  }
+
+  // ==========================================
+  // โหมดหน้าหลักของเควสสังเคราะห์แสง
+  // ==========================================
   return (
-    <CameraCapture
-      hint={
-        isMorning
-          ? `ตอนนี้ ${hour}:00 น. — ช่วงเวลาทองของแสงเช้าพอดี ถ่ายรูปตอนอยู่กลางแดดเพื่อยืนยัน`
-          : `ตอนนี้ ${hour}:00 น. — เลยช่วงเช้าแล้ว แสงยังดีต่อร่างกาย ถ่ายรูปตอนอยู่กลางแดดเพื่อยืนยันได้เลย`
-      }
-      onConfirm={handleConfirm}
-      onExit={exit}
-    />
+    <div className="photosynthesis-game">
+      <h2 className="photosynthesis-title">สังเคราะห์แสง / รับแดดยามเช้า</h2>
+      <p className="photosynthesis-desc">
+        รับแสงแดดอ่อนๆ ในยามเช้า ถ่ายรูปวิวแสงแดด 1 รูป เพื่อสะสมพลังงานให้ต้นไม้ของคุณ
+      </p>
+
+      {/* กรอบสี่เหลี่ยมสำหรับถ่ายรูป (ขนาดใหญ่) */}
+      <div className="photosynthesis-frame-box" onClick={() => setStep('camera')}>
+        {photo ? (
+          <img src={photo} alt="แสงแดดยามเช้า" className="photosynthesis-photo" />
+        ) : (
+          <div className="photosynthesis-frame-empty">
+            <span className="photosynthesis-frame-icon">☀️</span>
+            <span className="photosynthesis-frame-label">แตะเพื่อถ่ายรูปยามเช้า</span>
+          </div>
+        )}
+      </div>
+
+      {/* ปุ่มบันทึก จะโชว์ก็ต่อเมื่อถ่ายรูปแล้ว */}
+      {photo ? (
+        <button className="photosynthesis-submit-btn" onClick={handleSubmit}>
+          บันทึก (รับรางวัล)
+        </button>
+      ) : (
+        <button className="photosynthesis-cancel-btn" onClick={exit}>
+          ปิด
+        </button>
+      )}
+    </div>
   )
 }

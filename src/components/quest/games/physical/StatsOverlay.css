@@ -1,0 +1,78 @@
+/* ═══════════════════════════════════════════════════════════════
+   StatsOverlay.css — แผงสถิติของฉากแผนที่ Step Journey
+   ───────────────────────────────────────────────────────────────
+   [แก้รอบนี้ — feedback รอบ 2: โดน action menu bar บัง] ขนาด 6x10cm ตายตัวจากรอบก่อนสูงเกินไป
+   จนบวกกับปุ่มควบคุมด้านล่างแล้วชนขอบบนของ action menu bar ในหลายความสูงจอ — ตัด min-height
+   ตายตัวทิ้ง เปลี่ยนเป็น content-sized (สูงเท่าที่เนื้อหาต้องการจริง) ลด padding/font ของแต่ละ
+   tile ลงให้กระชับขึ้นแทน ยังคงความกว้าง 14.2rem เดิม (พอดีกับคอลัมน์ขวาที่ตั้งใน
+   StepJourneyGame.css)
+   ═══════════════════════════════════════════════════════════════ */
+
+.stats-overlay {
+  width: 14.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(10, 22, 16, 0.6);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--fixed-white);
+  font-family: 'Nunito', sans-serif;
+  box-sizing: border-box;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.stats-overlay__tile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.stats-overlay__tile-icon { font-size: 17px; line-height: 1; }
+
+.stats-overlay__tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.stats-overlay__tile-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stats-overlay__tile-value {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 16px;
+  line-height: 1.2;
+}
+.stats-overlay__tile-goal { font-size: 11px; opacity: 0.7; font-family: 'Nunito', sans-serif; }
+
+.stats-overlay__track {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.16);
+  margin-top: 4px;
+  overflow: hidden;
+}
+.stats-overlay__fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #74C69D, #52B788);
+  transition: width 0.5s ease;
+}
+.stats-overlay__fill--trip { background: linear-gradient(90deg, #FFD166, #F4C430); }
+
+@media (max-width: 520px) {
+  .stats-overlay { width: 100%; flex-direction: row; flex-wrap: wrap; }
+  .stats-overlay__tile { flex: 1 1 120px; }
+}

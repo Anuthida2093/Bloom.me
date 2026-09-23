@@ -1,0 +1,39 @@
+/* ═══════════════════════════════════════════════════════════════
+   WeatherEffectLayer.css — เอฟเฟกต์สภาพอากาศคลุมแผนที่ (mock)
+   ═══════════════════════════════════════════════════════════════ */
+
+.weather-effect-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.weather-effect-layer--rain {
+  background: rgba(10, 22, 30, 0.18);
+}
+
+.weather-effect-layer__drop {
+  position: absolute;
+  top: -10%;
+  width: 2px;
+  height: 16px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, rgba(214, 238, 255, 0), rgba(214, 238, 255, 0.75));
+  animation: weatherRainFall linear infinite;
+}
+@keyframes weatherRainFall {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(720%); opacity: 0.2; }
+}
+
+.weather-effect-layer--sunny {
+  background:
+    radial-gradient(45% 40% at 15% 8%, rgba(255, 214, 130, 0.4), transparent 70%),
+    radial-gradient(30% 25% at 85% 15%, rgba(255, 240, 200, 0.22), transparent 75%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weather-effect-layer__drop { animation: none; opacity: 0.35; }
+}

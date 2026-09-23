@@ -220,6 +220,9 @@ export type QuestControlType =
   | 'SWIPE_DISCARD'
   /** [เพิ่มรอบนี้] ยืนยันงานด้วยการถ่ายรูปจริง (ผ่านกล้อง/แนบไฟล์) แทนการจับเวลา/กดปุ่มเฉยๆ */
   | 'PHOTO_CAPTURE'
+  /** เควส "ก้าวเพื่อสุขภาพ" โฉมใหม่ — เลือกแผนที่ปลายทางจาก 8 ใบแล้วเดินไปถึงตามก้าวจริง
+   *  (ดู types.journey.ts, src/components/quest/games/physical/StepJourneyGame.tsx) */
+  | 'STEP_JOURNEY'
 export type QuestLogStatus = 'IN_PROGRESS' | 'COMPLETED' | 'FAILED'
 export type MoodCategory = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL'
 /**

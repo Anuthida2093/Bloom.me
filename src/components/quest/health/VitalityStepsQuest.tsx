@@ -5,6 +5,7 @@ import { playSfx, startLoopingSfx, stopLoopingSfx } from '../../../utils/audioPl
 import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import { useIsLowPowerMode } from '../../../hooks/useMediaQuery'
+import { useStepTracker } from '../../../hooks/useStepTracker'
 import { OWL_AVATAR_ICON, BADGE_ICONS } from '../../../config/iconAssets'
 import { findQuestByCode } from '../../../config/questCatalog'
 import CameraCapture from '../shared/CameraCapture'
@@ -40,6 +41,12 @@ interface VitalityStepsQuestProps {
 type Stage = 'walk' | 'camera' | 'done'
 
 /**
+ * [เลิกใช้แล้ว] ไม่มีจุดไหนเรียกใช้ component นี้อีกต่อไป — code 'phys-vitality-steps' เล่นผ่าน
+ * StepJourneyGame.tsx (src/components/quest/games/physical/) ผ่าน questGameRegistry.ts
+ * (gameKey: 'step-journey') แล้ว ไม่ใช่ SPECIAL_QUEST เต็มจอที่ GameplayFrame.tsx เรนเดอร์ตรง
+ * แบบเดิมอีกต่อไป — เก็บไฟล์นี้ไว้เผื่อ rollback ไม่ได้ลบทิ้งทันที ถ้ามั่นใจว่าไม่ต้อง rollback
+ * แล้วค่อยลบไฟล์นี้ + VitalityStepsQuest.css ทิ้งได้เลย
+ *
  * VitalityStepsQuest — เควส "ก้าวเพื่อสุขภาพ" (Vitality Steps)   [ไฟล์ใหม่]
  * ────────────────────────────────────────────────────────────────────────────
  * เปิดเป็นหน้าเต็มกรอบผ่าน SPECIAL_QUEST_CODES pattern เดียวกับเควสสุขภาพจิต
@@ -56,7 +63,12 @@ type Stage = 'walk' | 'camera' | 'done'
  * เครื่องตรงๆ ใช้ได้ทันทีแต่แม่นยำต่ำกว่ามาก) → ถ้าทั้งสองทางใช้ไม่ได้เลย ตกกลับไปโหมดกรอกมือ/
  * ถ่ายรูปยืนยัน (allowManualStepEntry) แบบเดิม ระบบยังไม่ได้ตรวจสอบว่าตัวเลขที่กรอกเอง/ที่นับ
  * จาก DeviceMotion ตรงกับรูปที่แนบจริงหรือไม่ (ดูสรุปท้ายบทสนทนา)
- */
+ *
+ * [แก้รอบนี้ — เฟส 3 Capacitor] ตอนรันเป็นแอป native (iOS/Android ผ่าน Capacitor) เพิ่มแหล่ง
+ * Health Connect/HealthKit จริง (src/hooks/useStepTracker.ts) เข้ามาแทนที่ตำแหน่งเดิมของ
+ * DeviceMotion ใน fallback chain — ลำดับใหม่: Google Fit (ถ้าตั้งค่าไว้ — ไม่เปลี่ยน) →
+ * Health Connect/HealthKit (ถ้าเป็น native platform) → DeviceMotion (ถ้า native health ใช้
+ * ไม่ได้/permission ถูกปฏิเสธ) → กรอกมือ ตามที่ระบุไว้ */
 export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStepsQuestProps) {
   useLockBodyScroll()
   const { settings, userData, logActivity } = useAppContext()
@@ -84,13 +96,19 @@ export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStep
   const [stepsInput, setStepsInput] = useState('')
   const [hasPhoto, setHasPhoto] = useState(false)
 
+  // [เพิ่มรอบนี้ — เฟส 3 Capacitor] nativePlatform ไม่เปลี่ยนตลอดอายุแอป (ดู useStepTracker.ts)
+  const { nativePlatform, requestNativeSteps } = useStepTracker()
+
   /** [ใหม่ — เชื่อมก้าวเดินจริง] แหล่งข้อมูลที่ "พร้อมใช้" ตอนนี้ — ตัดสินใจครั้งเดียวตอน mount
    * ผ่าน lazy initializer (ไม่ใช่ useEffect+setState เพราะ isGoogleFitConfigured/
-   * isDeviceMotionSupported เป็น capability check แบบ sync ล้วน อ่านค่าคงที่ตลอดอายุ component
-   * ไม่ใช่การ subscribe ระบบภายนอกที่ต้องรอ effect) ไม่ได้ขอ OAuth/permission จริงตรงนี้ (ต้องรอ
-   * user gesture ที่ปุ่มซิงค์เท่านั้น — ดูคอมเมนต์ใน stepTracking.ts ว่าทำไม) */
+   * isDeviceMotionSupported/nativePlatform เป็น capability check แบบ sync ล้วน อ่านค่าคงที่
+   * ตลอดอายุ component ไม่ใช่การ subscribe ระบบภายนอกที่ต้องรอ effect) ไม่ได้ขอ OAuth/
+   * permission จริงตรงนี้ (ต้องรอ user gesture ที่ปุ่มซิงค์เท่านั้น — ดูคอมเมนต์ใน
+   * stepTracking.ts ว่าทำไม) [แก้รอบนี้ — เฟส 3] แทรก native health เข้ามาแทนตำแหน่งเดิมของ
+   * DeviceMotion — DeviceMotion เลื่อนลงมาเป็น fallback ถัดไปแทน */
   const [dataSource, setDataSource] = useState<StepDataSource>(() => {
     if (isGoogleFitConfigured()) return 'google-fit'
+    if (nativePlatform) return nativePlatform
     if (isDeviceMotionSupported()) return 'device-motion'
     return 'manual'
   })
@@ -141,6 +159,24 @@ export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStep
       setIsSyncing(true)
       try {
         const reading = await syncStepsFromGoogleFit()
+        setStepsInput(String(reading.steps))
+      } catch (err) {
+        setDataSource(isDeviceMotionSupported() ? 'device-motion' : 'manual')
+        setSyncError(describeStepSyncError(err))
+      } finally {
+        setIsSyncing(false)
+      }
+      return
+    }
+
+    // [เพิ่มรอบนี้ — เฟส 3 Capacitor] เหมือน flow ของ google-fit ด้านบน (ดึงยอดสะสมวันนี้ครั้ง
+    // เดียวจบ ไม่ใช่ฟังต่อเนื่องแบบ DeviceMotion) requestNativeSteps() ไม่ throw เอง (ดู
+    // useStepTracker.ts) จึงสร้าง Error ขึ้นมาเองเพื่อใช้ describeStepSyncError ข้อความเดียวกัน
+    if (dataSource === 'health-connect' || dataSource === 'healthkit') {
+      setIsSyncing(true)
+      try {
+        const reading = await requestNativeSteps()
+        if (!reading) throw new Error('NATIVE_HEALTH_QUERY_FAILED')
         setStepsInput(String(reading.steps))
       } catch (err) {
         setDataSource(isDeviceMotionSupported() ? 'device-motion' : 'manual')
@@ -221,7 +257,9 @@ export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStep
             <span className="vitality-steps__count-goal">{stepGoal.toLocaleString()} ก้าว</span>
           </div>
 
-          {/* เส้นทางเดิน — นกฮูกเลื่อนตามสัดส่วน steps/stepGoal */}
+          {/* เส้นทางเดิน — นกฮูกเลื่อนตามสัดส่วน steps/stepGoal
+              // TODO(journey-map-phase-6): ส่วนนี้จะถูกแทนที่ด้วยระบบ StepJourneyGame ในเฟส 6 —
+              อย่าลบจนกว่าเฟส 6 จะมี UI ทดแทนพร้อมใช้งานจริง */}
           <div className="vitality-steps__path">
             <div className="vitality-steps__path-track" />
             <div className="vitality-steps__path-fill" style={{ width: `${progressPct}%` }} />
@@ -245,13 +283,16 @@ export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStep
               onClick={handleSyncClick}
               disabled={isSyncing}
             >
-              {dataSource === 'google-fit'
-                ? (isSyncing ? '⏳ กำลังซิงก์จาก Google Fit...' : '🔄 ซิงก์จาก Google Fit')
-                : (isSyncing ? '⏳ กำลังขออนุญาตเซ็นเซอร์...' : isCountingMotion ? '⏸️ หยุดนับก้าว' : '▶️ เริ่มนับก้าวจากเซ็นเซอร์')}
+              {dataSource === 'google-fit' && (isSyncing ? '⏳ กำลังซิงก์จาก Google Fit...' : '🔄 ซิงก์จาก Google Fit')}
+              {dataSource === 'health-connect' && (isSyncing ? '⏳ กำลังซิงก์จาก Health Connect...' : '🔄 ซิงก์จาก Health Connect')}
+              {dataSource === 'healthkit' && (isSyncing ? '⏳ กำลังซิงก์จาก Apple Health...' : '🔄 ซิงก์จาก Apple Health')}
+              {dataSource === 'device-motion' && (isSyncing ? '⏳ กำลังขออนุญาตเซ็นเซอร์...' : isCountingMotion ? '⏸️ หยุดนับก้าว' : '▶️ เริ่มนับก้าวจากเซ็นเซอร์')}
             </button>
           )}
           <p className="vitality-steps__sync-note">
             {dataSource === 'google-fit' && 'แหล่งข้อมูล: ซิงก์จาก Google Fit'}
+            {dataSource === 'health-connect' && 'แหล่งข้อมูล: ซิงก์จาก Health Connect (Android)'}
+            {dataSource === 'healthkit' && 'แหล่งข้อมูล: ซิงก์จาก Apple Health (HealthKit)'}
             {dataSource === 'device-motion' && (isCountingMotion
               ? 'แหล่งข้อมูล: กำลังนับจากเซ็นเซอร์เครื่อง (ประมาณการ) — เดินต่อไปเรื่อยๆ แล้วกด "หยุดนับ" เมื่อพอ'
               : 'แหล่งข้อมูล: นับจากเซ็นเซอร์เครื่อง (ประมาณการ — ไม่แม่นยำเท่า pedometer จริง)')}
@@ -259,6 +300,8 @@ export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStep
           </p>
           {syncError && <p className="vitality-steps__sync-error">⚠️ {syncError}</p>}
 
+          {/* TODO(journey-map-phase-6): ส่วนนี้จะถูกแทนที่ด้วยระบบ StepJourneyGame ในเฟส 6 —
+              อย่าลบจนกว่าเฟส 6 จะมี UI ทดแทนพร้อมใช้งานจริง */}
           {allowManualStepEntry && (
             <div className="vitality-steps__input-row">
               <label htmlFor="vitality-steps-input" className="vitality-steps__input-label">กรอกจำนวนก้าวที่เดินได้วันนี้</label>

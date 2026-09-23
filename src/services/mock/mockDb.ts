@@ -8,6 +8,7 @@ import {
   type ActivityItem,
   type PostLikerInfo,
 } from '../../types'
+import type { JourneyRecord } from '../../types.journey'
 
 /*============================================================================*\
   mockDb.ts — [ไฟล์ใหม่] ข้อมูลจำลองสำหรับโหมด VITE_API_MODE=mock
@@ -57,6 +58,9 @@ export interface MockAccountProfile {
   following: string[]
   activity: ActivityItem[]
   privateProfileUserIds: string[]
+  /** [เพิ่มรอบนี้ — เฟส 2 ระบบ Journey] ต้องอยู่ในสแนปช็อตต่อบัญชีเหมือนฟิลด์อื่นข้างบน
+   *  ไม่งั้นจะเกิดบั๊กเดียวกับที่คอมเมนต์ด้านบนเตือนไว้ (ข้อมูลรั่วข้ามบัญชีตอนสลับ) */
+  activeJourney: JourneyRecord | null
 }
 
 export interface MockDb {
@@ -86,6 +90,9 @@ export interface MockDb {
    *  คีย์ด้วย MockAccount.id ห้ามแก้ตรงนี้ตรงๆ ที่อื่น ต้องผ่าน switchActiveAccount() เท่านั้น
    *  ไม่งั้นจะไม่ sync กับมิเรอร์ด้านบน */
   profiles: Record<string, MockAccountProfile>
+  /** [เพิ่มรอบนี้ — เฟส 2 ระบบ Journey] journey ที่กำลังเดินอยู่ตอนนี้ของบัญชี active — null คือ
+   *  ยังไม่เริ่มเดินทริปไหนเลย ดู src/services/api/journey.api.ts */
+  activeJourney: JourneyRecord | null
 }
 
 /** [ใหม่] โพสต์ตัวอย่าง 2 อัน — ใช้ userId ตรงกับ MOCK_LEADERBOARD_PLAYERS (p1/p2 ใน
@@ -166,6 +173,7 @@ const EMPTY_DB: MockDb = {
   passwordResetTokens: [],
   activeAccountId: null,
   profiles: {},
+  activeJourney: null,
 }
 
 /** ดึงมิเรอร์บนสุดของ db มาเป็นสแนปช็อตหนึ่งก้อน (ไว้เก็บเข้า profiles ก่อนสลับบัญชี) */
@@ -179,6 +187,7 @@ function snapshotActiveProfile(db: MockDb): MockAccountProfile {
     following: db.following,
     activity: db.activity,
     privateProfileUserIds: db.privateProfileUserIds,
+    activeJourney: db.activeJourney,
   }
 }
 
@@ -192,6 +201,7 @@ function applyProfileToMirror(db: MockDb, profile: MockAccountProfile) {
   db.following = profile.following
   db.activity = profile.activity
   db.privateProfileUserIds = profile.privateProfileUserIds
+  db.activeJourney = profile.activeJourney
 }
 
 /** ข้อมูลเริ่มต้นของบัญชีที่ "ไม่เคยมีมาก่อน" — ใช้ posts/activity ตัวอย่างชุดเดียวกับ EMPTY_DB
@@ -206,6 +216,7 @@ function createFreshProfile(userSeed: Partial<UserData>): MockAccountProfile {
     following: [],
     activity: structuredClone(SEED_ACTIVITY),
     privateProfileUserIds: ['p4'],
+    activeJourney: null,
   }
 }
 

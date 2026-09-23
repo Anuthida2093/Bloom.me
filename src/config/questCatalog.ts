@@ -76,6 +76,11 @@ export interface QuestDef {
    *  ไม่มี maxPerDay (เช่น green-vision/breathing) ยังไม่ได้ติดธงนี้เพราะเป็นการตัดสินใจเชิงโปรดักต์
    *  ว่าจะเปิดให้เล่นซ้ำได้ไหม ไม่ใช่บั๊กที่ต้องแก้ — ถ้าอยากเปิดเพิ่มเติมให้ผู้ดูแลโปรเจกต์ตัดสินใจ */
   isRepeatable?: boolean
+  /** [เพิ่มรอบนี้ — ปรับ layout เควส Step Journey] true = เกมของเควสนี้ต้องการพื้นที่เต็ม
+   *  .game-shell__stage จริงๆ (เช่น แผนที่เดินที่ต้องเต็มจอ) — GameShell.tsx จะสลับไปใช้แถบหัว
+   *  บาง 95px + ไม่มีกล่อง howTo/theory + .game-shell__stage ไม่มี max-width/padding แทน header
+   *  ปกติ (ไอคอน+ชื่อ+คำอธิบาย) ไม่ใส่ = พฤติกรรมเดิมทุกประการ (เควสอื่นทั้งหมดไม่กระทบ) */
+  fullscreenGame?: boolean
   /** [เพิ่มรอบนี้ — เควสสุขภาพใหม่ Vitality Steps/Balanced Nutrients] ค่าตั้งค่าเฉพาะของเควส
    *  นั้นๆ ที่หน้าเล่นเควส (special quest component) อ่านไปใช้ตรงๆ แทนการ hardcode ค่าคงที่
    *  แยกไว้ในไฟล์ component เอง — แต่ละเควสมี shape ของตัวเอง ไม่มีโครงสร้างร่วมตายตัว จึงพัก
@@ -208,24 +213,28 @@ export const PHYSICAL_DAILY: QuestDef[] = [
     gameKey: 'pure-water', energyLevel: 'LOW', maxPerDay: 10, isRepeatable: true,
   },
   {
-    // [เพิ่มรอบนี้ — เควสสุขภาพใหม่] ยังไม่มีไอคอนไฟล์รูปเฉพาะในตาราง badges/quests ที่มีอยู่
-    // ใช้ emoji 🦶 ไปก่อนตามที่ระบุ จนกว่าจะมี asset จริง (ดู QUEST_ICONS ใน iconAssets.ts —
-    // ไม่มี key 'phys-vitality-steps' จึงfallback เป็น quest.icon นี้เองอัตโนมัติ)
+    // [แก้รอบนี้ — Step Journey] ยังไม่มีไอคอนไฟล์รูปเฉพาะในตาราง badges/quests ที่มีอยู่ ใช้
+    // emoji 🦶 ไปก่อนตามที่ระบุ จนกว่าจะมี asset จริง (ดู QUEST_ICONS ใน iconAssets.ts — ไม่มี key
+    // 'phys-vitality-steps' จึงfallback เป็น quest.icon นี้เองอัตโนมัติ) — code เดิมไม่เปลี่ยน
+    // (กัน questLogs เก่าของผู้เล่นอ้างอิงเควสที่หายไป) เปลี่ยนกลไกทั้งหมดเป็นเลือกแผนที่ปลายทาง
+    // 1 ใบจาก 8 ใบแล้วเดินข้ามแผนที่ใบนั้นด้วยก้าวจริง (ดู StepJourneyGame.tsx ผ่าน
+    // questGameRegistry.ts — ไม่ใช่ SPECIAL_QUEST เต็มจอแบบเดิมอีกต่อไป จึงตัดออกจาก
+    // SPECIAL_QUEST_CODES ด้านล่างด้วย)
+    // isDaily:false เพราะ 1 ทริปใช้เวลาหลายวันกว่าจะถึงจุดหมาย ไม่ใช่ทำครั้งเดียวจบในวันเดียว —
+    // maxPerDay:1 + isRepeatable:true ไม่ได้แปลว่าจะสำเร็จได้วันละครั้งจริงๆ (เป็นไปไม่ได้อยู่แล้ว
+    // เพราะ 1 ทริปกินเวลาหลายวัน) แต่จำเป็นต้องมีเพื่อปลดล็อกเงื่อนไข "isCompleted() เช็คแบบไม่มี
+    // deadline" ของ QuestSection.tsx/QuestConfirmModal.tsx ที่บล็อกเควสไม่มี maxPerDay ไม่ให้เล่น
+    // ซ้ำได้อีกเลยหลังสำเร็จครั้งแรก (ดูสรุปท้ายบทสนทนา) — ไม่มี maxPerDay ตัวนี้ผู้เล่นจะเดินได้
+    // แค่ทริปเดียวตลอดชาติ เล่นซ้ำไม่ได้อีกเลยหลังถึงจุดหมายครั้งแรก
     code: 'phys-vitality-steps', icon: '🦶', title: 'Vitality Steps', titleTh: 'ก้าวเพื่อสุขภาพ',
-    desc: 'เดินให้ครบเป้าหมายก้าวที่ปรับตาม BMI ของคุณ',
-    howTo: 'เดินสะสมก้าวให้ครบเป้าหมายของวันนี้ (ปรับเพิ่มอัตโนมัติถ้า BMI สูง) กรอกจำนวนก้าวเอง หรือถ่ายรูปยืนยัน (เช่นหน้าจอแอปนับก้าว) แล้วดูนกฮูกเดินตามเส้นทางไปเรื่อยๆ ตามสัดส่วนที่เดินได้',
+    desc: 'เลือกแผนที่ปลายทางที่อยากไปถึง แล้วเดินสะสมก้าวจริงพาตัวละครไปให้ถึง',
+    howTo: 'เลือกแผนที่จุดหมาย 1 ใบจาก 8 ใบ แล้วเดินสะสมก้าวไปเรื่อยๆ (ซิงก์จากเซ็นเซอร์/Health app หรือกรอกเอง) ตัวละครจะเดินตามเส้นทางบนแผนที่ตามสัดส่วนก้าวที่เดินได้ ถึงจุดหมายก่อนหมดเวลาที่ให้ไว้เพื่อรับรางวัล',
     theory: 'Physical Activity Guidelines — เดิน 8,000+ ก้าว/วัน ลดความเสี่ยงโรคหัวใจและเบาหวานชนิดที่ 2 ได้อย่างมีนัยสำคัญ',
-    category: 'HEALTH', controlType: 'PHOTO_CAPTURE', coinReward: 35, expReward: 25, isDaily: true,
-    energyLevel: 'LOW',
-    config: {
-      verificationMethod: 'PHOTO',
-      baseStepGoal: 8000,
-      bmiAdjustment: { highBmiThreshold: 23, highBmiExtraSteps: 1500 },
-      // BMI >= highBmiThreshold → เป้าหมาย = baseStepGoal + highBmiExtraSteps
-      allowManualStepEntry: true,
-      // fallback ให้กรอกจำนวนก้าวเองได้ระหว่างที่ยังไม่มีการเชื่อม Health API จริง (ดูสรุปท้าย
-      // บทสนทนา — ต้องต่อ Apple HealthKit/Google Fit ก่อนถึงจะดึงจำนวนก้าวอัตโนมัติได้จริง)
-    },
+    category: 'HEALTH', controlType: 'STEP_JOURNEY', coinReward: 60, expReward: 50, isDaily: false,
+    gameKey: 'step-journey', energyLevel: 'LOW', maxPerDay: 1, isRepeatable: true,
+    // [เพิ่มรอบนี้ — ปรับ layout] แผนที่ต้องเต็มพื้นที่ .game-shell__stage จริงๆ ไม่ใช่การ์ด
+    // จำกัดความกว้าง 620px แบบเควสอื่น — ดู comment ของ fullscreenGame ใน interface ด้านบน
+    fullscreenGame: true,
   },
   {
     code: 'phys-balanced-nutrients', icon: '🍽️', title: 'Balanced Nutrients', titleTh: 'แคลอรี่ตาม BMI',
@@ -370,9 +379,10 @@ export const SPECIAL_QUEST_CODES = [
   'ment-cognitive-incinerator',
   'ment-gratitude-shield',
   'ment-mindful-anchor',
-  // [เพิ่มรอบนี้ — เควสสุขภาพใหม่] มีฉาก/เสียง/VFX เป็นของตัวเอง (นกฮูกเดินตามก้าว, ถ่ายรูป
-  // มื้ออาหาร) เหมือน 5 เควสสุขภาพจิตด้านบน จึงเปิดเป็นหน้าเต็มกรอบตรงๆ ไม่ผ่าน GameShell/registry
-  'phys-vitality-steps',
+  // [เพิ่มรอบนี้ — เควสสุขภาพใหม่] มีฉาก/เสียง/VFX เป็นของตัวเอง (ถ่ายรูปมื้ออาหาร) เหมือน 5
+  // เควสสุขภาพจิตด้านบน จึงเปิดเป็นหน้าเต็มกรอบตรงๆ ไม่ผ่าน GameShell/registry
+  // [ตัดออกรอบนี้ — Step Journey] 'phys-vitality-steps' ย้ายไปผ่าน GameShell/registry ปกติแล้ว
+  // (gameKey: 'step-journey') ไม่ใช่หน้าเต็มจอของตัวเองอีกต่อไป — ดู StepJourneyGame.tsx
   'phys-balanced-nutrients',
 ]
 
