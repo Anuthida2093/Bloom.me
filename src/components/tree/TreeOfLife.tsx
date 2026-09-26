@@ -3,22 +3,25 @@ import type { MbtiType, RiskLevel, PlacedItem, DecorationPositionMap, QuestCateg
 import { DECORATION_EMOJI, DECORATION_ZONE_POSITION } from '../../config/decorationItems'
 import { ITEM_ICONS } from '../../config/iconAssets'
 import { useIsSmallScreen, usePrefersReducedMotion } from '../../hooks/useMediaQuery'
-import { getCanopyShape, sampleCanopyPoint, type CanopyShape } from '../../config/canopyShape'
-import {
-  getTrunkImagePath, getLeafImagePath, getGroundImagePath,
-  toTrunkVisualLevel, getLeafPool, toGroundVariant, getShapeLetter,
-} from '../../config/treeAssets'
-import { LEAF_ANCHORS } from '../../config/leafAnchors'
+import { getGroundImagePath, toGroundVariant } from '../../config/treeAssets'
 import { seededRandom } from '../../utils/seededRandom'
 import GroundScene from './GroundScene'
+import { buildTreeModel } from './procedural/buildTreeModel'
+import ProceduralTreeCanvas from './procedural/ProceduralTreeCanvas'
 import { useAudio } from '../../context/AudioContext'
 import './TreeOfLife.css'
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
- * TreeOfLife — Layered Pre-drawn Images + "Leaf Brush Stamping"
+ * TreeOfLife — ต้นไม้ procedural วาด 2D + เลเยอร์พื้นดิน/เอฟเฟกต์/ไอเทมตกแต่ง
  * ═══════════════════════════════════════════════════════════════════════
- * (คำอธิบายเทคนิคการปั๊มใบไม้/เหตุผลที่ไม่ใช้ canvas — ดูรอบก่อนหน้า ไม่เปลี่ยนแปลง)
+ * [เปลี่ยนระบบต้นไม้ — 2026-09-26] ตัวต้นไม้ (ลำต้น/กิ่ง/ใบ/ดอก) เลิกใช้ภาพวาดสำเร็จรูป
+ * (treeAssets.ts ลำต้น + ปั๊มภาพใบตาม LEAF_ANCHORS + brush ดอก) — สร้างจากโค้ดแทน:
+ * procedural/buildTreeModel.ts (รูปทรงตามกลุ่ม MBTI, โตตามเลเวล, สีจาก MBTI_TREE_THEME) แล้ววาดลง
+ * canvas 2D 2 ชั้นด้วย procedural/ProceduralTreeCanvas.tsx (กิ่ง / ใบ+ดอก — filter ใบเหี่ยวใส่ได้
+ * เฉพาะชั้นใบ) ส่วนที่เหลือของไฟล์นี้คงเดิม: พื้นดิน 3 variant, GroundScene, growth pulse, คราบหมอง,
+ * กลีบร่วง, ป้ายสายด่วน, ไอเทมตกแต่งลากวาง, tooltip
+ *
  *
  * [แก้รอบนี้ — ประสิทธิภาพและความสม่ำเสมอของภาพ]
  *  1. จำนวนใบไม้ปรับตามขนาดจอ: มือถือ 28 ใบ / เดสก์ท็อป 70 ใบ
@@ -41,374 +44,10 @@ import './TreeOfLife.css'
  *  - <GroundScene>: เลเยอร์หญ้า/ดอกไม้มีมิติ พริ้วไหวตามลม ผูกกับ grassSoilLevel
  */
 
-const treeAssetModules = import.meta.glob('/src/assets/trees/**/*.{webp,gif,png}', {
-  eager: true,
-  query: '?url',
-  import: 'default',
-})
-
-const ASSET_LOOKUP: Record<string, string> = {}
-for (const [modulePath, url] of Object.entries(treeAssetModules)) {
-  const match = modulePath.match(/\/assets\/trees\/([^/]+)\/([^/]+)$/)
-  if (match) {
-    const [, folder, filename] = match
-    ASSET_LOOKUP[`${folder}/${filename}`] = url
-  }
-}
-
-type TreeAssetFolder = MbtiType | 'BALANCED'
-const ASSET_EXTENSIONS = ['webp', 'gif', 'png'] as const
-
-function findLeveledAsset(folder: string, prefix: 'trunk', level: number): string | null {
-  const clampedLevel = Math.min(100, Math.max(1, Math.round(level)))
-  for (let lv = clampedLevel; lv >= 1; lv--) {
-    for (const ext of ASSET_EXTENSIONS) {
-      const url = ASSET_LOOKUP[`${folder}/${prefix}_lvl${lv}.${ext}`]
-      if (url) return url
-    }
-  }
-  return null
-}
-
-function findBrushVariants(folder: string, prefix: 'leaf_brush' | 'flower_brush'): string[] {
-  const urls: string[] = []
-  for (let i = 1; i <= 40; i++) {
-    let found: string | null = null
-    for (const ext of ASSET_EXTENSIONS) {
-      const url = ASSET_LOOKUP[`${folder}/${prefix}_${i}.${ext}`]
-      if (url) { found = url; break }
-    }
-    if (!found) break
-    urls.push(found)
-  }
-  return urls
-}
-
-function resolveFolder(preferred: TreeAssetFolder): { folder: TreeAssetFolder; usedFallback: boolean } {
-  const hasLeafBrush = findBrushVariants(preferred, 'leaf_brush').length > 0
-  if (hasLeafBrush) return { folder: preferred, usedFallback: false }
-
-  if (preferred !== 'BALANCED') {
-    const balancedHasLeafBrush = findBrushVariants('BALANCED', 'leaf_brush').length > 0
-    if (balancedHasLeafBrush) {
-      if (import.meta.env.DEV) {
-        console.warn(`[TreeOfLife] ไม่พบชุด leaf_brush ของ "${preferred}" — ใช้ชุด BALANCED แทนทั้งต้น`)
-      }
-      return { folder: 'BALANCED', usedFallback: true }
-    }
-  }
-  return { folder: preferred, usedFallback: false }
-}
-
-interface FoliageStamp {
-  key: string
-  url: string
-  leftPct: number
-  topPct: number
-  scale: number
-  rotationDeg: number
-  order: number
-  delayMs: number
-}
-
-interface GenerateStampsOptions {
-  seedKey: string
-  brushUrls: string[]
-  count: number
-  canopyShape: CanopyShape
-  baseSizePct: number
-  keyPrefix: string
-}
-
-function generateFoliageStamps({ seedKey, brushUrls, count, canopyShape, baseSizePct, keyPrefix }: GenerateStampsOptions): FoliageStamp[] {
-  if (brushUrls.length === 0 || count <= 0) return []
-
-  const rng = seededRandom(seedKey)
-  const stamps: FoliageStamp[] = []
-
-  for (let i = 0; i < count; i++) {
-    const point = sampleCanopyPoint(canopyShape, rng)
-    const sizeByDepth = 0.7 + point.depthT * 0.6
-    const randomVariance = 0.85 + rng() * 0.3
-    const brush = brushUrls[Math.floor(rng() * brushUrls.length)]
-
-    stamps.push({
-      key: `${keyPrefix}-${seedKey}-${i}`,
-      url: brush,
-      leftPct: point.xPct,
-      topPct: point.yPct,
-      scale: (baseSizePct / 100) * sizeByDepth * randomVariance,
-      rotationDeg: (rng() - 0.5) * 36,
-      order: point.depthT,
-      delayMs: point.depthT * 260 + rng() * 80,
-    })
-  }
-
-  return stamps.sort((a, b) => a.order - b.order)
-}
-
-/** [ใหม่ — ตามที่ระบุรอบนี้ "ทำลำต้นให้เล็กลง"] ย่อภาพลำต้นด้วย CSS scale() (ดู
- *  .tree-of-life__layer--trunk ใน .css ที่อ่านค่านี้ผ่าน CSS var --trunk-visual-scale)
- *  โดย pivot ที่ 50% 100% (กึ่งกลาง-ล่างสุด) ให้โคนต้น/รากยังแนบขอบล่างเดิมเป๊ะ ไม่ขยับ
- *  ตำแหน่ง มีแต่ตัวลำต้นที่หดเข้าหาจุดนั้น — ทรงพุ่ม (canopy) ต้องหดตามสัดส่วนเดียวกันด้วย
- *  ไม่งั้นใบ/ดอกจะลอยห่างจากลำต้นที่เล็กลงไปแล้ว (ดู scaleCanopyTowardTrunkBase ด้านล่าง) */
-const TRUNK_VISUAL_SCALE = 0.6
-
-/** หด CanopyShape เข้าหาจุดหมุนเดียวกับที่ลำต้นหด (กึ่งกลางแนวนอน x=centerXPct เดิม,
- *  ขอบล่างสุด y=100%) ด้วยอัตราส่วนเดียวกัน — topPct/bottomPct คือระยะจากขอบบนของกล่อง จึง
- *  ต้องคำนวณกลับจาก "ระยะห่างจากขอบล่าง (100 - pct)" คูณ scale ก่อนแปลงกลับ ส่วนความกว้าง
- *  (topWidthPct/baseWidthPct) คูณ scale ตรงๆ ได้เลยเพราะ centerXPct คือจุดหมุนแนวนอนอยู่แล้ว */
-function scaleCanopyTowardTrunkBase(shape: CanopyShape, scale: number): CanopyShape {
-  return {
-    centerXPct: shape.centerXPct,
-    topPct: 100 - (100 - shape.topPct) * scale,
-    bottomPct: 100 - (100 - shape.bottomPct) * scale,
-    topWidthPct: shape.topWidthPct * scale,
-    baseWidthPct: shape.baseWidthPct * scale,
-  }
-}
-
-/* [เขียนใหม่ทั้งบล็อกตามที่ระบุรอบนี้] ยกเลิกระบบวางใบทั้งหมดที่ทำมาก่อนหน้านี้ — ทั้ง
- * tip-detection/skeletonize (scripts/extract-branch-tips.mjs), random-in-circle scatter
- * (scripts/extract-canopy-tip.mjs + canopyTipPoints.ts) และ "ภาพใบก้อนใหญ่ก้อนเดียวต่อ
- * trunk level" (leaf-transforms.json/leafTransforms.ts รอบก่อนหน้า) ทั้งหมดยังเก็บไฟล์ไว้
- * เฉยๆ ไม่ลบทิ้งตามธรรมเนียมที่ยึดมาตลอด แค่เลิกเรียกใช้ในไฟล์นี้แล้ว
- *
- * แทนที่ด้วยวิธีใหม่: "หลายจุดยึด (anchor) x หลายสำเนาภาพใบขนาดเล็ก" — หาจุดยึดหลายจุดทั่ว
- * โครงกิ่งของ trunk แต่ละ shape+level ไว้ล่วงหน้า (scripts/compute-leaf-transform.mjs →
- * src/config/leafAnchors.ts) แล้ววาง "สำเนาเล็กๆ" ของภาพ LeafCanopy เดียวกันซ้อนที่แต่ละจุด
- * ยึด (ขนาด/หมุน/ไหวสุ่มเล็กน้อยต่อชิ้นที่ runtime) แทนภาพก้อนใหญ่ก้อนเดียว — แก้ปัญหาที่
- * ภาพก้อนเดียวไม่ว่าปรับ K/offset เท่าไหร่ก็ยังดู "เป็นลูกบอลกลมแข็งๆ ติดปลายไม้เสียบ" ไม่ใช่
- * ใบไม้กระจายตามกิ่งแบบต้นไม้จริง */
-interface ImageNaturalSize {
-  w: number
-  h: number
-}
-
+/** ขนาดกล่อง .tree-of-life จริง (วัดด้วย ResizeObserver) — ใช้คำนวณขนาดก้อนดินและจัดต้นไม้ให้พอดีกล่อง */
 interface ContainerSize {
   w: number
   h: number
-}
-
-/** [สำคัญ] แปลงพิกัด % ของ "ภาพต้นฉบับ" (ของลำต้น) ให้เป็น % ของกล่อง .tree-of-life โดยจำลอง
- *  object-fit:contain + object-position:center bottom (CSS ของ .tree-of-life__layer) บวก
- *  transform:scale จุดหมุน 50% 100% (CSS ของ .tree-of-life__layer--trunk) ทีละขั้นตรงตาม
- *  สูตร CSS จริง — ตอนนี้ใช้แปลง "มุมกล่องสำเนาใบเล็กแต่ละชิ้น" (จาก LEAF_ANCHORS ซึ่งเป็น
- *  พิกเซลบน canvas เดียวกับภาพ trunk) แทนจุดปลายกิ่งเดี่ยวๆ/กล่องใบก้อนใหญ่แบบเดิม (ดู
- *  computeInstanceRect ด้านล่าง) */
-function mapImagePointToContainerPct(
-  point: { x: number; y: number },
-  imgSize: ImageNaturalSize,
-  containerSize: ContainerSize,
-  trunkScale: number,
-): { xPct: number; yPct: number } {
-  const containerAspect = containerSize.w / containerSize.h
-  const imgAspect = imgSize.w / imgSize.h
-
-  let renderedW: number
-  let renderedH: number
-  let offsetX: number
-  let offsetY: number
-
-  if (imgAspect > containerAspect) {
-    // ภาพกว้างกว่ากล่อง (เทียบสัดส่วน) → contain ด้วยความกว้างเต็มกล่อง เหลือช่องว่างบน/ล่าง
-    renderedW = containerSize.w
-    renderedH = renderedW / imgAspect
-    offsetX = 0
-    offsetY = containerSize.h - renderedH // object-position: bottom → ชิดขอบล่าง
-  } else {
-    // ภาพสูงกว่ากล่อง (เทียบสัดส่วน) → contain ด้วยความสูงเต็มกล่อง เหลือช่องว่างซ้าย/ขวา
-    renderedH = containerSize.h
-    renderedW = renderedH * imgAspect
-    offsetY = 0
-    offsetX = (containerSize.w - renderedW) / 2 // object-position: center → กึ่งกลางแนวนอน
-  }
-
-  const preScaleX = offsetX + (point.x / 100) * renderedW
-  const preScaleY = offsetY + (point.y / 100) * renderedH
-
-  // transform-origin: 50% 100% ของกล่องเต็ม (ไม่ใช่ของ contain-box) — ดู .tree-of-life__layer--trunk
-  const pivotX = containerSize.w / 2
-  const pivotY = containerSize.h
-
-  const postScaleX = pivotX + (preScaleX - pivotX) * trunkScale
-  const postScaleY = pivotY + (preScaleY - pivotY) * trunkScale
-
-  return {
-    xPct: (postScaleX / containerSize.w) * 100,
-    yPct: (postScaleY / containerSize.h) * 100,
-  }
-}
-
-/** ขนาดไฟล์ต้นฉบับของภาพ LeafCanopy ทุกไฟล์ (435×435 พิกเซล เท่ากันทั้ง 32 ไฟล์ — ตรวจสอบ
- *  แล้วตอนรัน scripts/compute-leaf-transform.mjs) ใช้แปลงเป็นขนาดจริงตอนคำนวณกล่องใบแต่ละชิ้น
- *  ด้านล่าง ไม่ต้องรอ onLoad วัดขนาดจริงแบบภาพลำต้น (ทุกไฟล์คงที่แล้ว) */
-const LEAF_NATIVE_SIZE_PX = 435
-
-/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 2] ขนาดเป้าหมายของ "สำเนาใบเล็ก" 1 ชิ้น บน canvas ต้นฉบับ
- *  432px ของภาพ trunk (~25% ของความกว้าง canvas ที่ level ต่ำ-กลาง) — เล็กลงมากจากภาพก้อนใหญ่
- *  ก้อนเดียวรอบก่อนที่ทำให้ดูเป็น "ลูกบอลติดปลายไม้เสียบ" ตอนนี้วางกระจายหลายชิ้นเล็กๆ ตาม
- *  จุดยึดแทน
- *
- * [แก้ระหว่างตรวจ preview จริง — ขั้นตอน 4] level 7-8 ยังดูมีช่องว่างระหว่างกลุ่มใบเยอะเกินไป
- * (ดูไม่ "ครึ้มเต็มต้น" ตามที่ระบุ) ทั้งที่ใช้ anchor ครบทุกจุดแล้ว — เพิ่มขนาดต่อชิ้นขึ้นเล็กน้อย
- * เฉพาะ level สูง (จุดยึดที่มีอยู่ไม่พอเติมช่องว่างด้วยจำนวนอย่างเดียว ต้องให้แต่ละชิ้นกว้างขึ้น
- * ด้วยเพื่อให้ชนกัน/คาบเกี่ยวกันปิดช่องว่างระหว่างกิ่ง) level 1-5 คงค่าเดิมไว้ (ดูสวยแล้วจาก
- * preview จริง ไม่ต้องแตะ) */
-function baseTargetWidthForLevel(visualLevel: number): number {
-  if (visualLevel <= 5) return 110
-  if (visualLevel === 6) return 125
-  if (visualLevel === 7) return 145
-  return 160 // level 8
-}
-
-interface LeafInstanceRect {
-  leftPct: number
-  topPct: number
-  widthPct: number
-  heightPct: number
-}
-
-interface LeafInstance extends LeafInstanceRect {
-  key: string
-  /** จุดหมุนสำหรับ sway — ขอบบนกึ่งกลางของ instance (ใกล้กิ่ง/anchor ที่สุด) ไม่ใช่ center
-   *  ของภาพ ให้ดูเหมือนใบแกว่งจากจุดที่ติดกับกิ่งจริง (ดูคอมเมนต์ข้อ 3 ที่จุดเรียกใช้) */
-  originXPct: number
-  originYPct: number
-  rotationDeg: number
-  swayAmpDeg: number
-  swayDurationS: number
-  swayDelayS: number
-  mountDelayMs: number
-}
-
-/** คำนวณกล่อง (ตำแหน่ง+ขนาด เป็น % ของกล่อง .tree-of-life) ของ "สำเนาใบเล็ก" 1 ชิ้นที่มี
- *  จุดศูนย์กลางตรงกับ anchor point พอดี (ตามสูตรที่ระบุ: pasteX = ax - scaledW/2) — แปลงมุม
- *  บนซ้าย/ล่างขวาของกล่อง (หลัง scale) จาก % ของภาพ trunk ผ่าน mapImagePointToContainerPct
- *  เหมือนที่ระบบภาพก้อนใหญ่รอบก่อนทำ (ดูคอมเมนต์ฟังก์ชันนั้นในรอบก่อน — logic เดิมทุกประการ
- *  แค่เปลี่ยนมาคำนวณต่อ "จุดยึด" แทนที่จะเป็นกล่องเดียวของทั้งต้น) */
-function computeInstanceRect(
-  anchor: { x: number; y: number },
-  scaledSizePx: number,
-  imgSize: ImageNaturalSize,
-  containerSize: ContainerSize,
-  trunkScale: number,
-): LeafInstanceRect {
-  const halfPx = scaledSizePx / 2
-  const topLeftImgPct = { x: ((anchor.x - halfPx) / imgSize.w) * 100, y: ((anchor.y - halfPx) / imgSize.h) * 100 }
-  const bottomRightImgPct = { x: ((anchor.x + halfPx) / imgSize.w) * 100, y: ((anchor.y + halfPx) / imgSize.h) * 100 }
-
-  const topLeft = mapImagePointToContainerPct(topLeftImgPct, imgSize, containerSize, trunkScale)
-  const bottomRight = mapImagePointToContainerPct(bottomRightImgPct, imgSize, containerSize, trunkScale)
-
-  return {
-    leftPct: topLeft.xPct,
-    topPct: topLeft.yPct,
-    widthPct: bottomRight.xPct - topLeft.xPct,
-    heightPct: bottomRight.yPct - topLeft.yPct,
-  }
-}
-
-/** [แก้ระหว่างตรวจ preview จริง — ขั้นตอน 4] สเปกเดิมบอกให้ "เรียง anchor ตาม y (จุดสูงสุด/
- *  เด่นสุดก่อน) แล้ว slice" ตรงๆ — แต่ทดสอบจริงแล้วพัง: ถ้าจุดที่ y น้อยที่สุด 2-3 จุดแรก
- *  ดันอยู่ฝั่งเดียวกันหมด (เช่น shape A level 3 มีจุดกิ่งขวาสูงกว่าซ้ายทั้งคู่) การ slice ตาม y
- *  ล้วนๆ จะได้ใบกระจุกอยู่ข้างเดียว ทิ้งอีกฝั่งของกิ่งให้โล่งเปล่าไม่มีใบเลยแม้จะมี anchor
- *  รออยู่ก็ตาม (เห็นชัดจาก preview จริง) แก้โดยเรียงแบบ "สลับฝั่งซ้าย-ขวา" แทน: แบ่งจุดเป็น 2
- *  ฝั่งตามเส้นกึ่งกลางของกลุ่ม anchor ทั้งหมด แต่ละฝั่งเรียงตาม y (บนสุดก่อน) ในตัวเอง แล้ว
- *  สลับหยิบทีละฝั่ง (เริ่มจากฝั่งที่มีจุดสูงสุดโดยรวมก่อน) — ทำให้ทุก prefix length (ตั้งแต่
- *  slice 2 จุดขึ้นไป) มีตัวแทนทั้งสองฝั่งเสมอ ไม่กระจุกข้างเดียว ในขณะที่ยังคงหลักการ "จุดเด่น/
- *  สูงสุดมาก่อน" ตามที่ระบุไว้เดิมทุกประการ (แค่แยกพิจารณาเป็น 2 คิวย่อยแทนคิวเดียว) */
-function buildBalancedAnchorOrder(anchors: { x: number; y: number }[]): { x: number; y: number }[] {
-  if (anchors.length === 0) return []
-  const xs = anchors.map((a) => a.x)
-  const centerX = (Math.min(...xs) + Math.max(...xs)) / 2
-  const left = anchors.filter((a) => a.x < centerX).sort((a, b) => a.y - b.y)
-  const right = anchors.filter((a) => a.x >= centerX).sort((a, b) => a.y - b.y)
-
-  const ordered: { x: number; y: number }[] = []
-  let li = 0
-  let ri = 0
-  let takeLeftNext = (left[0]?.y ?? Infinity) <= (right[0]?.y ?? Infinity)
-  while (li < left.length || ri < right.length) {
-    if (takeLeftNext && li < left.length) {
-      ordered.push(left[li++])
-      takeLeftNext = false
-    } else if (ri < right.length) {
-      ordered.push(right[ri++])
-      takeLeftNext = true
-    } else if (li < left.length) {
-      ordered.push(left[li++])
-    }
-  }
-  return ordered
-}
-
-/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 2] จำนวน anchor point ที่ "ใช้จริง" ต่อ trunkVisualLevel —
- *  slice จาก buildBalancedAnchorOrder (จุดเด่น/สูงสุดก่อน แต่กระจายซ้าย-ขวาเสมอ — ดูหมายเหตุ
- *  ด้านบน) level ต่ำใช้แค่ 2-3 จุดบนสุด (ใบเพิ่งขึ้นครั้งแรก บางสมเหตุสมผล) level สูงใช้ครบ
- *  ทุกจุดที่ตรวจเจอ */
-function anchorUsageCountForLevel(visualLevel: number, totalAnchors: number): number {
-  if (visualLevel <= 3) return Math.min(2, totalAnchors)
-  if (visualLevel === 4) return Math.min(3, totalAnchors)
-  if (visualLevel === 5) return Math.min(4, totalAnchors)
-  if (visualLevel === 6) return Math.min(5, totalAnchors)
-  return totalAnchors // 7-8 ใช้ครบทุกจุดที่มี
-}
-
-/** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 2] วางสำเนาใบเล็กที่แต่ละจุดยึด (LEAF_ANCHORS ของ shape+level
- *  นี้) — ระดับสูงสุด (8) เพิ่มความหนาแน่นด้วยการวาง 2 ชิ้นซ้อนกันต่อจุดยึด 1 จุด ตามที่ระบุ
- *  ทุกอย่าง (ขนาด/หมุน/sway amplitude/duration/delay) สุ่มด้วย seed เดียวกันทุกครั้งที่ level/
- *  shape เดิม (deterministic ต่อ user เหมือนระบบก่อนหน้าทุกตัว) ไม่สุ่มใหม่ทุก re-render */
-function generateLeafAnchorInstances(
-  seedKey: string,
-  shapeLetter: string,
-  visualLevel: number,
-  imgSize: ImageNaturalSize,
-  containerSize: ContainerSize,
-  trunkScale: number,
-): LeafInstance[] {
-  const allAnchors = LEAF_ANCHORS[`${shapeLetter}-lv${visualLevel}`] ?? []
-  if (allAnchors.length === 0) return []
-
-  const balancedOrder = buildBalancedAnchorOrder(allAnchors)
-  const useCount = anchorUsageCountForLevel(visualLevel, balancedOrder.length)
-  const usedAnchors = balancedOrder.slice(0, useCount)
-  const doubleUp = visualLevel >= 8
-
-  const baseTargetWidthPx = baseTargetWidthForLevel(visualLevel)
-  const rng = seededRandom(seedKey)
-  const instances: LeafInstance[] = []
-  let i = 0
-  for (const anchor of usedAnchors) {
-    const copies = doubleUp ? 2 : 1
-    for (let c = 0; c < copies; c++) {
-      const sizeScale = (baseTargetWidthPx / LEAF_NATIVE_SIZE_PX) * (0.8 + rng() * 0.35)
-      const scaledSizePx = LEAF_NATIVE_SIZE_PX * sizeScale
-      // [แก้ระหว่างตรวจ preview จริง] สำเนาที่ 2 ของ anchor เดียวกัน (doubleUp ที่ level 8)
-      // ขยับเล็กน้อยแบบสุ่ม (±18px บน canvas 432 ต้นฉบับ) แทนที่จะซ้อนตำแหน่งเป๊ะกับชิ้นแรก —
-      // ไม่งั้นจะบังกันเองเกือบสนิท ไม่ช่วยปิดช่องว่างระหว่างกิ่งเลยตามที่ตั้งใจ ("เพิ่มความ
-      // หนาแน่น" ต้องกระจายพื้นที่ครอบคลุมเพิ่ม ไม่ใช่แค่ซ้อนสีเข้มขึ้นตรงจุดเดิม)
-      const jitteredAnchor = c === 0
-        ? anchor
-        : { x: anchor.x + (rng() - 0.5) * 36, y: anchor.y + (rng() - 0.5) * 36 }
-      const rect = computeInstanceRect(jitteredAnchor, scaledSizePx, imgSize, containerSize, trunkScale)
-
-      instances.push({
-        key: `leaf-${seedKey}-${i}`,
-        ...rect,
-        originXPct: rect.leftPct + rect.widthPct / 2,
-        originYPct: rect.topPct,
-        rotationDeg: (rng() - 0.5) * 30, // -15..15deg
-        swayAmpDeg: 1.5 + rng() * 0.5, // 1.5-2deg (เล็กมาก ตามที่ระบุ)
-        swayDurationS: 4 + rng() * 3, // 4-7s
-        swayDelayS: rng() * 4,
-        mountDelayMs: i * 30,
-      })
-      i++
-    }
-  }
-
-  return instances
 }
 
 /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 5] ตอน "dying" (ไม่ได้เล่นเควสหมวดจิตใจมานาน) ลด opacity ของ
@@ -488,7 +127,7 @@ function toHealthPhase(daysSinceLastQuest: number | null): HealthPhase {
 }
 
 /** ใบไม้ไล่สีเขียว→เหลือง/น้ำตาลอ่อนตอน wilting, เข้มขึ้นตอน dying — transition หลายวินาที
- *  (ดู .tree-of-life__leaf-layer ใน .css) ให้ความรู้สึก "ค่อยๆ เหี่ยว" ไม่ใช่เปลี่ยนทันที */
+ *  (ใส่ที่ canvas ใบ — ดู .tree-of-life__canvas--foliage ใน .css) ให้ความรู้สึก "ค่อยๆ เหี่ยว" ไม่ใช่เปลี่ยนทันที */
 const LEAF_HEALTH_FILTER: Record<HealthPhase, string> = {
   healthy: 'none',
   wilting: 'sepia(0.45) saturate(0.7) hue-rotate(-12deg) brightness(0.97)',
@@ -560,29 +199,8 @@ function TreeOfLifeBase({
   showHint = true,
   className,
 }: TreeOfLifeProps) {
-  const preferredFolder: TreeAssetFolder = mbtiType ?? 'BALANCED'
-  const { folder } = useMemo(() => resolveFolder(preferredFolder), [preferredFolder])
-  const canopyShape = useMemo(() => getCanopyShape(mbtiType), [mbtiType])
-
-  /* [ใหม่ — ตามที่ระบุรอบนี้] ทรงพุ่มที่ใบ/ดอกใช้จริงต้องหดตามลำต้นที่เล็กลง (ดู
-     TRUNK_VISUAL_SCALE ด้านบน) ไม่งั้นใบ/ดอกจะลอยห่างจากลำต้นเล็กที่หดแล้ว */
-  const scaledCanopyShape = useMemo(
-    () => scaleCanopyTowardTrunkBase(canopyShape, TRUNK_VISUAL_SCALE),
-    [canopyShape],
-  )
-
-  /* [เขียนใหม่ตามที่ระบุรอบนี้ ข้อ 1] เลิกใช้สูตร progressive เดิม (toVisualLevel) เปลี่ยนเป็น
-     ตาราง fix ตามที่ระบุเป๊ะผ่าน toTrunkVisualLevel — trunkBranchLevel ที่ได้มาคือ "เกมเลเวล"
-     ที่คำนวณจาก knowledgeStack ไว้แล้วที่ UserContext.tsx (ดูคอมเมนต์ยาวใน treeAssets.ts) */
-  const visualLevel = useMemo(() => toTrunkVisualLevel(trunkBranchLevel), [trunkBranchLevel])
-  const shapeTrunkUrl = useMemo(() => getTrunkImagePath(mbtiType, visualLevel), [mbtiType, visualLevel])
-
-  const trunkUrl = useMemo(() => findLeveledAsset(folder, 'trunk', trunkBranchLevel), [folder, trunkBranchLevel])
-
-  /* ใบไม่ผูกกับ emotionStack อีกต่อไป ผูกกับ "เกมเลเวลเดียวกับ trunk" ตรงๆ (trunkBranchLevel
-     ตัวเดียวกับที่ป้อน toTrunkVisualLevel ด้านบน) — getLeafPool คืน null ก่อนเกมเลเวล 21
-     (trunk lv1-2 ยังไม่มีใบเลยตามที่ระบุ) */
-  const leafPool = useMemo(() => getLeafPool(trunkBranchLevel), [trunkBranchLevel])
+  /** seed ของพื้นดิน/ลม (คงค่าเดิมของระบบเก่า — resolveFolder คืน MBTI เสมอเพราะไม่มีไฟล์ brush) */
+  const folder = mbtiType ?? 'BALANCED'
 
   /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] ใบเหี่ยว/ร่วงตามจำนวนวันที่ไม่ได้ทำเควสหมวดจิตใจ */
   const leafHealthPhase = useMemo(() => toHealthPhase(daysSinceLastMentalQuest), [daysSinceLastMentalQuest])
@@ -610,21 +228,16 @@ function TreeOfLifeBase({
   const groundVariant2Opacity = groundVariant2TargetOpacity * groundDecayMultiplier
   const groundVariant3Opacity = groundVariant3TargetOpacity * groundDecayMultiplier
 
-  const flowerBrushUrls = useMemo(() => findBrushVariants(folder, 'flower_brush'), [folder])
-
-  /* [ใหม่] เพดานจำนวนดอกตามขนาดจอ — เรื่องจำนวน DOM node ต้องตัดสินใจใน JS
-     ไม่ใช่ซ่อนด้วย CSS (ซ่อนด้วย CSS = สร้าง element ครบแล้วค่อยซ่อน
-     ซึ่งจ่ายค่า layout/paint ไปแล้วเรียบร้อย) */
+  /* จอเล็ก → ต้นไม้ใช้ใบ/ดอกน้อยลง + ก้อนดินน้อยลง (งานวาดน้อยลงบนเครื่องสเปกต่ำ) */
   const isSmallScreen = useIsSmallScreen()
   const reducedMotion = usePrefersReducedMotion()
-  const maxFlowers = isSmallScreen ? 6 : 14
 
-  const flowerStampCount = Math.min(maxFlowers, Math.round((leafFlowerLevel / 100) * 14))
-
-  const flowerStamps = useMemo(
-    () => generateFoliageStamps({ seedKey: `${folder}-flower-${leafFlowerLevel}`, brushUrls: flowerBrushUrls, count: flowerStampCount, canopyShape: scaledCanopyShape, baseSizePct: 9, keyPrefix: 'flower' }),
-    [folder, leafFlowerLevel, flowerBrushUrls, flowerStampCount, scaledCanopyShape],
+  /* ต้นไม้ procedural: รูปทรงตาม MBTI, โตตาม trunkBranchLevel, ดอกตาม leafFlowerLevel (ดู buildTreeModel) */
+  const treeModel = useMemo(
+    () => buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, compact: isSmallScreen }),
+    [mbtiType, trunkBranchLevel, leafFlowerLevel, isSmallScreen],
   )
+
 
   /* [แก้ตามที่ระบุรอบนี้] จำนวนก้อนดิน/หญ้าตามขนาดจอ — seed ผูกกับ folder เท่านั้น (ไม่ผูกกับ
      healthVisualLevel/variant อีกต่อไป เพราะตอนนี้ทั้ง 3 variant ใช้ตำแหน่ง "ชุดเดียวกัน"
@@ -652,28 +265,6 @@ function TreeOfLifeBase({
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
-
-  /* [ใหม่ — ตามที่ระบุรอบนี้] ขนาดจริง (naturalWidth/Height) ของไฟล์ภาพลำต้นที่โหลดสำเร็จ
-     ล่าสุด — จำเป็นสำหรับสูตร object-fit:contain เช่นกัน อัปเดตผ่าน callback ที่ TrunkLayer
-     เรียกตอน <img onLoad> (ดู TrunkLayer ด้านล่าง) */
-  const [trunkNaturalSize, setTrunkNaturalSize] = useState<ImageNaturalSize | null>(null)
-
-  /* [เขียนใหม่ตามที่ระบุรอบนี้] สำเนาใบเล็กหลายชิ้นที่แต่ละจุดยึด (LEAF_ANCHORS ของ shape+
-     level นี้ — ค่าคงที่ baked ไว้แล้ว ไม่ต้อง fetch) ต้องรอ containerSize/trunkNaturalSize
-     พร้อมก่อนเหมือนระบบเดิม — array ว่างถ้า leafPool ยังไม่มี (เกมเลเวล ≤20 ยังไม่มีใบเลย
-     ตามตารางเดิมที่ไม่เปลี่ยน) seed ผูกกับ folder+visualLevel เดียวกับที่ระบบเดิมใช้เสมอมา */
-  const shapeLetter = useMemo(() => getShapeLetter(mbtiType), [mbtiType])
-  const leafInstances = useMemo(() => {
-    if (!containerSize || !trunkNaturalSize || !leafPool) return []
-    return generateLeafAnchorInstances(
-      `${folder}-leaf-anchors-${visualLevel}`, shapeLetter, visualLevel,
-      trunkNaturalSize, containerSize, TRUNK_VISUAL_SCALE,
-    )
-  }, [containerSize, trunkNaturalSize, leafPool, folder, shapeLetter, visualLevel])
-
-  /* ไฟล์ใบเดียวกันทุกสำเนา (ตามที่ระบุ — ไม่มีเลเยอร์คละสี/สุ่มไฟล์แยกอีกต่อไปในระบบ
-     multi-anchor นี้ ความหลากหลายมาจากขนาด/มุมหมุน/จังหวะไหวที่สุ่มต่อชิ้นแทน) */
-  const primaryLeafUrl = useMemo(() => getLeafImagePath(mbtiType, visualLevel), [mbtiType, visualLevel])
 
   /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 5] สายลมพัดเป็นระยะ — สุ่มช่วงเวลา 15-30s ไม่ตายตัว ทุกครั้ง
      ที่ถึงกำหนด toggle class เอฟเฟกต์ไหวแรงชั่วคราว ~2.5s แล้วกลับสู่ปกติ ไม่ sync กับ state
@@ -756,7 +347,6 @@ function TreeOfLifeBase({
           filter: hasSoot
             ? [RISK_FILTER[riskLevel] === 'none' ? '' : RISK_FILTER[riskLevel], 'sepia(0.3)', 'saturate(0.7)', 'brightness(0.92)'].filter(Boolean).join(' ')
             : RISK_FILTER[riskLevel],
-          '--trunk-visual-scale': TRUNK_VISUAL_SCALE,
         } as React.CSSProperties}
       >
         {/* [เขียนใหม่ตามที่ระบุรอบนี้ ข้อ 3] variant 1 = ฐานเต็มพื้นที่เสมอ ไม่มีเงื่อนไข
@@ -828,74 +418,21 @@ function TreeOfLifeBase({
         {/* [ข้อกำหนดข้อ 4] หญ้า/ดอกไม้มีมิติ ซ้อนทับภาพพื้นหญ้าเดิม */}
         <GroundScene grassSoilLevel={grassSoilLevel} seedKey={`${folder}-ground`} />
 
-        <TrunkLayer
-          primaryUrl={shapeTrunkUrl}
-          fallbackUrl={trunkUrl}
-          zIndex={2}
-          onNaturalSize={setTrunkNaturalSize}
-        />
-
-        {/* [เขียนใหม่ทั้งบล็อกตามที่ระบุรอบนี้] วางสำเนาภาพ LeafCanopy ขนาดเล็กหลายชิ้นที่แต่ละ
-            จุดยึด (leafInstances — คำนวณจาก LEAF_ANCHORS ที่ทำ offline ไว้แล้ว ดู
-            generateLeafAnchorInstances) แทนภาพก้อนใหญ่ก้อนเดียวรอบก่อน — 1 <div> ครอบ = 1
-            สำเนาใบ ตั้ง transform-origin ไปที่ "ขอบบนกึ่งกลาง" ของสำเนานั้น (ใกล้กิ่ง/anchor
-            ที่สุด ไม่ใช่ center ของภาพ) ให้ไหวเหมือนแกว่งจากจุดที่ติดกิ่งจริง แต่ละชิ้นไหวอิสระ
-            ต่อกัน (amplitude/duration/delay สุ่มต่อชิ้น) แทนที่จะไหวทั้งก้อนพร้อมกันแบบเดิม
-            (ต้นเหตุที่ดูเหมือน "ลูกบอลติดไม้เสียบส่ายไปมา")
-
-            [ใหม่] key ต่อชิ้นผูกกับ folder+visualLevel (จาก generateLeafAnchorInstances) —
-            เลเวลเปลี่ยน = จุดยึด/จำนวนชิ้นเปลี่ยนทั้งชุด ทุกชิ้นจึง remount+เล่น bloom ใหม่พร้อม
-            กัน (cross-fade ตามที่ระบุไว้แต่เดิม) ใบเก่าที่ mount ค้างอยู่แล้วไม่ขยับตำแหน่งเอง
-            [คงเดิมจากรอบก่อน] leafHealthPhase==='dying' → ลด opacity ของทั้งเลเยอร์ (ครอบทุก
-            สำเนา) แทนการเล่น fall animation ทีละใบ
-            [แก้ตามที่ระบุรอบนี้ ข้อ 3] windGusting → เพิ่ม amplitude ของทุกชิ้นพร้อมกันชั่วคราว
-            ผ่านการสลับชื่อ keyframe sway (เหมือนเดิม ไม่ใช่ effect ที่ทำงานตลอดเวลา) */}
-        <div
-          className="tree-of-life__leaf-layer"
-          style={{
+        {/* ต้นไม้ procedural 2 ชั้น (กิ่ง / ใบ+ดอก) — key ผูกกับ visual level ให้เล่นอนิเมชันโตทุกครั้งที่ขึ้นขั้น
+            ชั้นใบรับ filter/ความจางของใบเหี่ยว (หมวดจิตใจ) และไหวตามลม (CSS ทั้งแผ่น ไม่วาดใหม่) */}
+        <ProceduralTreeCanvas
+          key={treeModel.visualLevel}
+          model={treeModel}
+          size={containerSize}
+          foliageStyle={{
             filter: LEAF_HEALTH_FILTER[leafHealthPhase],
             opacity: leafHealthPhase === 'dying' ? LEAF_DYING_OPACITY : 1,
           }}
-        >
-          {leafInstances.map((leaf) => (
-            <div
-              key={leaf.key}
-              className={[
-                'tree-of-life__leaf-group',
-                windGusting ? 'tree-of-life__leaf-group--gust' : '',
-              ].filter(Boolean).join(' ')}
-              style={{
-                zIndex: 3,
-                transformOrigin: `${leaf.originXPct}% ${leaf.originYPct}%`,
-                '--sway-amp': `${leaf.swayAmpDeg}deg`,
-                animationDuration: `0.5s, ${leaf.swayDurationS}s`,
-                animationDelay: reducedMotion ? '0ms, 0s' : `${leaf.mountDelayMs}ms, ${leaf.swayDelayS}s`,
-              } as React.CSSProperties}
-              aria-hidden="true"
-            >
-              <img
-                src={primaryLeafUrl} alt=""
-                className="tree-of-life__stamp tree-of-life__stamp--leaf"
-                style={{
-                  left: `${leaf.leftPct}%`,
-                  top: `${leaf.topPct}%`,
-                  width: `${leaf.widthPct}%`,
-                  height: `${leaf.heightPct}%`,
-                  transform: `rotate(${leaf.rotationDeg}deg)`,
-                }}
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="tree-of-life__foliage" style={{ zIndex: 4 }} aria-hidden="true">
-          {flowerStamps.map((s) => (
-            <img
-              key={s.key} src={s.url} alt="" className="tree-of-life__stamp tree-of-life__stamp--flower"
-              style={{ left: `${s.leftPct}%`, top: `${s.topPct}%`, width: `${s.scale * 100}%`, transform: `translate(-50%, -50%) rotate(${s.rotationDeg}deg)`, animationDelay: reducedMotion ? '0ms' : `${s.delayMs + 150}ms` }}
-            />
-          ))}
-        </div>
+          foliageClassName={[
+            reducedMotion ? '' : 'tree-of-life__canvas--sway',
+            windGusting && !reducedMotion ? 'tree-of-life__canvas--gust' : '',
+          ].filter(Boolean).join(' ')}
+        />
       </div>
 
       {/* [ใหม่] Growth Pulse — "เควสสำเร็จ ต้นไม้ต้องรับผลชัดเจนทันที" ไม่ใช่แค่เลข level
@@ -989,8 +526,8 @@ function TreeOfLifeBase({
           {hintVisible && (
             <div className="tree-of-life__tooltip">
               <div className="tree-of-life__tooltip-title">🌳 {folder}</div>
-              <div>🪵 ลำต้น/ใบ (ความรู้): Lv.{trunkBranchLevel} (ภาพ {visualLevel}/8){leafInstances.length > 0 ? ` · ใบ ${leafInstances.length} ชิ้น` : ' · ยังไม่มีใบ'}</div>
-              <div>🌸 ดอก (จิตใจ): Lv.{leafFlowerLevel} · ดอกปั๊ม {flowerStamps.length} จุด</div>
+              <div>🪵 ลำต้น/ใบ (ความรู้): Lv.{trunkBranchLevel} (ขั้น {treeModel.visualLevel}/8){treeModel.leaves.length > 0 ? ` · ใบ ${treeModel.leaves.length} ใบ` : ' · ยังไม่มีใบ'}</div>
+              <div>🌸 ดอก (จิตใจ): Lv.{leafFlowerLevel} · ดอก {treeModel.flowers.length} ดอก</div>
               <div>🌱 หญ้า/ราก (สุขภาพ): Lv.{grassSoilLevel} (ผสม {groundHealthVisualLevel}/3)</div>
               {leafHealthPhase !== 'healthy' && (
                 <div className="tree-of-life__tooltip-warn">🍂 ใบ: {leafHealthPhase === 'dying' ? 'กำลังร่วง' : 'เริ่มเหี่ยว'}</div>
@@ -1006,65 +543,6 @@ function TreeOfLifeBase({
         </div>
       )}
     </div>
-  )
-}
-
-interface TrunkLayerProps {
-  /** ชุดภาพใหม่ (shape-based ตาม MBTI/visual level — ดู treeAssets.ts) ลองก่อนเสมอ */
-  primaryUrl: string
-  /** ชุดภาพเก่า (src/assets/trees/<MBTI>/trunk_lvl{N}.*) — ใช้ก็ต่อเมื่อ primaryUrl โหลด
-   *  ไม่ขึ้นเท่านั้น (shape ที่ยังไม่มี asset จริง) */
-  fallbackUrl: string | null
-  zIndex: number
-  /** [ใหม่ — ตามที่ระบุรอบนี้] แจ้งขนาดจริง (naturalWidth/Height) ของไฟล์ภาพที่โหลดสำเร็จ
-   *  กลับขึ้นไปให้ parent ใช้แปลงพิกัด branch-tip (ดู mapImagePointToContainerPct) */
-  onNaturalSize?: (size: ImageNaturalSize) => void
-}
-
-/*============================================================================*\
-  TrunkLayer — [ใหม่] เรนเดอร์ลำต้นจากชุดภาพใหม่ (shape-based) เป็นหลัก มี fallback 2 ชั้น:
-  primaryUrl (ชุดใหม่) โหลดไม่ขึ้น → fallbackUrl (ชุดเก่า) → ไม่มีทั้งคู่ → placeholder 🌱
-  (เช็คจาก onError จริง ไม่ใช่เดาว่าไฟล์มีไหม กันโชว์ broken image)
-
-  ใช้ key={resolvedUrl} ให้ <img> ถูก remount ทุกครั้งที่ level/MBTI เปลี่ยนจน src เปลี่ยนจริง
-  แล้วปล่อยให้ CSS animation ของ .tree-of-life__layer--trunk (TreeOfLife.css) เล่น fade เข้า
-  เอง — ไม่ใช้ framer-motion AnimatePresence เพราะ pattern "key เปลี่ยน + CSS @keyframes
-  เล่นตอน mount" นี้มีอยู่แล้วในระบบ (ground/leaf/flower ใช้ pattern เดียวกันผ่าน .tree-of-life__stamp)
-  เรียบง่าย/สอดคล้องกับโค้ดเดิมกว่า — เฉพาะ trunk ปรับความยาวเป็น 0.4s ตามที่ระบุ (300-500ms)
-  ส่วนขนาดภาพลำต้น (ตามที่ระบุรอบนี้ "ทำลำต้นให้เล็กลง") ย่อด้วย transform: scale() ผ่าน
-  CSS var --trunk-visual-scale (ดู .tree-of-life__layer--trunk ใน .css) ไม่ใช่ปรับที่นี่
-\*============================================================================*/
-function TrunkLayer({ primaryUrl, fallbackUrl, zIndex, onNaturalSize }: TrunkLayerProps) {
-  const [prevPrimaryUrl, setPrevPrimaryUrl] = useState(primaryUrl)
-  const [primaryFailed, setPrimaryFailed] = useState(false)
-  const [fallbackFailed, setFallbackFailed] = useState(false)
-  if (primaryUrl !== prevPrimaryUrl) {
-    setPrevPrimaryUrl(primaryUrl)
-    setPrimaryFailed(false)
-    setFallbackFailed(false)
-  }
-
-  const resolvedUrl = !primaryFailed ? primaryUrl : (!fallbackFailed ? fallbackUrl : null)
-
-  if (!resolvedUrl) {
-    return (
-      <div className="tree-of-life__layer tree-of-life__layer--placeholder" style={{ zIndex }} aria-hidden="true">
-        🌱
-      </div>
-    )
-  }
-
-  return (
-    <img
-      key={resolvedUrl} src={resolvedUrl} alt="" aria-hidden="true"
-      className="tree-of-life__layer tree-of-life__layer--trunk"
-      style={{ zIndex }}
-      onLoad={(e) => onNaturalSize?.({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
-      onError={() => {
-        if (!primaryFailed) setPrimaryFailed(true)
-        else setFallbackFailed(true)
-      }}
-    />
   )
 }
 

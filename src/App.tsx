@@ -32,6 +32,12 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const MBTISelect = lazy(() => import('./pages/MBTISelect'))
 const Dashboard = lazy(() => import('./components/dashboard/Dashboard'))
+/** [experiment — dev only] ต้นไม้ procedural 3D — ผูกกับ import.meta.env.DEV ซึ่ง Vite แทนเป็น false
+ *  ตอน build production แล้วตัดทิ้งทั้ง route + dynamic import (three.js ไม่ติดไปใน bundle จริง)
+ *  เข้าได้ทาง URL ตรงๆ /dev/procedural-tree ตอน `npm run dev` เท่านั้น ไม่มีลิงก์จากเมนูไหน */
+const ProceduralTreePage = import.meta.env.DEV
+  ? lazy(() => import('./experiments/procedural-tree/ProceduralTreePage'))
+  : null
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,6 +79,7 @@ export default function App() {
                         </ErrorBoundary>
                       }
                     />
+                    {ProceduralTreePage && <Route path="/dev/procedural-tree" element={<ProceduralTreePage />} />}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Suspense>
