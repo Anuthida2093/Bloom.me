@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { Z_INDEX } from '../../config/zIndex'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 const C_1 = 'rgba(10,25,20,.55)'
 const C_2 = '#F3E8FF'
@@ -52,7 +53,7 @@ export default function BrainDumpModal({ onClose }: BrainDumpModalProps) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{ background: `linear-gradient(160deg, var(--fixed-white), ${BG_2})`, borderRadius: 28, width: '100%', maxWidth: 440, padding: '28px 26px', boxShadow: '0 28px 70px var(--glass-b-35)', position: 'relative' }}>
-        <button onClick={onClose} title="ปิด" style={{ position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: 99, border: 'none', background: 'var(--glass-b-8)', cursor: 'pointer', fontSize: 13 }}>✕</button>
+        <button onClick={onClose} title="ปิด" style={{ position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: 99, border: 'none', background: 'var(--glass-b-8)', cursor: 'pointer', fontSize: 13 }}><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 40 }}>🧠</div>

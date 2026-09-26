@@ -97,7 +97,7 @@ export default function QuestConfirmModal({ quest, stageLabel, accent, accentBg,
                   fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2,
                 }}
               >
-                ✕
+                <img src={BADGE_ICONS.close} className="icon-img" alt="" />
               </button>
 
               <div style={{ textAlign: 'center', position: 'relative' }}>

@@ -98,7 +98,7 @@ export default function MedicalBoxAlert({ moodEntries, onOpenMentalQuests }: Med
               transition={{ type: 'spring', stiffness: 260, damping: 22 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <button className="medical-box-alert__close" onClick={() => setShowPopup(false)} title="ปิด" aria-label="ปิด">✕</button>
+              <button className="medical-box-alert__close" onClick={() => setShowPopup(false)} title="ปิด" aria-label="ปิด"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
               <div className="medical-box-alert__icon">🏥</div>
               <h3 className="medical-box-alert__title">เราเป็นห่วงคุณนะ</h3>
               <p className="medical-box-alert__body">

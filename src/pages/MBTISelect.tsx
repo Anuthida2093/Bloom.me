@@ -3,18 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { MBTI_TREE_THEME, type MbtiType } from '../types'
 import { useAppContext } from '../context/AppContext'
 import MiniTree from '../components/tree/MiniTree'
-import CinematicBackground from '../components/layout/CinematicBackground'
+import SceneBackground from '../components/layout/SceneBackground'
 import SoundToggleButton from '../components/layout/SoundToggleButton'
-
-const C_1 = 'rgba(10,30,25,.55)'
-const C_2 = 'rgba(10,30,25,.35)'
-const C_3 = 'rgba(10,30,25,.7)'
-const C_4 = 'rgba(255,255,255,.94)'
-
-const BG_1 = C_1
-const BG_2 = C_2
-const BG_3 = C_3
-const BG_4 = C_4
 
 const MBTI_ORDER: MbtiType[] = [
   'INTJ', 'INTP', 'ENTJ', 'ENTP',
@@ -25,13 +15,12 @@ const MBTI_ORDER: MbtiType[] = [
 
 /**
  * MBTISelect — หน้าเลือกบุคลิกภาพเพื่อกำหนดสายพันธุ์ต้นไม้ (route "/mbti")
- * [ข้อกำหนดข้อ 5] พื้นหลังวิดีโอ hero-waterfall.mp4 เหมือนหน้า Dashboard (ผ่าน
- * CinematicBackground ตัวเดียวกับที่ WelcomeModal/Login ใช้) + เลือกการ์ดแล้วเล่น
+ * พื้นหลัง SceneBackground (วิดีโอ + overlay ชุดเดียวกับหน้า Welcome/หน้า auth) + เลือกการ์ดแล้วเล่น
  * transition เด้ง/จางหายลื่นไหลก่อนค่อย navigate ไปหน้าถัดไปจริง (ไม่ตัดจบทันที)
  */
 export default function MBTISelect() {
   const navigate = useNavigate()
-  const { setMbtiType, settings } = useAppContext()
+  const { setMbtiType } = useAppContext()
   const [selected, setSelected] = useState<MbtiType | null>(null)
 
   const handleSelect = (mbti: MbtiType) => {
@@ -44,21 +33,14 @@ export default function MBTISelect() {
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative', padding: '48px 20px', overflow: 'hidden' }}>
-      <CinematicBackground musicVolume={settings.musicVolume} soundEnabled={settings.soundEnabled} />
+      <SceneBackground />
 
-      {/* [ใหม่] ปุ่มลำโพงลอยมุมขวาบน — หน้านี้ยังไม่มี NavBar ให้ใช้ */}
+      {/* ปุ่มลำโพงลอยมุมขวาบน */}
       <SoundToggleButton floating />
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'fixed', inset: 0, zIndex: 1,
-          background: `linear-gradient(180deg, ${BG_1} 0%, ${BG_2} 40%, ${BG_3} 100%)`,
-        }}
-      />
 
       <div style={{ position: 'relative', zIndex: 2, maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
-        <h1 className="mbti-select-fade-in" style={{ fontFamily: 'Fredoka One', fontSize: 32, color: 'var(--fixed-white)', textShadow: '0 4px 16px var(--glass-b-50)', marginBottom: 8 }}>
-          🌳 คุณเป็นคนแบบไหน?
+        <h1 className="mbti-select-fade-in" style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--fixed-white)', textShadow: '0 4px 16px var(--glass-b-50)', marginBottom: 8 }}>
+          คุณเป็นคนแบบไหน?
         </h1>
         <p className="mbti-select-fade-in" style={{ color: 'var(--fixed-white)', textShadow: '0 2px 8px var(--glass-b-50)', fontSize: 14, marginBottom: 32, animationDelay: '80ms' }}>
           เลือกบุคลิกภาพ (MBTI) ของคุณ เพื่อกำหนดสายพันธุ์และสีสันของต้นไม้ประจำตัว
@@ -77,10 +59,10 @@ export default function MBTISelect() {
                 disabled={!!selected}
                 className={`mbti-select-card mbti-select-fade-in ${isChosen ? 'mbti-select-card--chosen' : ''} ${isFadingOut ? 'mbti-select-card--fading' : ''}`}
                 style={{
-                  background: BG_4,
+                  background: 'var(--glass-w-95)',
                   backdropFilter: 'blur(6px)',
                   border: `2px solid ${theme.accent}44`,
-                  borderRadius: 20,
+                  borderRadius: 10,
                   padding: '18px 12px',
                   cursor: selected ? 'default' : 'pointer',
                   display: 'flex',
@@ -93,7 +75,7 @@ export default function MBTISelect() {
                 } as React.CSSProperties}
               >
                 <MiniTree theme={theme} size={64} />
-                <div style={{ fontFamily: 'Fredoka One', fontSize: 16, color: theme.accent }}>{mbti}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: theme.accent }}>{mbti}</div>
                 <div style={{ fontSize: 11, color: 'var(--n300)', fontWeight: 600, textAlign: 'center' }}>{theme.treeName}</div>
               </button>
             )

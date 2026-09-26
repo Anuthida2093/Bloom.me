@@ -5,14 +5,9 @@ import { RANK_CATEGORIES, MOCK_LEADERBOARD_PLAYERS, type LeaderboardPlayer, type
 import { BADGE_ICONS, RANK_CATEGORY_ICONS } from '../../config/iconAssets';
 import './leaderboardRow.css';
 
-const C_1 = '#ccc'
-const C_2 = '#333333'
 const C_3 = 'rgba(244,196,48,.12)'
 const C_4 = 'rgba(180,180,180,.1)'
 const C_5 = 'rgba(244,132,95,.1)'
-
-const BORDER_1 = C_1
-const TEXT_2 = C_2
 
 export type PanelPlayer = LeaderboardPlayer
 
@@ -26,7 +21,6 @@ interface LeaderboardPanelProps {
   onToggle?: () => void
   myMbti?: MbtiType
   myName?: string
-  glass?: boolean
   onPlayerClick?: (player: PanelPlayer) => void
   /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 8] สถิติจริงของผู้ใช้เอง ใช้คำนวณอันดับจริงแทนเลข "#8"
    *  ที่ hardcode ไว้เดิม (ตรวจโค้ดจริงแล้ว — ไม่เคยมีการคำนวณอันดับผู้ใช้เองเลยสักจุด) */
@@ -46,7 +40,6 @@ export default function LeaderboardPanel({
   onToggle = () => {},
   myMbti = 'INFP',
   myName,
-  glass = false,
   onPlayerClick = () => {},
   myLevel = 0,
   myKnowledgeStack = 0,
@@ -81,266 +74,151 @@ export default function LeaderboardPanel({
     onMyRankChange?.(myRankOverall);
   }, [myRankOverall, onMyRankChange]);
 
+  /* [ย่อขนาด + กรอบใหม่ — Part D] กรอบเขียวเข้มขอบทอง + ป้ายหัวข้อแบบม้วนกระดาษลอยทับขอบบน
+     + แผ่นเนื้อหาสีครีมขอบบาง + ป้ายชื่อ "อันดับของฉัน" แยกเป็นแถบล่าง (สไตล์อยู่ใน
+     leaderboardRow.css — .lb-frame*) ภาพกรอบประดับจริงตามภาพอ้างอิงยังไม่มีไฟล์ใน
+     public/assets/images/ui/frames/ นี่คือเวอร์ชัน CSS ที่ใกล้เคียงที่สุดไปก่อน */
   return (
     <div
       style={{
-        width: collapsed ? 0 : 220,/* แก้ตามที่ระบุ: 200 → 220 ให้ความกว้างของกระดานจัดอันดับใหญ่ขึ้น */
-        flexShrink: 0,/* แก้ตามที่ระบุ: 0 → 1 ให้กระดานจัดอันดับไม่ย่อเล็กลงเมื่อพื้นที่แคบ */
+        // จอแคบ: .dashboard__panel จำกัดไว้ที่ 44vw — ย่อตามไม่ให้กรอบล้นช่อง (ชื่อยาวตัด … เอง)
+        width: collapsed ? 0 : 'min(190px, 44vw)',
+        flexShrink: 0,
         transition: 'width .3s cubic-bezier(0.4, 0, 0.2, 1)',
-        position: 'relative',/* แก้ตามที่ระบุ: relative → fixed ให้กระดานจัดอันดับอยู่ด้านบนสุดของหน้าจอเสมอ */
-        zIndex: 50,/* แก้ตามที่ระบุ: 50 → 100 ให้กระดานจัดอันดับอยู่เหนือปุ่มอื่น ๆ */
+        position: 'relative',
+        zIndex: 50,
       }}
     >
-      {/* ═══ ปุ่มเปิด/ปิด (< >) นำออกมาอยู่นอกเงื่อนไข เพื่อให้คงอยู่เสมอ ═══ */}
+      {/* ปุ่มเปิด/ปิด (‹ ›) — อยู่นอกเงื่อนไข collapsed เพื่อให้คงอยู่เสมอ */}
       <button
-        onClick={onToggle}/* แก้ตามที่ระบุ: onClick={() => setCollapsed(!collapsed)} → onClick={onToggle} ให้ใช้ callback จาก props แทนการจัดการ state ภายใน */
+        onClick={onToggle}
         title={collapsed ? 'กางกระดานจัดอันดับ' : 'ซ่อนกระดานจัดอันดับ'}
+        aria-label={collapsed ? 'กางกระดานจัดอันดับ' : 'ซ่อนกระดานจัดอันดับ'}
+        className="lb-toggle"
         style={{
-          position: 'absolute',
-          top: 12,
+          top: 24,
           left: collapsed ? 0 : '100%',
           transform: collapsed ? 'none' : 'translateX(-50%)',
-          zIndex: 100,
-          width: 28,/* แก้ตามที่ระบุ: 24 → 28 ให้ปุ่มเปิด/ปิดใหญ่ขึ้น */
-          height: 28,
-          borderRadius: '50%',
-          border: `1.5px solid var(--border-mid, ${BORDER_1})`,
-          background: 'var(--fixed-white)',
-          color: TEXT_2,/* แก้ตามที่ระบุ: var(--text) → TEXT_2 ให้สีตัวอักษรเข้มขึ้น */
-          cursor: 'pointer',/* แก้ตามที่ระบุ: cursor: 'pointer' → cursor: 'pointer' ให้ปุ่มเปิด/ปิดมีเคอร์เซอร์เป็น pointer */
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 24,/* แก้ตามที่ระบุ: 16 → 20 ให้ตัวอักษรในปุ่มเปิด/ปิดใหญ่ขึ้น */
-          fontWeight: 'bold',
-          boxShadow: '0 2px 8px var(--glass-b-25)',
-          transition: 'left .3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         {collapsed ? '›' : '‹'}
       </button>
 
-      {/* ═══ เนื้อหาการ์ด ═══ */}
       <div
-        className={glass ? 'card glass' : 'card'}
+        className="lb-frame"
         style={{
-          height: '100%',/* แก้ตามที่ระบุ: height: '100%' → height: '100%' ให้กระดานจัดอันดับเต็มความสูงของหน้าจอ */
-          display: 'flex',/* แก้ตามที่ระบุ: display: 'flex' → display: 'flex' ให้กระดานจัดอันดับเป็น flex container */
-          flexDirection: 'column',
-          overflow: 'hidden',
           opacity: collapsed ? 0 : 1,
           pointerEvents: collapsed ? 'none' : 'auto',
-          transition: 'opacity .2s ease',
           visibility: collapsed ? 'hidden' : 'visible',
         }}
       >
-        {/* Header */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, var(--g800), var(--g700))',
-            padding: '12px 16px',/* แก้ตามที่ระบุ: padding: '12px 16px' → padding: '14px 16px' ให้พื้นที่ด้านบนและล่างของ header มากขึ้น */
-          }}
-        >
-          <div
-            style={{
-              fontFamily: 'Fredoka One',
-              fontSize: 20,/* แก้ตามที่ระบุ: 18 → 20 ให้ตัวอักษรใหญ่ขึ้น */
-              color: 'var(--fixed-white)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,/* แก้ตามที่ระบุ: gap: 6 → gap: 8 ให้ช่องว่างระหว่างไอคอนและข้อความมากขึ้น */
-            }}
-          >
-            <img src={BADGE_ICONS.trophy} className="icon-img" alt="" /> จัดอันดับ
-          </div>
+        {/* ป้ายหัวข้อแบบม้วนกระดาษ ลอยทับขอบบนของกรอบ */}
+        <div className="lb-frame__banner">
+          <img src={BADGE_ICONS.trophy} className="icon-img" alt="" /> จัดอันดับ
         </div>
 
-        {/* Cat tabs */}
-        <div
-          style={{
-            display: 'flex',/* แก้ตามที่ระบุ: display: 'flex' → display: 'flex' ให้ปุ่มหมวดหมู่จัดอันดับเรียงเป็นแถว */
-            padding: '2px 8px 4px',
-            gap: 1,
-            borderBottom: '1px solid var(--border)',
-          }}
-        >
-          {RANK_CATEGORIES.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setCat(c.id)}
-              style={{
-                flex: 1,/* แก้ตามที่ระบุ: flex: 1 → flex: 1 ให้ปุ่มแต่ละหมวดหมู่มีความกว้างเท่ากัน */
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '5px 2px',
-                border: 'none',
-                borderRadius: 4,/* แก้ตามที่ระบุ: borderRadius: 8 → borderRadius: 8 ให้ปุ่มหมวดหมู่จัดอันดับมีมุมโค้งมน */
-                cursor: 'pointer',
-                fontFamily: 'Nunito',
-                fontSize: 38, /* แก้ตามที่ระบุ: 24 → 28 ให้ตัวอักษรใหญ่ขึ้น */
-                fontWeight: 700,
-                background: cat === c.id ? 'var(--g700)' : 'transparent',
-                color: cat === c.id ? 'var(--fixed-white)' : 'var(--text-sub)',
-                transition: 'all .15s',
-              }}
-            >
-              {RANK_CATEGORY_ICONS[c.id] ? <img src={RANK_CATEGORY_ICONS[c.id]} className="icon-img" alt={c.label} /> : c.icon}
-            </button>
-          ))}
-        </div>
-
-        {/* List */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '6px 8px',
-          }}
-          className="no-scroll"
-        >
-          {sorted.map((p, i) => {
-            const pt = MBTI_TREE_THEME[p.mbtiType];
-
-            return (
-              <div
-                key={p.id}
-                className="leaderboard-row"
-                onClick={() => onPlayerClick(p)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,/* แก้ตามที่ระบุ: gap: 6 → gap: 8 ให้ช่องว่างระหว่างไอคอนและข้อความมากขึ้น */
-                  padding: '7px 6px',
-                  borderRadius: 10,
-                  marginBottom: 4,
-                  background:
-                    i < 3
-                      ? [
-                          C_3,
-                          C_4,
-                          C_5,
-                        ][i]
-                      : 'transparent',
-                }}
+        {/* แผ่นเนื้อหาสีครีม: แท็บหมวด + รายชื่อ */}
+        <div className="lb-frame__sheet">
+          <div className="lb-frame__tabs">
+            {RANK_CATEGORIES.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setCat(c.id)}
+                title={c.label}
+                aria-label={c.label}
+                aria-pressed={cat === c.id}
+                className={`lb-frame__tab${cat === c.id ? ' lb-frame__tab--active' : ''}`}
               >
-                <span
+                {RANK_CATEGORY_ICONS[c.id] ? <img src={RANK_CATEGORY_ICONS[c.id]} className="icon-img" alt="" /> : c.icon}
+              </button>
+            ))}
+          </div>
+
+          <div className="lb-frame__list no-scroll">
+            {sorted.map((p, i) => {
+              const pt = MBTI_TREE_THEME[p.mbtiType];
+
+              return (
+                <div
+                  key={p.id}
+                  className="leaderboard-row"
+                  onClick={() => onPlayerClick(p)}
                   style={{
-                    fontSize: 16, /* แก้ตามที่ระบุ: 13 → 16 ให้ตัวเลขอันดับใหญ่ขึ้น */
-                    width: 20,
-                    textAlign: 'center',
-                    flexShrink: 0,/* แก้ตามที่ระบุ: flexShrink: 0 → flexShrink: 0 ให้ตัวเลขอันดับไม่ย่อเล็กลง */
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '3px 5px',
+                    borderRadius: 8,
+                    marginBottom: 2,
+                    background: i < 3 ? [C_3, C_4, C_5][i] : 'transparent',
                   }}
                 >
-                  {i < 3
-                    ? <img src={RANK_ICONS[i]} alt={MEDALS[i]} style={{ width: 18, height: 18, objectFit: 'contain' }} />
-                    : `${i + 1}`}
-                </span>
+                  <span style={{ fontSize: 12, fontWeight: 700, width: 20, textAlign: 'center', flexShrink: 0, color: 'var(--text-sub)' }}>
+                    {i < 3
+                      ? <img src={RANK_ICONS[i]} alt={MEDALS[i]} style={{ width: 20, height: 20, objectFit: 'contain', display: 'block' }} />
+                      : `${i + 1}`}
+                  </span>
 
-                <MiniTree theme={pt} size={38} />
+                  <MiniTree theme={pt} size={28} />
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    className="leaderboard-row__name"
-                    style={{
-                      fontFamily: 'Fredoka One',
-                      fontSize: 16,/* แก้ตามที่ระบุ: 10 → 11 ให้ตัวอักษรใหญ่ขึ้น */
-                      color: 'var(--text)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {p.username}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      className="leaderboard-row__name"
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: 13,
+                        lineHeight: 1.2,
+                        color: 'var(--text)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '100%',
+                      }}
+                    >
+                      {p.username}
+                    </div>
+                    <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, lineHeight: 1.2 }}>
+                      {p.mbtiType}
+                    </div>
                   </div>
 
-                  <div
-                    style={{
-                      fontSize: 9,/* แก้ตามที่ระบุ: 8 → 9 ให้ตัวอักษรใหญ่ขึ้น */
-                      color: 'var(--text-muted)',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {p.mbtiType}
-                  </div>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, color: 'var(--g600)', flexShrink: 0 }}>
+                    {cat === 'level' ? p.level : p[cat]}
+                  </span>
                 </div>
-
-                <span
-                  style={{
-                    fontFamily: 'Fredoka One',
-                    fontSize: 14,/* แก้ตามที่ระบุ: 10 → 14 ให้ตัวอักษรใหญ่ขึ้น ตัวเลขข้างหลัง*/
-                    color: 'var(--g600)',
-                    flexShrink: 0,
-                  }}
-                >
-                  {cat === 'level' ? p.level : p[cat]}
-                </span>
-              </div>
-            );
-          })}
-
-          {/* My rank */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '7px 6px',
-              borderRadius: 10,
-              marginTop: 4,
-              background: myTheme.accent + '18',
-              border: `1.5px solid ${myTheme.accent}44`,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 16,/* แก้ตามที่ระบุ: 10 → 12 ให้ตัวเลขอันดับใหญ่ขึ้น */
-                width: 20,
-                textAlign: 'center',
-                color: myTheme.accent,
-                fontWeight: 700,
-              }}
-            >
-              #{myRankForCurrentCat}
-            </span>
-
-            <MiniTree theme={myTheme} size={38} />
-
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontFamily: 'Fredoka One',
-                  fontSize: 16,/* แก้ตามที่ระบุ: 10 → 11 ให้ตัวอักษรใหญ่ขึ้น */
-                  color: myTheme.accent,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {myName || 'คุณ'}
-              </div>
-
-              <div
-                style={{
-                  fontSize: 14,/* แก้ตามที่ระบุ: 8 → 9 ให้ตัวอักษรใหญ่ขึ้น */
-                  color: 'var(--text-muted)',
-                  fontWeight: 700,
-                }}
-              >
-                {myMbti}
-              </div>
-            </div>
-
-            <span
-              style={{
-                fontSize: 16,/* แก้ตามที่ระบุ: 9 → 12 ให้ตัวอักษรใหญ่ขึ้น */
-                color: myTheme.accent,
-                fontWeight: 700,
-              }}
-            >
-              ฉัน
-            </span>
+              );
+            })}
           </div>
+        </div>
+
+        {/* ป้ายชื่อด้านล่าง: อันดับของฉัน */}
+        <div className="lb-frame__plate" style={{ borderColor: myTheme.accent + '88' }}>
+          <span style={{ fontSize: 12, width: 22, textAlign: 'center', color: myTheme.accent, fontWeight: 800, flexShrink: 0 }}>
+            #{myRankForCurrentCat}
+          </span>
+
+          <MiniTree theme={myTheme} size={26} />
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 13,
+                lineHeight: 1.2,
+                color: myTheme.accent,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {myName || 'คุณ'}
+            </div>
+            <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, lineHeight: 1.2 }}>
+              {myMbti}
+            </div>
+          </div>
+
+          <span style={{ fontSize: 11, color: myTheme.accent, fontWeight: 800, flexShrink: 0 }}>ฉัน</span>
         </div>
       </div>
     </div>

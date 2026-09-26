@@ -334,7 +334,7 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
         </div>
       )}
 
-      {!showSummary && <button className="step-journey-game__close-btn" onClick={exit}>✕</button>}
+      {!showSummary && <button className="step-journey-game__close-btn" onClick={exit} title="ปิด" aria-label="ปิด"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>}
     </div>
   )
 }

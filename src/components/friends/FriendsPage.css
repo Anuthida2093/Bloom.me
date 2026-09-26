@@ -9,10 +9,6 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-top: 80px;
-}
-@media (max-width: 768px) {
-  .friends-page { padding-top: 66px; }
 }
 
 .friends-page__head {

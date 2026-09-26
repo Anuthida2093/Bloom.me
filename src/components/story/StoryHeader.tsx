@@ -1,3 +1,5 @@
+import { BADGE_ICONS } from '../../config/iconAssets'
+
 interface StoryHeaderProps {
   query: string
   onQueryChange: (q: string) => void
@@ -34,7 +36,7 @@ export default function StoryHeader({
       <button className="story-header__icon-btn show-tablet" title="เมนู" onClick={onToggleMobileSidebar}>☰</button>
       {/* [แก้ข้อ 4] ปุ่มปิดมาตรฐาน — ทรงเดียวกับปุ่มปิดของ ProfilePage.tsx (วงกลมพื้นการ์ด+เงา
           ไม่ใช่วงกลมทึบเข้มแบบกระดิ่ง/แฮมเบอร์เกอร์) แทนที่ปุ่ม Home ลอยกลางจอที่ตัดออกแล้ว */}
-      <button className="story-header__close-btn" title="ปิด" onClick={onClose}>✕</button>
+      <button className="story-header__close-btn" title="ปิด" onClick={onClose}><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
     </div>
   )
 }

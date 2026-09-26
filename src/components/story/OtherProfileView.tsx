@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { usePosts } from '../../context/PostContext'
 import PostCard from './PostCard'
 import { MOCK_LEADERBOARD_PLAYERS, type LeaderboardPlayer } from '../../config/leaderboardData'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 /*============================================================================*\
   OtherProfileView — [ใหม่ — ข้อ 9/10/11/15] หน้าโปรไฟล์ "คนอื่น" เปิดจาก list เพื่อน/
@@ -30,7 +31,7 @@ export default function OtherProfileView({ userId, username, onBack, onViewTree 
   return (
     <div className="story-subpage">
       <div className="story-subpage__head">
-        <button className="story-subpage__back" onClick={onBack}>←</button>
+        <button className="story-subpage__back" onClick={onBack} title="กลับ" aria-label="กลับ"><img src={BADGE_ICONS.back} className="icon-img" alt="" /></button>
         <span className="story-subpage__title">โปรไฟล์</span>
       </div>
 
@@ -42,7 +43,7 @@ export default function OtherProfileView({ userId, username, onBack, onViewTree 
       <div style={{ display: 'flex', gap: 10, marginBottom: 22 }}>
         {player ? (
           <button className="story-btn-outline" style={{ padding: '9px 18px', borderRadius: 999 }} onClick={() => onViewTree(player)}>
-            🌳 ดูต้นไม้
+            <img src={BADGE_ICONS.tree} className="icon-img" alt="" /> ดูต้นไม้
           </button>
         ) : (
           <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>ยังไม่มีข้อมูลต้นไม้ของผู้ใช้นี้</span>

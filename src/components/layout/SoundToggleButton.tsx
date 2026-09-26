@@ -1,4 +1,5 @@
 import { useAudio } from '../../context/AudioContext'
+import { useLanguage } from '../../context/LanguageContext'
 
 const C_1 = 'rgba(244,196,48,.4)'
 const C_2 = 'rgba(244,196,48,.4)'
@@ -7,8 +8,8 @@ const BORDER_1 = C_1
 const SHADOW_2 = C_2
 
 interface SoundToggleButtonProps {
-  /** true = ลอยอยู่มุมขวาบนของจอ (สำหรับหน้า Login/Register/WelcomeModal/MBTISelect ที่ยัง
-   *  ไม่มี NavBar) — false = ปุ่มธรรมดาฝังในแถบเมนู (ใช้ใน NavBar.tsx) */
+  /** true = ลอยอยู่มุมขวาบนของจอ (หน้า Login/Register/WelcomeModal/MBTISelect)
+   *  — false = ปุ่มธรรมดาสำหรับฝังในแถบ/กลุ่มปุ่มอื่น */
   floating?: boolean
 }
 
@@ -18,12 +19,14 @@ interface SoundToggleButtonProps {
  */
 export default function SoundToggleButton({ floating = false }: SoundToggleButtonProps) {
   const { isMuted, toggleMute } = useAudio()
+  const { t } = useLanguage()
 
   if (floating) {
     return (
       <button
         onClick={toggleMute}
-        title={isMuted ? 'เปิดเสียง' : 'ปิดเสียง'}
+        title={isMuted ? t('common.soundOn') : t('common.soundOff')}
+        aria-label={isMuted ? t('common.soundOn') : t('common.soundOff')}
         style={{
           position: 'fixed', top: 16, right: 16, zIndex: 50,
           width: 44, height: 44, borderRadius: 99, border: '1.5px solid var(--glass-w-50)',
@@ -42,7 +45,8 @@ export default function SoundToggleButton({ floating = false }: SoundToggleButto
   return (
     <button
       onClick={toggleMute}
-      title={isMuted ? 'เปิดเสียง' : 'ปิดเสียง'}
+      title={isMuted ? t('common.soundOn') : t('common.soundOff')}
+        aria-label={isMuted ? t('common.soundOn') : t('common.soundOff')}
       style={{
         width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${BORDER_1}`,
         background: 'var(--glass-w-10)', fontSize: 15, cursor: 'pointer',

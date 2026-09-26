@@ -122,7 +122,7 @@ export default function SettingsModal({
         <div className="settings-hero__blob" style={{ background: `${theme.accent}18` }} aria-hidden="true" />
         <MiniTree theme={theme} size={56} />
         <div>
-          <div className="settings-hero__title">⚙️ ตั้งค่า</div>
+          <div className="settings-hero__title"><img src={BADGE_ICONS.settings} className="icon-img" alt="" /> ตั้งค่า</div>
           {mbtiType && <div className="settings-hero__subtitle" style={{ color: theme.accent }}>{theme.treeName} · {mbtiType}</div>}
         </div>
       </div>
@@ -602,8 +602,8 @@ function SettingBtn({ icon, label, onClick, accent }: SettingBtnProps) {
 }
 
 /** [แก้ตามที่ระบุ] เอาความเป็น "ป็อบอัพลอยกลางจอ" ออก — เปลี่ยนเป็น full-screen section
- *  เหมือน InventoryModal/ShopSection ทุกจุด (พื้นทึบเต็มจอ + เนื้อหาเริ่มใต้ Navbar 95px
- *  + ปุ่มปิดลอยใต้ Navbar เช่นกัน) แทนการ์ดลอยกลางจอแบบเดิม
+ *  เหมือน InventoryModal/ShopSection ทุกจุด (พื้นทึบเต็มจอ + ปุ่มปิดกากบาทลอยมุมขวาบน
+ *  + เนื้อหาเริ่มที่ 72px ใต้ปุ่มนั้น) แทนการ์ดลอยกลางจอแบบเดิม
  *  [แก้รอบหลัง] maxWidth เดิม 480px แคบเกินไปเทียบกับ ShopSection (1100)/InventoryModal (900)
  *  จนดูเหมือนการ์ดแคบๆ ลอยอยู่กลางพื้นที่ว่าง ขยายเป็น 760px — ยังแคบกว่า Shop/Inventory
  *  เพราะเนื้อหาเป็นฟอร์ม/รายการตั้งค่า ไม่ใช่กริดการ์ดสินค้า กว้างเกินไปจะยืดฟอร์มจนอ่านยาก
@@ -614,6 +614,19 @@ export function Overlay({ children, onClose, accent = 'var(--g600)' }: { childre
   useEscapeKey(onClose)
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--bg)', overflowY: 'auto' }}>
+      {/* ปุ่มปิด (กากบาท) ลอยมุมขวาบน — แบบเดียวกับหน้าโปรไฟล์ (ProfilePage.tsx) */}
+      <button
+        onClick={onClose}
+        title="ปิด"
+        aria-label="ปิดหน้าตั้งค่า"
+        style={{
+          position: 'fixed', top: 14, right: 14, zIndex: 20, width: 44, height: 44, borderRadius: 99,
+          border: 'none', background: 'var(--bg-card)', boxShadow: 'var(--sh-card)',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <img src={BADGE_ICONS.close} alt="" style={{ width: 26, height: 26, objectFit: 'contain' }} />
+      </button>
       <div
         className="settings-overlay-card"
         style={{
@@ -622,7 +635,8 @@ export function Overlay({ children, onClose, accent = 'var(--g600)' }: { childre
           // ลอยทับทุก modal เสมอตามที่ตั้งใจ — ดู ActionMenuBar.css) บังตอนเลื่อนจนสุด เพราะ
           // เดิม padding-bottom (48px) น้อยกว่าความสูงจริงของแถบเมนูลอย (~100px/~80px มือถือ)
           // ใช้ --gpf-safe-bottom (โทเคนกลางใน index.css) บวกระยะห่างเพิ่มอีกนิด แทนเลขตายตัว
-          padding: 'calc(95px) 20px calc(var(--gpf-safe-bottom, 100px) + 24px)',
+          // 72px = เว้นปุ่มปิดลอยมุมขวาบน (top 14 + สูง 44) ไม่ให้ทับแถบหัวบนจอแคบ
+          padding: '72px 20px calc(var(--gpf-safe-bottom, 100px) + 24px)',
           boxShadow: `0 0 0 1px ${accent}14`,
         }}>
         {children}
@@ -652,7 +666,7 @@ export function Overlay({ children, onClose, accent = 'var(--g600)' }: { childre
  *  หลักเป๊ะ และ z-index สูงกว่า Overlay (500) เพื่อให้ลอยทับหน้าตั้งค่าหลักได้ถูกต้อง */
 function SubModalTemplate({ title, onClose, accent, children }: { title: string, onClose: () => void, accent: string, children: ReactNode }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-card)', zIndex: 510, padding: '95px 20px 28px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-card)', zIndex: 510, padding: '24px 20px 28px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ maxWidth: 760, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexShrink: 0 }}>
           <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-lg)', color: 'var(--heading-accent)' }}>{title}</div>
@@ -663,7 +677,7 @@ function SubModalTemplate({ title, onClose, accent, children }: { title: string,
               width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: `${accent}14`, border: 'none', borderRadius: '50%', fontSize: 18, cursor: 'pointer', color: accent,
             }}
-          >✕</button>
+          ><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
         </div>
         {/* [แก้บั๊กเดียวกับ Overlay หลัก] เนื้อหาล่างสุดของหน้าย่อย (เช่นปุ่มบันทึกโปรไฟล์)
             ก็โดน ActionMenuBar บังได้เหมือนกันถ้า scroll จนสุด — กันชนด้วยโทเคนเดียวกัน */}

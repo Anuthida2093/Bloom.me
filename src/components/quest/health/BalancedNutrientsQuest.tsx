@@ -11,6 +11,7 @@ import { analyzeFoodPhoto, describeFoodAnalysisError } from '../../../services/a
 import type { QuestPlayPayload } from '../../../types.mental'
 import type { Gender } from '../../../types'
 import './BalancedNutrientsQuest.css'
+import { BADGE_ICONS } from '../../../config/iconAssets'
 
 const QUEST_CODE = 'phys-balanced-nutrients'
 /** [ตามที่ระบุ] สมมติ activity level ระดับ "ออกแรงเบาถึงปานกลาง" ไปก่อน — ระบบยังไม่มีข้อมูล
@@ -211,7 +212,7 @@ export default function BalancedNutrientsQuest({ onComplete, onClose }: Balanced
 
   return (
     <div className="balanced-nutrients">
-      <button onClick={onClose} title="ปิด" className="balanced-nutrients__close" aria-label="ปิดเควสแคลอรี่ตาม BMI">✕</button>
+      <button onClick={onClose} title="ปิด" className="balanced-nutrients__close" aria-label="ปิดเควสแคลอรี่ตาม BMI"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       <div className="balanced-nutrients__content">
         <h1 className="balanced-nutrients__title">แคลอรี่ตาม BMI</h1>

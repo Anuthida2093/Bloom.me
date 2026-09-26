@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import './CameraCapture.css'
+import { BADGE_ICONS } from '../../../config/iconAssets'
 
 interface CameraCaptureProps {
   onSave: (imageSrc: string) => void
@@ -135,10 +136,8 @@ export default function CameraCapture({ onSave, onCancel }: CameraCaptureProps) 
 
         {/* ปุ่มกลับมุมซ้ายบน */}
         {onCancel && (
-          <button className="camera-btn-back-top-left" onClick={onCancel} aria-label="กลับ">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 18l-6-6 6-6"/>
-            </svg>
+          <button className="camera-btn-back-top-left" onClick={onCancel} title="กลับ" aria-label="กลับ">
+            <img src={BADGE_ICONS.back} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
           </button>
         )}
         

@@ -64,7 +64,7 @@ export default function NavbarQuest({
               (ต่างจาก popup รางวัลที่เพิ่งได้รับซึ่งให้ตัวเลขนำหน้ารูปตามที่ระบุ) */}
           <span className="navbar-quest__stat-pill"><img src={BADGE_ICONS.coins} className="icon-img" alt="" /> {coins.toLocaleString()}</span>
           {onClose && (
-            <button onClick={onClose} title="ปิด" className="navbar-quest__close-btn">✕</button>
+            <button onClick={onClose} title="ปิด" className="navbar-quest__close-btn"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
           )}
         </div>
       </div>

@@ -9,6 +9,7 @@ import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import CameraCapture from '../shared/CameraCapture'
 import { MOOD_TYPE_INFO } from '../../../config/moodTypes'
 import './OracleCardsPage.css'
+import { BADGE_ICONS } from '../../../config/iconAssets'
 
 type Stage = 'intro' | 'spread' | 'reading' | 'camera'
 
@@ -88,7 +89,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
 
   return (
     <div className="oracle-game-container">
-      <button onClick={handleClose} title="ปิด" className="oracle-page__close">✕</button>
+      <button onClick={handleClose} title="ปิด" className="oracle-page__close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       <div className="oracle-page__bg" />
       {Array.from({ length: 25 }).map((_, i) => (

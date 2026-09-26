@@ -1,4 +1,5 @@
 import { usePersistentState } from '../../hooks/usePersistentState'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 /*============================================================================*\
   ContentSettingsPage — [ไฟล์ใหม่ — ฟีเจอร์สตอรี่] ปุ่ม "การตั้งค่าเนื้อหา" ใน sidebar
@@ -15,7 +16,7 @@ export default function ContentSettingsPage({ onBack }: { onBack: () => void }) 
   return (
     <div className="story-subpage">
       <div className="story-subpage__head">
-        <button className="story-subpage__back" onClick={onBack}>←</button>
+        <button className="story-subpage__back" onClick={onBack} title="กลับ" aria-label="กลับ"><img src={BADGE_ICONS.back} className="icon-img" alt="" /></button>
         <span className="story-subpage__title">การตั้งค่าเนื้อหา</span>
       </div>
 

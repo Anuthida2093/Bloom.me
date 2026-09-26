@@ -3,6 +3,7 @@ import type { ActivityItem } from '../../types'
 import { useSocial } from '../../context/SocialContext'
 import { usePosts } from '../../context/PostContext'
 import PostCard from './PostCard'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 /*============================================================================*\
   ActivityPanel — [แก้รอบนี้ — ข้อ 14] หน้ากิจกรรมเต็มจอ (ไม่ใช่ popup ลอยกลางจอแบบเดิม)
@@ -56,7 +57,7 @@ export default function ActivityPanel({ onBack }: { onBack: () => void }) {
   return (
     <div className="story-subpage">
       <div className="story-subpage__head">
-        <button className="story-subpage__back" onClick={onBack}>←</button>
+        <button className="story-subpage__back" onClick={onBack} title="กลับ" aria-label="กลับ"><img src={BADGE_ICONS.back} className="icon-img" alt="" /></button>
         <span className="story-subpage__title">กิจกรรม</span>
       </div>
 

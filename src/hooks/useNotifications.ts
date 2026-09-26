@@ -49,7 +49,7 @@ export interface NotificationItem {
 
 /** [แก้ตามที่ระบุ — เปลี่ยนอีโมจิเป็นรูปภาพทั้งหมดสำหรับการแจ้งเตือน] ใช้รูปจริงจาก
  *  iconAssets.ts ทุกจุดที่มีไฟล์จริงรองรับ — ตรวจแล้วไม่มีไฟล์ไอคอน "ไลค์"/"คอมเมนต์" อยู่ใน
- *  public/assets/images/icons/badges/ เลยสักไฟล์ (ls จริงแล้ว) จึงยังคงเป็นอีโมจิไว้ก่อน 2 จุด
+ *  public/assets/images/decorations/ (เดิม icons/badges/) เลยสักไฟล์ (ls จริงแล้ว) จึงยังคงเป็นอีโมจิไว้ก่อน 2 จุด
  *  นี้เท่านั้น — ถ้ามีไฟล์รูปเพิ่มในอนาคตค่อยสลับ path เข้ามาแทนที่นี่ได้จุดเดียว */
 const ACTIVITY_ICON: Record<ActivityItem['type'], { icon: string; isImage: boolean }> = {
   NEW_FOLLOWER: { icon: BADGE_ICONS.friends, isImage: true },

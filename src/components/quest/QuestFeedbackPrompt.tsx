@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Z_INDEX } from '../../config/zIndex'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 const AUTO_DISMISS_MS = 6000
 
@@ -44,7 +45,7 @@ export default function QuestFeedbackPrompt({ data, onReact, onDismiss }: QuestF
         <button onClick={() => onReact('neutral')} title="เฉยๆ" aria-label="เฉยๆ">😐</button>
         <button onClick={() => onReact('bad')} title="ไม่ค่อยดี" aria-label="ไม่ค่อยดี">👎</button>
       </div>
-      <button className="quest-feedback-prompt__dismiss" onClick={onDismiss} title="ข้าม" aria-label="ข้าม">✕</button>
+      <button className="quest-feedback-prompt__dismiss" onClick={onDismiss} title="ข้าม" aria-label="ข้าม"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       <style>{`
         .quest-feedback-prompt {

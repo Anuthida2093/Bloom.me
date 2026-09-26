@@ -5,6 +5,7 @@ import OwlAvatar from '../OwlAvatar'
 import { useAppContext } from '../../../context/AppContext'
 import { playSfx } from '../../../utils/audioPlayer'
 import { useIsLowPowerMode } from '../../../hooks/useMediaQuery'
+import { BADGE_ICONS } from '../../../config/iconAssets'
 
 const C_13 = '#4B5563'
 const C_14 = '#374151'
@@ -898,7 +899,7 @@ export default function LearningQuestMap({
             onClick={() => setIsSideMenuOpen((v) => !v)}
             title="เควสเสริม"
           >
-            {isSideMenuOpen ? '✕' : '📋'}
+            {isSideMenuOpen ? <img src={BADGE_ICONS.close} className="icon-img" alt="" /> : '📋'}
           </button>
         </div>
       )}

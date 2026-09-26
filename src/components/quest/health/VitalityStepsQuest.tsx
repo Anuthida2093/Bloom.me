@@ -233,7 +233,7 @@ export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStep
       )}
       <div className="vitality-steps__scrim" aria-hidden="true" />
 
-      <button onClick={onClose} title="ปิด" className="vitality-steps__close" aria-label="ปิดเควสก้าวเพื่อสุขภาพ">✕</button>
+      <button onClick={onClose} title="ปิด" className="vitality-steps__close" aria-label="ปิดเควสก้าวเพื่อสุขภาพ"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       {stage !== 'done' && (
         <div className="vitality-steps__content">

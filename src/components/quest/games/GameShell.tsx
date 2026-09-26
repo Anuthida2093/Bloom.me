@@ -128,7 +128,7 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
             title="ปิด"
             aria-label={`ปิดเควส ${quest.titleTh}`}
           >
-            ✕
+            <img src={BADGE_ICONS.close} className="icon-img" alt="" />
           </button>
         </>
       ) : (
@@ -140,7 +140,7 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
               <div className="game-shell__subtitle">{quest.title}</div>
             </div>
           </div>
-          <button className="game-shell__close" onClick={requestClose} title="ปิด" aria-label={`ปิดเควส ${quest.titleTh}`}>✕</button>
+          <button className="game-shell__close" onClick={requestClose} title="ปิด" aria-label={`ปิดเควส ${quest.titleTh}`}><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
         </header>
       )}
 

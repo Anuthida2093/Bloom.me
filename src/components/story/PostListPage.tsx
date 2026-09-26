@@ -1,5 +1,6 @@
 import type { PostData } from '../../types'
 import PostCard from './PostCard'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 /*============================================================================*\
   PostListPage — [ไฟล์ใหม่ — ฟีเจอร์สตอรี่] หน้ารายการโพสต์ใช้ซ้ำ 3 จุดจาก sidebar grid:
@@ -16,7 +17,7 @@ export default function PostListPage({ title, posts, emptyMessage, onBack }: Pos
   return (
     <div className="story-subpage">
       <div className="story-subpage__head">
-        <button className="story-subpage__back" onClick={onBack}>←</button>
+        <button className="story-subpage__back" onClick={onBack} title="กลับ" aria-label="กลับ"><img src={BADGE_ICONS.back} className="icon-img" alt="" /></button>
         <span className="story-subpage__title">{title}</span>
       </div>
       {posts.length === 0 ? (

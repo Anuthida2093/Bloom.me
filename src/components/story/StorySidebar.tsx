@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react'
 import { useUser } from '../../context/UserContext'
 import { useSocial } from '../../context/SocialContext'
 import type { SearchUserResult } from '../../services/api/social.api'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 /*============================================================================*\
   StorySidebar — [ไฟล์ใหม่ — ฟีเจอร์สตอรี่] คอลัมน์ขวา (หน้า 1-2 ของ wireframe)
@@ -28,12 +30,12 @@ function initialOf(name: string): string {
 /* [แก้รอบนี้ — ข้อ 12] ตัด "รีโพสต์" ออกจาก grid ทั้งหมด (ฟีเจอร์ถูกตัดทิ้งทั้งเฟส) เหลือ
  * 5 ปุ่ม — "กิจกรรม" ย้ายมาเป็น view ปกติในนี้แทนการยิง callback แยก (ข้อ 14 ทำเป็นหน้าเต็มจอ
  * เหมือนหน้าอื่นๆ ในกริดนี้แล้ว ไม่ต้องมี prop onOpenActivity แยกอีกต่อไป) */
-const GRID_ITEMS: { view: StoryView; icon: string; label: string }[] = [
+const GRID_ITEMS: { view: StoryView; icon: ReactNode; label: string }[] = [
   { view: 'friends', icon: '👥', label: 'เพื่อน' },
   { view: 'anonymousPosts', icon: '🕶️', label: 'โพสต์ปิดโปรไฟล์' },
   { view: 'activity', icon: '🔔', label: 'กิจกรรม' },
   { view: 'likedPosts', icon: '❤️', label: 'ที่ถูกใจ' },
-  { view: 'contentSettings', icon: '⚙️', label: 'การตั้งค่าเนื้อหา' },
+  { view: 'contentSettings', icon: <img src={BADGE_ICONS.settings} className="icon-img" alt="" />, label: 'การตั้งค่าเนื้อหา' },
 ]
 
 export default function StorySidebar({ query, searchFocused, onNavigate }: StorySidebarProps) {
@@ -84,7 +86,7 @@ export default function StorySidebar({ query, searchFocused, onNavigate }: Story
             <div key={r.id} className="story-search-row">
               <div className="story-avatar story-avatar--sm">{initialOf(r.username)}</div>
               <span className="story-search-row__name">{r.username}</span>
-              <button className="story-search-row__remove" onClick={() => removeRecentSearch(r.id)}>✕</button>
+              <button className="story-search-row__remove" onClick={() => removeRecentSearch(r.id)} title="ลบ" aria-label="ลบออกจากประวัติการค้นหา"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
             </div>
           ))
         )}

@@ -18,6 +18,14 @@ import type { MbtiType } from '../types'
   ที่เหลือจากการตัดออก) ตรงกับ shape เลข 2 ห้าม map ตามลำดับตัวอักษรตรงๆ (A→1,B→2,...)
   เพราะจะได้ทรงผิดกลุ่ม MBTI ทั้ง 4 กลุ่มทันที
 
+  [ย้ายโฟลเดอร์ — 2026-09-26] leaf/ground อ่านจากโฟลเดอร์โครงสร้างใหม่แล้ว (สำเนาไฟล์เดิม
+  byte-ต่อ-byte ตามการจับคู่ SHAPE_TO_RAW_LETTER ด้านล่าง):
+    tree/leaves-flowers/shape-{N}/leaf_shape-{N}_lv{L}.png   (N = เลข shape 1-4 ไม่ใช่ตัวอักษร)
+    tree/soil-roots/ground_variant_{1-3}.png
+  ลำต้นยัง "ชี้โฟลเดอร์เดิม" (ตัวอักษร A-D) โดยตั้งใจ — ไฟล์ใน tree/trunk/shape-1/ เป็นงานภาพ
+  "คนละชุด" กับที่ใช้อยู่ (hash ไม่ตรงไฟล์ไหนเลย) และ branch-tips/*.json วัดจากภาพชุดเดิม
+  ถ้าสลับไปใช้ภาพใหม่ใบจะไม่เกาะปลายกิ่ง รอเจ้าของโปรเจกต์เลือกชุดภาพลำต้นก่อน
+
   [หมายเหตุสำคัญ] ระบบนี้ "แยกต่างหาก" จากระบบเดิมที่ TreeOfLife.tsx เคยใช้ (src/assets/
   trees/<MBTI>/trunk_lvl{N}.* โหลดผ่าน import.meta.glob) ซึ่งไม่มีไฟล์จริงเลยสักไฟล์ (เช็ค
   แล้ว มีแค่ .gitkeep) — leaf/ground ย้ายมาใช้ระบบนี้แทนแล้วในรอบนี้ (เดิมยังใช้ระบบเก่าอยู่)
@@ -61,17 +69,13 @@ function clampVisualLevel(visualLevel: number): number {
   return Math.max(1, Math.min(8, Math.round(visualLevel)))
 }
 
-/** โฟลเดอร์ต้นทางจริงตามที่ทีมงานส่งมอบมา (ชื่อภาษาไทย/มีช่องว่าง/วงเล็บ/em dash/เท่ากับ
- *  ปนกัน — ยังไม่ใช่ชื่อสุดท้าย) ใช้ encodeURI() ตอนประกอบ URL เสมอ (เข้ารหัสเฉพาะช่องว่าง/
- *  อักขระนอก ASCII เท่านั้น ไม่แตะ '/','=','(',')' ที่ต้องคงไว้ตรงๆ ในโครงสร้าง path) */
+/** โฟลเดอร์ลำต้นต้นทางที่ทีมงานส่งมอบมา (ชื่อภาษาไทย/มีช่องว่าง/วงเล็บ/em dash/เท่ากับปนกัน)
+ *  — ยังใช้อยู่จนกว่าจะเลือกชุดภาพลำต้น (ดูหัวไฟล์) ใช้ encodeURI() ตอนประกอบ URL เสมอ
+ *  (เข้ารหัสเฉพาะช่องว่าง/อักขระนอก ASCII ไม่แตะ '/','=','(',')' ที่ต้องคงไว้ในโครงสร้าง path) */
 const TRUNK_ROOT_FOLDER = 'ส่วนที่ 1 Trunk Layer (8 Level) — Shape A'
-const LEAF_ROOT_FOLDER = 'ส่วนที่ 2 LeafCanopy Layer (8 Level) — Shape A'
-const GROUND_ROOT_FOLDER = 'ส่วนที่ 3 Ground Layer (3 แบบ)'
 
-/** เลขรหัสต่อท้ายชื่อโฟลเดอร์ย่อยแต่ละตัวอักษร (ของจริงบนดิสก์ — ดู `ls` ที่ทำไว้ก่อนแก้ไฟล์
- *  นี้) เลขชุด Trunk (1000x) กับ Leaf (2000x) ไม่ใช่เลขเดียวกัน ต้องแยกตาราง */
+/** เลขรหัสต่อท้ายชื่อโฟลเดอร์ย่อยลำต้นแต่ละตัวอักษร (ของจริงบนดิสก์) */
 const TRUNK_SUFFIX: Record<RawShapeLetter, string> = { A: '10001', B: '10002', C: '10003', D: '10004' }
-const LEAF_SUFFIX: Record<RawShapeLetter, string> = { A: '20001', B: '20002', C: '20003', D: '20004' }
 
 /** ลำต้น — มีไฟล์จริงครบทั้ง 4 shape × 8 level แล้ว (432×432/435×435, RGBA มี alpha จริง) */
 export function getTrunkImagePath(mbtiType: MbtiType | null | undefined, visualLevel: number): string {
@@ -80,13 +84,14 @@ export function getTrunkImagePath(mbtiType: MbtiType | null | undefined, visualL
   return encodeURI(`/assets/images/tree/${TRUNK_ROOT_FOLDER}/shape ${letter}=${TRUNK_SUFFIX[letter]}/tree_${letter}_trunk_lv${clamped}.png`)
 }
 
-/** ใบไม้ — ชุดฐาน (ไม่ทาสีเฉพาะ MBTI) มีไฟล์จริงครบทั้ง 4 shape × 8 level แล้ว [ต้องแจ้ง]
- *  ตอนนี้ยังไม่มี alpha channel เลยสักไฟล์ (เจ้าของโปรเจกต์แจ้งว่าจะตัดเองภายหลัง) — จะเห็น
- *  เป็นกล่องทึบบังลำต้นชั่วคราวจนกว่าจะตัด alpha เสร็จ ไม่ใช่บั๊กโค้ด */
+/** ใบไม้ — ชุดฐาน (ไม่ทาสีเฉพาะ MBTI) ครบ 4 shape × 8 level ที่ tree/leaves-flowers/shape-{N}/
+ *  (โฟลเดอร์ใช้เลข shape ตรงๆ ไม่ต้องแปลงเป็นตัวอักษรแล้ว) [ต้องแจ้ง] ตอนนี้ยังไม่มี alpha channel
+ *  เลยสักไฟล์ (เจ้าของโปรเจกต์แจ้งว่าจะตัดเองภายหลัง) — จะเห็นเป็นกล่องทึบบังลำต้นชั่วคราวจนกว่า
+ *  จะตัด alpha เสร็จ ไม่ใช่บั๊กโค้ด */
 export function getLeafImagePath(mbtiType: MbtiType | null | undefined, visualLevel: number): string {
-  const letter = SHAPE_TO_RAW_LETTER[resolveShape(mbtiType)]
+  const shape = resolveShape(mbtiType)
   const clamped = clampVisualLevel(visualLevel)
-  return encodeURI(`/assets/images/tree/${LEAF_ROOT_FOLDER}/shape ${letter}=${LEAF_SUFFIX[letter]}/tree_${letter}_leaf_lv${clamped}.png`)
+  return `/assets/images/tree/leaves-flowers/shape-${shape}/leaf_shape-${shape}_lv${clamped}.png`
 }
 
 /** [ใหม่ — ตามที่ระบุรอบนี้] พิกัด "ปลายกิ่งจริง" ที่ตรวจจับมาจากภาพลำต้นแต่ละ shape/level
@@ -100,12 +105,9 @@ export function getBranchTipsPath(mbtiType: MbtiType | null | undefined, visualL
   return encodeURI(`/assets/images/tree/branch-tips/shape-${letter}-trunk-lv${clamped}.json`)
 }
 
-/** พื้นดิน — ไม่ผูกกับ MBTI/shape มีแค่ 3 variant ใช้ร่วมกันทุกต้น
- *  [แก้ตามที่ระบุรอบนี้] เจ้าของโปรเจกต์แก้ไฟล์จริงบนดิสก์แล้ว (ตรวจซ้ำจริงด้วย `ls`:
- *  ground_variant_1/2/3.png นามสกุลเดียวเรียบร้อย ไม่มี .png.png ซ้อนแล้ว) โค้ดเดิมยังต่อ
- *  .png.png ตามชื่อไฟล์เก่า ทำให้ 404 ไปหมด — ตัดนามสกุลซ้ำออกให้ตรงกับไฟล์จริง */
+/** พื้นดิน — ไม่ผูกกับ MBTI/shape มีแค่ 3 variant ใช้ร่วมกันทุกต้น (tree/soil-roots/) */
 export function getGroundImagePath(variant: 1 | 2 | 3): string {
-  return encodeURI(`/assets/images/tree/${GROUND_ROOT_FOLDER}/ground_variant_${variant}.png`)
+  return `/assets/images/tree/soil-roots/ground_variant_${variant}.png`
 }
 
 /*============================================================================*\

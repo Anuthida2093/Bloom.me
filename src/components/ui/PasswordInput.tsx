@@ -21,6 +21,18 @@ interface PasswordInputProps {
   id?: string
 }
 
+/** ไอคอนตา/ตาขีดฆ่า แบบ inline SVG — แทน emoji 👁️/🙈 ที่หน้าตาต่างกันไปทุก OS/เบราว์เซอร์
+ *  ใช้ stroke="currentColor" จึงรับสีเดียวกับตัวอักษรในช่องกรอกอัตโนมัติ */
+function EyeIcon({ slashed }: { slashed: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+      {slashed && <path d="M3 3l18 18" />}
+    </svg>
+  )
+}
+
 export default function PasswordInput({
   value, onChange, placeholder, style, onFocus, onBlur, required, name, autoComplete, id,
 }: PasswordInputProps) {
@@ -49,10 +61,12 @@ export default function PasswordInput({
         style={{
           position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
           width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 17, opacity: 0.75,
+          border: 'none', background: 'transparent', cursor: 'pointer', opacity: 0.75,
+          color: style?.color ?? 'inherit',
         }}
       >
-        {visible ? '🙈' : '👁️'}
+        {/* กำลังแสดงรหัสผ่านอยู่ → ไอคอนตาขีดฆ่า (กดเพื่อซ่อน) ตรงกับความหมายของ emoji 🙈 เดิม */}
+        <EyeIcon slashed={visible} />
       </button>
     </div>
   )

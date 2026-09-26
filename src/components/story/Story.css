@@ -12,20 +12,13 @@
   44px") — หัวข้อใหญ่ๆ ใช้ clamp() เพิ่มให้ขยับตามความกว้างจอจริงด้วย
 \*============================================================================*/
 
-/* [แก้บั๊กจากการทดสอบจริง] .top-navbar (z-index:999) กับ ActionMenuBar (z-index:1000) ลอย
-   ทับทุก modal เสมอโดยตั้งใจ (ดู index.css/NavBar.css) — เหมือนที่ ProfilePage.tsx เว้น
-   padding-top 95px กันเนื้อหาเข้าไปซ้อนใต้ NavBar ที่นี่ต้องเว้นระยะบนเท่ากับความสูงจริง
-   ของ .top-navbar (80px/56px มือถือ) ไม่งั้น story-header จะโดน NavBar บังมิดจนกดอะไรไม่ได้ */
+/* [ลบ NavBar แล้ว] เดิมเว้น padding-top 80px/56px ให้ .top-navbar ที่ลอยทับ — ไม่มีแถบนั้นแล้ว
+   เนื้อหาเริ่มชิดขอบบนจอได้เลย (ActionMenuBar ยังลอยทับด้านล่างเหมือนเดิม) */
 .story-overlay {
   position: fixed; inset: 0; z-index: 500;
   background: var(--bg);
   display: flex; flex-direction: column;
   overflow: hidden;
-  padding-top: 80px;
-}
-@media (max-width: 768px) {
-  .story-overlay { padding-top: 56px; }
-  .story-sidebar { top: 56px; }
 }
 
 /* ─── Header ─── */
@@ -88,7 +81,7 @@
 
 @media (max-width: 900px) {
   .story-sidebar {
-    position: fixed; top: 80px; right: 0; bottom: 0; width: 280px; z-index: 60;
+    position: fixed; top: 0; right: 0; bottom: 0; width: 280px; z-index: 60;
     transform: translateX(100%); transition: transform var(--dur-mid) var(--ease-out-soft);
     box-shadow: var(--sh-modal);
   }

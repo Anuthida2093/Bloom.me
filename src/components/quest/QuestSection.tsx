@@ -12,6 +12,7 @@ import { useAppContext, DAILY_FOCUS_QUOTA_MINUTES } from '../../context/AppConte
 import QuestRewardCelebration, { type QuestCelebrationData } from './QuestRewardCelebration'
 import QuestFeedbackPrompt, { type QuestFeedbackPromptData } from './QuestFeedbackPrompt'
 import { playSfx } from '../../utils/audioPlayer'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 interface QuestSectionProps {
   questLogs?: QuestLogEntry[]
@@ -292,7 +293,7 @@ export default function QuestSection({
             : tab.emoji} {ZONE_TITLES[activeTab]}
         </span>
       </div>
-      <button onClick={onClose} title="ปิด" className="quest-section-close-btn">✕</button>
+      <button onClick={onClose} title="ปิด" className="quest-section-close-btn"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       <QuestRewardCelebration data={celebration} onDone={() => setCelebration(null)} />
       <QuestFeedbackPrompt data={feedbackPrompt} onReact={handleQuestFeedback} onDismiss={() => setFeedbackPrompt(null)} />
@@ -345,12 +346,9 @@ export default function QuestSection({
              var(--bg) ของกล่องนี้ (สีขาว/อ่อน) แทนที่จะเป็นฉากเข้ม กลายเป็นแถบขาวที่ขอบล่าง
              ตอนนี้แก้ที่ "องค์ประกอบที่ชิดขอบล่างจริงๆ" แทน ผ่าน --gpf-safe-bottom ที่ประกาศ
              ไว้ที่ .gameplay-frame (GameplayFrame.css) ให้ทุกหน้าลูกอ้างอิงร่วมกัน */
-          position: fixed; top: 80px; left: 0; right: 0; bottom: 0;
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
           display: flex; flex-direction: column;
           background: var(--bg);
-        }
-        @media (max-width: 768px) {
-          .quest-section-root { top: 56px; }
         }
         .quest-section-body {
           flex: 1; min-height: 0; display: flex; flex-direction: column;

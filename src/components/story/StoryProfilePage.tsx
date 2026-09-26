@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useUser } from '../../context/UserContext'
 import { usePosts } from '../../context/PostContext'
 import PostCard from './PostCard'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 /*============================================================================*\
   StoryProfilePage — [ไฟล์ใหม่ — ฟีเจอร์สตอรี่] หน้า 7 ของ wireframe
@@ -50,7 +51,7 @@ export default function StoryProfilePage({ onBack, onEditProfile, onViewTree }: 
   return (
     <div className="story-subpage">
       <div className="story-subpage__head">
-        <button className="story-subpage__back" onClick={onBack}>←</button>
+        <button className="story-subpage__back" onClick={onBack} title="กลับ" aria-label="กลับ"><img src={BADGE_ICONS.back} className="icon-img" alt="" /></button>
         <span className="story-subpage__title">โปรไฟล์</span>
       </div>
 
@@ -70,7 +71,7 @@ export default function StoryProfilePage({ onBack, onEditProfile, onViewTree }: 
       <div style={{ display: 'flex', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
         <button className="story-btn-outline" style={{ padding: '9px 18px', borderRadius: 999 }} onClick={onEditProfile}>แก้ไขโปรไฟล์</button>
         <button className="story-btn-outline" style={{ padding: '9px 18px', borderRadius: 999 }} onClick={handleShareProfile}>แชร์โปรไฟล์</button>
-        <button className="story-btn-outline" style={{ padding: '9px 18px', borderRadius: 999 }} onClick={onViewTree}>🌳 ดูต้นไม้</button>
+        <button className="story-btn-outline" style={{ padding: '9px 18px', borderRadius: 999 }} onClick={onViewTree}><img src={BADGE_ICONS.tree} className="icon-img" alt="" /> ดูต้นไม้</button>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>

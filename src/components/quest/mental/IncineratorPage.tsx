@@ -5,6 +5,7 @@ import { playSfx, startLoopingSfx, stopLoopingSfx } from '../../../utils/audioPl
 import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import './IncineratorPage.css'
+import { BADGE_ICONS } from '../../../config/iconAssets'
 
 type Stage = 'ask' | 'write' | 'reading' | 'crumpling' | 'drag' | 'burning' | 'done'
 
@@ -220,7 +221,7 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
   return (
     <div className="incinerator-frame">
       <div className="incinerator-frame__ambient-bg" />
-      <button onClick={requestClose} title="ปิด" className="incinerator-frame__close">✕</button>
+      <button onClick={requestClose} title="ปิด" className="incinerator-frame__close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       <AnimatePresence mode="wait">
         {stage === 'ask' && (

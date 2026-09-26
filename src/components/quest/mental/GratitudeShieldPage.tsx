@@ -9,6 +9,7 @@ import JournalHistoryModal from './shared/JournalHistoryModal'
 import { QUEST_ICONS } from '../../../config/iconAssets'
 
 import './GratitudeShieldPage.css'
+import { BADGE_ICONS } from '../../../config/iconAssets'
 
 const C_1 = '#FFB020'
 const C_2 = '#FFB020'
@@ -118,7 +119,7 @@ export default function GratitudeShieldPage({ alreadyCompleted, onComplete, onCl
     <div className="gratitude-shield-page">
       {/* ปุ่มปิดหน้าจอหลัก (มุมขวาบน) */}
       <button onClick={onClose} title="ปิด" className="gratitude-shield-page__close">
-        ✕
+        <img src={BADGE_ICONS.close} className="icon-img" alt="" />
       </button>
 
       {/* [ย้ายตามที่ระบุ — ข้อ 12] ป้ายลอยมุมซ้ายบน "ประวัติเกราะแห่งความขอบคุณ" ย้ายไปเป็น

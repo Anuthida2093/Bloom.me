@@ -147,7 +147,7 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
   return (
     // [ข้อกำหนดข้อ 2] Full Screen Overlay เหมือน QuestSection เป๊ะ — พื้นทึบเต็มจอ เลื่อนได้ มีปุ่มปิดของตัวเอง
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'linear-gradient(180deg, var(--n50) 0%, var(--b50) 100%)', overflowY: 'auto' }}>
-    <section id="shop" style={{ padding: '95px 20px 48px', position: 'relative' }}>
+    <section id="shop" style={{ padding: '24px 20px 48px', position: 'relative' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>

@@ -4,11 +4,9 @@
   [สำคัญ] path ทุกตัวคัดลอกมาจากผล `ls -la` ของโฟลเดอร์จริงตรงๆ ไม่ใช่จากชื่อไฟล์ในเอกสาร
   "ภาพรวมโปรเจค new.docx" ตรงๆ เพราะคอลัมน์ "ชื่อไฟล์" ในเอกสารพิมพ์ผิดเกือบทุกแถว (ส่วนใหญ่
   เป็น .npg/.nng แทน .png จริง) เทียบตัวอย่างที่ต่างกันจริง:
-    - เอกสารเขียน 'Water.png'/'Coins.png'/'Item.png'/'Friends.png'/'Home.png'/'Profile.png'/
-      'Streak.png' (ตัวใหญ่นำ) — ไฟล์จริงทั้งหมดนี้เป็นตัวเล็ก (water.png, coins.png, item.png,
-      friends.png, home.png, profile.png) ยกเว้น Streak.png ที่ตัวใหญ่จริง
-    - เอกสารเขียน 'Learning Quests.png' — ไฟล์จริงคือ 'Learning Quests.npg.png' (สะกดผิดจริง
-      ในชื่อไฟล์ มีนามสกุลซ้อนกัน 2 ชั้น ต้องอ้างอิงตามนี้เป๊ะ)
+    - [อัปเดต 2026-09-26] ชุด BADGE_ICONS ย้ายไป decorations/ และเปลี่ยนชื่อไฟล์ตามรายชื่อของ
+      เจ้าของโปรเจกต์แล้ว (Water.png/Coins.png/Item.png/Friends.png/Home.png ฯลฯ และ
+      'Learning Quests.png' ไม่มีนามสกุลซ้อนแล้ว) — ดูหมายเหตุเหนือ BADGE_ICONS
     - เอกสารเขียน fox.jpeg — ไฟล์จริงคือ fox.png
     - [รอบก่อนหน้า] ls โฟลเดอร์ badges เจอไฟล์ 'Physical Quests.png' แล้ว จึงเพิ่ม key
       physicalTab ได้แล้ว — QUEST_TABS หมวดสุขภาพกาย (💪) ใช้รูปจริงได้แล้ว
@@ -24,42 +22,47 @@
   ห้ามแก้ path ในไฟล์นี้ให้ตรงกับเอกสารร่างแบบไม่เช็คของจริงอีก ถ้าจะเพิ่ม/แก้ค่าใดในอนาคต
   ต้อง ls โฟลเดอร์จริงก่อนเสมอ */
 
-/** ไอคอน badge/สถิติ/ปุ่มระบบ ทั่วไป — จาก public/assets/images/icons/badges/ */
+/** รูป badge/สถิติ/ปุ่มระบบ ทั่วไป — จาก public/assets/images/decorations/
+ *  [ย้ายโฟลเดอร์ — 2026-09-26] เดิมอยู่ที่ icons/badges/ เจ้าของโปรเจกต์ขอย้ายมา decorations/ ทั้งชุด
+ *  (ไฟล์กลุ่มนี้ไม่ใช่ "ไอคอน") ย้ายด้วย git mv และเปลี่ยนชื่อไฟล์ให้ตรงรายชื่อที่เจ้าของโปรเจกต์ให้มา
+ *  (ตัวพิมพ์ใหญ่นำ เช่น Water.png/Coins.png/Home.png, แก้ 'Learning Quests.npg.png' → 'Learning
+ *  Quests.png') — key ทุกตัวคงชื่อเดิม โค้ดที่เรียก BADGE_ICONS.xxx จึงไม่ต้องแก้
+ *  [ยังไม่มีไฟล์] leaf (🍃) — ไม่มีไฟล์ leaf ใดๆ ทั้งในโฟลเดอร์เดิมและใหม่ */
+const DECOR = '/assets/images/decorations'
+
 export const BADGE_ICONS = {
-  water: '/assets/images/icons/badges/water.png',
-  seed: '/assets/images/icons/badges/seed.png',
-  exp: '/assets/images/icons/badges/EXP.png',
-  tree: '/assets/images/icons/badges/tree.png',
-  streak: '/assets/images/icons/badges/Streak.png',
-  coins: '/assets/images/icons/badges/coins.png',
-  trophy: '/assets/images/icons/badges/badge.png',
-  item: '/assets/images/icons/badges/item.png',
-  questTab: '/assets/images/icons/badges/Quest Icon.png',
-  learningTab: '/assets/images/icons/badges/Learning Quests.npg.png',
-  // [เพิ่มรอบนี้] ยืนยันแล้วว่ามีไฟล์จริง (ls ล่าสุด) — รอบก่อนหน้ายังไม่มีไฟล์นี้ในโฟลเดอร์
-  physicalTab: '/assets/images/icons/badges/Physical Quests.png',
-  mentalTab: '/assets/images/icons/badges/Mental Quests.png',
-  store: '/assets/images/icons/badges/Store.png',
-  home: '/assets/images/icons/badges/home.png',
-  checkin: '/assets/images/icons/badges/Check-in.png',
-  profile: '/assets/images/icons/badges/profile.png',
-  rank1: '/assets/images/icons/badges/1.png',
-  rank2: '/assets/images/icons/badges/2.png',
-  rank3: '/assets/images/icons/badges/3.png',
-  friends: '/assets/images/icons/badges/friends.png',
-  share: '/assets/images/icons/badges/share.png',
-  notification: '/assets/images/icons/badges/Notification.png',
-  // [เพิ่มรอบนี้ — จากตาราง badge ในเอกสาร docx แถว "🌸 Flower"] ไม่มีคำอธิบายจุดใช้งานที่
-  // ชัดเจนในเอกสาร (ช่องรายละเอียดว่างเปล่า) grep 🌸 ทั้งโปรเจกต์แล้วไม่พบจุดไหนที่ควรใช้ไอคอนนี้
-  // นอกเหนือจาก QUEST_TAB_ICONS.mental ที่ผูกกับ Mental Quests.png ไปแล้ว (คนละแถวคนละไฟล์ใน
-  // เอกสาร) จึงยังไม่ได้เอาไปต่อสายใช้งานจริงที่ไหน — เก็บ path ไว้เผื่ออนาคต
-  flower: '/assets/images/icons/badges/flower.png',
-  // [เพิ่มรอบนี้ — เควส Balanced Nutrients] ยืนยันแล้วว่ามีไฟล์จริง (ls badges/) ใช้เล่นแอนิเมชัน
-  // "บัวรดน้ำบินเข้าต้นไม้" ตอนกลับมา Dashboard หลังปิดเควสสำเร็จ (ดู WateringCanFx.tsx)
-  wateringCan: '/assets/images/icons/badges/Watering Can.png',
-  // [เพิ่มรอบนี้ — แจ้งเตือนอารมณ์ลบต่อเนื่อง] ยืนยันแล้วว่ามีไฟล์จริง (ls badges/) ใช้เป็นไอคอน
-  // กล่องพยาบาลลอยมุมจอ (ดู MedicalBoxAlert.tsx) แทน emoji 🏥 ชั่วคราว
-  medicalBox: '/assets/images/icons/badges/Medical Box.png',
+  water: `${DECOR}/Water.png`,
+  seed: `${DECOR}/Seed.png`,
+  exp: `${DECOR}/EXP.png`,
+  tree: `${DECOR}/tree.png`,
+  streak: `${DECOR}/Streak.png`,
+  coins: `${DECOR}/Coins.png`,
+  trophy: `${DECOR}/badge.png`,
+  item: `${DECOR}/Item.png`,
+  questTab: `${DECOR}/Quest Icon.png`,
+  learningTab: `${DECOR}/Learning Quests.png`,
+  physicalTab: `${DECOR}/Physical Quests.png`,
+  mentalTab: `${DECOR}/Mental Quests.png`,
+  store: `${DECOR}/Store.png`,
+  home: `${DECOR}/Home.png`,
+  checkin: `${DECOR}/Check-in.png`,
+  profile: `${DECOR}/profile.png`,
+  rank1: `${DECOR}/1.png`,
+  rank2: `${DECOR}/2.png`,
+  rank3: `${DECOR}/3.png`,
+  friends: `${DECOR}/Friends.png`,
+  share: `${DECOR}/Share.png`,
+  notification: `${DECOR}/Notification.png`,
+  // ไม่มีคำอธิบายจุดใช้งานในเอกสาร — ยังไม่ได้ต่อสายใช้งานที่ไหน เก็บ path ไว้เผื่ออนาคต
+  flower: `${DECOR}/Flower.png`,
+  // บัวรดน้ำบินเข้าต้นไม้หลังปิดเควส Balanced Nutrients สำเร็จ (ดู WateringCanFx.tsx)
+  wateringCan: `${DECOR}/Watering Can.png`,
+  // กล่องพยาบาลลอยมุมจอ แจ้งเตือนอารมณ์ลบต่อเนื่อง (ดู MedicalBoxAlert.tsx)
+  medicalBox: `${DECOR}/Medical Box.png`,
+  // [ใหม่] ปุ่มควบคุมทั่วไป — แทนสัญลักษณ์ข้อความ ←/✕/⚙️
+  back: `${DECOR}/Return.png`,
+  close: `${DECOR}/Cross.png`,
+  settings: `${DECOR}/Settings.png`,
 } as const
 
 /** ไอคอนหมวดเควส (QUEST_TABS[].emoji) — ครบทั้ง 3 หมวดแล้ว (รอบก่อนหน้าหมวดสุขภาพกายยังไม่มี

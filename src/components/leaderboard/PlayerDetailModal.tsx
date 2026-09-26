@@ -2,6 +2,7 @@ import { MBTI_TREE_THEME } from '../../types'
 import type { LeaderboardPlayer } from '../../config/leaderboardData'
 import MiniTree from '../tree/MiniTree'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 interface PlayerDetailModalProps {
   /** null = ยังไม่มีใครถูกเลือก — component คืน null ทันที ไม่ render อะไรเลย (ดูใน Dashboard.tsx:
@@ -98,7 +99,7 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
                 flexShrink: 0,
               }}
             >
-              ✕
+              <img src={BADGE_ICONS.close} className="icon-img" alt="" />
             </button>
           </div>
 

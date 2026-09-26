@@ -39,7 +39,7 @@ export default function MoodGateScreen({ title, icon, iconImg, accent, onRequest
           border: 'none', background: 'var(--glass-w-18)', color: 'var(--fixed-white)', cursor: 'pointer', fontSize: 15,
         }}
       >
-        ✕
+        <img src={BADGE_ICONS.close} className="icon-img" alt="" />
       </button>
 
       {/* [แก้บั๊ก — พบระหว่างทดสอบจริงตามข้อ 7] เดิม heading ใช้ color: var(--n900) และ

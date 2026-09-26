@@ -2,6 +2,7 @@ import type { ReactNode, MouseEvent } from 'react'
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { Z_INDEX } from '../../config/zIndex'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 /**
  * PanelModal — เหมือน Overlay ใน SettingsModal.jsx แต่กว้างกว่า (maxWidth 560)
@@ -45,7 +46,7 @@ export default function PanelModal({ children, onClose = () => {} }: PanelModalP
             fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1,
           }}
         >
-          ✕
+          <img src={BADGE_ICONS.close} className="icon-img" alt="" />
         </button>
         {children}
       </div>

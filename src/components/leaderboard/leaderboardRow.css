@@ -61,14 +61,134 @@
 }
 
 /* ==========================================================================
-   3. Sidebar Layout & Positioning (แก้ปัญหาทับ Navbar + เว้นระยะ 1cm)
+   3. กรอบกระดานจัดอันดับ (LeaderboardPanel) — [Part D] ย่อขนาด + กรอบใหม่
+   ภาพอ้างอิง: กรอบเขียวเข้มประดับ + ลายม้วนกระดาษด้านบน + พื้นเนื้อหาสีครีมขอบบาง
+   + ป้ายชื่อทรงมนแยกด้านล่าง — ภาพกรอบประดับจริงยังไม่มีไฟล์ (ui/frames/ ว่าง) นี่คือ
+   เวอร์ชัน CSS ที่ใกล้เคียงที่สุด ถ้ามีไฟล์กรอบแล้วสลับไปใช้ border-image ที่ .lb-frame ได้เลย
+   (เดิม section นี้คือ .left-sidebar-container/.leaderboard-panel-container ที่เว้นระยะจาก
+   NavBar — ไม่มี element ไหนใช้ class นั้นแล้ว และ NavBar ถูกลบไปแล้ว จึงลบทิ้ง)
    ========================================================================== */
 
-.left-sidebar-container,
-.leaderboard-panel-container {
-  margin-top: 1cm !important; /* เว้นระยะจาก Navbar ลงมา 1 เซนติเมตร */
-  max-height: calc(100vh - 1cm - 20px) !important; /* คุมความสูงไม่ให้ล้นหน้าจอ */
-  z-index: 10; /* ตั้งค่าให้อยู่ต่ำกว่า Navbar (Navbar ควรใช้ z-index: 100+) */
+.lb-frame {
+  --lb-gold: color-mix(in srgb, var(--coin) 70%, var(--g800));
+  position: relative;
+  margin-top: 14px;               /* ที่ว่างให้ป้ายหัวข้อที่ลอยทับขอบบน */
+  padding: 20px 6px 6px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--g800) 0%, var(--g900) 100%);
+  border: 2px solid var(--lb-gold);
+  box-shadow: 0 8px 22px var(--glass-b-30), inset 0 0 0 3px var(--g800), inset 0 0 0 4px color-mix(in srgb, var(--coin) 25%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: opacity .2s ease;
+}
+
+/* ป้ายหัวข้อแบบม้วนกระดาษ — ตัวป้าย + ปลายม้วนสองข้าง (::before/::after) */
+.lb-frame__banner {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 16px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--g600) 0%, var(--g800) 100%);
+  border: 2px solid var(--lb-gold);
+  box-shadow: 0 3px 8px var(--glass-b-30);
+  color: var(--fixed-white);
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1.2;
+  white-space: nowrap;
+  z-index: 1;
+}
+.lb-frame__banner::before,
+.lb-frame__banner::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 18px;
+  background: var(--g900);
+  border: 2px solid var(--lb-gold);
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+.lb-frame__banner::before { left: -8px; }
+.lb-frame__banner::after  { right: -8px; }
+
+/* แผ่นเนื้อหาสีครีม (--b50 กลับเป็นน้ำตาลเข้มตอน dark mode คู่กับ --text ที่กลับเป็นสีอ่อน) */
+.lb-frame__sheet {
+  background: var(--b50);
+  border: 1.5px solid var(--lb-gold);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.lb-frame__tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--coin) 35%, transparent);
+}
+.lb-frame__tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 2px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 25px;               /* .icon-img = 1.1em → ไอคอนหมวด ~28px (เดิม ~42px) — ภาพมีขอบว่างในตัว */
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.lb-frame__tab:hover { background: color-mix(in srgb, var(--g700) 12%, transparent); }
+.lb-frame__tab--active { background: var(--g700); }
+
+.lb-frame__list {
+  padding: 4px;
+  overflow-y: auto;
+  max-height: calc(100vh - 260px);
+}
+
+/* ป้ายชื่อ "อันดับของฉัน" แถบล่าง */
+.lb-frame__plate {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 999px;
+  background: var(--b50);
+  border: 1.5px solid var(--lb-gold);
+}
+
+/* ปุ่มเปิด/ปิดกระดาน (‹ ›) */
+.lb-toggle {
+  position: absolute;
+  z-index: 100;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--coin) 70%, var(--g800));   /* อยู่นอก .lb-frame จึงอ่าน --lb-gold ไม่ได้ */
+  background: var(--fixed-white);
+  color: var(--g800);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px var(--glass-b-25);
+  transition: left .3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ==========================================================================
@@ -88,24 +208,8 @@
   }
 }
 
-/* รองรับ แท็บเล็ต (iPad) */
-@media (max-width: 1024px) {
-  .left-sidebar-container,
-  .leaderboard-panel-container {
-    margin-top: 0.8cm !important;
-    max-height: calc(100vh - 0.8cm - 16px) !important;
-  }
-}
-
-/* รองรับ มือถือ (Mobile) */
-@media (max-width: 768px) {
-  .left-sidebar-container,
-  .leaderboard-panel-container {
-    margin-top: 0.5cm !important;
-    width: 190px !important;
-  }
-
-  .leaderboard-panel-container.collapsed {
-    width: 36px !important;
-  }
+/* จอแคบ — กรอบบางลงอีกนิด ป้ายหัวข้อเล็กลง */
+@media (max-width: 480px) {
+  .lb-frame { padding: 18px 4px 4px; gap: 4px; }
+  .lb-frame__banner { font-size: 12px; padding: 3px 12px; }
 }

@@ -1,5 +1,6 @@
 import { MOCK_LEADERBOARD_PLAYERS } from '../../config/leaderboardData'
 import { useSocial } from '../../context/SocialContext'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 /*============================================================================*\
   FriendsListPanel — [แก้รอบนี้ — ข้อ 3] "เพื่อน" = คนที่เราติดตามอยู่เท่านั้น (followerId
@@ -17,7 +18,7 @@ export default function FriendsListPanel({ onBack }: { onBack: () => void }) {
   return (
     <div className="story-subpage">
       <div className="story-subpage__head">
-        <button className="story-subpage__back" onClick={onBack}>←</button>
+        <button className="story-subpage__back" onClick={onBack} title="กลับ" aria-label="กลับ"><img src={BADGE_ICONS.back} className="icon-img" alt="" /></button>
         <span className="story-subpage__title">เพื่อน</span>
       </div>
 

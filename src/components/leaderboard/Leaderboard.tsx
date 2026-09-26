@@ -126,7 +126,7 @@ export default function Leaderboard({ onClose = () => {}, myMbti = 'INFP', myNam
               justifyContent: 'center',
             }}
           >
-            ✕
+            <img src={BADGE_ICONS.close} className="icon-img" alt="" />
           </button>
         </div>
 

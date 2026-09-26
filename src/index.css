@@ -59,7 +59,7 @@
      54px + 15px ≈ 80px) ย้ายมาเป็นโทเคนกลางที่ :root เพื่อให้ "ทุกหน้าจอที่ scroll ได้
      เต็มจอ" (ไม่ใช่แค่หน้าเควส) อ้างอิงร่วมกันได้ เช่น SettingsModal ที่ปุ่มออกจากระบบ
      อยู่ล่างสุดของเนื้อหาที่ scroll ได้ */
-  --gpf-safe-bottom: 100px;
+  --gpf-safe-bottom: 90px;   /* [Part E] แถบเมนูล่าง 60px + bottom 25px ≈ 85 → 90 */
 
   --sh-card:  0 2px 12px rgba(27,67,50,.09), 0 1px 3px rgba(27,67,50,.05);
   --sh-hover: 0 8px 28px rgba(27,67,50,.15), 0 2px 6px rgba(27,67,50,.07);
@@ -193,7 +193,7 @@
 }
 
 @media (max-width: 768px) {
-  :root { --gpf-safe-bottom: 80px; }
+  :root { --gpf-safe-bottom: 72px; }  /* มือถือ: 56 + 12 ≈ 68 → 72 */
 }
 
 /* ─── Dark Mode tokens ─── */

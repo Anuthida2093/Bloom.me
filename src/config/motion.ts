@@ -18,7 +18,10 @@
       </AnimatePresence>
 \*============================================================================*/
 
-const EASE_OUT_SOFT = [0.22, 1, 0.36, 1] as const
+export const EASE_OUT_SOFT = [0.22, 1, 0.36, 1] as const
+
+/** EASE_OUT_SOFT ในรูปแบบ CSS — ใช้กับ transition ที่เขียนเป็น inline style (ไม่ใช่ framer-motion) */
+export const EASE_OUT_SOFT_CSS = `cubic-bezier(${EASE_OUT_SOFT.join(', ')})`
 
 /** ฉากเต็มจอ / full-screen section (เควส ร้านค้า คลังไอเทม) */
 export const sceneEnter = {

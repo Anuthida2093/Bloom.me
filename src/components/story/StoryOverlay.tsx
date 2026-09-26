@@ -18,6 +18,7 @@ import ContentSettingsPage from './ContentSettingsPage'
 import PostListPage from './PostListPage'
 import PostCard from './PostCard'
 import './Story.css'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 /*============================================================================*\
   StoryOverlay — [แก้รอบนี้] หน้าหลักของฟีเจอร์ "สตอรี่"
@@ -139,7 +140,7 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
 
         {mobileSidebarOpen && <div className="story-sidebar__scrim" onClick={() => setMobileSidebarOpen(false)} />}
         <div className={`story-sidebar${mobileSidebarOpen ? ' story-sidebar--open' : ''}`}>
-          <button className="story-subpage__back story-sidebar__close-mobile" onClick={() => setMobileSidebarOpen(false)}>✕ ปิดเมนู</button>
+          <button className="story-subpage__back story-sidebar__close-mobile" onClick={() => setMobileSidebarOpen(false)}><img src={BADGE_ICONS.close} className="icon-img" alt="" /> ปิดเมนู</button>
           <StorySidebar
             query={searchQuery}
             searchFocused={searchFocused}

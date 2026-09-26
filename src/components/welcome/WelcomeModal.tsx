@@ -1,187 +1,187 @@
+import { useMemo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import CinematicBackground from '../layout/CinematicBackground'
-import { useAppContext } from '../../context/AppContext'
+import { useLanguage } from '../../context/LanguageContext'
+import SceneBackground from '../layout/SceneBackground'
 import SoundToggleButton from '../layout/SoundToggleButton'
+import LanguageSwitcher from '../layout/LanguageSwitcher'
+import ImageWithFallback from '../ui/ImageWithFallback'
 import { BADGE_ICONS } from '../../config/iconAssets'
+import type { TranslationKey } from '../../i18n/th'
+import WelcomeMessageCycler from './WelcomeMessageCycler'
+import AppFeaturesFooter from './AppFeaturesFooter'
 
-const C_1 = 'rgba(10,30,25,.35)'
-const C_2 = 'rgba(10,30,25,.15)'
-const C_3 = 'rgba(10,30,25,.45)'
-const C_4 = 'rgba(45,106,79,.45)'
-const C_5 = 'rgba(116,198,157,.12)'
-const C_6 = 'rgba(116,198,157,.22)'
-const C_7 = 'rgba(116,198,157,.12)'
+const SHADOW_HOVER = 'color-mix(in srgb, var(--g700) 45%, transparent)'
 
-const BG_1 = C_1
-const BG_2 = C_2
-const BG_3 = C_3
-const SHADOW_4 = C_4
-const BG_5 = C_5
-const BG_6 = C_6
-const BG_7 = C_7
+// ไม่มีการ์ดพื้นขาวรองแล้ว — ข้อความทุกตัววางบนวิดีโอตรงๆ ความชัดมาจาก overlay ไล่สีของ SceneBackground + เงาตัวอักษรนี้
+const TEXT_SHADOW = '0 1px 3px var(--glass-b-60), 0 2px 12px var(--glass-b-45)'
+
+const LOGO_SRC = '/assets/images/logo/Logo.png'
+
+// ประโยคแนะนำแอป — ประโยคที่พูดถึงหมวดเควสจะต่อท้ายด้วยรูปไอคอนหมวดนั้น (แทน emoji เดิม)
+const MESSAGES: { key: TranslationKey; icon?: { src: string; fallback: string } }[] = [
+  { key: 'welcome.message1' },
+  { key: 'welcome.message2', icon: { src: BADGE_ICONS.learningTab, fallback: '📚' } },
+  { key: 'welcome.message3', icon: { src: BADGE_ICONS.physicalTab, fallback: '💪' } },
+  { key: 'welcome.message4', icon: { src: BADGE_ICONS.mentalTab, fallback: '🌸' } },
+]
 
 /**
  * WelcomeModal — หน้าหลัก (Main / Landing Page, route "/")
  * ----------------------------------------------
- * [ข้อกำหนดข้อ 6] พื้นหลังเปลี่ยนจากภาพนิ่ง + Ken Burns มาเป็นวิดีโออนิเมชันจริง
- * (CinematicBackground — วิดีโอ hero-waterfall.mp4 เป็น source หลัก, เสียงผูกกับ
- * soundEnabled/musicVolume จาก SettingsModal เหมือนที่ใช้ในหน้า Login/Register)
- * และ "ลบตัวต้นไม้ออก" ตามที่ขอ — ไม่มี TreeOfLife ในหน้านี้แล้ว
+ * พื้นหลัง: SceneBackground (วิดีโอสลับตามการวางจอ + overlay) — ชุดเดียวกับหน้า auth ทั้งหมด
  *
- * [ข้อกำหนดข้อ 1] แยกปุ่มเป็น 2 ปุ่มชัดเจน:
- *  - "เข้าสู่ระบบ"   → /login    (กรอกแค่ username + password)
- *  - "สมัครสมาชิก"   → /register (กรอก email/username/password/birthDate/height/weight)
+ * เลย์เอาต์: กลุ่มบน (โลโก้ + หัวข้อ + ข้อความวนสลับ) / กลุ่มล่าง (ปุ่ม) ดันลงล่างจอด้วย marginTop: auto
+ * แล้วปิดท้ายด้วย AppFeaturesFooter (ตัวเดียวกับหน้า Login) — ไม่มีการ์ดพื้นขาวครอบ ทุกอย่างวางบนวิดีโอตรงๆ
+ *
+ * ปุ่ม:
+ *  - "เริ่มต้นใช้งาน"                    → /register
+ *  - "เป็นสมาชิกอยู่แล้ว? เข้าสู่ระบบ"   → /login
+ *
+ * ข้อความทุกตัวผ่าน t() ของ LanguageContext — หน้าต้นแบบของระบบแปลภาษา (ไทย ⇄ อังกฤษ)
  */
 export default function WelcomeModal() {
   const navigate = useNavigate()
-  const { settings } = useAppContext()
+  const { t } = useLanguage()
+  const messages = useMemo<ReactNode[]>(
+    () => MESSAGES.map(({ key, icon }) => (
+      <>
+        {t(key)}
+        {icon && (
+          <>
+            {' '}
+            {/* 1.4em ≈ สูงเท่าตัวอักษร ไม่ดัน line-height (1.6) ให้บรรทัดสูงขึ้น */}
+            <ImageWithFallback src={icon.src} fallback={icon.fallback} size="1.4em" inline />
+          </>
+        )}
+      </>
+    )),
+    [t],
+  )
 
   return (
     <div
       style={{
         minHeight: '100vh',
         position: 'relative',
-        overflow: 'hidden',
+        overflowX: 'hidden',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
+        // เว้นด้านบนให้พ้นแถบปุ่มภาษา/ลำโพงที่ลอยอยู่ (top 16 + สูง 44)
+        padding: 'clamp(4.5rem, 10vh, 5.5rem) clamp(1rem, 4vw, 1.5rem) clamp(1.25rem, 4vh, 2rem)',
       }}
     >
-      {/* ── พื้นหลังวิดีโออนิเมชันเต็มจอ (แทนภาพนิ่งเดิม) ── */}
-      <CinematicBackground musicVolume={settings.musicVolume} soundEnabled={settings.soundEnabled} />
+      <SceneBackground />
 
-      {/* [ใหม่] ปุ่มลำโพงลอยมุมขวาบน — หน้าแรกสุดของแอป ยังไม่มี NavBar ให้ใช้ */}
+      {/* มุมขวาบน: ปุ่มเลือกภาษา + ปุ่มลำโพง */}
+      <LanguageSwitcher />
       <SoundToggleButton floating />
 
-      {/* ไล่สีทับเบาๆ ให้ข้อความ/การ์ดด้านบนอ่านง่ายขึ้นโดยยังเห็นวิดีโอชัด */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 1,
-          background: `linear-gradient(180deg, ${BG_1} 0%, ${BG_2} 35%, ${BG_3} 100%)`,
-        }}
-      />
-
       {/* ── UI ทั้งหมด overlay อยู่บนสุด ── */}
-      <div style={{ position: 'relative', zIndex: 3, textAlign: 'center', maxWidth: 480, width: '100%' }}>
-        {/* Logo */}
-        <div style={{ fontSize: 72, marginBottom: 8, filter: 'drop-shadow(0 8px 24px var(--glass-b-45))' }}>🌱</div>
-        <h1
-          style={{
-            fontFamily: 'Fredoka One',
-            fontSize: 48,
-            color: 'var(--fixed-white)',
-            textShadow: '0 4px 18px var(--glass-b-55)',
-            marginBottom: 4,
-          }}
-        >
-          ARBOR HORIZON
-        </h1>
-        <p style={{ fontSize: 16, color: 'var(--fixed-white)', textShadow: '0 2px 10px var(--glass-b-55)', marginBottom: 36 }}>
-          ปลูกต้นไม้แห่งตัวเอง พัฒนาทุกด้านของชีวิต
-        </p>
-
-        {/* Main card */}
-        <div
-          style={{
-            background: 'var(--glass-w-90)',
-            backdropFilter: 'blur(16px)',
-            borderRadius: 28,
-            padding: '36px 32px',
-            boxShadow: '0 16px 60px var(--glass-b-35)',
-            border: '1.5px solid var(--glass-w-80)',
-          }}
-        >
-          <div style={{ fontSize: 22, marginBottom: 8 }}>🌳</div>
-          <h2 style={{ fontFamily: 'Fredoka One', fontSize: 24, color: 'var(--g800)', marginBottom: 8 }}>
-            คุณมีต้นไม้ประจำตัวแล้วหรือยัง?
-          </h2>
-          {/* [แก้บั๊ก — พบจากรีวิวโค้ด] เดิม --n500 กลับด้านเป็นสีอ่อนตอน dark mode (#7EAD8C บน
-              การ์ดพื้นขาว --glass-w-90 ที่ไม่เปลี่ยนตามธีมเลย) คอนทราสต์ต่ำกว่ามาตรฐาน อ่านยาก
-              ในโหมดมืด — เปลี่ยนไปใช้ --g800 แทน (สีเดียวกับหัวข้อด้านบนในการ์ดนี้เอง ไม่กลับด้าน
-              ตามธีม อ่านออกชัดทั้ง 2 โหมดเสมอ) */}
-          <p style={{ fontSize: 14, color: 'var(--g800)', lineHeight: 1.65, marginBottom: 28, opacity: .8 }}>
-            ต้นไม้ของคุณจะเติบโตไปตามพฤติกรรมของคุณ<br />ทำเควสทุกวัน พัฒนาตัวเองใน 3 ด้าน
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <button
-              onClick={() => navigate('/login')}
-              style={{
-                padding: '16px 24px',
-                border: 'none',
-                borderRadius: 'var(--r-md)',
-                background: 'linear-gradient(135deg, var(--g700), var(--g600))',
-                color: 'var(--fixed-white)',
-                fontFamily: 'Fredoka One',
-                fontSize: 18,
-                boxShadow: 'var(--sh-btn)',
-                cursor: 'pointer',
-                transition: 'transform .15s, box-shadow .15s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow= `0 8px 24px ${SHADOW_4}`
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'none'
-                e.currentTarget.style.boxShadow = 'var(--sh-btn)'
-              }}
-            >
-              🔑 เข้าสู่ระบบ
-            </button>
-
-            <button
-              onClick={() => navigate('/register')}
-              style={{
-                padding: '16px 24px',
-                border: '2px solid var(--g400)',
-                borderRadius: 'var(--r-md)',
-                background: BG_5,
-                color: 'var(--g700)',
-                fontFamily: 'Fredoka One',
-                fontSize: 18,
-                cursor: 'pointer',
-                transition: 'all .15s',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = BG_6 }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = BG_7 }}
-            >
-              <img src={BADGE_ICONS.seed} className="icon-img" alt="" /> สมัครสมาชิก
-            </button>
-          </div>
-
-          {/* Features mini grid */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 3,
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          textAlign: 'center',
+          maxWidth: '36rem',
+          width: '100%',
+          color: 'var(--fixed-white)',
+          textShadow: TEXT_SHADOW,
+        }}
+      >
+        {/* ── กลุ่มบน: โลโก้ + หัวข้อ + ข้อความแนะนำแอป ── */}
+        <div style={{ paddingTop: 'clamp(0rem, 3vh, 3rem)' }}>
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
-              gap: 12,
-              marginTop: 28,
-              paddingTop: 24,
-              borderTop: '1.5px solid var(--border)',
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: 'clamp(.25rem, 1.5vh, .75rem)',
+              filter: 'drop-shadow(0 8px 24px var(--glass-b-45))',
             }}
           >
-            {[
-              { icon: '📚', label: 'ลำต้น', sub: 'ความรู้' },
-              { icon: '🍃', label: 'ใบไม้', sub: 'สุขภาพกาย' },
-              { icon: '🌸', label: 'ดอกไม้', sub: 'สุขภาพจิต' },
-            ].map((f) => (
-              <div key={f.label} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 26 }}>{f.icon}</div>
-                <div style={{ fontFamily: 'Fredoka One', fontSize: 14, color: 'var(--g700)', marginTop: 2 }}>{f.label}</div>
-                <div style={{ fontSize: 11, color: 'var(--n300)', fontWeight: 600 }}>{f.sub}</div>
-              </div>
-            ))}
+            <ImageWithFallback src={LOGO_SRC} fallback="🌱" size="clamp(4rem, min(26vw, 15vh), 9rem)" alt="ARBOR HORIZON" />
           </div>
+
+          <h1
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'var(--fixed-white)',
+              textShadow: '0 2px 4px var(--glass-b-45), 0 6px 24px var(--glass-b-55)',
+              lineHeight: 1.1,
+              margin: '0 0 clamp(1rem, 3vh, 1.75rem)',
+            }}
+          >
+            <span style={{ display: 'block', fontSize: 'clamp(1.05rem, 3.5vw, 1.35rem)', letterSpacing: '.02em', opacity: .95, marginBottom: '.3rem' }}>
+              {t('welcome.titleLead')}
+            </span>
+            <span style={{ display: 'block', fontSize: 'clamp(1.75rem, 8.5vw, 3.3rem)', letterSpacing: '.03em', overflowWrap: 'anywhere' }}>
+              ARBOR HORIZON
+            </span>
+          </h1>
+
+          <WelcomeMessageCycler messages={messages} style={{ fontWeight: 600, maxWidth: '30rem', marginInline: 'auto' }} />
         </div>
 
-        <p style={{ marginTop: 16, fontSize: 12, color: 'var(--fixed-white)', textShadow: '0 2px 8px var(--glass-b-55)' }}>
-          รองรับ 📱 มือถือ · 💻 คอมพิวเตอร์ · 📟 แท็บเล็ต · ⌚ Smartwatch
-        </p>
+        {/* ── กลุ่มล่าง: ปุ่ม — marginTop auto ดันลงล่างจอ, paddingTop เป็นระยะหายใจขั้นต่ำ ── */}
+        <div style={{ marginTop: 'auto', paddingTop: 'clamp(2rem, 8vh, 6rem)', width: '100%', maxWidth: '30rem', marginInline: 'auto' }}>
+          <button
+            onClick={() => navigate('/register')}
+            style={{
+              width: '100%',
+              padding: 'clamp(.85rem, 2.5vh, 1rem) 1.5rem',
+              border: 'none',
+              borderRadius: 999,
+              background: 'linear-gradient(135deg, var(--g700), var(--g600))',
+              color: 'var(--fixed-white)',
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(1.05rem, 3.8vw, 1.2rem)',
+              textShadow: 'none',
+              boxShadow: `var(--sh-btn), 0 8px 24px var(--glass-b-30)`,
+              cursor: 'pointer',
+              transition: 'transform .15s, box-shadow .15s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              e.currentTarget.style.boxShadow = `0 8px 24px ${SHADOW_HOVER}`
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'none'
+              e.currentTarget.style.boxShadow = 'var(--sh-btn), 0 8px 24px var(--glass-b-30)'
+            }}
+          >
+            {t('welcome.getStarted')}
+          </button>
+
+          <p style={{ margin: '.9rem 0 0', fontSize: 'clamp(.9rem, 3vw, 1rem)' }}>
+            <span style={{ opacity: .85 }}>{t('welcome.alreadyMember')} </span>
+            <button
+              type="button"
+              onClick={() => navigate('/login')}
+              style={{
+                border: 'none',
+                background: 'none',
+                padding: '.25rem .1rem',
+                color: 'var(--fixed-white)',
+                textShadow: 'inherit',
+                fontWeight: 800,
+                fontSize: 'inherit',
+                textDecoration: 'underline',
+                textUnderlineOffset: 3,
+                cursor: 'pointer',
+              }}
+            >
+              {t('welcome.logIn')}
+            </button>
+          </p>
+        </div>
+
+        {/* ── ท้ายหน้า: 3 ด้านของแอป + อุปกรณ์ที่รองรับ (ใช้ร่วมกับหน้า Login) ── */}
+        <div style={{ marginTop: 'clamp(1.5rem, 5vh, 3rem)' }}>
+          <AppFeaturesFooter />
+        </div>
       </div>
     </div>
   )

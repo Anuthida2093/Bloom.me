@@ -12,6 +12,7 @@ import {
 } from '../../../config/screening'
 import type { PendingScreening, ScreeningAnswer } from '../../../types.mental'
 import './ScreeningPage.css'
+import { BADGE_ICONS } from '../../../config/iconAssets'
 
 const C_1 = '#9B8FD8'
 
@@ -75,7 +76,7 @@ export default function ScreeningPage({ pending, onFinished, onOpenSafetyNet, on
       <div className="screening__glow" aria-hidden="true" />
 
       {stage !== 'result' && (
-        <button className="screening__close" onClick={onDismiss} title="ปิด">✕</button>
+        <button className="screening__close" onClick={onDismiss} title="ปิด"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
       )}
 
       {/* ── เกริ่นนำ ── */}

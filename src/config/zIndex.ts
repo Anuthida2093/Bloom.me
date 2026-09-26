@@ -6,11 +6,11 @@
  * รวมไว้ที่เดียวตรงนี้ ให้ทุก modal import ค่าคงที่ชุดนี้แทนการเขียนเลขตรงๆ
  *
  * ลำดับชั้น (ต่ำ→สูง) สะท้อนว่าอะไรควรอยู่ "บนสุด" เมื่อเปิดพร้อมกันจริง:
- *   floating (NavBar/panel ข้างจอ) < full-screen section (เควส/ร้านค้า/คลัง)
+ *   floating (ปุ่ม/panel ลอยข้างจอ) < full-screen section (เควส/ร้านค้า/คลัง)
  *   < confirm/detail modal ที่ซ้อนทับ section < gameplay modal < reward/celebration
  */
 export const Z_INDEX = {
-  /** NavBar, floating panel ข้างจอ (leaderboard/tree stats) */
+  /** ปุ่มและ panel ลอยข้างจอ (leaderboard/tree stats) */
   floatingChrome: 100,
   /** Leaderboard modal เต็มจอ */
   leaderboardModal: 200,

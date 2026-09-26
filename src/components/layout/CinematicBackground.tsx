@@ -60,8 +60,8 @@ interface CinematicBackgroundProps {
 }
 
 export default function CinematicBackground({
-  videoSrc = '/assets/hero-waterfall.mp4',
-  videoSrcWebm = '/assets/hero-waterfall.webm',
+  videoSrc = '/assets/videos/intro/hero-waterfall.mp4',
+  videoSrcWebm = '',
   musicSrc = '/assets/ambient-waterfall.mp3',
   musicVolume = 60,
   soundEnabled = true,
@@ -77,6 +77,14 @@ export default function CinematicBackground({
 
   const [videoFailed, setVideoFailed] = useState(false)
   const [audioEnabled, setAudioEnabled] = useState(false)
+
+  // videoSrc เปลี่ยนได้ระหว่างใช้งาน (WelcomeModal สลับไฟล์ตามการหมุนจอ) — ให้ไฟล์ใหม่ได้ลองโหลด
+  // อีกครั้งแม้ไฟล์ก่อนหน้าจะล้มเหลวไปแล้ว (ปรับ state ระหว่าง render แพทเทิร์นเดียวกับ useMediaQuery)
+  const [prevVideoSrc, setPrevVideoSrc] = useState(videoSrc)
+  if (videoSrc !== prevVideoSrc) {
+    setPrevVideoSrc(videoSrc)
+    setVideoFailed(false)
+  }
 
   /* ── ละอองฝุ่นเรืองแสง (ใช้ได้ทั้ง 2 โหมด) ── */
   useEffect(() => {
@@ -241,7 +249,7 @@ export default function CinematicBackground({
       videoRef.current.muted = !soundEnabled || !audioEnabled
       videoRef.current.volume = effectiveVolume
     }
-  }, [musicVolume, soundEnabled, audioEnabled])
+  }, [musicVolume, soundEnabled, audioEnabled, videoSrc]) // videoSrc: <video> ถูก remount ใหม่ ต้องตั้งเสียงซ้ำ
 
   // [ข้อกำหนดข้อ 5: Performance] หยุดเล่นวิดีโอ/เสียงแวดล้อมตอนสลับไปแท็บอื่น (tab ไม่ active)
   // — <video>/<audio> ไม่หยุดเล่นเองอัตโนมัติตอนแท็บถูกซ่อน (ต่างจาก requestAnimationFrame
@@ -268,13 +276,17 @@ export default function CinematicBackground({
     <div style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', background: `linear-gradient(160deg,${BG_9},${BG_10})` }}>
       {!videoFailed && (
         <video
+          // key ผูกกับ videoSrc — เปลี่ยน <source> อย่างเดียวเบราว์เซอร์ไม่โหลดไฟล์ใหม่ ต้อง remount <video>
+          key={videoSrc}
           ref={videoRef}
           autoPlay muted loop playsInline
           onError={() => setVideoFailed(true)}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', animation: 'cinematicPan 40s ease-in-out infinite alternate' }}
         >
-          <source src={videoSrc} type="video/mp4" />
-          <source src={videoSrcWebm} type="video/webm" />
+          {/* error ของไฟล์ที่หาไม่เจอยิงที่ <source> ไม่ใช่ <video> (onError ของ <video> ด้านบนจับแค่ error
+              ตอนถอดรหัส) — ต้องดักที่ <source> ตัวสุดท้าย ไม่งั้นฉาก canvas สำรองไม่เคยได้แสดงเลย */}
+          <source src={videoSrc} type="video/mp4" onError={videoSrcWebm ? undefined : () => setVideoFailed(true)} />
+          {videoSrcWebm && <source src={videoSrcWebm} type="video/webm" onError={() => setVideoFailed(true)} />}
         </video>
       )}
 

@@ -4,7 +4,7 @@ import { BADGE_ICONS, QUEST_TAB_ICONS } from '../../config/iconAssets'
 import './ActionMenuBar.css'
 
 /** [แก้ตามที่ระบุ] เอา 'inventory' (ย้ายไปอยู่ในหน้าโปรไฟล์) และ 'settings' (ย้ายไปเป็นปุ่ม
- * วงกลมที่ NavBar มุมขวาบนแทน) ออกจากแถบนี้ เหลือ 4 ปุ่ม: home / quests / shop / profile */
+ * ในคลัสเตอร์ปุ่มลอยขวาของหน้า Home แทน) ออกจากแถบนี้ เหลือ 4 ปุ่ม: home / quests / shop / profile */
 export type NavKey = 'quests' | 'shop' | 'home' | 'profile'
 
 interface ActionMenuBarProps {

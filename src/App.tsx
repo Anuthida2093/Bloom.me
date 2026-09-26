@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LazyMotion, domAnimation } from 'framer-motion'
 import { AppProvider } from './context/AppContext'
 import { AudioProvider } from './context/AudioContext'
+import { LanguageProvider } from './context/LanguageContext'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import RouteFallback from './components/common/RouteFallback'
 import { ApiError } from './services/http'
@@ -19,8 +20,9 @@ import { ApiError } from './services/http'
       ประหยัดประมาณ 25KB gzip โดยเปลี่ยนแค่ <motion.div> เป็น <m.div>
 
   ลำดับ Provider สำคัญและห้ามสลับ:
-    QueryClient → AppProvider (User → Progress → UI) → AudioProvider
+    QueryClient → LanguageProvider → AppProvider (User → Progress → UI) → AudioProvider
     AudioProvider ต้องอยู่ในสุดเพราะอ่าน settings.soundEnabled จาก UIContext
+    LanguageProvider ไม่พึ่ง context อื่น — ครอบไว้นอก AppProvider ให้ทุกชั้นใช้ t() ได้
 \*============================================================================*/
 
 const WelcomeModal = lazy(() => import('./components/welcome/WelcomeModal'))
@@ -50,33 +52,35 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppProvider>
-        <AudioProvider>
-          <LazyMotion features={domAnimation}>
-            <ErrorBoundary scope="แอปพลิเคชัน">
-              <Suspense fallback={<RouteFallback />}>
-                <Routes>
-                  <Route path="/" element={<WelcomeModal />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/mbti" element={<MBTISelect />} />
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ErrorBoundary scope="หน้าหลัก">
-                        <Dashboard />
-                      </ErrorBoundary>
-                    }
-                  />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </Suspense>
-            </ErrorBoundary>
-          </LazyMotion>
-        </AudioProvider>
-      </AppProvider>
+      <LanguageProvider>
+        <AppProvider>
+          <AudioProvider>
+            <LazyMotion features={domAnimation}>
+              <ErrorBoundary scope="แอปพลิเคชัน">
+                <Suspense fallback={<RouteFallback />}>
+                  <Routes>
+                    <Route path="/" element={<WelcomeModal />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/mbti" element={<MBTISelect />} />
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <ErrorBoundary scope="หน้าหลัก">
+                          <Dashboard />
+                        </ErrorBoundary>
+                      }
+                    />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Suspense>
+              </ErrorBoundary>
+            </LazyMotion>
+          </AudioProvider>
+        </AppProvider>
+      </LanguageProvider>
     </QueryClientProvider>
   )
 }

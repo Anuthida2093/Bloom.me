@@ -4,6 +4,7 @@ import type { JournalEntryRecord } from '../../../../types'
 import { useTypewriter } from '../../../../hooks/useTypewriter'
 import { playSfx } from '../../../../utils/audioPlayer'
 import type { ParchmentTheme } from './ParchmentJournalEditor'
+import { BADGE_ICONS } from '../../../../config/iconAssets'
 
 const C_1 = '#C7A34F'
 const C_2 = '#F3E6C8'
@@ -58,7 +59,7 @@ export default function JournalHistoryModal({ theme, accent, title, entries, onC
 
   return (
     <div className="journal-history">
-      <button onClick={onClose} title="ปิด" className="journal-history__close">✕</button>
+      <button onClick={onClose} title="ปิด" className="journal-history__close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       <AnimatePresence mode="wait">
         {!readingEntry ? (
@@ -198,7 +199,7 @@ function StorybookReader({ accent, colors, entry, onBack }: StorybookReaderProps
 
   return (
     <motion.div className="storybook-reader" initial={{ opacity: 0, rotateY: -15, scale: 0.9 }} animate={{ opacity: 1, rotateY: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 220, damping: 22 }}>
-      <button onClick={onBack} className="storybook-reader__back">← กลับ</button>
+      <button onClick={onBack} className="storybook-reader__back"><img src={BADGE_ICONS.back} className="icon-img" alt="" /> กลับ</button>
 
       {showSparkle && (
         <div className="storybook-reader__sparkles" aria-hidden="true">

@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, m } from 'framer-motion'
 import { toBlob } from 'html-to-image'
-import NavBar from '../navbar/NavBar'
 import TreeOfLife from '../tree/TreeOfLife'
 import LeaderboardPanel from '../leaderboard/LeaderboardPanel'
 import PlayerTreeCard from '../leaderboard/PlayerTreeCard'
@@ -314,7 +313,8 @@ export default function Dashboard() {
   /** [แก้ตามที่ระบุ] ไอคอนที่ไฮไลต์ใน ActionMenuBar ต้องอิงจาก modal ที่เปิดอยู่จริงเสมอ —
    *  ไม่ว่าจะถูกเปิดจากปุ่มไหนก็ตาม (กันปัญหาไอคอนค้าง/ไม่ตรงกับหน้าจอที่เห็นจริง)
    *  [แก้ตามที่ระบุ] ตัดกิ่ง 'settings' ออก — ตั้งค่าไม่ได้อยู่ใน ActionMenuBar (4 ปุ่ม) อีกต่อไป
-   *  เปิดจากปุ่มวงกลมที่ NavBar แทน ไม่มีไอคอนในแถบล่างให้ไฮไลต์ (ตกไปที่ 'home' ตามค่าเริ่มต้น) */
+   *  เปิดจากปุ่มตั้งค่าในคลัสเตอร์ปุ่มลอยขวา (ใต้ปุ่มสถานะต้นไม้) แทน ไม่มีไอคอนในแถบล่างให้ไฮไลต์
+   *  (ตกไปที่ 'home' ตามค่าเริ่มต้น) */
   const activeNavKey: NavKey = modals.quests
     ? 'quests'
     : modals.shop
@@ -339,15 +339,7 @@ export default function Dashboard() {
       )}
       {lowPower && <div className="dashboard__bg-still" aria-hidden="true" />}
 
-      <NavBar
-        userData={userData}
-        isLoggedIn={isLoggedIn}
-        isGuest={isGuest}
-        onOpenSettings={() => { setSettingsInitialSubModal(null); openMainPanel('settings') }}
-        onOpenProfileSettings={() => { setSettingsInitialSubModal('profile'); openMainPanel('settings') }}
-      />
-
-      {/* ═══ HUD แคปซูลกลางจอ ใต้ Navbar (แบบ V1) ═══ */}
+      {/* ═══ HUD แคปซูลกลางจอ ชิดขอบบน (แบบ V1) ═══ */}
       {!viewingPlayer && (isLoggedIn || isGuest) && (
         <div className="game-top-hud">
           <div className="hud-pill">
@@ -442,7 +434,6 @@ export default function Dashboard() {
             myEmotionStack={userData.emotionStack}
             onMyRankChange={handleMyRankChange}
             onPlayerClick={setViewingPlayer}
-            glass
           />
         </div>
       )}
@@ -491,8 +482,20 @@ export default function Dashboard() {
             )}
             <div className="right-action-buttons">
               <button className="game-icon-btn" onClick={() => { setShowTreeStats((v) => !v); setShowNotifications(false) }} title="สถานะต้นไม้">
-                🌳
+                <img src={BADGE_ICONS.tree} className="icon-img" alt="" />
               </button>
+              {/* ปุ่มตั้งค่า — จุดเข้าหน้าตั้งค่าจุดเดียวของหน้า Home (แทน NavBar ที่ลบไปแล้ว) ไม่มีปุ่ม
+                  ลัดโปรไฟล์แยก เพราะหน้าตั้งค่ามีแถว "ตั้งค่าโปรไฟล์" ให้เข้าได้อยู่แล้ว */}
+              {(isLoggedIn || isGuest) && (
+                <button
+                  className="game-icon-btn"
+                  onClick={() => { setSettingsInitialSubModal(null); openMainPanel('settings') }}
+                  title="ตั้งค่า"
+                  aria-label="ตั้งค่า"
+                >
+                  <img src={BADGE_ICONS.settings} className="icon-img" alt="" />
+                </button>
+              )}
           <button className="game-icon-btn mood-btn" onClick={() => openModal('moodCheckin')} title="เช็คอินอารมณ์">
                 <img src={BADGE_ICONS.checkin} className="icon-img" alt="" />
               </button>

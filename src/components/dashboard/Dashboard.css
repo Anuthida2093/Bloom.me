@@ -109,13 +109,12 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* ── แถบนำทาง ── */
-.dashboard__navbar { position: relative; z-index: 100; }
-
-/* ── แผงลอยข้างจอ ── */
+/* ── แผงลอยข้างจอ ──
+   [ลบ NavBar แล้ว] ระยะบนของ UI ลอยทั้งหน้า Home เดิมเว้นใต้ NavBar สูง 80px (95px/มือถือ 80px/HUD 92px)
+   ตอนนี้ชิดขอบบนจอแทน (16px/มือถือ 8px/HUD 12px) */
 .dashboard__panel {
   position: fixed;
-  top: 95px;
+  top: 16px;
   z-index: 50;
   pointer-events: none;   /* ตัวกรอบไม่รับคลิก จะได้ไม่บังต้นไม้ */
 }
@@ -158,18 +157,18 @@
    เบลอเล็กน้อยและกล่องรับคลิกเลื่อนไม่ตรงกับสิ่งที่ตาเห็น เปลี่ยนมาย่อด้วย
    font-size + ความกว้างจริงแทน */
 @media (max-width: 480px) {
-  .dashboard__panel { top: 80px; }
+  .dashboard__panel { top: 8px; }
   .dashboard__panel--left,
   .dashboard__panel--right { font-size: var(--fs-xs); max-width: 44vw; }
   .dashboard__panel--right { max-height: calc(100vh - 190px); }
   .dashboard__oracle-nudge { font-size: var(--fs-xs); padding: 8px 14px; }
 }
 /* ═══════════════════════════════════════════
-   [เพิ่มใหม่] HUD กลางจอใต้ Navbar แบบ V1
+   [เพิ่มใหม่] HUD กลางจอชิดขอบบน แบบ V1
    ═══════════════════════════════════════════ */
 .game-top-hud {
   position: fixed;
-  top: 92px;
+  top: 12px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 90;
@@ -218,7 +217,7 @@
 }
 
 @media (max-width: 768px) {
-  .game-top-hud { top: 68px; gap: 6px; }
+  .game-top-hud { top: 8px; gap: 6px; }  /* เดิม 68px เว้นใต้ NavBar มือถือ (56px) ที่ลบไปแล้ว */
   .hud-pill { padding: 5px 10px; font-size: var(--fs-md); }
   .hud-icon { font-size: 18px; }
 }
@@ -228,7 +227,7 @@
    ═══════════════════════════════════════════ */
 .dashboard__right-cluster {
   position: fixed;
-  top: 95px;
+  top: 16px;
   right: 16px;
   z-index: 60;
   display: flex;
@@ -252,9 +251,11 @@
    box-shadow/border-radius วงกลมออกทั้งหมด ให้ปุ่มมีขนาดเท่ารูป/ไอคอนจริงตรงๆ (2cm) แทน —
    .icon-img (1.1em ใน index.css) overrride เป็น 2cm ตรงๆ ในนี้ ส่วน emoji ล้วน (🌳/🔊/📖)
    ที่ยังไม่มีไฟล์รูปจริงก็ใช้ font-size 2cm ให้ขนาดสายตาใกล้เคียงกันในกลุ่มปุ่มเดียวกัน */
+/* [Part E — ย่อปุ่ม] 2cm (~75px) → 56px, รูป 2.4cm (~91px) → 66px (สัดส่วน ~1.2x เท่าเดิม ชดเชย
+   ขอบโปร่งใสของ PNG), emoji 1.5cm → 42px — มือถือ 46px/รูป 54px ยังเกินขั้นต่ำช่องกด ~44px */
 .game-icon-btn {
-  width: 2cm;
-  height: 2cm;
+  width: 56px;
+  height: 56px;
   cursor: pointer;
   background: none;
   border: none;
@@ -262,7 +263,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5cm; /* ขนาดตัวอักษรของ emoji ล้วน (🌳/🔊/📖) ให้ใกล้เคียงกับขนาดรูปจริงในปุ่มเดียวกัน*/
+  font-size: 42px; /* emoji ล้วน (เช่น 🔊) ให้ขนาดสายตาใกล้เคียงรูปจริงในกลุ่มเดียวกัน */
   transition: transform var(--dur-fast) var(--ease-spring);
 }
 /* [แก้บั๊ก — พบระหว่างตรวจตามที่ระบุ] เดิม 4cm ทั้งที่คอมเมนต์ด้านบนบอกเจตนาไว้เองว่า
@@ -272,18 +273,18 @@
    แก้เป็น 2.4cm (ใหญ่กว่าปุ่มเล็กน้อย ~20% ไม่ใช่ 100%) ชดเชยที่ไฟล์ภาพ PNG มีขอบโปร่งใส
    รอบตัวอยู่แล้ว (เทียบกับอีโมจิที่ตัวอักษรมักเต็มกรอบ font-size มากกว่า) ให้ขนาดที่ "ตา
    มองเห็น" ของรูปกับอีโมจิใกล้เคียงกันในกลุ่มปุ่มเดียวกัน ไม่ใช่แค่ขนาดกรอบเท่ากันเฉยๆ */
-.game-icon-btn .icon-img { width: 2.4cm; height: 2.4cm; }
+.game-icon-btn .icon-img { width: 66px; height: 66px; object-fit: contain; }
 .game-icon-btn:hover { transform: scale(1.08); }
 .game-icon-btn:active { transform: scale(.94); }
 
 @media (max-width: 768px) {
-  .dashboard__right-cluster { top: 80px; right: 2px; gap: 2px; }/* [แก้ตามที่ระบุ] เดิมใช้ 8px แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่ ทำให้ปุ่มล้นจอออกไปนิดหน่อย
+  .dashboard__right-cluster { top: 8px; right: 2px; gap: 2px; }/* [แก้ตามที่ระบุ] เดิมใช้ 8px แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่ ทำให้ปุ่มล้นจอออกไปนิดหน่อย
      เปลี่ยนเป็น 2px ให้เหลือพื้นที่ว่างด้านบน/ล่างเท่ากัน */
   /* [แก้ตามที่ระบุ] เดิม font-size 1.2cm (< ปุ่ม 1.5cm) ทำให้อีโมจิดูเล็กกว่ารูปเล็กน้อย ตอนนี้
      ขยับขึ้นมาเกือบเท่าปุ่ม (1.4cm) ให้ทุกปุ่มในกลุ่มนี้ (ต้นไม้/เช็คอิน/แจ้งเตือน/ปิดเสียง/
      แชร์/เพื่อน) ดูใหญ่สม่ำเสมอกันบนจอมือถือ ไม่มีปุ่มไหนดูเด่นเล็กกว่าเพื่อน */
-  .game-icon-btn { width: 1.5cm; height: 1.5cm; font-size: 1.4cm; }/* ขนาดปุ่มย่อเหลือ 1.5cm บนจอเล็ก */
-  .game-icon-btn .icon-img { width: 1.9cm; height: 1.9cm; }/* [แก้] เดิม 1.5cm เท่าปุ่มเป๊ะ (ดูเล็กกว่าอีโมจิ) ขยายสัดส่วนเดียวกับ desktop (~1.27x ปุ่ม) */
+  .game-icon-btn { width: 46px; height: 46px; font-size: 36px; }
+  .game-icon-btn .icon-img { width: 54px; height: 54px; }
 }
 
 /* ═══════════════════════════════════════════
@@ -315,7 +316,7 @@
    ═══════════════════════════════════════════ */
 .dashboard__back-btn {
   position: fixed;
-  top: 95px;
+  top: 16px;
   left: 16px;
   z-index: 60;
   padding: 10px 18px;
@@ -334,7 +335,7 @@
 
 .dashboard__viewing-name-pill {
   position: fixed;
-  top: 95px;
+  top: 16px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 60;
@@ -351,6 +352,6 @@
 }
 
 @media (max-width: 768px) {
-  .dashboard__back-btn { top: 80px; left: 8px; padding: 8px 14px; font-size: var(--fs-xs); }
-  .dashboard__viewing-name-pill { top: 80px; padding: 8px 18px; font-size: var(--fs-sm); }
+  .dashboard__back-btn { top: 8px; left: 8px; padding: 8px 14px; font-size: var(--fs-xs); }
+  .dashboard__viewing-name-pill { top: 8px; padding: 8px 18px; font-size: var(--fs-sm); }
 }

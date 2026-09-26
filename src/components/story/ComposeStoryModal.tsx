@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { usePosts } from '../../context/PostContext'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import { BADGE_ICONS } from '../../config/iconAssets'
 
 /*============================================================================*\
   ComposeStoryModal — [ไฟล์ใหม่ — ฟีเจอร์สตอรี่] สร้างสตอรี่ใหม่ (ปุ่ม + ลอยมุมขวาล่าง)
@@ -47,7 +48,7 @@ export default function ComposeStoryModal({ onClose }: { onClose: () => void }) 
         {imageDataUrl ? (
           <div className="story-image-preview">
             <img src={imageDataUrl} alt="รูปที่แนบ" />
-            <button onClick={() => setImageDataUrl(null)} title="ลบรูป">✕</button>
+            <button onClick={() => setImageDataUrl(null)} title="ลบรูป"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
           </div>
         ) : (
           <div className="story-modal-card__row">

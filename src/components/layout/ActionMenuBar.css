@@ -3,11 +3,12 @@
   --nav-cutout-color: var(--lc-c-4);
   --nav-bg: var(--g700);
   --nav-indicator: var(--fixed-white);/* [แก้ตามที่ระบุ] เดิมใช้ var(--lc-c-4) แต่ผู้ใช้บอกว่าไม่ค่อยเห็น เลยเปลี่ยนเป็นสีขาวให้เด่นชัดขึ้น */
-  /* [แก้ตามที่ระบุ — รอบนี้] ผู้ใช้บอกว่ายังใหญ่ไป ลดจาก 2.5cm → 1.5cm ปรับ nav-height/
-     btn-width ลงตามสัดส่วนเดิม (เผื่อ padding รอบไอคอนไว้ที่ประมาณ 35px เท่ารอบก่อน) */
-  --nav-icon-size: 70px;
-  --nav-height: 80px;
-  --btn-width: 100px;
+  /* [Part E — ย่อแถบเมนูล่าง] แถบ 400×80 → 288×60, ไอคอน 125×130 (ใหญ่กว่าตัวแถบ และไม่ได้
+     อ่านตัวแปรนี้เลย) → 62px ผูกกับ --nav-icon-size จริงแล้ว ภาพ PNG มีขอบโปร่งใสรอบตัวจึงตั้ง
+     ใหญ่กว่าความสูงแถบเล็กน้อย ช่องกดต่อปุ่ม 72×60 ยังเกินขั้นต่ำ ~44px ของมือถือ */
+  --nav-icon-size: 62px;
+  --nav-height: 60px;
+  --btn-width: 72px;
 }
 
 .action-menu-container {
@@ -54,10 +55,10 @@
   gap: 2px;
   transition: background .16s ease, transform .18s ease;
 }
-/* [แก้ตามที่ระบุ] ไอคอนหมวดเควสในเมนูลอย — ใช้ขนาดเดียวกับแถบเมนูล่างหลัก (--nav-icon-size) */
+/* ไอคอนหมวดเควสในเมนูลอย (เป็นรายการข้อความ ไม่ต้องใหญ่เท่าไอคอนแถบหลัก) */
 .quest-floating-menu .icon-img {
-  width: 100px;/* [แก้ตามที่ระบุ] ไอคอนหมวดเควสในเมนูลอย — ใช้ขนาดเดียวกับแถบเมนูล่างหลัก (--nav-icon-size) */
-  height: var(--nav-icon-size);
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
 }
 .quest-floating-menu button:hover {
@@ -102,10 +103,11 @@
   transition: .5s var(--ease-spring);
 }
 .liquid-nav-bar ul li.active a .nav-icon { opacity: 1; }
-/* [แก้ตามที่ระบุ] ไอคอนแถบเมนูล่าง — ใช้ --nav-icon-size (เดิม font-size:26px ตอนยังเป็น emoji) */
+/* ไอคอนแถบเมนูล่าง — ผูกกับ --nav-icon-size (เดิม fix ไว้ 125×130px ไม่ย่อตามจอ) */
 .liquid-nav-bar ul li a .nav-icon .icon-img {
-  width: 125px;/* [แก้ตามที่ระบุ] ไอคอนแถบเมนูล่าง — ใช้ --nav-icon-size (เดิม font-size:26px ตอนยังเป็น emoji) */
-  height: 130px;/* [แก้ตามที่ระบุ] ไอคอนแถบเมนูล่าง — ใช้ --nav-icon-size (เดิม font-size:26px ตอนยังเป็น emoji) */
+  width: var(--nav-icon-size);
+  height: var(--nav-icon-size);
+  object-fit: contain;
 }
 .liquid-nav-bar ul li a .nav-text {
   position: absolute;
@@ -120,7 +122,7 @@
 /* [แก้ตามที่ระบุ] คำนวณจาก --nav-height แทนเลขคงที่ เพราะ nav-height เปลี่ยนตามขนาดไอคอนใหม่
    (เดิม -34px คำนวณจาก nav-height:70px เดิม ผูกตายตัวไว้จะพังทันทีที่ nav-height เปลี่ยน) */
 .liquid-nav-bar ul li.active a .nav-icon { transform: translateY(calc(var(--nav-height) / -2)); }
-.liquid-nav-bar ul li.active a .nav-text { opacity: 1; transform: translateY(14px); }
+.liquid-nav-bar ul li.active a .nav-text { opacity: 1; transform: translateY(12px); }
 
 .nav-badge {
   position: absolute;
@@ -165,12 +167,10 @@
 @keyframes popUp { from { opacity: 0; transform: translateY(15px) scale(.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 @media (max-width: 768px) {
-  /* [แก้ตามที่ระบุ] เดสก์ท็อปลดลงเหลือ 1.5cm แล้ว บนจอเล็กก็ลดตามสัดส่วนด้วย (เดิม 1.6cm
-     ใหญ่กว่าเดสก์ท็อป 1.5cm ใหม่ไปแล้ว กลับตาลปัตร) */
-  :root { --nav-icon-size: 1.5cm; --nav-height: 75px; --btn-width: 75px; }
-  .action-menu-container { bottom: 15px; }
-  .liquid-nav-bar ul li a .nav-text { font-size: var(--fs-sm, 18px); }
-  .liquid-nav-bar ul li.active a .nav-text { transform: translateY(14px); }
+  /* จอเล็ก: แถบ 256×56 ช่องกดต่อปุ่ม 64×56 (ยังเกินขั้นต่ำ ~44px) */
+  :root { --nav-icon-size: 54px; --nav-height: 56px; --btn-width: 64px; }
+  .action-menu-container { bottom: 12px; }
+  .liquid-nav-bar ul li.active a .nav-text { transform: translateY(12px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

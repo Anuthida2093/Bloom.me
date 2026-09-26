@@ -30,7 +30,7 @@ import JournalHistoryModal from '../quest/mental/shared/JournalHistoryModal'
     b) ขวา   — กิจกรรมวันนี้ + ปฏิทิน (กดวันไหนดึงสรุปของวันนั้นมาแสดงแทน "วันนี้")
     c) ซ้าย  — ไอเทมที่ซื้อแล้ว จัดกลุ่มตามประเภทร้านค้า (รูปปั้น/ของแขวน/โพสอิท)
 
-  รูปแบบ full-screen overlay (fixed inset:0, padding-top เว้น Navbar, เลื่อนได้) ยึดตาม
+  รูปแบบ full-screen overlay (fixed inset:0, padding-top 72px เว้นปุ่มปิดลอยมุมขวาบน, เลื่อนได้) ยึดตาม
   ShopSection.tsx/InventoryModal.tsx เป๊ะ — ใช้ inline style + CSS var() token เดิมทั้งหมด
   ไม่มีสีใหม่/โทเคนใหม่ (ตามที่ระบุห้ามแตะธีมสีรอบนี้)
 \*============================================================================*/
@@ -195,10 +195,10 @@ export default function ProfilePage({
           cursor: 'pointer', fontSize: 16,
         }}
       >
-        ✕
+        <img src={BADGE_ICONS.close} className="icon-img" alt="" />
       </button>
 
-      <div style={{ maxWidth: 1180, margin: '0 auto', padding: '95px 20px 48px' }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto', padding: '72px 20px 48px' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-3xl)', color: 'var(--heading-accent)' }}>👤 {userData.username || 'ผู้ใช้'}</div>
           {/* [แก้ตามที่ระบุ — ข้อ 7] ขยาย MBTI/Lv./เหรียญ ให้เด่นชัดขึ้น (เดิม fs-sm เท่าตัวหนังสือรองทั่วไป) ใช้ --fs-md + ตัวหนา แทนตัวเลขแบนราบเดิม */}

@@ -10,6 +10,7 @@ import JournalHistoryModal from './shared/JournalHistoryModal'
 import { QUEST_ICONS } from '../../../config/iconAssets'
 
 import './ReframerJournalPage.css'
+import { BADGE_ICONS } from '../../../config/iconAssets'
 
 const C_1 = '#9B59D0'
 const C_2 = '#9B59D0'
@@ -107,7 +108,7 @@ export default function ReframerJournalPage({ moodEntry, alreadyCompleted, onCom
 
   return (
     <div className="reframer-journal-page">
-      <button onClick={onClose} title="ปิด" className="reframer-journal-page__close">✕</button>
+      <button onClick={onClose} title="ปิด" className="reframer-journal-page__close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
       {/* [ย้ายตามที่ระบุ — ข้อ 12] ป้ายลอยมุมซ้ายบน "ประวัติสมุดบันทึกรากไม้เรืองแสง" ย้ายไป
           เป็นการ์ดเปิด modal ที่หน้าโปรไฟล์แล้ว (ดู ProfilePage.tsx) — ลบปุ่มซ้ำจากหน้าเควสนี้ */}
 

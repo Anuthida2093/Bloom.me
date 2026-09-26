@@ -3,6 +3,7 @@ import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import { SAFETY_NET_CONTACTS, SAFETY_NET_DISCLAIMER } from '../../../config/screening'
 import './SafetyNetPage.css'
+import { BADGE_ICONS } from '../../../config/iconAssets'
 
 /*============================================================================*\
   SafetyNetPage — กล่องพยาบาลเวทมนตร์ (High Risk Safety Net)  [ไฟล์ใหม่]
@@ -30,7 +31,7 @@ export default function SafetyNetPage({ onClose, onStartCalmingQuest }: SafetyNe
   return (
     <div className="safety-net">
       <div className="safety-net__aura" aria-hidden="true" />
-      <button className="safety-net__close" onClick={onClose} title="ปิด" aria-label="ปิดกล่องพยาบาล">✕</button>
+      <button className="safety-net__close" onClick={onClose} title="ปิด" aria-label="ปิดกล่องพยาบาล"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       <div className="safety-net__inner">
         <div className="safety-net__box">🧰</div>
