@@ -15,9 +15,9 @@
   height: 100%;
 }
 
-/* ต้นไม้ procedural (ProceduralTreeCanvas.tsx) — canvas 2 ชั้นเต็มกล่อง: กิ่ง / ใบ+ดอก
+/* ต้นไม้ procedural (ProceduralTreeCanvas.tsx) — canvas 3 ชั้นเต็มกล่อง: ทุ่งหญ้า / กิ่ง / ใบ+ดอก
    วาดใหม่เฉพาะตอนเลเวลหรือขนาดกล่องเปลี่ยน การไหวตามลมเป็น transform ของ canvas ใบทั้งแผ่น
-   (จุดหมุนที่โคนต้น 50% 88% — ตรงกับ baseYRatio ใน drawTree2D.ts) จึงไม่ต้องวาดซ้ำทุกเฟรม */
+   (จุดหมุนที่โคนต้น 50% 84% — ตรงกับ TREE_BASE_Y_RATIO ใน drawTree2D.ts) จึงไม่ต้องวาดซ้ำทุกเฟรม */
 .tree-of-life__canvas {
   position: absolute;
   inset: 0;
@@ -27,7 +27,18 @@
   z-index: 2;
   /* โผล่/โตขึ้นทุกครั้งที่ขึ้นขั้น (canvas ถูก remount ด้วย key = visual level) */
   animation: treeOfLifeLayerGrow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
-  transform-origin: 50% 88%;
+  transform-origin: 50% 84%;
+}
+/* ชั้นทุ่งหญ้า + หญ้าหลังต้น อยู่ใต้ลำต้น / หญ้าหน้าต้นทับโคนต้น (ใต้ชั้นใบ) — ไม่เล่นอนิเมชันโต
+   (พื้นไม่ควรขยายตามต้นตอนขึ้นขั้น) หญ้าไหวเพราะวาดใหม่ทุกเฟรมใน ProceduralTreeCanvas ไม่ใช่ CSS */
+.tree-of-life__canvas--ground,
+.tree-of-life__canvas--meadow {
+  z-index: 1;
+  animation: none;
+}
+.tree-of-life__canvas--meadow-front {
+  z-index: 2;
+  animation: none;
 }
 .tree-of-life__canvas--foliage {
   z-index: 3;
@@ -62,47 +73,6 @@
     opacity: 1;
     transform: scale(1);
   }
-}
-
-/* container เต็มพื้นที่ที่ "ปั๊ม" ก้อนดิน/หญ้าลงไป — ตัว container เองไม่มีขนาด/รูปร่างอะไร
-   เป็นแค่กรอบอ้างอิง % สำหรับ .tree-of-life__stamp แต่ละจุดข้างใน */
-.tree-of-life__foliage {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-/* จุด "ปั๊ม" เดี่ยวๆ (ใบหรือดอก 1 คลัสเตอร์เล็ก) — ตำแหน่ง (left/top), ขนาด (width),
-   และมุมหมุน (rotate) ทั้งหมดคำนวณมาจาก TreeOfLife.tsx (generateFoliageStamps) แล้ว
-   ส่งมาเป็น inline style ทีละจุด คลาสนี้จึงกำหนดแค่พฤติกรรมร่วมของทุกจุด */
-.tree-of-life__stamp {
-  position: absolute;
-  height: auto;
-  object-fit: contain;
-  pointer-events: none;
-  user-select: none;
-  transform-origin: center center;
-
-  /* เล่นแอนิเมชัน "โผล่ขึ้นมา" เดียวกับ layer หลัก แต่ตัว key ของแต่ละจุดผูกกับ level
-     อยู่แล้ว (ดู generateFoliageStamps ใน .tsx) เวลา level เปลี่ยน ทุกจุดจะถูก remount
-     ใหม่หมดพร้อมกัน ดูเหมือนพุ่มทั้งต้น "แตกใบใหม่" เป็นชุดเดียวกัน ไม่ใช่โผล่ทีละใบ */
-  animation: treeOfLifeLayerGrow 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] เลเยอร์ patch หญ้า/ดอกหญ้า (variant 2/3) ที่ซ้อนทับฐาน
-   variant 1 — opacity/filter คุมจาก .tsx (groundVariant2/3Opacity, GRASS_HEALTH_FILTER)
-   transition นุ่มนวลตอนเปลี่ยน healthVisualLevel หรือ decay/ฟื้นตัว ไม่กระตุก */
-.tree-of-life__ground-overlay {
-  transition: opacity 3s ease, filter 3s ease;
-}
-
-/* [ใหม่ — ตามที่ระบุรอบนี้] ดิน/หญ้าปั๊มซ้ำหลายก้อนคาบเกี่ยวกัน (generateGroundClumps ใน
-   .tsx) ใช้โครง .tree-of-life__stamp เดียวกัน แทนภาพวงกลมดินเดี่ยวๆ เดิม — ไม่ใส่เงาแบบใบ/
-   ดอก เพราะเป็นพื้นผิวแนบพื้น ใส่เงาจะดูลอยเกินจริง */
-.tree-of-life__stamp--ground {
-  filter: none;
 }
 
 /* ไอเทมตกแต่งที่สวมใส่อยู่ (จาก InventoryModal)
@@ -213,55 +183,6 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   GroundScene — หญ้า/ดอกไม้แบบมีมิติ [ข้อกำหนดข้อ 4]
-   ═══════════════════════════════════════════════════════════════ */
-.ground-scene {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 2%;
-  height: 18%;
-  z-index: 1; /* เท่ากับ/ทับเบาๆ บนภาพพื้นหญ้า (grass layer z-index 1) */
-  pointer-events: none;
-}
-
-.ground-scene__blade {
-  position: absolute;
-  bottom: 0;
-  width: 10px;
-  transform-origin: bottom center;
-  animation-name: groundSceneSway;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-  filter: drop-shadow(0 1px 1px var(--glass-b-12));
-}
-
-@keyframes groundSceneSway {
-  0%, 100% { transform: rotate(-6deg); }
-  50% { transform: rotate(6deg); }
-}
-
-.ground-scene__flower {
-  position: absolute;
-  bottom: 2%;
-  width: 16px;
-  height: 16px;
-  animation: groundSceneFlowerPop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both,
-    groundSceneFlowerBob 3s ease-in-out infinite;
-  filter: drop-shadow(0 2px 3px var(--glass-b-15));
-}
-
-@keyframes groundSceneFlowerPop {
-  from { opacity: 0; transform: scale(0); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-@keyframes groundSceneFlowerBob {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-2px) rotate(4deg); }
-}
-
-/* ═══════════════════════════════════════════════════════════════
    Draggable decorations [ข้อกำหนดข้อ 3]
    ═══════════════════════════════════════════════════════════════ */
 .tree-of-life__decoration-item--draggable {
@@ -315,14 +236,6 @@
 
 .tree-of-life__drop-zone-hint--visible {
   opacity: 1;
-}
-
-/* เคารพ prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-  .ground-scene__blade,
-  .ground-scene__flower {
-    animation: none;
-  }
 }
 
 /* ═══════════════════════════════════════════════════════════════

@@ -1,6 +1,7 @@
 import { http, API_MODE, mockDelay } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import { findQuestByCode } from '../../config/questCatalog'
+import { daysSinceLastHealthQuest, groundDryness, knowledgeGrowthMultiplier } from '../../config/groundFertility'
 import type { QuestLogEntry, QuestCategory, UserData } from '../../types'
 
 /*============================================================================*\
@@ -59,6 +60,12 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
     let resultLog!: QuestLogEntry
 
     const db = updateDb((d) => {
+      // ดินไม่อุดมสมบูรณ์ (ไม่ได้ทำเควสสุขภาพติดต่อกันหลายวัน) → เควสความรู้ได้คะแนนลำต้นน้อยลง
+      // ต้นไม้จึงโตช้าลง (ดู config/groundFertility.ts) — หมวดอื่นได้เต็มเหมือนเดิม
+      const growth = category === 'KNOWLEDGE'
+        ? knowledgeGrowthMultiplier(groundDryness(daysSinceLastHealthQuest(d.questLogs)))
+        : 1
+      const awarded = Math.round(stackDelta * growth)
       if (isRepeatable) {
         const newLog: QuestLogEntry = {
           id: `local-${questCode}-${Date.now()}`,
@@ -69,6 +76,7 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
           logDate: now.split('T')[0],
           completedAt: now,
           ...(payload ? { payload } : {}),
+          stackAwarded: awarded,
         } as QuestLogEntry
         d.questLogs.push(newLog)
         resultLog = newLog
@@ -76,15 +84,16 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
           ...d.user,
           coins: Math.max(0, d.user.coins + Math.round(10 * rewardMultiplier)),
           exp: Math.max(0, d.user.exp + Math.round(5 * rewardMultiplier)),
-          knowledgeStack: category === 'KNOWLEDGE' ? d.user.knowledgeStack + stackDelta : d.user.knowledgeStack,
-          emotionStack: category === 'EMOTION' ? d.user.emotionStack + stackDelta : d.user.emotionStack,
-          healthStack: category === 'HEALTH' ? d.user.healthStack + stackDelta : d.user.healthStack,
+          knowledgeStack: category === 'KNOWLEDGE' ? d.user.knowledgeStack + awarded : d.user.knowledgeStack,
+          emotionStack: category === 'EMOTION' ? d.user.emotionStack + awarded : d.user.emotionStack,
+          healthStack: category === 'HEALTH' ? d.user.healthStack + awarded : d.user.healthStack,
         }
         return
       }
 
       const existing = d.questLogs.find((l) => l.quest?.code === questCode)
       const willComplete = !(existing?.status === 'COMPLETED')
+      let delta = awarded
 
       if (!existing) {
         const newLog: QuestLogEntry = {
@@ -96,12 +105,16 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
           logDate: now.split('T')[0],
           completedAt: now,
           ...(payload ? { payload } : {}),
+          stackAwarded: awarded,
         } as QuestLogEntry
         d.questLogs.push(newLog)
         resultLog = newLog
       } else {
+        // ยกเลิก = คืนคะแนนเท่าที่ได้ไปจริงตอนทำสำเร็จ (อาจถูกลดเพราะดินแห้ง) ไม่ใช่ค่าเต็ม
+        if (!willComplete) delta = existing.stackAwarded ?? stackDelta
         existing.status = willComplete ? 'COMPLETED' : 'IN_PROGRESS'
         existing.completedAt = willComplete ? now : null
+        existing.stackAwarded = willComplete ? awarded : undefined
         resultLog = existing
       }
 
@@ -111,11 +124,11 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
         coins: Math.max(0, d.user.coins + Math.round(10 * rewardMultiplier) * sign),
         exp: Math.max(0, d.user.exp + Math.round(5 * rewardMultiplier) * sign),
         knowledgeStack: category === 'KNOWLEDGE'
-          ? Math.max(0, d.user.knowledgeStack + stackDelta * sign) : d.user.knowledgeStack,
+          ? Math.max(0, d.user.knowledgeStack + delta * sign) : d.user.knowledgeStack,
         emotionStack: category === 'EMOTION'
-          ? Math.max(0, d.user.emotionStack + stackDelta * sign) : d.user.emotionStack,
+          ? Math.max(0, d.user.emotionStack + delta * sign) : d.user.emotionStack,
         healthStack: category === 'HEALTH'
-          ? Math.max(0, d.user.healthStack + stackDelta * sign) : d.user.healthStack,
+          ? Math.max(0, d.user.healthStack + delta * sign) : d.user.healthStack,
       }
     })
 

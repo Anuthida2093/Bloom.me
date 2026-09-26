@@ -373,6 +373,9 @@ export interface QuestLogEntry {
    *  แรก แต่ type เดิมไม่เคยประกาศ field นี้ ทำให้ดึงมาใช้ (เช่นหน้าโปรไฟล์) ต้อง cast เอง
    *  [ต้องเพิ่มใน DB] quest_logs.payload (Json?) — ดู docs/DB_CHANGES.md ข้อ 5 */
   payload?: Record<string, unknown>
+  /** คะแนน stack ที่ได้จริงตอนทำสำเร็จ (เควสความรู้ถูกลดตามความแห้งของดิน — ดู config/groundFertility.ts)
+   *  ใช้คืนคะแนนให้ตรงตอนยกเลิกเควส  [ต้องเพิ่มใน DB] ดู docs/DB_CHANGES.md ข้อ 10 */
+  stackAwarded?: number
 }
 
 export const DEFAULT_QUEST_LOGS: QuestLogEntry[] = []

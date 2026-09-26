@@ -3,9 +3,8 @@ import type { MbtiType, RiskLevel, PlacedItem, DecorationPositionMap, QuestCateg
 import { DECORATION_EMOJI, DECORATION_ZONE_POSITION } from '../../config/decorationItems'
 import { ITEM_ICONS } from '../../config/iconAssets'
 import { useIsSmallScreen, usePrefersReducedMotion } from '../../hooks/useMediaQuery'
-import { getGroundImagePath, toGroundVariant } from '../../config/treeAssets'
-import { seededRandom } from '../../utils/seededRandom'
-import GroundScene from './GroundScene'
+import { toGroundVariant } from '../../config/treeAssets'
+import { GROUND_STAGE_LABEL, groundDryness, groundStage, knowledgeGrowthMultiplier } from '../../config/groundFertility'
 import { buildTreeModel } from './procedural/buildTreeModel'
 import ProceduralTreeCanvas from './procedural/ProceduralTreeCanvas'
 import { useAudio } from '../../context/AudioContext'
@@ -15,12 +14,14 @@ import './TreeOfLife.css'
  * ═══════════════════════════════════════════════════════════════════════
  * TreeOfLife — ต้นไม้ procedural วาด 2D + เลเยอร์พื้นดิน/เอฟเฟกต์/ไอเทมตกแต่ง
  * ═══════════════════════════════════════════════════════════════════════
- * [เปลี่ยนระบบต้นไม้ — 2026-09-26] ตัวต้นไม้ (ลำต้น/กิ่ง/ใบ/ดอก) เลิกใช้ภาพวาดสำเร็จรูป
- * (treeAssets.ts ลำต้น + ปั๊มภาพใบตาม LEAF_ANCHORS + brush ดอก) — สร้างจากโค้ดแทน:
- * procedural/buildTreeModel.ts (รูปทรงตามกลุ่ม MBTI, โตตามเลเวล, สีจาก MBTI_TREE_THEME) แล้ววาดลง
- * canvas 2D 2 ชั้นด้วย procedural/ProceduralTreeCanvas.tsx (กิ่ง / ใบ+ดอก — filter ใบเหี่ยวใส่ได้
- * เฉพาะชั้นใบ) ส่วนที่เหลือของไฟล์นี้คงเดิม: พื้นดิน 3 variant, GroundScene, growth pulse, คราบหมอง,
- * กลีบร่วง, ป้ายสายด่วน, ไอเทมตกแต่งลากวาง, tooltip
+ * [ต้นไม้ procedural + เนินดิน — 2026-09-26] ต้นไม้ทั้งต้น + พื้น วาดลง canvas 2D 3 ชั้นด้วย
+ * procedural/ProceduralTreeCanvas.tsx จากข้อมูลของ procedural/buildTreeModel.ts:
+ *   - ลำต้น/กิ่ง/ใบ: generateTree แตกกิ่งตามกลุ่ม MBTI โตตาม trunkBranchLevel, ใบวาดทีละใบในทรงพุ่มวงรี
+ *   - ดอก: จำนวนตาม leafFlowerLevel
+ *   - ทุ่งหญ้ามีมิติ: หนาแน่นตาม grassSoilLevel, ไม่ได้ทำเควสสุขภาพต่อเนื่อง → หญ้าเหี่ยว → แห้ง → ดินร้าง
+ *     (config/groundFertility.ts — ดินแห้งทำให้เควสความรู้ได้คะแนนลำต้นน้อยลง ต้นไม้โตช้าลง)
+ * filter ใบเหี่ยวใส่ที่ชั้นใบ — ส่วนที่เหลือของไฟล์นี้คงเดิม: growth pulse,
+ * คราบหมอง, กลีบร่วง, ป้ายสายด่วน, ไอเทมตกแต่งลากวาง, tooltip
  *
  *
  * [แก้รอบนี้ — ประสิทธิภาพและความสม่ำเสมอของภาพ]
@@ -41,7 +42,6 @@ import './TreeOfLife.css'
  *    เปิด TreeSummaryModal (บทความ AI) ที่ Dashboard.tsx ควบคุม
  *  - decorationPositions/onDecorationMove: ไอเทมตกแต่งลากวางอิสระได้ทุกตำแหน่งรอบต้นไม้
  *    แทนที่จะติดอยู่กับโซนตายตัว 4 โซนแบบเดิม (ดู AppContext.tsx สำหรับ state ที่เก็บพิกัด)
- *  - <GroundScene>: เลเยอร์หญ้า/ดอกไม้มีมิติ พริ้วไหวตามลม ผูกกับ grassSoilLevel
  */
 
 /** ขนาดกล่อง .tree-of-life จริง (วัดด้วย ResizeObserver) — ใช้คำนวณขนาดก้อนดินและจัดต้นไม้ให้พอดีกล่อง */
@@ -54,56 +54,6 @@ interface ContainerSize {
  *  เลเยอร์ใบทั้งหมดลงมา ให้ความรู้สึก "ใบร่วงไปเยอะ บางลง" แบบง่ายๆ (คงพฤติกรรมเดิมจากรอบก่อน
  *  ไว้ — ไม่เปลี่ยน แค่ตอนนี้ครอบสำเนาใบเล็กหลายชิ้นแทนภาพก้อนเดียว) */
 const LEAF_DYING_OPACITY = 0.25
-
-/* [ใหม่ — ตามที่ระบุรอบนี้ "ดินและหญ้าต้องวางซ้อนๆกันตั้งแต่รากไปยังข้างล่าง ActionMenuBar
- * เต็มตลอดแนวยาวหลายๆก้อน"] เดิม ground ใช้ภาพวงกลมดินเดี่ยวๆ ภาพเดียว (LeveledLayer) —
- * เปลี่ยนมาใช้ pattern เดียวกับใบ/ดอก (stamp ซ้ำหลายชิ้นตำแหน่งสุ่มแบบ deterministic) แทน
- * เพื่อปั๊มภาพดิน/หญ้าเดียวกันซ้ำเป็นก้อนเล็กๆ หลายก้อนเรียงคาบเกี่ยวกันเต็มความกว้างจอ
- * ในแถบตั้งแต่โคนต้น (ประมาณ 78%) ลงไปจนถึงขอบล่างสุด (97%) ซึ่งเป็นแถบเดียวกับที่
- * ActionMenuBar ลอยอยู่ (position:fixed เต็มจอเดียวกับ .tree-of-life) */
-interface GroundClump {
-  key: string
-  leftPct: number
-  topPct: number
-  scale: number
-  rotationDeg: number
-  delayMs: number
-}
-
-/* [แก้ตามที่ระบุรอบนี้ — "ดินต้องคงขนาดเท่าเดิมนะ"] แก้บั๊กก้อนดินใหญ่เกินจริง (ดู
- * groundClumpBasePx ใน component) ด้วยการอิงขนาดจากความสูงกล่องแทนความกว้าง — ทำให้แต่ละ
- * ก้อน "เล็กลง" กว่าเดิมมาก (จากที่เคยบวมจนล้นจอ) จึงเพิ่มจำนวนก้อนขึ้นชดเชย (~1.85 เท่า)
- * เพื่อให้ "พื้นที่รวมที่ดินปกคลุม" (ความต่อเนื่อง/ความหนาแน่นของแถบดินทั้งแนว) ยังเท่าเดิม
- * ไม่ใช่ดูบางลง แค่แต่ละก้อนไม่บวมจนล้นเฟรมเหมือนก่อน */
-const GROUND_CLUMP_COUNT_DESKTOP = 26
-const GROUND_CLUMP_COUNT_MOBILE = 16
-const GROUND_BAND_TOP_PCT = 78
-const GROUND_BAND_BOTTOM_PCT = 97
-
-function generateGroundClumps(seedKey: string, count: number): GroundClump[] {
-  const rng = seededRandom(seedKey)
-  const clumps: GroundClump[] = []
-
-  for (let i = 0; i < count; i++) {
-    const slotCenterPct = ((i + 0.5) / count) * 100
-    // jitter แคบกว่าช่องของตัวเอง (0.6 เท่า) — ทำให้ก้อนเรียงชิดกันสม่ำเสมอตลอดแนว ไม่มีช่วง
-    // ห่างผิดปกติแบบสุ่มเต็มช่วง (ตอนแรกใช้ 1.4 เท่าแล้วบางเคสมีช่องว่างตรงกลางให้เห็น) รวมกับ
-    // ขนาดก้อนที่กว้างกว่าระยะห่างของ slot มาก (baseSizePct 32% ต่อ slot ~7%) ก้อนข้างเคียงจึง
-    // คาบเกี่ยว/ซ้อนกันแน่นอนทุกจุดตลอดความกว้างจอ ("เต็มตลอดแนวยาว" ตามที่ระบุ)
-    const jitterPct = (rng() - 0.5) * (100 / count) * 0.6
-    clumps.push({
-      key: `ground-${seedKey}-${i}`,
-      leftPct: Math.min(99, Math.max(1, slotCenterPct + jitterPct)),
-      topPct: GROUND_BAND_TOP_PCT + rng() * (GROUND_BAND_BOTTOM_PCT - GROUND_BAND_TOP_PCT),
-      scale: 0.8 + rng() * 0.5,
-      rotationDeg: (rng() - 0.5) * 14,
-      delayMs: i * 35,
-    })
-  }
-
-  // เรียงตาม topPct: ก้อนที่อยู่สูงกว่า (ไกลกว่า) วาดก่อน ก้อนที่อยู่ต่ำกว่า (ใกล้ผู้ดูกว่า) วาดทับทีหลัง
-  return clumps.sort((a, b) => a.topPct - b.topPct)
-}
 
 const RISK_FILTER: Record<RiskLevel, string> = {
   LOW: 'none',
@@ -132,14 +82,6 @@ const LEAF_HEALTH_FILTER: Record<HealthPhase, string> = {
   healthy: 'none',
   wilting: 'sepia(0.45) saturate(0.7) hue-rotate(-12deg) brightness(0.97)',
   dying: 'sepia(0.7) saturate(0.45) hue-rotate(-20deg) brightness(0.88)',
-}
-
-/** หญ้า (ground variant 2) ไล่สีเหลือง/น้ำตาลแห้งแบบเดียวกับใบตอน decay ก่อนจะจางหายไป
- *  (ลด opacity — ดู groundVariant2Opacity ใน component) */
-const GRASS_HEALTH_FILTER: Record<HealthPhase, string> = {
-  healthy: 'none',
-  wilting: 'sepia(0.5) saturate(0.65) hue-rotate(-10deg)',
-  dying: 'sepia(0.75) saturate(0.4) hue-rotate(-18deg) brightness(0.85)',
 }
 
 /** พิกัดกำหนดเอง (%) ของไอเทมตกแต่งแต่ละชิ้น — key = itemId (type อยู่ที่ types.ts ใช้ร่วมกับ AppContext.tsx) */
@@ -205,29 +147,16 @@ function TreeOfLifeBase({
   /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] ใบเหี่ยว/ร่วงตามจำนวนวันที่ไม่ได้ทำเควสหมวดจิตใจ */
   const leafHealthPhase = useMemo(() => toHealthPhase(daysSinceLastMentalQuest), [daysSinceLastMentalQuest])
 
-  /* [เขียนใหม่ตามที่ระบุรอบนี้ ข้อ 3] พื้นดิน — เลิกใช้ getGroundImagePath เดี่ยวๆ (สลับภาพ
-     ตาม variant เดียว) เปลี่ยนเป็นผสม 3 variant ซ้อนกัน: variant 1 คือ "ฐาน" เต็มพื้นที่เสมอ
-     ไม่มีเงื่อนไข, variant 2/3 คือ patch หญ้า/ดอกหญ้าซ้อนทับด้วย opacity เพิ่มตาม
-     healthVisualLevel (เดิมเรียก groundVariant — เปลี่ยนชื่อให้ตรงความหมายใหม่ที่ไม่ใช่
-     "เลือก 1 ใน 3" แล้ว แต่เป็น "ระดับผสม 1-3" ของทั้ง 3 ชั้นพร้อมกัน) */
-  const groundHealthVisualLevel = useMemo(() => toGroundVariant(grassSoilLevel), [grassSoilLevel])
-  const groundVariant1Url = useMemo(() => getGroundImagePath(1), [])
-  const groundVariant2Url = useMemo(() => getGroundImagePath(2), [])
-  const groundVariant3Url = useMemo(() => getGroundImagePath(3), [])
+  const groundStep = useMemo(() => toGroundVariant(grassSoilLevel), [grassSoilLevel])
 
-  /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] Decay ย้อนกลับของหญ้า — ผูกกับจำนวนวันที่ไม่ได้ทำเควส
-     หมวดสุขภาพกาย (คนละหมวดกับใบซึ่งผูกหมวดจิตใจ) */
-  const groundHealthPhase = useMemo(() => toHealthPhase(daysSinceLastPhysicalQuest), [daysSinceLastPhysicalQuest])
+  /* หญ้าเหี่ยว → แห้ง → ดินร้าง ตามจำนวนวันที่ไม่ได้ทำเควสหมวดสุขภาพกาย (คนละหมวดกับใบซึ่งผูกหมวดจิตใจ)
+     ไล่ต่อเนื่องทีละวัน — และดินแห้งทำให้ต้นไม้โตช้าลง (ดู config/groundFertility.ts) */
+  const groundDry = useMemo(() => groundDryness(daysSinceLastPhysicalQuest), [daysSinceLastPhysicalQuest])
+  const groundStg = groundStage(groundDry)
 
   /* target opacity ตาม healthVisualLevel (1: มีแค่ฐาน, 2: หญ้าเริ่มขึ้น, 3: หญ้า+ดอกหญ้าเต็ม)
      คูณด้วย decay multiplier (wilting ลดลงครึ่งหนึ่ง, dying จางจนเกือบหมด) — ค่อยๆ นุ่มนวล
      ด้วย CSS transition บน opacity/filter ที่ container (ดู render ด้านล่าง) ไม่กระตุก */
-  const groundDecayMultiplier = groundHealthPhase === 'dying' ? 0.08 : groundHealthPhase === 'wilting' ? 0.55 : 1
-  const groundVariant2TargetOpacity = groundHealthVisualLevel === 1 ? 0 : groundHealthVisualLevel === 2 ? 0.55 : 1
-  const groundVariant3TargetOpacity = groundHealthVisualLevel === 3 ? 0.65 : 0
-  const groundVariant2Opacity = groundVariant2TargetOpacity * groundDecayMultiplier
-  const groundVariant3Opacity = groundVariant3TargetOpacity * groundDecayMultiplier
-
   /* จอเล็ก → ต้นไม้ใช้ใบ/ดอกน้อยลง + ก้อนดินน้อยลง (งานวาดน้อยลงบนเครื่องสเปกต่ำ) */
   const isSmallScreen = useIsSmallScreen()
   const reducedMotion = usePrefersReducedMotion()
@@ -242,11 +171,6 @@ function TreeOfLifeBase({
   /* [แก้ตามที่ระบุรอบนี้] จำนวนก้อนดิน/หญ้าตามขนาดจอ — seed ผูกกับ folder เท่านั้น (ไม่ผูกกับ
      healthVisualLevel/variant อีกต่อไป เพราะตอนนี้ทั้ง 3 variant ใช้ตำแหน่ง "ชุดเดียวกัน"
      ซ้อนทับกันเป๊ะเสมอ — เปลี่ยนแค่ opacity ต่อ variant ไม่ใช่สลับตำแหน่งไปมา) */
-  const groundClumpCount = isSmallScreen ? GROUND_CLUMP_COUNT_MOBILE : GROUND_CLUMP_COUNT_DESKTOP
-  const groundClumps = useMemo(
-    () => generateGroundClumps(`${folder}-ground`, groundClumpCount),
-    [folder, groundClumpCount],
-  )
 
   const [hintVisible, setHintVisible] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -291,16 +215,6 @@ function TreeOfLifeBase({
     }
   }, [reducedMotion])
 
-  /* [แก้ตามที่ระบุรอบนี้ ข้อ 2 — root cause จริงของ "ดินจางๆ/ฝั่งซ้ายไม่มีดิน"] เดิมกำหนด
-     ขนาดก้อนดินเป็น "% ของความกว้างกล่อง" (`${scale*32}%`) แล้วปล่อย height:auto ตามสัดส่วน
-     ภาพจริง (ground_variant_*.png เป็นภาพเกือบสี่เหลี่ยมจัตุรัส 435×435) — บนจอกว้าง (เช่น
-     2304px) 32% ของความกว้างกลายเป็นก้อนดิน ~750px ทั้งกว้างและสูง (เพราะภาพสี่เหลี่ยมจัตุรัส)
-     ใหญ่กว่าแถบพื้นที่ตั้งใจไว้ (GROUND_BAND สูงแค่ ~19% ของความสูงกล่อง) หลายเท่า ทำให้ก้อน
-     ดินส่วนใหญ่ยื่นล้นพ้นขอบบน/ล่างของ viewport ที่มองเห็นจริงไป เห็นแค่บางส่วนที่โผล่พ้นขอบ
-     แบบสุ่มๆ ตามตำแหน่ง (ดูเหมือน "จาง"/"ขาดไปฝั่งหนึ่ง" ทั้งที่จริงคือก้อนใหญ่เกินจนโดนตัดขอบ)
-     แก้โดยคำนวณขนาดเป็น "px ตรงๆ" อิงจากความสูงกล่อง (ซึ่งสอดคล้องกับความสูงของ GROUND_BAND
-     ที่ตั้งใจไว้จริง) แทนการอิงความกว้างกล่องที่ไม่เกี่ยวกับแถบพื้นที่นี้เลย */
-  const groundClumpBasePx = containerSize ? containerSize.h * 0.22 : 0
 
   // [ใหม่] เล่น burst effect ทุกครั้งที่ growthPulse.key เปลี่ยน (เควสสำเร็จ) แล้วเคลียร์เอง
   // อัตโนมัติหลัง 1.8s — ไม่ต้องให้ AppContext เป็นคนจับเวลาเคลียร์ค่าทิ้ง กัน stale closure
@@ -349,81 +263,16 @@ function TreeOfLifeBase({
             : RISK_FILTER[riskLevel],
         } as React.CSSProperties}
       >
-        {/* [เขียนใหม่ตามที่ระบุรอบนี้ ข้อ 3] variant 1 = ฐานเต็มพื้นที่เสมอ ไม่มีเงื่อนไข
-            ("ปั๊ม" ตำแหน่งเดียวกับ variant 2/3 ด้านล่างเป๊ะ ให้ 3 ชั้นซ้อนทับตรงกันพอดี) */}
-        <div className="tree-of-life__foliage" style={{ zIndex: 1 }} aria-hidden="true">
-          {groundClumps.map((c, i) => (
-            <img
-              key={c.key} src={groundVariant1Url} alt=""
-              className="tree-of-life__stamp tree-of-life__stamp--ground"
-              style={{
-                left: `${c.leftPct}%`,
-                top: `${c.topPct}%`,
-                width: `${c.scale * groundClumpBasePx}px`,
-                transform: `translate(-50%, -50%) rotate(${c.rotationDeg}deg)`,
-                animationDelay: reducedMotion ? '0ms' : `${c.delayMs}ms`,
-                zIndex: i,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] variant 2 (หญ้าเริ่มขึ้น) — opacity/filter ทั้งชั้น
-            คุมที่ container เดียว (ไม่ใช่ต่อก้อน) transition นุ่มนวลตอนเปลี่ยน
-            healthVisualLevel หรือตอน decay/ฟื้นตัว ไม่กระตุก */}
-        <div
-          className="tree-of-life__foliage tree-of-life__ground-overlay"
-          style={{ zIndex: 1, opacity: groundVariant2Opacity, filter: GRASS_HEALTH_FILTER[groundHealthPhase] }}
-          aria-hidden="true"
-        >
-          {groundClumps.map((c, i) => (
-            <img
-              key={c.key} src={groundVariant2Url} alt=""
-              className="tree-of-life__stamp tree-of-life__stamp--ground"
-              style={{
-                left: `${c.leftPct}%`,
-                top: `${c.topPct}%`,
-                width: `${c.scale * groundClumpBasePx}px`,
-                transform: `translate(-50%, -50%) rotate(${c.rotationDeg}deg)`,
-                animationDelay: reducedMotion ? '0ms' : `${c.delayMs}ms`,
-                zIndex: i,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] variant 3 (ดอกหญ้าแซม) — โผล่เฉพาะ healthVisualLevel
-            สูงสุด (3) เท่านั้น ก่อน decay multiplier เดียวกับ variant 2 */}
-        <div
-          className="tree-of-life__foliage tree-of-life__ground-overlay"
-          style={{ zIndex: 1, opacity: groundVariant3Opacity }}
-          aria-hidden="true"
-        >
-          {groundClumps.map((c, i) => (
-            <img
-              key={c.key} src={groundVariant3Url} alt=""
-              className="tree-of-life__stamp tree-of-life__stamp--ground"
-              style={{
-                left: `${c.leftPct}%`,
-                top: `${c.topPct}%`,
-                width: `${c.scale * groundClumpBasePx}px`,
-                transform: `translate(-50%, -50%) rotate(${c.rotationDeg}deg)`,
-                animationDelay: reducedMotion ? '0ms' : `${c.delayMs}ms`,
-                zIndex: i,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* [ข้อกำหนดข้อ 4] หญ้า/ดอกไม้มีมิติ ซ้อนทับภาพพื้นหญ้าเดิม */}
-        <GroundScene grassSoilLevel={grassSoilLevel} seedKey={`${folder}-ground`} />
-
-        {/* ต้นไม้ procedural 2 ชั้น (กิ่ง / ใบ+ดอก) — key ผูกกับ visual level ให้เล่นอนิเมชันโตทุกครั้งที่ขึ้นขั้น
-            ชั้นใบรับ filter/ความจางของใบเหี่ยว (หมวดจิตใจ) และไหวตามลม (CSS ทั้งแผ่น ไม่วาดใหม่) */}
+        {/* ต้นไม้ + ทุ่งหญ้า (ทุ่ง / หญ้าหลังต้น / ลำต้น / หญ้าหน้าต้น / ใบ+ดอก — หญ้าไหวตามลม) — key ผูกกับ visual level ให้เล่นอนิเมชันโต
+            ทุกครั้งที่ขึ้นขั้น, ชั้นใบรับ filter/ความจางของใบเหี่ยว (หมวดจิตใจ) และไหวตามลม
+            (CSS ทั้งแผ่น ไม่วาดใหม่) */}
         <ProceduralTreeCanvas
           key={treeModel.visualLevel}
           model={treeModel}
           size={containerSize}
+          grassSoilLevel={grassSoilLevel}
+          dryness={groundDry}
+          animateWind={!reducedMotion}
           foliageStyle={{
             filter: LEAF_HEALTH_FILTER[leafHealthPhase],
             opacity: leafHealthPhase === 'dying' ? LEAF_DYING_OPACITY : 1,
@@ -528,12 +377,14 @@ function TreeOfLifeBase({
               <div className="tree-of-life__tooltip-title">🌳 {folder}</div>
               <div>🪵 ลำต้น/ใบ (ความรู้): Lv.{trunkBranchLevel} (ขั้น {treeModel.visualLevel}/8){treeModel.leaves.length > 0 ? ` · ใบ ${treeModel.leaves.length} ใบ` : ' · ยังไม่มีใบ'}</div>
               <div>🌸 ดอก (จิตใจ): Lv.{leafFlowerLevel} · ดอก {treeModel.flowers.length} ดอก</div>
-              <div>🌱 หญ้า/ราก (สุขภาพ): Lv.{grassSoilLevel} (ผสม {groundHealthVisualLevel}/3)</div>
+              <div>🌱 แปลงหญ้า (สุขภาพ): Lv.{grassSoilLevel} (ขั้น {groundStep}/3) · {GROUND_STAGE_LABEL[groundStg]}</div>
               {leafHealthPhase !== 'healthy' && (
                 <div className="tree-of-life__tooltip-warn">🍂 ใบ: {leafHealthPhase === 'dying' ? 'กำลังร่วง' : 'เริ่มเหี่ยว'}</div>
               )}
-              {groundHealthPhase !== 'healthy' && (
-                <div className="tree-of-life__tooltip-warn">🌾 หญ้า: {groundHealthPhase === 'dying' ? 'แห้งเกือบหมด' : 'เริ่มแห้ง'}</div>
+              {groundDry > 0 && (
+                <div className="tree-of-life__tooltip-warn">
+                  🌾 ดินไม่อุดมสมบูรณ์ — ต้นไม้โตช้าลง (ได้คะแนนความรู้ {Math.round(knowledgeGrowthMultiplier(groundDry) * 100)}%) ทำเควสสุขภาพเพื่อฟื้นดิน
+                </div>
               )}
               {riskLevel !== 'LOW' && (
                 <div className="tree-of-life__tooltip-warn">⚠️ สุขภาพต้นไม้: {riskLevel === 'HIGH' ? 'เหี่ยวมาก' : 'เริ่มซีด'}</div>

@@ -106,10 +106,39 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
     const wanted = young
       ? 3 + Math.floor(Math.min(Math.max(trunkBranchLevel, 1), 20) / 5)
       : Math.round((density[0] + density[1]) * 1.6)
-    const perBranch = young ? wanted : Math.max(3, Math.min(wanted, Math.floor(cap / leafBranches.length)))
+    // ใบใหญ่ขึ้น 2 เท่า → ใบต่อกิ่งลดลง (ใบเต็ม ÷2, ใบอ่อน ×0.6) (พื้นที่ใบรวมยังพอๆ เดิม ไม่แน่นจนทึบ/หนักเครื่อง)
+    const perBranch = young
+      ? Math.max(2, Math.round(wanted * 0.6))
+      : Math.max(2, Math.min(Math.round(wanted / 2), Math.floor(cap / leafBranches.length)))
 
-    // ใบใหญ่ขึ้นเล็กน้อยจากรอบก่อน (0.34 → 0.38) — ใบอ่อนใหญ่กว่าอีกนิด ต้นกล้าใบน้อยจะได้มองเห็นชัด
-    const leafLength = young ? 0.46 : 0.38
+    // ใบใหญ่ 2 เท่าของรอบก่อน (0.38 → 0.76, ใบอ่อน 0.46 → 0.92) ปลายใบมน (ดู getLeafPath ใน drawTree2D)
+    const leafLength = young ? 0.92 : 0.76
+
+    const addLeaf = (p: Vec3) => {
+      const out = normalize([(p[0] - center[0]) / crown.rx, ((p[1] - center[1]) / crown.ry) * 0.8, (p[2] - center[2]) / crown.rx])
+      // ทิศปลายใบบนจอ: ออกนอกพุ่ม 75% + หาแสง 25% + สุ่มเล็กน้อย
+      const tipX = out[0] * 0.75 + SUN_DIR[0] * 0.25 + (rand() - 0.5) * 0.6
+      const tipY = out[1] * 0.75 + SUN_DIR[1] * 0.25 + (rand() - 0.5) * 0.6
+      // ความสว่าง: หันรับแสง + อยู่ด้านหน้าพุ่ม (z มาก) + อยู่สูง
+      const facing = dot(out, SUN_DIR) * 0.5 + 0.5
+      const front = clamp01(((p[2] - center[2]) / crown.rx) * 0.5 + 0.5)
+      const lift = clamp01(((p[1] - crown.cy) / crown.ry) * 0.5 + 0.5)
+      const base = theme.leaves[Math.floor(rand() * theme.leaves.length)]
+      leaves.push({
+        position: p,
+        length: leafLength * (0.75 + rand() * 0.6),
+        angle: Math.atan2(tipX, tipY),
+        widthScale: 0.55 + rand() * 0.45,
+        // ใบอ่อน: สว่างขึ้น อมเหลือง (hue ถอยไปทางเหลือง) และสีจางลงเล็กน้อย เหมือนใบแตกใหม่
+        color: shade(
+          base,
+          (facing - 0.5) * 0.24 + (front - 0.5) * 0.12 + (lift - 0.5) * 0.06 + (young ? 0.08 : 0),
+          (rand() - 0.5) * 0.03 + (young ? -0.035 : 0),
+          (rand() - 0.5) * 0.08 + (young ? -0.06 : 0),
+        ),
+      })
+    }
+
     for (const b of leafBranches) {
       const len = dist(b.start, b.end)
       // ใบเกาะรอบแนวกิ่ง ห่างจากกิ่งไม่มาก (ใบอ่อนชิดกิ่งกว่า)
@@ -127,33 +156,27 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
           on[1] + r * Math.cos(ph) * 0.8,
           on[2] + r * Math.sin(ph) * Math.sin(th),
         ]
-        // อยู่ในวงรีทรงพุ่มเท่านั้น — ขอบนุ่มเล็กน้อย (สุ่มเกณฑ์ 0.88-1) ไม่ให้ขอบพุ่มเรียบเหมือนตัดกรรไกร
+        // อยู่ในวงรีทรงพุ่มเท่านั้น — ขอบนุ่มนิดเดียว (สุ่มเกณฑ์ 0.95-1) ให้ขอบพุ่มโค้งเรียบสวย
         const e = ((p[0] - crown.cx) / crown.rx) ** 2 + ((p[1] - crown.cy) / crown.ry) ** 2
-        if (e > 1 - rand() * 0.12) continue
+        if (e > 1 - rand() * 0.05) continue
         placed++
+        addLeaf(p)
+      }
+    }
 
-        const out = normalize([(p[0] - center[0]) / crown.rx, ((p[1] - center[1]) / crown.ry) * 0.8, (p[2] - center[2]) / crown.rx])
-        // ทิศปลายใบบนจอ: ออกนอกพุ่ม 75% + หาแสง 25% + สุ่มเล็กน้อย
-        const tipX = out[0] * 0.75 + SUN_DIR[0] * 0.25 + (rand() - 0.5) * 0.6
-        const tipY = out[1] * 0.75 + SUN_DIR[1] * 0.25 + (rand() - 0.5) * 0.6
-        // ความสว่าง: หันรับแสง + อยู่ด้านหน้าพุ่ม (z มาก) + อยู่สูง
-        const facing = dot(out, SUN_DIR) * 0.5 + 0.5
-        const front = clamp01(((p[2] - center[2]) / crown.rx) * 0.5 + 0.5)
-        const lift = clamp01(((p[1] - crown.cy) / crown.ry) * 0.5 + 0.5)
-        const base = theme.leaves[Math.floor(rand() * theme.leaves.length)]
-        leaves.push({
-          position: p,
-          length: leafLength * (0.75 + rand() * 0.6),
-          angle: Math.atan2(tipX, tipY),
-          widthScale: 0.45 + rand() * 0.55,
-          // ใบอ่อน: สว่างขึ้น อมเหลือง (hue ถอยไปทางเหลือง) และสีจางลงเล็กน้อย เหมือนใบแตกใหม่
-          color: shade(
-            base,
-            (facing - 0.5) * 0.24 + (front - 0.5) * 0.12 + (lift - 0.5) * 0.06 + (young ? 0.08 : 0),
-            (rand() - 0.5) * 0.03 + (young ? -0.035 : 0),
-            (rand() - 0.5) * 0.08 + (young ? -0.06 : 0),
-          ),
-        })
+    // ขอบบนของพุ่มเป็นโดมโค้งเรียบ: ใบเรียงแน่นตามแนวขอบวงรีครึ่งบน (+เลยแนวนอนลงมาเล็กน้อย)
+    // 2 แถว — มองไกลๆ เห็นพุ่มกลมสวย ไม่ใช่กิ่งโปร่งมีใบกระจายเป็นจุดๆ (ต้นอ่อนใบน้อยยังไม่มีขอบนี้)
+    if (!young) {
+      const halfPerimeter = Math.PI * Math.sqrt((crown.rx ** 2 + crown.ry ** 2) / 2)
+      const shell = Math.min(cap - leaves.length, Math.round((halfPerimeter / (leafLength * 0.42)) * 2))
+      for (let i = 0; i < shell; i++) {
+        const a = Math.PI * (-0.1 + rand() * 1.2) // มุมของขอบวงรี: 0 = ขวา, π/2 = ยอด, π = ซ้าย
+        const rr = 0.8 + rand() * 0.16
+        addLeaf([
+          crown.cx + Math.cos(a) * crown.rx * rr,
+          crown.cy + Math.sin(a) * crown.ry * rr,
+          center[2] + (rand() - 0.5) * crown.rx * 0.9,
+        ])
       }
     }
     // วาดจากหลังมาหน้า (z น้อย → มาก) ให้ใบด้านหน้าทับด้านหลังถูกลำดับ
@@ -189,7 +212,8 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
     leaves,
     flowers,
     trunkColor: theme.trunk,
-    growth: 0.38 + ((visualLevel - 1) / 7) * 0.62,
+    // ต้นเล็กสุดสูง 55% ของต้นโตเต็มที่ (เดิม 38% — ต้นเล็กเกินเทียบกับฉากหลัง)
+    growth: 0.55 + ((visualLevel - 1) / 7) * 0.45,
     visualLevel,
     tipDepth: shownDepth,
     crown,
@@ -224,7 +248,8 @@ function average(points: Vec3[]): Vec3 {
   return [s[0] / points.length, s[1] / points.length, s[2] / points.length]
 }
 
-/** ปรับสี hex ใน HSL: dl = ความสว่าง ±, dh = hue ±, ds = saturation ± → 'hsl(...)' */
+/** ปรับสี hex ใน HSL: dl = ความสว่าง ±, dh = hue ±, ds = saturation ± → 'hsl(h, s%, l%)'
+ *  (คั่นจุลภาค — ใช้ได้ทั้ง canvas และ THREE.Color) */
 export function shade(hex: string, dl: number, dh = 0, ds = 0): string {
   const n = parseInt(hex.slice(1), 16)
   const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255
@@ -238,5 +263,5 @@ export function shade(hex: string, dl: number, dh = 0, ds = 0): string {
     h /= 6
   }
   const H = (((h + dh) % 1) + 1) % 1
-  return `hsl(${Math.round(H * 360)} ${Math.round(clamp01(s + ds) * 100)}% ${Math.round(clamp01(l + dl) * 100)}%)`
+  return `hsl(${Math.round(H * 360)}, ${Math.round(clamp01(s + ds) * 100)}%, ${Math.round(clamp01(l + dl) * 100)}%)`
 }
