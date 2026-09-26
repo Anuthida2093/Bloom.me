@@ -1,4 +1,4 @@
-import type { BranchSegment, Vec3 } from './generateTree'
+import { pointOnBranch, type Vec3 } from './generateTree'
 import { shade, type TreeModel } from './buildTreeModel'
 
 /*============================================================================*\
@@ -27,17 +27,6 @@ export function fitTree(model: TreeModel, width: number, height: number, baseYRa
 
 const toScreen = (p: Vec3, f: TreeFit): [number, number] => [f.baseX + p[0] * f.scale, f.baseY - p[1] * f.scale]
 
-/** จุดบนเส้นโค้งกำลังสองที่ผ่าน start → mid → end (control point คำนวณให้เส้นผ่าน mid พอดี) */
-function curvePoint(b: BranchSegment, t: number): Vec3 {
-  const c: Vec3 = [2 * b.mid[0] - (b.start[0] + b.end[0]) / 2, 2 * b.mid[1] - (b.start[1] + b.end[1]) / 2, 2 * b.mid[2] - (b.start[2] + b.end[2]) / 2]
-  const u = 1 - t
-  return [
-    u * u * b.start[0] + 2 * u * t * c[0] + t * t * b.end[0],
-    u * u * b.start[1] + 2 * u * t * c[1] + t * t * b.end[1],
-    u * u * b.start[2] + 2 * u * t * c[2] + t * t * b.end[2],
-  ]
-}
-
 export function drawBranches(ctx: CanvasRenderingContext2D, model: TreeModel, fit: TreeFit) {
   const dark = shade(model.trunkColor, -0.1)
   const light = shade(model.trunkColor, 0.14)
@@ -50,15 +39,18 @@ export function drawBranches(ctx: CanvasRenderingContext2D, model: TreeModel, fi
     const highlight: [number, number][] = []
     for (let i = 0; i <= steps; i++) {
       const t = i / steps
-      const p = toScreen(curvePoint(b, t), fit)
-      const q = toScreen(curvePoint(b, Math.min(1, t + 0.01)), fit)
-      const pPrev = toScreen(curvePoint(b, Math.max(0, t - 0.01)), fit)
+      const p = toScreen(pointOnBranch(b, t), fit)
+      const q = toScreen(pointOnBranch(b, Math.min(1, t + 0.01)), fit)
+      const pPrev = toScreen(pointOnBranch(b, Math.max(0, t - 0.01)), fit)
       let dx = q[0] - pPrev[0], dy = q[1] - pPrev[1]
       const len = Math.hypot(dx, dy) || 1
       dx /= len; dy /= len
-      let r = (b.radiusStart + (b.radiusEnd - b.radiusStart) * t) * fit.scale
+      // กิ่งปลายสุด (ไม่มีกิ่งต่อ) เรียวจนปลายแหลม — กิ่งอื่นเรียวถึงรัศมีปลายปกติที่กิ่งลูกต่อพอดี
+      const isTip = b.depth === model.tipDepth
+      const rEnd = isTip ? b.radiusStart * 0.06 : b.radiusEnd
+      let r = (b.radiusStart + (rEnd - b.radiusStart) * (isTip ? Math.pow(t, 0.85) : t)) * fit.scale
       if (b.depth === 0) r *= 1 + 0.7 * Math.pow(1 - t, 4) // โคนต้นบานออก
-      r = Math.max(r, 0.6)
+      r = Math.max(r, isTip ? 0.2 : 0.6)
       // ตั้งฉากกับทิศกิ่ง: (-dy, dx)
       left.push([p[0] - dy * r, p[1] + dx * r])
       right.push([p[0] + dy * r, p[1] - dx * r])

@@ -117,6 +117,18 @@ function perpendicular(v: Vec3): Vec3 {
   return normalize(cross(v, helper))
 }
 
+/** จุดบนกิ่งที่สัดส่วน t (0 = โคน, 1 = ปลาย) ตามเส้นโค้งกำลังสองที่ผ่าน start → mid → end
+ *  (control point คำนวณให้เส้นผ่าน mid พอดี) — ใช้ร่วมกันทั้งตอนวาดกิ่งและตอนวางใบตามกิ่ง */
+export function pointOnBranch(b: BranchSegment, t: number): Vec3 {
+  const c: Vec3 = [2 * b.mid[0] - (b.start[0] + b.end[0]) / 2, 2 * b.mid[1] - (b.start[1] + b.end[1]) / 2, 2 * b.mid[2] - (b.start[2] + b.end[2]) / 2]
+  const u = 1 - t
+  return [
+    u * u * b.start[0] + 2 * u * t * c[0] + t * t * b.end[0],
+    u * u * b.start[1] + 2 * u * t * c[1] + t * t * b.end[1],
+    u * u * b.start[2] + 2 * u * t * c[2] + t * t * b.end[2],
+  ]
+}
+
 const UP: Vec3 = [0, 1, 0]
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
 const DEG = Math.PI / 180

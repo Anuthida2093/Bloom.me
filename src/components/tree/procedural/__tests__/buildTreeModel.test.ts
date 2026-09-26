@@ -47,4 +47,14 @@ describe('buildTreeModel', () => {
     const width = (m: typeof nt) => m.bounds.maxX - m.bounds.minX
     expect(width(nt) / nt.bounds.maxY).not.toBeCloseTo(width(sp) / sp.bounds.maxY, 1)
   })
+
+  it('keeps every leaf inside the crown ellipse (round/oval canopy)', () => {
+    for (const mbtiType of ['INTJ', 'INFJ', 'ISFJ', 'ESTP'] as const) {
+      const m = buildTreeModel({ ...base, mbtiType, trunkBranchLevel: 130 })
+      for (const l of m.leaves) {
+        const e = ((l.position[0] - m.crown.cx) / m.crown.rx) ** 2 + ((l.position[1] - m.crown.cy) / m.crown.ry) ** 2
+        expect(e).toBeLessThanOrEqual(1)
+      }
+    }
+  })
 })
