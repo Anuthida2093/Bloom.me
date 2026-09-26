@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState, useEffect, type PointerEvent as ReactPointerEvent } from 'react'
+import { memo, useCallback, useMemo, useRef, useState, useEffect, type PointerEvent as ReactPointerEvent } from 'react'
 import type { MbtiType, RiskLevel, PlacedItem, DecorationPositionMap, QuestCategory } from '../../types'
 import { DECORATION_EMOJI, DECORATION_ZONE_POSITION } from '../../config/decorationItems'
 import { ITEM_ICONS } from '../../config/iconAssets'
@@ -8,6 +8,7 @@ import { GROUND_STAGE_LABEL, groundDryness, groundStage, knowledgeGrowthMultipli
 import { buildTreeModel } from './procedural/buildTreeModel'
 import ProceduralTreeCanvas from './procedural/ProceduralTreeCanvas'
 import { useAudio } from '../../context/AudioContext'
+import { useHorizontalPan } from '../../hooks/useHorizontalPan'
 import './TreeOfLife.css'
 
 /**
@@ -54,6 +55,10 @@ interface ContainerSize {
  *  เลเยอร์ใบทั้งหมดลงมา ให้ความรู้สึก "ใบร่วงไปเยอะ บางลง" แบบง่ายๆ (คงพฤติกรรมเดิมจากรอบก่อน
  *  ไว้ — ไม่เปลี่ยน แค่ตอนนี้ครอบสำเนาใบเล็กหลายชิ้นแทนภาพก้อนเดียว) */
 const LEAF_DYING_OPACITY = 0.25
+
+/** ฉากเลื่อนได้กว้างกี่เท่าของจอ — จอแนวนอนเลื่อนได้ 60% ของจอ, แนวตั้ง (จอแคบ) เลื่อนได้มากกว่า */
+const WORLD_FACTOR_LANDSCAPE = 1.6
+const WORLD_FACTOR_PORTRAIT = 2.4
 
 const RISK_FILTER: Record<RiskLevel, string> = {
   LOW: 'none',
@@ -120,6 +125,10 @@ interface TreeOfLifeProps {
    *  จางหาย/เปลี่ยนสีของหญ้า (ground variant 2/3) แทนใบ */
   daysSinceLastPhysicalQuest?: number | null
   showHint?: boolean
+  /** ฉากกว้างกว่าจอ กดค้างที่พื้นแล้วลากซ้าย-ขวาเพื่อเลื่อนดูได้ (หน้า Home) — ต้นไม้เริ่มกึ่งกลาง */
+  pannable?: boolean
+  /** แจ้งตำแหน่งเลื่อน (px, -range…0) ทุกครั้งที่ลาก — Dashboard ใช้เลื่อนวิดีโอพื้นหลังช้ากว่า (parallax) */
+  onPanChange?: (pan: number, range: number) => void
   className?: string
 }
 
@@ -139,6 +148,8 @@ function TreeOfLifeBase({
   daysSinceLastMentalQuest = null,
   daysSinceLastPhysicalQuest = null,
   showHint = true,
+  pannable = false,
+  onPanChange,
   className,
 }: TreeOfLifeProps) {
   /** seed ของพื้นดิน/ลม (คงค่าเดิมของระบบเก่า — resolveFolder คืน MBTI เสมอเพราะไม่มีไฟล์ brush) */
@@ -190,31 +201,20 @@ function TreeOfLifeBase({
     return () => ro.disconnect()
   }, [])
 
-  /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 5] สายลมพัดเป็นระยะ — สุ่มช่วงเวลา 15-30s ไม่ตายตัว ทุกครั้ง
-     ที่ถึงกำหนด toggle class เอฟเฟกต์ไหวแรงชั่วคราว ~2.5s แล้วกลับสู่ปกติ ไม่ sync กับ state
-     ไหนเป็นพิเศษ (ปิดทั้งหมดถ้า reducedMotion) */
-  const [windGusting, setWindGusting] = useState(false)
-  useEffect(() => {
-    if (reducedMotion) return
-    let gustTimeoutId: number
-    let scheduleTimeoutId: number
-    const scheduleNextGust = () => {
-      const delay = 15000 + Math.random() * 15000
-      scheduleTimeoutId = window.setTimeout(() => {
-        setWindGusting(true)
-        gustTimeoutId = window.setTimeout(() => {
-          setWindGusting(false)
-          scheduleNextGust()
-        }, 2500)
-      }, delay)
-    }
-    scheduleNextGust()
-    return () => {
-      window.clearTimeout(scheduleTimeoutId)
-      window.clearTimeout(gustTimeoutId)
-    }
-  }, [reducedMotion])
-
+  /* ฉากกว้างกว่าจอ (pannable): ดิน/หญ้ากว้าง WORLD_FACTOR เท่าของจอ ต้นไม้อยู่กึ่งกลางฉาก
+     ลากซ้าย-ขวาเลื่อนทั้งฉาก — ใส่ transform ตรงที่ DOM (ไม่ re-render ต้นไม้ทุกเฟรมที่ลาก) */
+  const worldRef = useRef<HTMLDivElement | null>(null)
+  const bandRef = useRef<HTMLDivElement | null>(null)
+  const viewW = containerSize?.w ?? 0
+  const worldW = pannable && containerSize
+    ? Math.round(viewW * (containerSize.w > containerSize.h ? WORLD_FACTOR_LANDSCAPE : WORLD_FACTOR_PORTRAIT))
+    : viewW
+  const panRange = Math.max(0, worldW - viewW)
+  const applyPan = useCallback((pan: number, range: number) => {
+    if (worldRef.current) worldRef.current.style.transform = `translate3d(${pan}px, 0, 0)`
+    onPanChange?.(pan, range)
+  }, [onPanChange])
+  const { panRef, handlers: panHandlers } = useHorizontalPan(panRange, applyPan)
 
   // [ใหม่] เล่น burst effect ทุกครั้งที่ growthPulse.key เปลี่ยน (เควสสำเร็จ) แล้วเคลียร์เอง
   // อัตโนมัติหลัง 1.8s — ไม่ต้องให้ AppContext เป็นคนจับเวลาเคลียร์ค่าทิ้ง กัน stale closure
@@ -242,8 +242,9 @@ function TreeOfLifeBase({
   return (
     <div
       ref={rootRef}
-      className={`tree-of-life ${className ?? ''}`}
+      className={`tree-of-life ${pannable ? 'tree-of-life--pannable' : ''} ${className ?? ''}`}
       onClick={onTreeClick}
+      {...(pannable ? panHandlers : {})}
       style={{
         cursor: onTreeClick ? 'pointer' : undefined,
         animation: activePulse ? 'treeOfLifeGrowBounce .6s cubic-bezier(.34,1.56,.64,1) both' : undefined,
@@ -256,6 +257,11 @@ function TreeOfLifeBase({
           ไม่ transition ส่วนความนุ่มนวลย้ายไปอยู่ที่เลเยอร์สีทับด้านล่างที่ fade
           ด้วย opacity ซึ่งเป็น property ที่ composited ล้วน ไม่แตะ layout เลย */}
       <div
+        ref={worldRef}
+        className="tree-of-life__world"
+        style={{ width: worldW || '100%', transform: `translate3d(${-panRange / 2}px, 0, 0)` }}
+      >
+      <div
         className="tree-of-life__stack"
         style={{
           filter: hasSoot
@@ -263,13 +269,14 @@ function TreeOfLifeBase({
             : RISK_FILTER[riskLevel],
         } as React.CSSProperties}
       >
-        {/* ต้นไม้ + ทุ่งหญ้า (ทุ่ง / หญ้าหลังต้น / ลำต้น / หญ้าหน้าต้น / ใบ+ดอก — หญ้าไหวตามลม) — key ผูกกับ visual level ให้เล่นอนิเมชันโต
-            ทุกครั้งที่ขึ้นขั้น, ชั้นใบรับ filter/ความจางของใบเหี่ยว (หมวดจิตใจ) และไหวตามลม
-            (CSS ทั้งแผ่น ไม่วาดใหม่) */}
+        {/* ต้นไม้ + แปลงหญ้า (ดิน / หญ้าหลังต้น / ลำต้น / หญ้าหน้าต้น / ใบ+ดอก — หญ้าไหวตามลม ใบนิ่ง)
+            key ผูกกับ visual level ให้เล่นอนิเมชันโตทุกครั้งที่ขึ้นขั้น, ชั้นใบรับ filter/ความจางของใบเหี่ยว (หมวดจิตใจ) */}
         <ProceduralTreeCanvas
           key={treeModel.visualLevel}
           model={treeModel}
-          size={containerSize}
+          size={containerSize && { w: worldW, h: containerSize.h }}
+          viewWidth={viewW}
+          panRef={panRef}
           grassSoilLevel={grassSoilLevel}
           dryness={groundDry}
           animateWind={!reducedMotion}
@@ -277,12 +284,12 @@ function TreeOfLifeBase({
             filter: LEAF_HEALTH_FILTER[leafHealthPhase],
             opacity: leafHealthPhase === 'dying' ? LEAF_DYING_OPACITY : 1,
           }}
-          foliageClassName={[
-            reducedMotion ? '' : 'tree-of-life__canvas--sway',
-            windGusting && !reducedMotion ? 'tree-of-life__canvas--gust' : '',
-          ].filter(Boolean).join(' ')}
         />
       </div>
+
+      {/* แถบกว้างเท่าจอกึ่งกลางฉาก — เอฟเฟกต์/ไอเทมตกแต่ง/hotspot อ้างพิกัด % จากแถบนี้ (เท่ากับจอตอนเริ่ม)
+          จึงวางตรงกับต้นไม้เหมือนเดิม และเลื่อนไปพร้อมฉากเวลาลาก */}
+      <div ref={bandRef} className="tree-of-life__band" style={{ left: (worldW - viewW) / 2, width: viewW || '100%' }}>
 
       {/* [ใหม่] Growth Pulse — "เควสสำเร็จ ต้นไม้ต้องรับผลชัดเจนทันที" ไม่ใช่แค่เลข level
           ขยับเงียบๆ — burst แสง + ประกายไฟกระจายออกจากทรงพุ่ม สีเปลี่ยนตามหมวดเควสที่เพิ่งทำ
@@ -361,7 +368,7 @@ function TreeOfLifeBase({
         placedItems={placedItems}
         decorationPositions={decorationPositions}
         onDecorationMove={onDecorationMove}
-        containerRef={rootRef}
+        containerRef={bandRef}
       />
 
       {showHint && (
@@ -374,7 +381,7 @@ function TreeOfLifeBase({
         >
           {hintVisible && (
             <div className="tree-of-life__tooltip">
-              <div className="tree-of-life__tooltip-title">🌳 {folder}</div>
+              <div className="tree-of-life__tooltip-title">🌳 {folder} · {treeModel.speciesName}</div>
               <div>🪵 ลำต้น/ใบ (ความรู้): Lv.{trunkBranchLevel} (ขั้น {treeModel.visualLevel}/8){treeModel.leaves.length > 0 ? ` · ใบ ${treeModel.leaves.length} ใบ` : ' · ยังไม่มีใบ'}</div>
               <div>🌸 ดอก (จิตใจ): Lv.{leafFlowerLevel} · ดอก {treeModel.flowers.length} ดอก</div>
               <div>🌱 แปลงหญ้า (สุขภาพ): Lv.{grassSoilLevel} (ขั้น {groundStep}/3) · {GROUND_STAGE_LABEL[groundStg]}</div>
@@ -393,6 +400,8 @@ function TreeOfLifeBase({
           )}
         </div>
       )}
+      </div>
+      </div>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { MBTI_TREE_THEME, type MbtiType } from '../../types'
 import { getMbtiDescription } from '../../config/mbtiDescriptions'
+import { speciesOf } from './procedural/species'
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import './TreeSummaryModal.css'
@@ -27,6 +28,7 @@ export default function TreeSummaryModal({ open, onClose, mbtiType, username }: 
 
   const theme = MBTI_TREE_THEME[mbtiType as MbtiType] ?? MBTI_TREE_THEME.INFP
   const info = getMbtiDescription(mbtiType)
+  const species = speciesOf(mbtiType)
 
   return (
     <>
@@ -51,6 +53,22 @@ export default function TreeSummaryModal({ open, onClose, mbtiType, username }: 
               </div>
               <div style={{ fontFamily: 'Fredoka One', fontSize: 22, color: theme.accent, marginTop: 4 }}>
                 {mbtiType ?? 'INFP'} · {info.nickname}
+              </div>
+            </div>
+
+            {/* ต้นไม้ประจำตัวของ MBTI นี้ (ต้นเดียวกับที่ปลูกอยู่บนหน้า Home) + สิ่งที่ต้นไม้สื่อถึงตัวตน */}
+            <div
+              style={{
+                display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', marginBottom: 12,
+                borderRadius: 14, background: theme.accent + '14', border: `1px solid ${theme.accent}33`,
+              }}
+            >
+              <div style={{ fontSize: 22, lineHeight: 1 }} aria-hidden="true">🌳</div>
+              <div>
+                <div style={{ fontFamily: 'Fredoka One', fontSize: 14, color: theme.accent }}>
+                  ต้นไม้ประจำตัว: {species.name} <span style={{ color: 'var(--n300)', fontSize: 12 }}>({species.nameEn})</span>
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--n700)', lineHeight: 1.65, marginTop: 2 }}>{species.meaning}</div>
               </div>
             </div>
 

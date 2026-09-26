@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, m } from 'framer-motion'
 import { toBlob } from 'html-to-image'
 import TreeOfLife from '../tree/TreeOfLife'
@@ -51,6 +51,9 @@ const FriendsPage = lazy(() => import('../friends/FriendsPage'))
 const DAY_MS = 1000 * 60 * 60 * 24
 const ALL_MODAL_KEYS = ['quests', 'shop', 'profile', 'settings', 'leaderboard', 'moodCheckin', 'meditation', 'brainDump', 'story', 'friends'] as const
 
+/** วิดีโอพื้นหลังเลื่อนตามฉากต้นไม้กี่เท่า (0 = นิ่ง, 1 = เท่าฉาก) */
+const BG_PARALLAX = 0.25
+
 export default function Dashboard() {
   const {
     userData, treeStats, inventoryData, placedItems,
@@ -92,6 +95,17 @@ export default function Dashboard() {
   const [infoAlert, setInfoAlert] = useState<string | null>(null)
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  /* ลากฉากต้นไม้ซ้าย-ขวา → วิดีโอพื้นหลังเลื่อนตามช้ากว่า (BG_PARALLAX เท่า) ให้รู้สึกว่าฉากหลังอยู่ไกล
+     วิดีโอกว้างขึ้นเท่าระยะที่ต้องเลื่อน (ไม่เห็นขอบว่าง) — ใส่ style ตรงที่ DOM ไม่ re-render ทั้งหน้า */
+  const handleTreePan = useCallback((pan: number, range: number) => {
+    const v = videoRef.current
+    if (!v) return
+    const extra = range * BG_PARALLAX
+    v.style.left = `${-extra / 2}px`
+    v.style.width = `calc(100% + ${extra}px)`
+    v.style.transform = `translate3d(${(pan + range / 2) * BG_PARALLAX}px, 0, 0)`
+  }, [])
   /** [ใหม่ — ข้อ C] ครอบเฉพาะ "ต้นไม้ของตัวเอง" (ไม่รวม HUD/ปุ่ม) — ให้แชร์เป็นรูปได้เฉพาะ
    *  ต้นไม้จริงๆ ไม่ใช่ทั้งหน้าจอ ดู handleShare ด้านล่าง */
   const treeCaptureRef = useRef<HTMLDivElement>(null)
@@ -378,6 +392,8 @@ export default function Dashboard() {
                 trunkBranchLevel={viewingTreeStats.trunkBranchLevel}
                 leafFlowerLevel={viewingTreeStats.leafFlowerLevel}
                 grassSoilLevel={viewingTreeStats.grassSoilLevel}
+                pannable
+                onPanChange={handleTreePan}
                 riskLevel="LOW"
                 placedItems={[]}
                 decorationPositions={{}}
@@ -393,6 +409,8 @@ export default function Dashboard() {
                 trunkBranchLevel={treeStats.trunkBranchLevel}
                 leafFlowerLevel={treeStats.leafFlowerLevel}
                 grassSoilLevel={treeStats.grassSoilLevel}
+                pannable
+                onPanChange={handleTreePan}
                 riskLevel={userData.currentRiskLevel}
                 placedItems={placedItems}
                 decorationPositions={decorationPositions}

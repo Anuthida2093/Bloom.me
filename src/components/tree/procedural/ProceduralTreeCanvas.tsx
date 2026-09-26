@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type CSSProperties, type RefObject } from 'react'
 import type { TreeModel } from './buildTreeModel'
-import { buildMeadow, drawBranches, drawFoliage, drawGround, drawMeadow, fitTree } from './drawTree2D'
+import { buildMeadow, drawBranches, drawFlutterLeaf, drawFoliage, drawGround, drawMeadow, fitTree, leafRect } from './drawTree2D'
 
 interface ProceduralTreeCanvasProps {
   model: TreeModel
@@ -24,10 +24,24 @@ interface ProceduralTreeCanvasProps {
 const WIND_FRAME_MS = 1000 / 30
 /** ชั้นที่กว้างเท่าฉาก (ดิน/หญ้า) ใช้ความละเอียดไม่เกินนี้ — ฉากกว้างหลายเท่าจอ ประหยัดหน่วยความจำ */
 const WIDE_LAYER_MAX_DPR = 1.5
+/** ใบไหวพร้อมกันได้สูงสุดกี่ใบ (ธรรมชาติ: ทีละ 2-3 ใบ ไม่ไหวทั้งพุ่ม) */
+const FLUTTER_SLOTS = 3
+
+interface FlutterSlot {
+  /** index ใบที่กำลังไหว (-1 = ว่าง รอถึง nextAt) */
+  leaf: number
+  start: number
+  duration: number
+  amp: number
+  freq: number
+  nextAt: number
+}
 
 /**
- * ProceduralTreeCanvas — ต้นไม้ procedural วาด 2D ลง canvas 5 ชั้น:
- *   แปลงหญ้า/ดิน → หญ้าหลังต้น (ไหว) → ลำต้น/กิ่ง → หญ้าหน้าต้น (ไหว ทับโคนต้น) → ใบ+ดอก
+ * ProceduralTreeCanvas — ต้นไม้ procedural วาด 2D ลง canvas 6 ชั้น:
+ *   แปลงหญ้า/ดิน → หญ้าหลังต้น (ไหว) → ลำต้น/กิ่ง → หญ้าหน้าต้น (ไหว ทับโคนต้น) → ใบ+ดอก → ใบที่กำลังไหว
+ * ใบไหวทีละ 2-3 ใบแบบสุ่ม (เฉพาะใบริมพุ่ม ก้อนพุ่มไม่ขยับ): ตอนใบเริ่มไหว ลบใบนั้นออกจากชั้นใบ
+ * (วาดใหม่เฉพาะกรอบเล็กๆ รอบใบ) แล้ววาดใบที่หมุน/บิดบนชั้นใบไหวทุกเฟรม — หยุดไหวก็วาดกลับที่เดิม
  * ดิน/หญ้ากว้างเต็มฉาก (เลื่อนดูได้) ส่วนต้นไม้วาดบนแถบกว้างเท่าจอตรงกลางฉาก
  * ดิน/ลำต้น/ใบ วาดใหม่เฉพาะตอนข้อมูลหรือขนาดเปลี่ยน — มีแค่ 2 ชั้นหญ้าที่วาดซ้ำทุกเฟรม (เฉพาะช่วงที่อยู่ในจอ)
  */
@@ -39,6 +53,7 @@ export default function ProceduralTreeCanvas({
   const branchRef = useRef<HTMLCanvasElement>(null)
   const meadowFrontRef = useRef<HTMLCanvasElement>(null)
   const foliageRef = useRef<HTMLCanvasElement>(null)
+  const flutterRef = useRef<HTMLCanvasElement>(null)
 
   const view = Math.min(viewWidth ?? size?.w ?? 0, size?.w ?? 0)
   const bandLeft = size ? (size.w - view) / 2 : 0
@@ -108,6 +123,74 @@ export default function ProceduralTreeCanvas({
     return () => cancelAnimationFrame(raf)
   }, [model, size, view, bandLeft, panRef, grassSoilLevel, dryness, animateWind])
 
+  // ใบไหวตามลมทีละ 2-3 ใบ — ช่องละใบ แต่ละช่องไหว 1.2-2.4 วินาที แล้วพักสุ่ม ไม่พร้อมกัน
+  useEffect(() => {
+    const foliage = foliageRef.current
+    const flutter = flutterRef.current
+    if (!animateWind || !size || size.h < 2 || view < 2 || !foliage || !flutter || !model.flutterable.length) return
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    const fit = fitTree(model, view, size.h)
+    const fctx = foliage.getContext('2d')
+    flutter.width = Math.round(view * dpr)
+    flutter.height = Math.round(size.h * dpr)
+    const lctx = flutter.getContext('2d')
+    if (!fctx || !lctx) return
+    const skip = new Set<number>()
+    const now0 = performance.now() / 1000
+    const slots: FlutterSlot[] = Array.from({ length: FLUTTER_SLOTS }, (_, k) => ({
+      leaf: -1, start: 0, duration: 0, amp: 0, freq: 0, nextAt: now0 + 0.3 + k * 0.7 + Math.random() * 0.6,
+    }))
+    const restore = (leaf: number) => {
+      skip.delete(leaf)
+      drawFoliage(fctx, model, fit, dpr, { skip, region: leafRect(model, fit, leaf) })
+    }
+
+    let raf = 0
+    let last = -Infinity
+    const loop = (nowMs: number) => {
+      raf = requestAnimationFrame(loop)
+      if (nowMs - last < WIND_FRAME_MS) return
+      last = nowMs
+      const t = nowMs / 1000
+      lctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      lctx.clearRect(0, 0, view, size.h)
+      for (const s of slots) {
+        if (s.leaf >= 0 && t - s.start >= s.duration) {
+          restore(s.leaf)
+          s.leaf = -1
+          s.nextAt = t + 0.4 + Math.random() * 1.6
+        }
+        if (s.leaf < 0 && t >= s.nextAt) {
+          const pool = model.flutterable
+          const pick = pool[Math.floor(Math.random() * pool.length)]
+          if (!skip.has(pick)) {
+            s.leaf = pick
+            s.start = t
+            s.duration = 1.2 + Math.random() * 1.2
+            s.amp = 0.14 + Math.random() * 0.16
+            s.freq = 1.8 + Math.random() * 1.4
+            skip.add(pick)
+            drawFoliage(fctx, model, fit, dpr, { skip, region: leafRect(model, fit, pick) })
+          }
+        }
+        if (s.leaf >= 0) {
+          const u = (t - s.start) / s.duration
+          const env = Math.sin(Math.PI * Math.min(1, u)) // ค่อยๆ เริ่ม-ค่อยๆ หยุด กลับมาที่มุมเดิมพอดี
+          const wave = Math.sin(2 * Math.PI * s.freq * (t - s.start))
+          drawFlutterLeaf(lctx, model, fit, dpr, s.leaf, s.amp * env * wave, 1 - 0.35 * env * Math.abs(wave))
+        }
+      }
+    }
+    raf = requestAnimationFrame(loop)
+    return () => {
+      cancelAnimationFrame(raf)
+      // คืนใบที่ค้างอยู่กลางการไหวกลับชั้นใบหลัก
+      for (const leaf of [...skip]) restore(leaf)
+      lctx.setTransform(1, 0, 0, 1, 0, 0)
+      lctx.clearRect(0, 0, flutter.width, flutter.height)
+    }
+  }, [model, size, view, animateWind])
+
   const bandStyle: CSSProperties = { left: bandLeft, width: view }
   return (
     <>
@@ -118,6 +201,12 @@ export default function ProceduralTreeCanvas({
       <canvas
         ref={foliageRef}
         className="tree-of-life__canvas tree-of-life__canvas--foliage"
+        style={{ ...foliageStyle, ...bandStyle }}
+        aria-hidden="true"
+      />
+      <canvas
+        ref={flutterRef}
+        className="tree-of-life__canvas tree-of-life__canvas--foliage tree-of-life__canvas--flutter"
         style={{ ...foliageStyle, ...bandStyle }}
         aria-hidden="true"
       />

@@ -27,6 +27,16 @@ export function useHorizontalPan(range: number, apply: (pan: number, range: numb
     applyRef.current = apply
   }, [apply])
 
+  /** ใส่ค่าทันที (ยกเลิกเฟรมที่ค้างอยู่) — ใช้ตอนเริ่มต้น/ปล่อยนิ้ว ไม่ต้องรอ requestAnimationFrame
+   *  (แท็บที่ถูกซ่อนอยู่ rAF ไม่ทำงาน — ไม่อยากให้ตำแหน่งค้างเพราะรอเฟรมที่ไม่มาถึง) */
+  const applyNow = useCallback(() => {
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+    applyRef.current(panRef.current, rangeRef.current)
+  }, [])
+
   const flush = useCallback(() => {
     if (rafRef.current != null) return
     rafRef.current = requestAnimationFrame(() => {
@@ -39,8 +49,8 @@ export function useHorizontalPan(range: number, apply: (pan: number, range: numb
   useEffect(() => {
     rangeRef.current = range
     panRef.current = -range / 2
-    flush()
-  }, [range, flush])
+    applyNow()
+  }, [range, applyNow])
 
   useEffect(() => () => {
     if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
@@ -72,9 +82,10 @@ export function useHorizontalPan(range: number, apply: (pan: number, range: numb
     const d = dragRef.current
     dragRef.current = null
     if (!d?.dragging) return
+    applyNow()
     swallowClickRef.current = true
     try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
-  }, [])
+  }, [applyNow])
 
   /** ใส่เป็น onClickCapture — กลืนคลิกที่เกิดจากการปล่อยนิ้วหลังลาก */
   const onClickCapture = useCallback((e: ReactMouseEvent<HTMLElement>) => {

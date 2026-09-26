@@ -9,6 +9,7 @@ import {
   type MbtiType,
 } from '../../types'
 import MiniTree from './MiniTree'
+import { speciesOf } from './procedural/species'
 import { BADGE_ICONS } from '../../config/iconAssets'
 
 const C_3 = '#8B6000'
@@ -40,12 +41,13 @@ export default function TreeStatsPanel({
   glass = false,
 }: TreeStatsPanelProps) {
   const theme = MBTI_TREE_THEME[userData.mbtiType as MbtiType] ?? MBTI_TREE_THEME.INFP
+  const species = speciesOf(userData.mbtiType as MbtiType)
   const expIntoLevel = userData.exp % EXP_PER_LEVEL
   const expPct = Math.min(100, (expIntoLevel / EXP_PER_LEVEL) * 100)
 
   const growthStats = [
     { icon: '🧠', label: 'ด้านการเรียนรู้', sub: 'ลำต้น', val: toBarPct(userData.knowledgeStack), color: 'var(--b500)' },
-    { icon: '💪', label: 'ด้านสุขภาพร่างกาย', sub: 'ราก/หญ้า', val: toBarPct(userData.healthStack), color: 'var(--g600)' },
+    { icon: '💪', label: 'ด้านสุขภาพร่างกาย', sub: 'แปลงหญ้า', val: toBarPct(userData.healthStack), color: 'var(--g600)' },
     { icon: '❤️', label: 'ด้านสุขภาพจิต', sub: 'ใบ/ดอก', val: toBarPct(userData.emotionStack), color: 'var(--purple)' },
   ]
 
@@ -68,6 +70,11 @@ export default function TreeStatsPanel({
       <div className="tree-stats-panel__section" style={{ animationDelay: '0ms', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
         <MiniTree theme={theme} size={64} />
         <div style={{ fontFamily: 'Fredoka One', fontSize: 15, color: 'var(--text)', textAlign: 'center' }}>{theme.treeName}</div>
+        {/* ต้นไม้ประจำตัวตาม MBTI (สายพันธุ์ที่ปลูกบนหน้า Home) */}
+        <div style={{ fontSize: 12, fontWeight: 700, color: theme.accent, textAlign: 'center' }} title={species.meaning}>
+          🌳 {species.name} · {species.nameEn}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-sub)', textAlign: 'center', lineHeight: 1.5 }}>{species.meaning}</div>
         <div style={{ display: 'flex', gap: 6 }}>
           <span className="tag" style={{ background: theme.accent + '22', color: theme.accent }}>{userData.mbtiType}</span>
           <span className="tag" style={{ background: 'var(--g50)', color: 'var(--g700)' }}>🌳 Lv.{treeStats.level}</span>

@@ -4,6 +4,26 @@
   height: 100%;
 }
 
+/* ฉาก (กว้างเท่าจอ หรือกว้างกว่าเมื่อ pannable) — เลื่อนซ้าย-ขวาด้วย transform จาก useHorizontalPan */
+.tree-of-life__world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  will-change: transform;
+}
+/* แถบกว้างเท่าจอกึ่งกลางฉาก — เอฟเฟกต์/ไอเทม/hotspot อ้างพิกัด % จากแถบนี้ */
+.tree-of-life__band {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+/* ลากแนวนอนเป็นของเรา (เลื่อนฉาก) — แนวตั้งยังให้เบราว์เซอร์จัดการตามปกติ */
+.tree-of-life--pannable {
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
 /* [ใหม่] containment — บอกเบราว์เซอร์ว่าการเปลี่ยนแปลงข้างในเลเยอร์นี้
    ไม่กระทบ layout ของส่วนอื่นในหน้า ทำให้ข้ามการคำนวณส่วนที่เหลือได้ทั้งหมด
    สำคัญมากกับเลเยอร์ที่มีลูกหลายสิบตัว animate พร้อมกันแบบนี้ */
@@ -16,8 +36,8 @@
 }
 
 /* ต้นไม้ procedural (ProceduralTreeCanvas.tsx) — canvas 3 ชั้นเต็มกล่อง: ทุ่งหญ้า / กิ่ง / ใบ+ดอก
-   วาดใหม่เฉพาะตอนเลเวลหรือขนาดกล่องเปลี่ยน การไหวตามลมเป็น transform ของ canvas ใบทั้งแผ่น
-   (จุดหมุนที่โคนต้น 50% 84% — ตรงกับ TREE_BASE_Y_RATIO ใน drawTree2D.ts) จึงไม่ต้องวาดซ้ำทุกเฟรม */
+   วาดใหม่เฉพาะตอนเลเวลหรือขนาดกล่องเปลี่ยน (อนิเมชันโตหมุนรอบโคนต้น 50% 84% — ตรงกับ
+   TREE_BASE_Y_RATIO ใน drawTree2D.ts) — ใบไม่ไหวทั้งก้อนแล้ว (ดูแข็ง) มีแค่หญ้าที่ไหวตามลม */
 .tree-of-life__canvas {
   position: absolute;
   inset: 0;
@@ -44,24 +64,6 @@
   z-index: 3;
   filter: drop-shadow(0 3px 4px var(--glass-b-15));
   transition: filter 3s ease, opacity 3s ease; /* ใบค่อยๆ เหี่ยว/ฟื้น ไม่ตัดภาพ */
-}
-.tree-of-life__canvas--sway {
-  animation:
-    treeOfLifeLayerGrow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both,
-    treeOfLifeCanopySway 7s ease-in-out infinite;
-}
-/* ลมกระโชก — เปลี่ยนเฉพาะชื่ออนิเมชันช่องที่ 2 (ไม่รีสตาร์ทอนิเมชันโตช่องแรก) */
-.tree-of-life__canvas--gust {
-  animation-name: treeOfLifeLayerGrow, treeOfLifeCanopyGust;
-  animation-duration: 0.7s, 1.2s;
-}
-@keyframes treeOfLifeCanopySway {
-  0%, 100% { transform: rotate(-0.6deg); }
-  50% { transform: rotate(0.6deg); }
-}
-@keyframes treeOfLifeCanopyGust {
-  0%, 100% { transform: rotate(-1.8deg) skewX(0.8deg); }
-  50% { transform: rotate(1.8deg) skewX(-0.8deg); }
 }
 
 @keyframes treeOfLifeLayerGrow {

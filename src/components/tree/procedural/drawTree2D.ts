@@ -1,6 +1,6 @@
 import { toGroundVariant } from '../../../config/treeAssets'
 import { seededRandom } from '../../../utils/seededRandom'
-import { shade, type TreeModel } from './buildTreeModel'
+import { shade, type LeafShape, type TreeModel } from './buildTreeModel'
 import { pointOnBranch, type Vec3 } from './generateTree'
 
 /*============================================================================*\
@@ -409,7 +409,8 @@ export function drawBranches(ctx: CanvasRenderingContext2D, model: TreeModel, fi
       dx /= len; dy /= len
       // เรียวถึงรัศมีปลายปกติ (กิ่งปลายสุดก็ไม่เรียวจนแหลม) + ขั้นต่ำบนจอ → ปลายกิ่งมน ปิดด้วยวงกลมด้านล่าง
       let r = (b.radiusStart + (b.radiusEnd - b.radiusStart) * t) * fit.scale
-      if (b.depth === 0) r *= 1 + 0.7 * Math.pow(1 - t, 4) // โคนต้นบานออก
+      // โคนต้นบานออก (เฉพาะท่อนที่เริ่มจากพื้น — ลำต้นหลายท่อนอย่างปาล์ม/ไผ่ไม่บานทุกข้อ, ไผ่ไม่บานเลย)
+      if (b.depth === 0 && b.start[1] < 0.01 && model.bark !== 'bamboo') r *= 1 + 0.7 * Math.pow(1 - t, 4)
       r = Math.max(r, MIN_BRANCH_RADIUS_PX)
       // ตั้งฉากกับทิศกิ่ง: (-dy, dx)
       left.push([p[0] - dy * r, p[1] + dx * r])
@@ -430,6 +431,7 @@ export function drawBranches(ctx: CanvasRenderingContext2D, model: TreeModel, fi
     ctx.beginPath()
     ctx.arc(ex, ey, er, 0, Math.PI * 2)
     ctx.fill()
+    if (model.bark !== 'plain' && b.depth <= (model.bark === 'birch' ? 2 : 0)) drawBark(ctx, model, fit, b, left, right, steps)
     // แถบสว่างด้านซ้าย (แสงมาจากซ้ายบน) — ให้กิ่งดูกลมมีมิติ
     if (b.depth < 5) {
       ctx.beginPath()
@@ -445,72 +447,280 @@ export function drawBranches(ctx: CanvasRenderingContext2D, model: TreeModel, fi
   }
 }
 
-/** รูปทรงใบ 1 หน่วย: โคนที่ (0,0) ปลายชี้ขึ้นที่ (0,-1) กว้างสุด ~0.34 — สร้างครั้งแรกที่วาด
- *  (ไม่สร้างตอน import เพราะบางสภาพแวดล้อม เช่น jsdom ในเทสต์ ไม่มี Path2D) */
-let leafPath: Path2D | null = null
-function getLeafPath(): Path2D {
-  if (!leafPath) {
-    leafPath = new Path2D()
-    // ใบทรงไข่ปลายมน: ป่องสุดราว 55% ของความยาว แล้วโค้งมนเข้าหาปลาย (ไม่แหลมเป็นหยดน้ำแข็ง)
-    leafPath.moveTo(0, 0)
-    leafPath.bezierCurveTo(0.3, -0.1, 0.38, -0.5, 0.3, -0.78)
-    leafPath.bezierCurveTo(0.24, -0.97, 0.08, -1, 0, -1)
-    leafPath.bezierCurveTo(-0.08, -1, -0.24, -0.97, -0.3, -0.78)
-    leafPath.bezierCurveTo(-0.38, -0.5, -0.3, -0.1, 0, 0)
-    leafPath.closePath()
+/** ลายเปลือกเฉพาะสายพันธุ์ — birch: ขีดดำแนวขวางบนเปลือกขาว / palm: วงแหวนรอบลำต้น / bamboo: ข้อปล้อง */
+function drawBark(
+  ctx: CanvasRenderingContext2D, model: TreeModel, fit: TreeFit, b: TreeModel['branches'][number],
+  left: [number, number][], right: [number, number][], steps: number,
+) {
+  // ลายต่อ "ช่วงความยาว" ของกิ่ง — ใช้จุดขอบซ้าย/ขวาที่คำนวณไว้แล้ว (ตั้งฉากกับกิ่งอยู่แล้ว)
+  const across = (t: number): [[number, number], [number, number]] => {
+    const f = t * steps, i = Math.min(steps - 1, Math.floor(f)), u = f - i
+    const lerp = (a: [number, number], c: [number, number]): [number, number] => [a[0] + (c[0] - a[0]) * u, a[1] + (c[1] - a[1]) * u]
+    return [lerp(left[i], left[i + 1]), lerp(right[i], right[i + 1])]
   }
-  return leafPath
-}
-
-export function drawFoliage(ctx: CanvasRenderingContext2D, model: TreeModel, fit: TreeFit, dpr: number) {
-  const LEAF_PATH = getLeafPath()
-  const [ccx, ccy] = toScreen([model.crown.cx, model.crown.cy, 0], fit)
-  const crx = model.crown.rx * fit.scale, cry = model.crown.ry * fit.scale
-  for (const leaf of model.leaves) {
-    const [x, y] = toScreen(leaf.position, fit)
-    const L = Math.max(4, leaf.length * fit.scale)
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.translate(x, y)
-    ctx.rotate(leaf.angle)
-    ctx.scale(L * leaf.widthScale, L)
-    ctx.fillStyle = leaf.color
-    ctx.fill(LEAF_PATH)
-    // เส้นกลางใบ (เห็นได้เฉพาะใบที่ใหญ่พอบนจอ)
-    if (L >= 9) {
+  const [sx, sy] = toScreen(b.start, fit), [ex, ey] = toScreen(b.end, fit)
+  const lenPx = Math.hypot(ex - sx, ey - sy)
+  ctx.save()
+  ctx.lineCap = 'round'
+  if (model.bark === 'birch') {
+    // เปลือกเบิร์ช: ขีดดำสั้นๆ แนวขวาง กระจายไม่สม่ำเสมอ (seed จากตำแหน่งกิ่ง)
+    let k = Math.abs(Math.sin(b.start[0] * 91.7 + b.start[1] * 47.3)) * 1000
+    const rnd = () => { k = (k * 9301 + 49297) % 233280; return k / 233280 }
+    const n = Math.max(2, Math.round(lenPx / 9))
+    ctx.strokeStyle = 'rgba(52, 48, 44, 0.75)'
+    for (let i = 0; i < n; i++) {
+      const [l, r] = across(0.05 + rnd() * 0.9)
+      const a = 0.15 + rnd() * 0.4, w = 0.15 + rnd() * 0.35
+      ctx.lineWidth = 1 + rnd() * 1.4
       ctx.beginPath()
-      ctx.moveTo(0, -0.05)
-      ctx.lineTo(0, -0.85)
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.strokeStyle = 'rgba(255, 255, 235, 0.28)'
-      ctx.lineWidth = 0.7
+      ctx.moveTo(l[0] + (r[0] - l[0]) * a, l[1] + (r[1] - l[1]) * a)
+      ctx.lineTo(l[0] + (r[0] - l[0]) * Math.min(1, a + w), l[1] + (r[1] - l[1]) * Math.min(1, a + w))
       ctx.stroke()
     }
+  } else if (model.bark === 'palm') {
+    // ลำต้นปาล์ม: วงแหวนถี่ๆ รอบลำต้น (รอยทางใบเก่า)
+    const n = Math.max(3, Math.round(lenPx / 5))
+    ctx.strokeStyle = shade(model.trunkColor, -0.16)
+    ctx.globalAlpha = 0.55
+    ctx.lineWidth = 1.1
+    for (let i = 1; i < n; i++) {
+      const [l, r] = across(i / n)
+      ctx.beginPath()
+      ctx.moveTo(l[0], l[1])
+      ctx.quadraticCurveTo((l[0] + r[0]) / 2, (l[1] + r[1]) / 2 + 1.5, r[0], r[1])
+      ctx.stroke()
+    }
+  } else if (model.bark === 'bamboo') {
+    // ไผ่: ข้อปล้องที่ปลายแต่ละท่อน (เส้นเข้ม + ขอบสว่างใต้ข้อ)
+    const [l, r] = across(0.999)
+    ctx.strokeStyle = shade(model.trunkColor, -0.2)
+    ctx.lineWidth = 1.6
+    ctx.beginPath()
+    ctx.moveTo(l[0], l[1])
+    ctx.lineTo(r[0], r[1])
+    ctx.stroke()
+    ctx.strokeStyle = shade(model.trunkColor, 0.18)
+    ctx.globalAlpha = 0.6
+    ctx.lineWidth = 1
+    const [l2, r2] = across(0.94)
+    ctx.beginPath()
+    ctx.moveTo(l2[0], l2[1])
+    ctx.lineTo(r2[0], r2[1])
+    ctx.stroke()
+  }
+  ctx.restore()
+}
+
+/** รูปทรงใบ 1 หน่วยต่อแบบใบ: โคนที่ (0,0) ปลายชี้ขึ้นที่ (0,-1) — สร้างครั้งแรกที่วาด
+ *  (ไม่สร้างตอน import เพราะบางสภาพแวดล้อม เช่น jsdom ในเทสต์ ไม่มี Path2D) */
+const leafPaths = new Map<LeafShape, Path2D>()
+
+/** ใบเมเปิ้ล 5 แฉก (ครึ่งขวา จากก้านใบขึ้นไปถึงปลายแฉกบนสุด) — ครึ่งซ้ายสะท้อนจากชุดนี้ */
+const MAPLE_RIGHT: [number, number][] = [
+  [0.015, 0], [0.02, -0.12], // ก้านใบ
+  [0.1, -0.1], [0.3, -0.06], [0.24, -0.18], // แฉกล่าง ชี้ลงเฉียงออก
+  [0.3, -0.24], [0.52, -0.34], [0.44, -0.42], // แฉกข้าง ชี้ออกด้านข้าง
+  [0.5, -0.56], [0.36, -0.54], [0.3, -0.62], // ฟันเลื่อยขอบบนแฉกข้าง
+  [0.18, -0.52], [0.2, -0.72], [0.1, -0.7], // เว้าลึกเข้าหาแฉกบน + ฟันเลื่อย
+  [0.12, -0.86], [0.04, -0.84], [0, -1.02], // แฉกบน ปลายแหลม
+]
+
+function getLeafPath(shape: LeafShape): Path2D {
+  const cached = leafPaths.get(shape)
+  if (cached) return cached
+  const p = new Path2D()
+  if (shape === 'maple') {
+    MAPLE_RIGHT.forEach(([x, y], i) => (i === 0 ? p.moveTo(x, y) : p.lineTo(x, y)))
+    for (let i = MAPLE_RIGHT.length - 2; i >= 0; i--) p.lineTo(-MAPLE_RIGHT[i][0], MAPLE_RIGHT[i][1])
+    p.closePath()
+    leafPaths.set(shape, p)
+    return p
+  }
+  p.moveTo(0, 0)
+  if (shape === 'needle') {
+    // ใบเข็มสน: เรียวแคบมาก ปลายแหลม
+    p.bezierCurveTo(0.09, -0.2, 0.09, -0.7, 0, -1.05)
+    p.bezierCurveTo(-0.09, -0.7, -0.09, -0.2, 0, 0)
+  } else if (shape === 'blade') {
+    // ใบไผ่/ใบย่อยปาล์ม: เรียวยาว กว้างสุดช่วงล่าง ปลายแหลมยาว
+    p.bezierCurveTo(0.16, -0.08, 0.18, -0.4, 0.1, -0.7)
+    p.quadraticCurveTo(0.04, -0.92, 0, -1.08)
+    p.quadraticCurveTo(-0.04, -0.92, -0.1, -0.7)
+    p.bezierCurveTo(-0.18, -0.4, -0.16, -0.08, 0, 0)
+  } else if (shape === 'fan') {
+    // ใบแปะก๊วย: ก้านเรียว แผ่เป็นพัดขอบบนโค้ง มีรอยเว้าตรงกลาง
+    p.lineTo(0.03, -0.3)
+    p.bezierCurveTo(0.2, -0.45, 0.5, -0.62, 0.5, -0.82)
+    p.quadraticCurveTo(0.3, -1.0, 0.06, -0.92)
+    p.lineTo(0, -0.8)
+    p.lineTo(-0.06, -0.92)
+    p.quadraticCurveTo(-0.3, -1.0, -0.5, -0.82)
+    p.bezierCurveTo(-0.5, -0.62, -0.2, -0.45, -0.03, -0.3)
+  } else if (shape === 'oak') {
+    // ใบโอ๊ก: รูปไข่ขอบหยักมน 4 หยักต่อข้าง
+    p.quadraticCurveTo(0.14, -0.05, 0.18, -0.14)
+    p.quadraticCurveTo(0.36, -0.2, 0.2, -0.3)
+    p.quadraticCurveTo(0.44, -0.4, 0.24, -0.5)
+    p.quadraticCurveTo(0.44, -0.62, 0.22, -0.7)
+    p.quadraticCurveTo(0.34, -0.86, 0.1, -0.9)
+    p.quadraticCurveTo(0.06, -1.02, 0, -1.02)
+    p.quadraticCurveTo(-0.06, -1.02, -0.1, -0.9)
+    p.quadraticCurveTo(-0.34, -0.86, -0.22, -0.7)
+    p.quadraticCurveTo(-0.44, -0.62, -0.24, -0.5)
+    p.quadraticCurveTo(-0.44, -0.4, -0.2, -0.3)
+    p.quadraticCurveTo(-0.36, -0.2, -0.18, -0.14)
+    p.quadraticCurveTo(-0.14, -0.05, 0, 0)
+  } else if (shape === 'lance') {
+    // ใบเรียวยาว ปลายแหลมชัด
+    p.bezierCurveTo(0.26, -0.14, 0.3, -0.55, 0.16, -0.82)
+    p.bezierCurveTo(0.1, -0.94, 0.03, -1, 0, -1.06)
+    p.bezierCurveTo(-0.03, -1, -0.1, -0.94, -0.16, -0.82)
+    p.bezierCurveTo(-0.3, -0.55, -0.26, -0.14, 0, 0)
+  } else if (shape === 'petal') {
+    // ใบมนนุ่ม ป่องค่อนปลาย คล้ายกลีบดอก
+    p.bezierCurveTo(0.28, -0.08, 0.42, -0.58, 0.3, -0.84)
+    p.bezierCurveTo(0.22, -0.99, 0.06, -1.02, 0, -1)
+    p.bezierCurveTo(-0.06, -1.02, -0.22, -0.99, -0.3, -0.84)
+    p.bezierCurveTo(-0.42, -0.58, -0.28, -0.08, 0, 0)
+  } else if (shape === 'broad') {
+    // ใบกว้างแผ่ โคนป่อง ปลายแหลมนิดๆ
+    p.bezierCurveTo(0.42, -0.06, 0.44, -0.46, 0.3, -0.72)
+    p.bezierCurveTo(0.2, -0.9, 0.06, -0.98, 0, -1.03)
+    p.bezierCurveTo(-0.06, -0.98, -0.2, -0.9, -0.3, -0.72)
+    p.bezierCurveTo(-0.44, -0.46, -0.42, -0.06, 0, 0)
+  } else {
+    // ใบรูปไข่ ป่องกลาง ปลายแหลมนิดๆ
+    p.bezierCurveTo(0.3, -0.1, 0.38, -0.48, 0.28, -0.76)
+    p.bezierCurveTo(0.2, -0.93, 0.05, -0.99, 0, -1.03)
+    p.bezierCurveTo(-0.05, -0.99, -0.2, -0.93, -0.28, -0.76)
+    p.bezierCurveTo(-0.38, -0.48, -0.3, -0.1, 0, 0)
+  }
+  p.closePath()
+  leafPaths.set(shape, p)
+  return p
+}
+
+/** สี่เหลี่ยมบนจอ (CSS px) */
+export interface ScreenRect { x0: number; y0: number; x1: number; y1: number }
+
+const overlaps = (a: ScreenRect, b: ScreenRect) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0
+
+/** กรอบของใบ index i บนจอ (เผื่อการหมุนไหวรอบโคนใบแล้ว) */
+export function leafRect(model: TreeModel, fit: TreeFit, i: number): ScreenRect {
+  const leaf = model.leaves[i]
+  const [x, y] = toScreen(leaf.position, fit)
+  const L = Math.max(4, leaf.length * fit.scale) * 1.1 + 2
+  return { x0: x - L, y0: y - L, x1: x + L, y1: y + L }
+}
+
+/** วาดใบหนึ่งใบ — angleOffset/widthFactor ใช้ตอนใบไหว (หมุนรอบโคนใบ + พลิกแคบลงเหมือนใบบิดตามลม) */
+function paintLeaf(
+  ctx: CanvasRenderingContext2D, model: TreeModel, fit: TreeFit, dpr: number, i: number, angleOffset = 0, widthFactor = 1,
+) {
+  const leaf = model.leaves[i]
+  const [x, y] = toScreen(leaf.position, fit)
+  const L = Math.max(4, leaf.length * fit.scale)
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.translate(x, y)
+  ctx.rotate(leaf.angle + angleOffset)
+  ctx.scale(L * leaf.widthScale * widthFactor, L)
+  ctx.fillStyle = leaf.color
+  ctx.fill(getLeafPath(model.leafShape))
+  // เส้นกลางใบ (เห็นได้เฉพาะใบที่ใหญ่พอบนจอ)
+  if (L >= 9) {
+    ctx.beginPath()
+    ctx.moveTo(0, -0.05)
+    ctx.lineTo(0, -0.85)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.strokeStyle = 'rgba(255, 255, 235, 0.28)'
+    ctx.lineWidth = 0.7
+    ctx.stroke()
+  }
+}
+
+/** แสงแดดอุ่นแบบภาพวาดในวิดีโอพื้นหลัง: ด้านซ้ายบนของพุ่มสว่างอมเหลือง ด้านขวาล่างเงาเย็น
+ *  (source-atop = ลงสีเฉพาะบนใบที่วาดแล้ว ไม่เลอะพื้นหลัง) — region = ทาเฉพาะในกรอบนี้ */
+export function applyCrownGlaze(ctx: CanvasRenderingContext2D, model: TreeModel, fit: TreeFit, dpr: number, region?: ScreenRect) {
+  if (!model.leaves.length) return
+  const [ccx, ccy] = toScreen([model.crown.cx, model.crown.cy, 0], fit)
+  const crx = model.crown.rx * fit.scale, cry = model.crown.ry * fit.scale
+  const R = Math.max(crx, cry) * 1.3
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.globalCompositeOperation = 'source-atop'
+  const glaze = ctx.createLinearGradient(ccx - crx, ccy - cry, ccx + crx, ccy + cry)
+  glaze.addColorStop(0, 'rgba(255, 236, 170, 0.28)')
+  glaze.addColorStop(0.5, 'rgba(255, 236, 170, 0)')
+  glaze.addColorStop(0.62, 'rgba(24, 48, 40, 0)')
+  glaze.addColorStop(1, 'rgba(24, 48, 40, 0.3)')
+  ctx.fillStyle = glaze
+  const r = region ?? { x0: ccx - R, y0: ccy - R, x1: ccx + R, y1: ccy + R }
+  ctx.fillRect(r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0)
+  ctx.globalCompositeOperation = 'source-over'
+}
+
+/**
+ * ชั้นใบ: ก้อนพุ่ม → ใบทีละใบ → แสงแดด → ดอก → ผล
+ * opts.skip   = index ใบที่ไม่วาด (กำลังไหวอยู่บนชั้นใบไหว)
+ * opts.region = วาดใหม่เฉพาะในกรอบนี้ (ล้างกรอบก่อน) — ใช้ตอนใบเริ่ม/หยุดไหว ไม่ต้องวาดทั้งพุ่มใหม่
+ */
+export function drawFoliage(
+  ctx: CanvasRenderingContext2D, model: TreeModel, fit: TreeFit, dpr: number,
+  opts: { skip?: ReadonlySet<number>; region?: ScreenRect } = {},
+) {
+  const { skip, region } = opts
+  if (region) {
+    ctx.save()
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(region.x0, region.y0, region.x1 - region.x0, region.y1 - region.y0)
+    ctx.beginPath()
+    ctx.rect(region.x0, region.y0, region.x1 - region.x0, region.y1 - region.y0)
+    ctx.clip()
   }
 
-  // แสงแดดอุ่นแบบภาพวาดในวิดีโอพื้นหลัง: ด้านซ้ายบนของพุ่มสว่างอมเหลือง ด้านขวาล่างเงาเย็น
-  // (source-atop = ลงสีเฉพาะบนใบที่วาดแล้ว ไม่เลอะพื้นหลัง)
-  if (model.leaves.length) {
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.globalCompositeOperation = 'source-atop'
-    const R = Math.max(crx, cry) * 1.3
-    const glaze = ctx.createLinearGradient(ccx - crx, ccy - cry, ccx + crx, ccy + cry)
-    glaze.addColorStop(0, 'rgba(255, 236, 170, 0.28)')
-    glaze.addColorStop(0.5, 'rgba(255, 236, 170, 0)')
-    glaze.addColorStop(0.62, 'rgba(24, 48, 40, 0)')
-    glaze.addColorStop(1, 'rgba(24, 48, 40, 0.3)')
-    ctx.fillStyle = glaze
-    ctx.fillRect(ccx - R, ccy - R, R * 2, R * 2)
-    ctx.globalCompositeOperation = 'source-over'
+  // ก้อนพุ่มใต้ใบ: วงกลมสีใบเข้ม — ใบจริงวาดทับด้านบนให้ขอบพุ่มยังเป็นรูปใบ (ก้อนพุ่มไม่ไหว)
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  for (const c of model.clumps) {
+    const [x, y] = toScreen(c.position, fit)
+    const R = c.radius * fit.scale
+    if (region && !overlaps(region, { x0: x - R, y0: y - R, x1: x + R, y1: y + R })) continue
+    ctx.fillStyle = c.color
+    ctx.beginPath()
+    ctx.arc(x, y, R, 0, Math.PI * 2)
+    ctx.fill()
   }
+  for (let i = 0; i < model.leaves.length; i++) {
+    if (skip?.has(i)) continue
+    if (region && !overlaps(region, leafRect(model, fit, i))) continue
+    paintLeaf(ctx, model, fit, dpr, i)
+  }
+
+  applyCrownGlaze(ctx, model, fit, dpr, region)
 
   for (const f of model.flowers) {
     const [x, y] = toScreen(f.position, fit)
     const R = Math.max(3, f.radius * fit.scale)
+    if (region && !overlaps(region, { x0: x - R, y0: y - R, x1: x + R, y1: y + R })) continue
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.translate(x, y)
+    if (f.kind === 'magnolia') {
+      // แมกโนเลีย: ดอกใหญ่ทรงถ้วย กลีบยาวชี้ขึ้น กลีบหลังเข้มกว่า โคนกลีบอมชมพู
+      ctx.rotate((f.rotation - Math.PI) * 0.08)
+      for (const [a, back] of [[-0.95, true], [0.95, true], [-0.5, false], [0.5, false], [0, false]] as const) {
+        const cx = Math.sin(a) * R * 0.5, cy = -Math.cos(a) * R * 0.5
+        const grad = ctx.createLinearGradient(0, 0, cx * 2, cy * 2)
+        grad.addColorStop(0, '#e58aa9')
+        grad.addColorStop(0.55, back ? shade('#f7d5e0', -0.04) : f.color)
+        grad.addColorStop(1, back ? '#f7dbe5' : '#fffafc')
+        ctx.fillStyle = grad
+        ctx.beginPath()
+        ctx.ellipse(cx, cy, R * 0.3, R * 0.62, a, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      continue
+    }
     ctx.rotate(f.rotation)
     ctx.fillStyle = f.color
-    for (let i = 0; i < 5; i++) {
+    for (let k = 0; k < 5; k++) {
       ctx.rotate((Math.PI * 2) / 5)
       ctx.beginPath()
       ctx.ellipse(0, -R * 0.55, R * 0.42, R * 0.6, 0, 0, Math.PI * 2)
@@ -518,8 +728,40 @@ export function drawFoliage(ctx: CanvasRenderingContext2D, model: TreeModel, fit
     }
     ctx.beginPath()
     ctx.arc(0, 0, R * 0.3, 0, Math.PI * 2)
-    ctx.fillStyle = '#FFE08A'
+    ctx.fillStyle = f.center ?? '#FFE08A'
     ctx.fill()
   }
+
+  // ผลไม้: ลูกกลมมีแสงเงา (สว่างซ้ายบน) + ขั้วสั้นๆ
+  for (const fr of model.fruits) {
+    const [x, y] = toScreen(fr.position, fit)
+    const R = Math.max(2.5, fr.radius * fit.scale)
+    if (region && !overlaps(region, { x0: x - R, y0: y - R * 1.6, x1: x + R, y1: y + R })) continue
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.strokeStyle = '#5b4028'
+    ctx.lineWidth = Math.max(1, R * 0.16)
+    ctx.beginPath()
+    ctx.moveTo(x, y - R * 0.8)
+    ctx.lineTo(x + R * 0.12, y - R * 1.4)
+    ctx.stroke()
+    const grad = ctx.createRadialGradient(x - R * 0.35, y - R * 0.35, R * 0.1, x, y, R)
+    grad.addColorStop(0, shade(fr.color, 0.2))
+    grad.addColorStop(0.6, fr.color)
+    grad.addColorStop(1, shade(fr.color, -0.14))
+    ctx.fillStyle = grad
+    ctx.beginPath()
+    ctx.arc(x, y, R, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  if (region) ctx.restore()
+}
+
+/** ใบที่กำลังไหว: หมุนรอบโคนใบ + บิดแคบลง แล้วทาแสงแดดทับเฉพาะใบนั้น (สีตรงกับใบบนชั้นหลัก) */
+export function drawFlutterLeaf(
+  ctx: CanvasRenderingContext2D, model: TreeModel, fit: TreeFit, dpr: number, i: number, angleOffset: number, widthFactor: number,
+) {
+  paintLeaf(ctx, model, fit, dpr, i, angleOffset, widthFactor)
+  applyCrownGlaze(ctx, model, fit, dpr, leafRect(model, fit, i))
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 }
