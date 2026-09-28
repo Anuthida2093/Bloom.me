@@ -7,6 +7,7 @@ import { useAppContext } from '../../../context/AppContext'
 import { playSfx } from '../../../utils/audioPlayer'
 import { BADGE_ICONS } from '../../../config/iconAssets'
 import './GameShell.css'
+import '../../leaderboard/leaderboardRow.css'
 
 /*============================================================================*\
   GameShell — "ห้องเล่นเควสเต็มกรอบเขียว"   [แทนที่การ์ดเล็กกลางจอแบบเดิม]
@@ -33,6 +34,7 @@ interface GameShellApi {
   /** [เพิ่มรอบนี้] ให้เกมลูกเรียกออกเองได้ตรงๆ — จำเป็นสำหรับเกมที่เนื้อหาตัวเอง (เช่น
    *  CameraCapture แบบเต็มจอ) บังปุ่ม "✕" ของ header ด้านล่างนี้จนกดไม่ถึง ดู types.mental.ts */
   exit: () => void
+  finishAndClose: (payload?: QuestPlayPayload) => void
 }
 
 interface GameShellProps {
@@ -107,42 +109,37 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
     setStage('reward')
   }
 
+  /** จบเควส + ให้รางวัล + ปิดหน้าเควสทันทีโดยไม่ผ่านหน้ารับรางวัล (เควสที่จบเองอัตโนมัติ เช่น ฟื้นฟูหน้าดิน) */
+  const finishAndClose = (payload?: QuestPlayPayload) => {
+    playSfx('QUEST_SUCCESS', sfxOpts)
+    onComplete(quest.code, payload)
+    onClose()
+  }
+
   const claim = () => {
     playSfx('REWARD_CLAIM', sfxOpts)
     onClose()
   }
 
   return (
-    <div className="game-shell" style={{ '--game-accent': accent, '--game-accent-bg': accentBg } as React.CSSProperties}>
+    <div className={`game-shell game-shell--${quest.code}`} style={{ '--game-accent': accent, '--game-accent-bg': accentBg } as React.CSSProperties}>
       <div className="game-shell__scenery" aria-hidden="true" />
 
-      {fullscreenGame ? (
-        <>
-          <div className="game-shell__pill-header">
-            <span className="game-shell__pill-icon" aria-hidden="true">{quest.icon}</span>
-            <span className="game-shell__pill-title">{quest.titleTh}</span>
-          </div>
-          <button
-            className="game-shell__close game-shell__close--floating"
-            onClick={requestClose}
-            title="ปิด"
-            aria-label={`ปิดเควส ${quest.titleTh}`}
-          >
-            <img src={BADGE_ICONS.close} className="icon-img" alt="" />
-          </button>
-        </>
-      ) : (
-        <header className="game-shell__header">
-          <div className="game-shell__heading">
-            <span className="game-shell__icon">{quest.icon}</span>
-            <div>
-              <div className="game-shell__title">{quest.titleTh}</div>
-              <div className="game-shell__subtitle">{quest.title}</div>
-            </div>
-          </div>
-          <button className="game-shell__close" onClick={requestClose} title="ปิด" aria-label={`ปิดเควส ${quest.titleTh}`}><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
-        </header>
-      )}
+      {/* [แก้ตามที่ระบุ] ทุกเควสใช้ป้ายชื่อเควสลอยกึ่งกลางด้านบนแบบกระดานจัดอันดับ (เหมือนป้ายหน้าเควส)
+          แทนแถบหัวเต็มความกว้างแบบเดิม — ปุ่มปิดลอยมุมขวาบน */}
+      {/* [แก้ตามที่ระบุ] ฟื้นฟูหน้าดิน / คลิปกล่อมนอน → ป้ายโทนฟ้า ตัวหนังสือสีน้ำเงิน */}
+      <div className={`game-shell__pill-header lb-banner top-center-pill${quest.code === 'phys-soil-restoration' ? ' lb-banner--sky' : ''}`}>
+        <span className="game-shell__pill-icon" aria-hidden="true">{quest.icon}</span>
+        <span className="game-shell__pill-title">{quest.titleTh}</span>
+      </div>
+      <button
+        className="game-shell__close game-shell__close--floating"
+        onClick={requestClose}
+        title="ปิด"
+        aria-label={`ปิดเควส ${quest.titleTh}`}
+      >
+        <img src={BADGE_ICONS.close} className="icon-img" alt="" />
+      </button>
 
       {stage === 'playing' ? (
         <div className={`game-shell__body${fullscreenGame ? ' game-shell__body--fullscreen' : ''}`}>
@@ -154,7 +151,7 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
           )}
 
           <div className="game-shell__stage">
-            {children({ finish, accent, accentBg, strictMode: settings.strictMode, skip, exit: requestClose })}
+            {children({ finish, accent, accentBg, strictMode: settings.strictMode, skip, exit: requestClose, finishAndClose })}
           </div>
         </div>
       ) : (
@@ -174,6 +171,8 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
               />
             ))}
           </div>
+          <div className="quest-done-card game-shell__reward-card">
+          <div className="lb-banner quest-done-card__banner">ภารกิจสำเร็จ</div>
           <div className="game-shell__reward-icon">🎉</div>
           <div className="game-shell__reward-title">เควสสำเร็จแล้ว</div>
           <p className="game-shell__reward-text">
@@ -186,7 +185,8 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
             <div><strong>+{awardedSkipped ? Math.round(quest.coinReward / 2) : quest.coinReward}</strong><img src={BADGE_ICONS.coins} className="icon-img--reward" alt="" />เหรียญละอองดาว</div>
             <div><strong>+{awardedSkipped ? Math.round(quest.expReward / 2) : quest.expReward}</strong><img src={BADGE_ICONS.exp} className="icon-img--reward" alt="" />EXP</div>
           </div>
-          <button className="game-shell__claim" onClick={claim}>รับรางวัล</button>
+          <button className="lb-btn lb-btn--wide" onClick={claim}>รับรางวัล</button>
+          </div>
         </div>
       )}
 

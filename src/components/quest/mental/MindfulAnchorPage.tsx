@@ -272,7 +272,8 @@ export default function MindfulAnchorPage({ onComplete, onClose }: MindfulAnchor
 
       {/* ── ฉากที่ 4: จบเซสชัน ── */}
       {stage === 'complete' && (
-        <div className="mindful-anchor__panel mindful-anchor__panel--done">
+        <div className="mindful-anchor__panel mindful-anchor__panel--done quest-done-card">
+          <div className="lb-banner quest-done-card__banner">ภารกิจสำเร็จ</div>
           <div className="mindful-anchor__done-glow" aria-hidden="true" />
           <div className="mindful-anchor__anchor-icon">🌿</div>
           <h2 className="mindful-anchor__title">สมอลงแล้ว</h2>
@@ -286,7 +287,7 @@ export default function MindfulAnchorPage({ onComplete, onClose }: MindfulAnchor
             <div><strong>{Math.round(elapsedMs / 1000)}</strong>วินาที</div>
             <div><strong>4-7-8</strong>จังหวะ</div>
           </div>
-          <button className="mindful-anchor__cta" onClick={handleClaim}>รับหยดน้ำเรืองแสง</button>
+          <button className="lb-btn lb-btn--wide" onClick={handleClaim}>รับหยดน้ำเรืองแสง</button>
         </div>
       )}
 

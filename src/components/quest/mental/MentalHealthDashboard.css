@@ -96,7 +96,7 @@
 .mh-dash__status-badge {
   display: inline-block;
   font-size: 0.9rem; font-weight: 700;
-  color: var(--risk-accent);
+  color: var(--ae-text);
 }
 .mh-dash__status-tree {
   margin-top: 4px;
@@ -276,7 +276,7 @@
   --lc-text-2: rgba(232,245,238,0.5);
   color: var(--lc-text-2);
 }
-.mh-dash__screening-risk { font-size: 0.78rem !important; color: var(--risk-accent) !important; font-weight: 600; }
+.mh-dash__screening-risk { font-size: 0.78rem !important; color: var(--ae-text) !important; font-weight: 600; }
 
 .mh-dash__ghost-btn {
   width: 100%; margin-top: 12px;

@@ -1,6 +1,8 @@
 import { http, API_MODE, mockDelay } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import type { InventoryItem, UserData } from '../../types'
+import { toInventoryItem } from './adapters'
+import { getMe } from './user.api'
 
 /*============================================================================*\
   shop.api.ts — [ไฟล์ใหม่] ซื้อ/สวมใส่ไอเทมตกแต่ง
@@ -13,7 +15,8 @@ export interface BuyResult { item: InventoryItem; user: UserData }
 
 export async function getInventory(): Promise<InventoryItem[]> {
   if (API_MODE === 'mock') { await mockDelay(120); return getDb().inventory }
-  return http.get<InventoryItem[]>('/inventory')
+  const raw = await http.get<Record<string, unknown>[]>('/shop/inventory/me')
+  return raw.map(toInventoryItem)
 }
 
 export async function buyItem(shopItemId: string, price: number): Promise<BuyResult> {
@@ -31,7 +34,10 @@ export async function buyItem(shopItemId: string, price: number): Promise<BuyRes
     const item = db.inventory.find((i) => i.shopItemId === shopItemId) as InventoryItem
     return { item, user: db.user }
   }
-  return http.post<BuyResult>('/shop/buy', { shopItemId })
+  // backend: POST /api/shop/:id/purchase → { userItem, user } (user เป็น select ย่อย
+  // id/level/exp/coins/streak) — ดึงโปรไฟล์เต็มซ้ำอีกครั้งให้แคชฝั่งหน้าเว็บครบทุก field
+  const res = await http.post<{ userItem: Record<string, unknown> }>(`/shop/${shopItemId}/purchase`)
+  return { item: toInventoryItem(res.userItem), user: await getMe() }
 }
 
 export async function toggleEquip(shopItemId: string): Promise<InventoryItem[]> {
@@ -43,5 +49,11 @@ export async function toggleEquip(shopItemId: string): Promise<InventoryItem[]> 
       )
     }).inventory
   }
-  return http.patch<InventoryItem[]>(`/inventory/${shopItemId}/equip`, {})
+  // backend: PATCH /api/shop/inventory/:userItemId/equip { isEquipped } — ใช้ id ของแถว
+  // user_items (ไม่ใช่ shopItemId) และต้องบอกสถานะปลายทางชัดๆ ไม่ใช่ toggle
+  const inventory = await getInventory()
+  const owned = inventory.find((i) => i.shopItemId === shopItemId)
+  if (!owned) return inventory
+  await http.patch(`/shop/inventory/${owned.id}/equip`, { isEquipped: !owned.isEquipped })
+  return getInventory()
 }

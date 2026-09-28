@@ -81,7 +81,7 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button
+            <button className="popup-close"
               onClick={onClose}
               title="ปิด"
               style={{

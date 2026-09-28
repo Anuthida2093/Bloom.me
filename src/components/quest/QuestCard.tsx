@@ -241,12 +241,12 @@ export default function QuestCard({
         .quest-card-reward-coin {
   --lc-bg-4: #FFF9C4;
   background: var(--lc-bg-4);
-  --lc-text-5: #8B6000;
+  --lc-text-5: var(--fixed-black);
   color: var(--lc-text-5);
   --lc-border-6: #F4C43055;
   border: 1px solid var(--lc-border-6);
 }
-        .quest-card-reward-exp { background: var(--card-accent-bg); color: var(--card-accent); border: 1px solid var(--card-accent); }
+        .quest-card-reward-exp { background: var(--card-accent-bg); color: var(--fixed-black); border: 1px solid var(--card-accent); }
 
         .quest-card-float {
           position: absolute; top: -14px; left: 50%; transform: translateX(-50%); z-index: 15;
@@ -256,7 +256,7 @@ export default function QuestCard({
           font-family: 'Fredoka One'; font-size: 15px; border-radius: 999px; padding: 3px 10px;
         }
         .quest-card-float__pill--coin {
-  --lc-text-1: #8B6000;
+  --lc-text-1: var(--fixed-black);
   color: var(--lc-text-1);
   --lc-bg-2: #FFF9C4;
   background: var(--lc-bg-2);
@@ -264,7 +264,7 @@ export default function QuestCard({
   --lc-shadow-3: rgba(244,196,48,.35);
   box-shadow: 0 3px 10px var(--lc-shadow-3);
 }
-        .quest-card-float__pill--exp { color: var(--card-accent); background: var(--card-accent-bg); border: 1.5px solid var(--card-accent); box-shadow: 0 3px 10px var(--glass-b-12); }
+        .quest-card-float__pill--exp { color: var(--fixed-black); background: var(--card-accent-bg); border: 1.5px solid var(--card-accent); box-shadow: 0 3px 10px var(--glass-b-12); }
       `}</style>
     </button>
   )

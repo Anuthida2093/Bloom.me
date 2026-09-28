@@ -33,16 +33,23 @@ export interface Species {
   /** ตัวคูณขนาดใบ */
   leafSize?: number
   leafColors: string[]
+  /** สีใบช่วงปลายกิ่ง/ขอบนอกพุ่ม (สน) — เขียวสดกว่าเนื้อพุ่มด้านใน ไล่จากเข้ม→สด */
+  tipColors?: string[]
   trunkColor: string
   bark?: BarkStyle
   /** ดอก: amount คูณจำนวนดอกปกติ, size คูณขนาด, kind = รูปดอก */
   flowers?: { colors: string[]; amount: number; size?: number; kind?: 'blossom' | 'magnolia'; center?: string }
-  /** พุ่มเป็นกลุ่มฟูๆ ที่ปลายกิ่ง (ซากุระ) แทนพุ่มโดมทึบ — size คูณขนาดกลุ่ม */
-  puffs?: { size: number }
+  /** พุ่มเป็นกลุ่มฟูๆ ที่ปลายกิ่ง (ซากุระ) แทนพุ่มโดมทึบ — size คูณขนาดกลุ่ม,
+   *  detail > 1 = ละเอียดขึ้น (ช่อดอกย่อยรอบกลุ่ม + กลีบถี่ขึ้นตามตัวคูณ) */
+  puffs?: { size: number; detail?: number }
   /** ผล (ขั้นภาพ 4+): amount คูณจำนวนผลปกติ */
   fruit?: { color: string; amount: number; size?: number }
   /** ไทร: รากอากาศห้อยจากกิ่งลงดิน */
   aerialRoots?: boolean
+  /** พุ่มทรงกลม (วงกลม ไม่ใช่วงรีสูง) — จาคารันดา */
+  roundCrown?: boolean
+  /** ตัวคูณจำนวนใบในพุ่ม (<1 = โปร่งขึ้น เห็นกิ่ง/ดอกชัด ดูเป็นธรรมชาติ) */
+  leafDensity?: number
 }
 
 const TRUNK_SOFT = '#a8835f'
@@ -74,21 +81,24 @@ export const SPECIES: Record<MbtiType, Species> = {
     leafColors: ['#d9482b', '#f08a24', '#f4b73f', '#c0392b'], trunkColor: TRUNK_SOFT,
   },
   ENFP: {
-    // ยามบานสะพรั่ง พุ่มเป็นสีม่วงเกือบทั้งต้น (ใบเขียวแซมบ้าง) ทรงร่มกางกว้าง
+    // [แก้ตามที่ระบุ] พุ่มทรงกลมโค้งมนด้านบน ใบไม่แน่นจนตัน (โปร่ง เป็นธรรมชาติ) มีใบเขียวแซม
+    // และดอกม่วงห้ากลีบกระจายทั่วพุ่มพอประมาณ
     name: 'ต้นจาคารันดา', nameEn: 'Jacaranda',
     meaning: 'ดอกสีม่วงบานสะพรั่งเต็มต้น สดใส ร่าเริง และเต็มไปด้วยจินตนาการที่ไร้กรอบ',
-    form: 'broadleaf', leafShape: 'petal', leafSize: 0.85,
-    params: { branchAngle: 50, upwardBias: 0.28, lengthDecay: 0.8, gnarl: 0.12 },
-    leafColors: ['#9b7ad8', '#b394e6', '#8566c4', '#a88ae0', '#7cb46b'], trunkColor: TRUNK_SOFT,
-    flowers: { colors: ['#9b6fd6', '#b48be8', '#8a5cc7', '#c9a6f2'], amount: 4, center: '#5e3d99' },
-    puffs: { size: 1.15 },
+    form: 'broadleaf', leafShape: 'petal', leafSize: 0.8,
+    params: { branchAngle: 52, upwardBias: 0.2, lengthDecay: 0.8, gnarl: 0.14 },
+    leafColors: ['#9b7ad8', '#b394e6', '#8566c4', '#a88ae0', '#c6aef0', '#6f9f5c', '#86b46e'], trunkColor: TRUNK_SOFT,
+    flowers: { colors: ['#9b6fd6', '#b48be8', '#8a5cc7', '#c9a6f2', '#e2d2fa'], amount: 3, size: 0.9, center: '#5e3d99' },
+    roundCrown: true, leafDensity: 0.55,
   },
   // ── นักวิเคราะห์ (NT) ──
   INTJ: {
     name: 'ต้นสนไซเปรส', nameEn: 'Cypress',
     meaning: 'เติบโตอย่างมีระเบียบ แข็งแกร่ง มีโครงสร้างชัดเจนและมุ่งตรงสู่เป้าหมาย',
     form: 'column', leafShape: 'needle',
-    leafColors: ['#1f4d3a', '#2d6a4f', '#3f7f5c'], trunkColor: '#8a6a4a',
+    // [แก้ตามที่ระบุ — ภาพอ้างอิง] เขียวป่าเข้มอมฟ้าเทาแบบไซเปรส ปลายกิ่งเขียวอ่อนลงเล็กน้อย
+    // ลำต้นน้ำตาลเข้มเรียว (คงสีนี้ ไม่ใช้น้ำตาลอ่อนกลางของต้นอื่น — ดู assembleModel)
+    leafColors: ['#1d4032', '#264d3f', '#2f5a4b', '#3a6657'], tipColors: ['#4b7c64', '#5a8b72', '#6b9a80'], trunkColor: '#4e3527',
   },
   INTP: {
     name: 'ต้นแปะก๊วย', nameEn: 'Ginkgo',

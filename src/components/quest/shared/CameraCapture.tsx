@@ -1,16 +1,21 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import './CameraCapture.css'
+import '../../leaderboard/leaderboardRow.css'
 import { BADGE_ICONS } from '../../../config/iconAssets'
 
 interface CameraCaptureProps {
   onSave: (imageSrc: string) => void
   onCancel?: () => void
+  /** คำแนะนำว่าต้องถ่ายอะไร — โชว์ลอยบนจอกล้อง และเป็นหัวข้อของหน้าตรวจรูป */
+  hint?: string
+  /** เปิดมาที่หน้าตรวจรูปพร้อมรูปนี้เลย (เช่น กดกลับจากหน้าเลือกเมนูมาที่รูปเดิม) — ไม่ใส่ = เปิดกล้อง */
+  initialImage?: string | null
 }
 
-export default function CameraCapture({ onSave, onCancel }: CameraCaptureProps) {
-  const [isCapturing, setIsCapturing] = useState(true)
-  const [imageSrc, setImageSrc] = useState<string | null>(null)
+export default function CameraCapture({ onSave, onCancel, hint, initialImage = null }: CameraCaptureProps) {
+  const [isCapturing, setIsCapturing] = useState(!initialImage)
+  const [imageSrc, setImageSrc] = useState<string | null>(initialImage)
   
   // State สำหรับสลับกล้องหน้า/หลัง (เริ่มต้นที่กล้องหลัง)
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
@@ -117,6 +122,7 @@ export default function CameraCapture({ onSave, onCancel }: CameraCaptureProps) 
   if (isCapturing) {
     const cameraUI = (
       <div className="camera-fullscreen-container">
+        {hint && <div className="camera-hint lb-banner">{hint}</div>}
         {/* วิดีโอกล้อง */}
         <video 
           ref={videoRef} 
@@ -175,15 +181,18 @@ export default function CameraCapture({ onSave, onCancel }: CameraCaptureProps) 
   // โหมดที่ 2: หน้าจอพรีวิวหลังจากถ่ายเสร็จ
   // ---------------------------------------------------------
   return (
+    // [แก้ตามที่ระบุ] หน้าตรวจรูปหลังถ่าย (ใช้ร่วมทุกเควสที่ถ่ายรูป) — กรอบแบบกระดานจัดอันดับ
+    // ปุ่ม "ถ่ายใหม่" / "บันทึก" แบบปุ่มป้ายกระดาน ไม่มีเครื่องหมายนำหน้า
     <div className="camera-preview-container">
-      <div className="camera-preview-card">
+      <div className="camera-preview-card lb-card">
+        <div className="lb-banner camera-preview-banner">{hint ?? 'รูปภารกิจของคุณ'}</div>
         {imageSrc && <img src={imageSrc} alt="Captured preview" className="camera-preview-image" />}
         <div className="camera-preview-actions">
-          <button className="camera-btn-retake" onClick={handleRetake}>
-            ↺ ถ่ายใหม่
+          <button className="lb-btn lb-btn--ghost" onClick={handleRetake}>
+            ถ่ายใหม่
           </button>
-          <button className="camera-btn-save" onClick={handleSave}>
-            ✓ บันทึก
+          <button className="lb-btn" onClick={handleSave}>
+            บันทึก
           </button>
         </div>
       </div>

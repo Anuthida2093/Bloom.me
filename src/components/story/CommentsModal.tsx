@@ -3,6 +3,7 @@ import type { PostData } from '../../types'
 import { usePosts } from '../../context/PostContext'
 import { useSocial } from '../../context/SocialContext'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import PostPreviewMini from './PostPreviewMini'
 
 /*============================================================================*\
   CommentsModal — [ใหม่ — ข้อ 9] popup แสดงคอมเมนต์ทั้งหมดของโพสต์ (แทนการขยาย inline
@@ -23,8 +24,10 @@ export default function CommentsModal({ post, onClose }: { post: PostData; onClo
 
   return (
     <div className="story-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="story-modal-card story-modal-card--tall">
+      <div className="story-modal-card story-modal-card--tall story-modal-card--post">
         <div className="story-modal-card__title">คอมเมนต์ ({post.comments.length})</div>
+        {/* [แก้ตามที่ระบุ] ป็อปอัพแบบการ์ดโพสต์ — โชว์โพสต์นี้ไว้บนสุด */}
+        <PostPreviewMini post={post} />
 
         <div className="story-comments-list">
           {post.comments.length === 0 && (

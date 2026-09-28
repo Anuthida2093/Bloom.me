@@ -15,6 +15,10 @@
 /* [ลบ NavBar แล้ว] เดิมเว้น padding-top 80px/56px ให้ .top-navbar ที่ลอยทับ — ไม่มีแถบนั้นแล้ว
    เนื้อหาเริ่มชิดขอบบนจอได้เลย (ActionMenuBar ยังลอยทับด้านล่างเหมือนเดิม) */
 .story-overlay {
+  /* [แก้ตามที่ระบุ] เส้นขอบทั้งหน้าสตอรี่: ทอง (ธีมสว่าง) / ขาว (ธีมมืด) */
+  --story-edge: color-mix(in srgb, var(--coin) 70%, var(--g600));
+  /* ความสูงแถบบน (padding 14×2 + ปุ่ม 44 + ขอบล่าง 2) — แถบเมนูข้างบนจอเล็กเริ่มใต้แถบนี้ */
+  --story-header-h: 74px;
   position: fixed; inset: 0; z-index: 500;
   background: var(--bg);
   display: flex; flex-direction: column;
@@ -26,9 +30,12 @@
   flex-shrink: 0;
   display: flex; align-items: center; gap: 14px;
   padding: 14px 18px;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border);
+  /* [แก้ตามที่ระบุ] แถบบนเขียวอ่อนที่เข้มกว่าพื้นด้านล่าง (--bg = --leaf-soft) หนึ่งระดับ
+     ธีมมืด: เขียวเข้มที่สว่างกว่าพื้นด้านล่าง (--g900) หนึ่งระดับ */
+  background: var(--leaf-soft-strong);
+  border-bottom: 2px solid var(--story-edge);
 }
+[data-theme="dark"] .story-header { background: var(--g800); }
 .story-header__title {
   font-family: var(--font-display); font-size: clamp(var(--fs-lg), 4vw, var(--fs-xl)); color: var(--g800);
   margin-right: auto;
@@ -53,6 +60,8 @@
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .story-header__icon-btn:hover { opacity: .85; }
+/* [แก้ตามที่ระบุ] ธีมมืด: วงกลมกลายเป็นสีอ่อน (--n900 กลับสี) — ไอคอนสามขีด/กระดิ่งต้องเป็นสีดำ */
+[data-theme="dark"] .story-header__icon-btn { color: var(--fixed-black); }
 /* [แก้ข้อ 4] ปุ่มปิดมาตรฐาน — ทรงเดียวกับปุ่มปิดของ ProfilePage.tsx (วงกลมพื้นการ์ด+เงา
    สีอ่อน ไม่ใช่วงกลมทึบเข้มแบบกระดิ่ง/แฮมเบอร์เกอร์) แทนที่ปุ่ม Home ลอยกลางจอที่ตัดออกแล้ว —
    อยู่ในแถวหัวข้อซึ่งอยู่ใต้ Navbar หลักพอดี (เทียบเท่า "ลอยมุมขวาบน ใต้ Navbar" ตามที่ระบุ
@@ -70,24 +79,28 @@
 /* ฟีดทั้งฟีดอยู่ในกล่องขอบมนใบเดียว (ไม่ใช่การ์ดลอยแยกทีละโพสต์) — แต่ละโพสต์คั่นด้วยเส้น
    บางๆ ข้างในกล่องเดียวกัน ดู .story-post-card ด้านล่าง */
 .story-feed__list {
-  background: var(--bg-card); border: 1.5px solid var(--border-mid); border-radius: var(--r-xl);
+  background: var(--bg-card); border: 2px solid var(--story-edge); border-radius: var(--r-xl);
   overflow: hidden;
 }
 .story-sidebar {
   width: 300px; flex-shrink: 0; overflow-y: auto;
-  padding: 18px; border-left: 1px solid var(--border); background: var(--bg-sidebar);
+  /* [แก้ตามที่ระบุ] แถบข้างพื้นเขียวอ่อน + ขอบทอง (ธีมมืด: เขียวเข้ม + ขอบขาว) */
+  padding: 18px; border-left: 2px solid var(--story-edge); background: var(--leaf-soft);
 }
+[data-theme="dark"] .story-overlay { --story-edge: var(--fixed-white); }
+[data-theme="dark"] .story-sidebar { background: var(--g800); }
 .story-sidebar__scrim { display: none; }
 
 @media (max-width: 900px) {
   .story-sidebar {
-    position: fixed; top: 0; right: 0; bottom: 0; width: 280px; z-index: 60;
+    /* [แก้ตามที่ระบุ] กดสามขีดแล้วแถบข้างเลื่อนออกมา "ใต้" แถบบนของสตอรี่ ไม่ทับแถบบน */
+    position: fixed; top: var(--story-header-h); right: 0; bottom: 0; width: 280px; z-index: 60;
     transform: translateX(100%); transition: transform var(--dur-mid) var(--ease-out-soft);
     box-shadow: var(--sh-modal);
   }
   .story-sidebar--open { transform: translateX(0); }
   .story-sidebar__scrim {
-    display: block; position: fixed; inset: 0; z-index: 55;
+    display: block; position: fixed; inset: var(--story-header-h) 0 0 0; z-index: 55;
     background: var(--bg-modal);
   }
   .story-sidebar__close-mobile {
@@ -219,17 +232,16 @@
 /* ─── Sidebar profile card + grid — แบนราบ ไม่มีเงา/เส้นขอบ สีพื้นเทาอ่อนเรียบ ─── */
 .story-sidebar__profile-card {
   display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: var(--r-pill);
-  background: var(--n100); border: none; margin-bottom: 18px; width: 100%; text-align: left; min-height: 44px;
+  background: var(--n100); border: 2px solid var(--story-edge); margin-bottom: 18px; width: 100%; text-align: left; min-height: 44px;
 }
 .story-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 /* ไอคอน+ข้อความเรียงแนวนอนในบรรทัดเดียว (ไม่ใช่ไอคอนอยู่บนข้อความ) */
 .story-grid-btn {
   display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px;
-  padding: 20px 10px; border-radius: var(--r-lg); border: none; background: var(--n100); color: var(--text);
+  padding: 20px 10px; border-radius: var(--r-lg); border: 2px solid var(--story-edge); background: var(--n100); color: var(--text);
   font-size: var(--fs-sm); font-weight: 700; min-height: 58px;
 }
 .story-grid-btn:hover { background: var(--n200); }
-.story-grid-btn__icon { font-size: var(--fs-lg); line-height: 1; }
 
 /* ─── Search ─── */
 .story-search__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
@@ -327,3 +339,422 @@
   .story-header__search { max-width: none; }
   .story-post-card__image-placeholder { height: 160px; }
 }
+
+/* [แก้ตามที่ระบุ] โปรไฟล์สตอรี่: แถบหัวข้อ "โพสต์ของฉัน" เขียวเข้มกว่าการ์ดโปรไฟล์ด้านบนหนึ่งระดับ */
+.story-profile__posts-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 12px; padding: 10px 14px; border-radius: 14px;
+  background: var(--leaf-soft-active); color: var(--on-leaf-soft);
+  border: 2px solid var(--story-edge);
+}
+[data-theme="dark"] .story-profile__posts-bar { background: var(--g700); color: var(--fixed-white); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   [แก้ตามที่ระบุ] สตอรี่ — ฟอนต์เดียวกับกระดานจัดอันดับ · ป็อปอัพทุกอัน (คอมเมนต์/ถูกใจ/แชร์/แก้ไข/
+   แจ้งโปรไฟล์ส่วนตัว) เป็นกรอบแบบกระดานจัดอันดับ · หน้าสร้างสตอรี่เต็มจอ · รูปเต็มขอบ ไม่ตัดรูป
+   ═══════════════════════════════════════════════════════════════════════════ */
+.story-overlay { font-family: var(--font-display); }
+.story-overlay :is(input, textarea, button, select) { font-family: inherit; }
+
+/* ── ป็อปอัพ ── */
+.story-modal-backdrop { padding: 34px 16px calc(var(--gpf-safe-bottom, 90px) + 8px); }
+.story-modal-card {
+  position: relative;
+  background: var(--lb-card-bg);
+  border: 2px solid var(--lb-gold-edge);
+  border-radius: 22px;
+  padding: 34px 20px 20px;
+  color: var(--lb-card-text);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--lb-gold-edge) 60%, var(--g800)), 0 16px 36px var(--glass-b-30);
+  scrollbar-width: none;
+  overflow: visible;
+}
+.story-modal-card::-webkit-scrollbar { display: none; }
+.story-modal-card__title {
+  position: absolute; top: -17px; left: 50%; transform: translateX(-50%);
+  max-width: calc(100% - 40px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding: 5px 18px; border-radius: 10px; margin: 0;
+  background: var(--lb-btn-bg); color: var(--lb-btn-text);
+  border: 2px solid var(--lb-gold-edge); font-size: var(--fs-md);
+  box-shadow: 0 3px 8px var(--glass-b-30);
+}
+.story-modal-card .story-comments-list { max-height: min(50vh, 360px); scrollbar-width: none; }
+.story-modal-card .story-comments-list::-webkit-scrollbar { display: none; }
+.story-modal-card :is(.story-comment-popup-row, .story-list-row, .story-friend-row, .story-toggle-row) {
+  background: color-mix(in srgb, var(--fixed-white) 42%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 45%, transparent);
+  border-radius: 14px; margin-bottom: 6px; padding: 8px 10px;
+}
+[data-theme="dark"] .story-modal-card :is(.story-comment-popup-row, .story-list-row, .story-friend-row, .story-toggle-row) {
+  background: color-mix(in srgb, var(--g900) 45%, transparent);
+}
+.story-modal-card :is(.story-comment-popup-row__name, .story-friend-row__name) { color: var(--lb-card-text); }
+.story-modal-card :is(.story-comment-popup-row__content, .story-empty-state) { color: var(--lb-card-text-sub); }
+.story-modal-card .story-btn-ghost {
+  background: transparent; color: var(--lb-card-text);
+  border: 2px solid var(--lb-gold-edge) !important;
+}
+.story-modal-card .story-btn-primary,
+.story-modal-card .story-comment-form button {
+  background: var(--lb-btn-bg); color: var(--lb-btn-text); border: 2px solid var(--lb-gold-edge);
+}
+.story-modal-card :is(.story-comment-form input, textarea) {
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 60%, transparent);
+}
+.story-privacy-card { max-width: 380px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.story-privacy-card__icon { font-size: 44px; line-height: 1; margin-top: 4px; }
+.story-privacy-card__text { font-size: var(--fs-md); color: var(--lb-card-text); }
+.story-privacy-card__sub { font-size: var(--fs-sm); color: var(--lb-card-text-sub); margin-bottom: 6px; }
+
+/* ── การ์ดโพสต์ ── */
+.story-post-card__name-btn {
+  display: inline; padding: 0; border: none; background: none; cursor: pointer; text-align: left;
+  font-family: inherit; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.story-post-card__name-btn:hover { text-decoration: underline; }
+.story-avatar--clickable { cursor: pointer; }
+.story-post-card__friend-tag {
+  display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 99px; font-size: 11px;
+  background: var(--leaf-soft-active); color: var(--on-leaf-soft); border: 1px solid var(--story-edge);
+}
+[data-theme="dark"] .story-post-card__friend-tag { background: var(--g700); color: var(--fixed-white); }
+.story-post-card__mood {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 3px 12px; border-radius: 99px;
+  font-size: var(--fs-xs); color: var(--text); background: color-mix(in srgb, var(--leaf-soft-strong) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--story-edge) 60%, transparent);
+}
+[data-theme="dark"] .story-post-card__mood { background: var(--g800); }
+/* รูปโพสต์: เต็มขอบซ้าย-ขวาของการ์ด (ชดเชย padding 16px) เห็นครบทั้งรูปทุกสัดส่วน ไม่ครอป */
+.story-post-card__image-wrap {
+  margin: 0 -16px 10px;
+  background: color-mix(in srgb, var(--n900) 8%, transparent);
+  display: flex; justify-content: center;
+}
+.story-post-card__image-wrap .story-post-card__image {
+  width: 100%; height: auto; max-height: 85vh; object-fit: contain; border-radius: 0; margin: 0;
+}
+
+/* ── หน้าสร้างสตอรี่เต็มจอ ── */
+.story-compose-page {
+  position: absolute; inset: 0; z-index: 85;
+  background: var(--bg);
+  overflow-y: auto; scrollbar-width: none;
+  padding: 30px 16px calc(var(--gpf-safe-bottom, 90px) + 16px);
+}
+.story-compose-page::-webkit-scrollbar { display: none; }
+[data-theme="dark"] .story-compose-page { background: var(--g900); }
+.story-compose-page__inner { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.story-compose-page__top { position: relative; display: flex; justify-content: center; align-items: center; min-height: 44px; }
+.story-compose-page__banner { font-size: var(--fs-lg); padding: 8px 26px; }
+.story-compose-page__close { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 0; cursor: pointer; }
+.story-compose-page__close img { width: 36px; height: 36px; object-fit: contain; }
+.story-compose-page__card { padding: 18px; border-radius: 22px; display: flex; flex-direction: column; gap: 16px; }
+.story-compose-page__text {
+  width: 100%; min-height: 34vh; resize: vertical; padding: 14px; border-radius: 14px;
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 60%, transparent);
+  background: color-mix(in srgb, var(--fixed-white) 55%, transparent); color: var(--lb-card-text);
+  font-family: inherit; font-size: var(--fs-md); line-height: 1.7; outline: none;
+}
+[data-theme="dark"] .story-compose-page__text { background: color-mix(in srgb, var(--g900) 55%, transparent); }
+.story-compose-page__text::placeholder { color: var(--lb-card-text-sub); opacity: .7; }
+.story-compose-page__label { display: block; font-size: var(--fs-sm); color: var(--lb-card-text); margin-bottom: 8px; }
+.story-compose-page__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.story-compose-page__row .story-compose-page__label { margin-bottom: 0; }
+.story-compose-page__moods { display: flex; flex-wrap: wrap; gap: 8px; }
+.story-compose-page__mood,
+.story-compose-page__toggle {
+  min-height: 40px; padding: 7px 14px; border-radius: 99px; cursor: pointer; font-family: inherit; font-size: var(--fs-sm);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 50%, transparent);
+  background: color-mix(in srgb, var(--fixed-white) 45%, transparent); color: var(--lb-card-text-sub);
+}
+[data-theme="dark"] :is(.story-compose-page__mood, .story-compose-page__toggle) { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+:is(.story-compose-page__mood, .story-compose-page__toggle):is(.is-active, .is-on) {
+  background: var(--lb-btn-bg); color: var(--lb-btn-text); border-color: var(--lb-gold-edge);
+}
+.story-compose-page__actions { display: flex; gap: 12px; }
+.story-compose-page__actions .lb-btn { flex: 1; }
+/* การ์ดป็อปอัพไม่ตัดป้ายหัวข้อ (overflow visible) — ให้ฉากหลังเป็นตัวเลื่อนแทนเมื่อเนื้อหายาว (ไม่แสดงแถบเลื่อน) */
+.story-modal-backdrop { overflow-y: auto; align-items: safe center; scrollbar-width: none; }
+.story-modal-backdrop::-webkit-scrollbar { display: none; }
+.story-modal-card { max-height: none; margin: auto 0; }
+
+/* [แก้ตามที่ระบุ] จอกว้าง (โน้ตบุ๊ก): กดสามขีดเพื่อซ่อนแถบเมนูข้าง — ฟีดขยายเต็มความกว้าง */
+@media (min-width: 901px) {
+  .story-sidebar--hidden { display: none; }
+}
+
+/* [แก้ตามที่ระบุ] กล่องผลค้นหา/ประวัติค้นหา ใต้ช่อง Search — กรอบแบบกระดานจัดอันดับ ลอยทับฟีด */
+.story-header { position: relative; z-index: 70; }
+.story-search-dropdown {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 75;
+  max-height: min(60vh, 420px); overflow-y: auto; scrollbar-width: none;
+  padding: 12px; border-radius: 16px;
+  background: var(--lb-card-bg); border: 2px solid var(--lb-gold-edge);
+  box-shadow: 0 12px 28px var(--glass-b-30);
+  color: var(--lb-card-text);
+}
+.story-search-dropdown::-webkit-scrollbar { display: none; }
+.story-search-dropdown .story-search__head-label { color: var(--lb-card-text-sub); }
+.story-search-dropdown .story-search-empty { color: var(--lb-card-text-sub); padding: 14px 0; }
+.story-search-dropdown .story-search-row {
+  padding: 4px 6px; background: color-mix(in srgb, var(--fixed-white) 42%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 40%, transparent);
+}
+[data-theme="dark"] .story-search-dropdown .story-search-row { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+.story-search-row__main {
+  flex: 1; display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 0;
+  background: none; border: none; text-align: left; cursor: pointer; font-family: inherit; color: inherit;
+}
+.story-search-row__main .story-search-row__name { color: var(--lb-card-text); }
+@media (max-width: 640px) {
+  .story-search-dropdown { position: fixed; top: calc(var(--story-header-h) + 6px); left: 12px; right: 12px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   [แก้ตามที่ระบุ] รอบ "เพื่อน/แชท/รูป 20 รูป/ปุ่มโพสต์ใหม่" — ทุกชิ้นใช้ธีมกระดานจัดอันดับ
+   (พื้นเขียวอ่อนไล่เฉด ขอบทอง ตัวหนังสือดำ · โหมดมืด: เขียวเข้ม ตัวหนังสือขาว)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── เมนูข้าง: ปุ่มที่เปิดอยู่ ── */
+.story-grid-btn.is-active {
+  background: var(--lb-btn-bg); color: var(--lb-btn-text);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--lb-gold-edge) 60%, var(--g800));
+}
+
+/* ── ปุ่มถูกใจ / คอมเมนต์ / ส่ง — ป้ายเม็ดยาว ขอบทอง ── */
+.story-post-card__actions { gap: 10px; flex-wrap: wrap; padding-top: 4px; }
+.story-action-pill {
+  --pill-edge: color-mix(in srgb, var(--lb-gold-edge) 70%, transparent);
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 42px; padding: 0 14px 0 10px; border-radius: 999px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--leaf-soft) 90%, #fff) 0%, var(--leaf-soft-strong) 100%);
+  border: 1.5px solid var(--pill-edge);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--lb-gold-edge) 45%, transparent);
+  color: var(--n900); font-family: var(--font-display); font-size: var(--fs-sm); cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+}
+button.story-action-pill:hover, .story-action-pill:has(button:hover) { transform: translateY(-1px); box-shadow: 0 4px 0 color-mix(in srgb, var(--lb-gold-edge) 45%, transparent); }
+button.story-action-pill:active { transform: translateY(1px); box-shadow: none; }
+[data-theme="dark"] .story-action-pill {
+  background: linear-gradient(180deg, var(--g700) 0%, var(--g800) 100%);
+  color: var(--fixed-white);
+}
+.story-action-pill--like { padding: 0 4px; gap: 0; }
+.story-action-pill__icon-btn,
+.story-action-pill__count {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  min-width: 38px; min-height: 38px; padding: 0 6px; border: none; background: none; border-radius: 999px;
+  color: inherit; font: inherit; cursor: pointer;
+}
+.story-action-pill__count { min-width: 30px; padding: 0 10px 0 2px; font-weight: 700; }
+.story-action-pill__count:disabled { opacity: .55; cursor: default; }
+.story-action-pill__label { font-weight: 700; }
+.story-action-pill.is-active {
+  background: linear-gradient(180deg, #FFE3E9 0%, #FFC7D3 100%);
+  border-color: #E8839A; color: #6B1427;
+}
+[data-theme="dark"] .story-action-pill.is-active { background: linear-gradient(180deg, #7A2E43 0%, #5A1F30 100%); color: #FFE3E9; border-color: #E8839A; }
+
+/* ไอคอน SVG */
+.story-icon { display: block; overflow: visible; }
+.story-icon__stroke { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.story-icon__dot { fill: currentColor; }
+.story-icon--heart .story-icon__heart { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linejoin: round; transition: fill .2s ease; }
+.story-icon--heart .story-icon__leaf { fill: var(--g500); stroke: none; transform-origin: 12px 7px; transform: scale(.85); }
+.story-icon--heart.is-filled .story-icon__heart { fill: url(#storyHeartFill); stroke: #C9304F; }
+.story-icon--heart.is-filled .story-icon__leaf { fill: var(--g400); animation: storyLeafSprout .5s cubic-bezier(.34, 1.56, .64, 1) both; }
+.story-icon--heart.is-filled { animation: storyHeartPop .45s cubic-bezier(.34, 1.56, .64, 1) both; }
+@keyframes storyHeartPop { 0% { transform: scale(.6); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes storyLeafSprout { 0% { transform: scale(0) rotate(-30deg); } 100% { transform: scale(1.05) rotate(0); } }
+/* ประกายกระจายรอบหัวใจตอนกดถูกใจ */
+.story-action-pill__burst {
+  position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px;
+  border-radius: 50%; pointer-events: none;
+  background:
+    radial-gradient(circle, #FF8AA0 0 2.5px, transparent 3px) 50% 0 / 6px 6px no-repeat,
+    radial-gradient(circle, #9BD17A 0 2.5px, transparent 3px) 100% 50% / 6px 6px no-repeat,
+    radial-gradient(circle, #FFD166 0 2.5px, transparent 3px) 50% 100% / 6px 6px no-repeat,
+    radial-gradient(circle, #FF8AA0 0 2.5px, transparent 3px) 0 50% / 6px 6px no-repeat,
+    radial-gradient(circle, #9BD17A 0 2px, transparent 2.5px) 15% 15% / 5px 5px no-repeat,
+    radial-gradient(circle, #FFD166 0 2px, transparent 2.5px) 85% 85% / 5px 5px no-repeat;
+  animation: storyLikeBurst .55s ease-out both;
+}
+@keyframes storyLikeBurst { 0% { transform: scale(.4); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .story-icon--heart.is-filled, .story-icon--heart.is-filled .story-icon__leaf, .story-action-pill__burst { animation: none; }
+}
+
+/* ── แท็ก # / ป้ายสถานะติดตาม ── */
+.story-post-card__tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 10px; }
+.story-tag {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px;
+  font-size: var(--fs-xs); font-weight: 700; color: var(--g700);
+  background: color-mix(in srgb, var(--leaf-soft-strong) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--lb-gold-edge) 50%, transparent);
+}
+[data-theme="dark"] .story-tag { color: var(--g100); background: var(--g800); }
+button.story-tag { cursor: pointer; font-family: inherit; }
+.story-post-card__friend-tag--pending { background: transparent; color: var(--text-sub); border-style: dashed; }
+
+/* ── รูปหลายรูป เลื่อนซ้าย-ขวา ── */
+.story-carousel { position: relative; margin: 0 -16px 10px; background: color-mix(in srgb, var(--n900) 8%, transparent); }
+.story-carousel__track {
+  display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.story-carousel__track::-webkit-scrollbar { display: none; }
+.story-carousel__slide {
+  flex: 0 0 100%; scroll-snap-align: center; display: flex; align-items: center; justify-content: center;
+  aspect-ratio: 4 / 5; max-height: 80vh;
+}
+.story-carousel__slide img { width: 100%; height: 100%; object-fit: contain; user-select: none; }
+.story-carousel__counter {
+  position: absolute; top: 10px; right: 12px; padding: 3px 10px; border-radius: 999px;
+  background: rgba(0, 0, 0, .55); color: #fff; font-size: var(--fs-xs); font-weight: 700;
+}
+.story-carousel__nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--lb-gold-edge);
+  background: color-mix(in srgb, var(--fixed-white) 88%, transparent); color: var(--n900);
+  font-size: 22px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px var(--glass-b-30); cursor: pointer;
+}
+.story-carousel__nav--prev { left: 10px; }
+.story-carousel__nav--next { right: 10px; }
+.story-carousel__dots { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; justify-content: center; gap: 5px; pointer-events: none; }
+.story-carousel__dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, .55); box-shadow: 0 0 2px rgba(0, 0, 0, .4); transition: transform .2s, background .2s; }
+.story-carousel__dots span.is-active { background: #fff; transform: scale(1.35); }
+@media (hover: none) { .story-carousel__nav { display: none; } }
+
+/* ── หน้าสร้างสตอรี่: รูป 20 รูป + แฮชแท็ก + สวิตช์ระบุตัวตน ── */
+.story-compose-page__count { font-size: var(--fs-xs); color: var(--lb-card-text-sub); }
+.story-compose-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.story-compose-images__item, .story-compose-images__add {
+  position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden;
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 60%, transparent);
+}
+.story-compose-images__item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.story-compose-images__index {
+  position: absolute; left: 6px; bottom: 6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  background: rgba(0, 0, 0, .55); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center;
+}
+.story-compose-images__remove {
+  position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%;
+  border: none; background: rgba(0, 0, 0, .6); color: #fff; font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.story-compose-images__add {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border-style: dashed; background: color-mix(in srgb, var(--fixed-white) 45%, transparent);
+  color: var(--lb-card-text); font-family: inherit; font-size: var(--fs-xs); cursor: pointer;
+}
+[data-theme="dark"] .story-compose-images__add { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+.story-compose-images__plus { font-size: 28px; line-height: 1; }
+.story-compose-page__text { min-height: 22vh; }
+.story-compose-tags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.story-tag--removable span { opacity: .6; font-size: 10px; }
+.story-compose-tags__input {
+  display: inline-flex; align-items: center; gap: 2px; flex: 1; min-width: 160px;
+  padding: 0 12px; min-height: 40px; border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 50%, transparent);
+  background: color-mix(in srgb, var(--fixed-white) 45%, transparent); color: var(--lb-card-text);
+}
+[data-theme="dark"] .story-compose-tags__input { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+.story-compose-tags__input input { flex: 1; min-width: 0; border: none; background: none; outline: none; color: inherit; font: inherit; font-size: var(--fs-sm); }
+
+/* ── ป็อปอัพแบบการ์ดโพสต์ (ถูกใจ/คอมเมนต์/ส่ง) — โพสต์ย่ออยู่บนสุด ── */
+.story-modal-card--post { width: min(480px, 100%); }
+.story-post-mini {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; box-sizing: border-box;
+  padding: 8px; margin-bottom: 12px; border-radius: 14px; font-family: inherit;
+  background: color-mix(in srgb, var(--fixed-white) 55%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 50%, transparent); color: var(--lb-card-text);
+}
+[data-theme="dark"] .story-post-mini { background: color-mix(in srgb, var(--g900) 50%, transparent); color: var(--fixed-white); }
+.story-post-mini--clickable { cursor: pointer; }
+.story-post-mini--clickable:hover { border-color: var(--lb-gold-edge); }
+.story-post-mini__thumb { position: relative; flex-shrink: 0; width: 54px; height: 54px; border-radius: 10px; overflow: hidden; }
+.story-post-mini__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.story-post-mini__more { position: absolute; right: 3px; bottom: 3px; padding: 0 4px; border-radius: 6px; background: rgba(0, 0, 0, .6); color: #fff; font-size: 10px; }
+.story-post-mini__body { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.story-post-mini__author { font-weight: 700; font-size: var(--fs-sm); }
+.story-post-mini__text { font-size: var(--fs-xs); opacity: .8; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.story-share-note {
+  width: 100%; min-height: 42px; padding: 8px 14px; margin-bottom: 10px; border-radius: 999px; box-sizing: border-box;
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 60%, transparent);
+  background: color-mix(in srgb, var(--fixed-white) 55%, transparent); color: var(--lb-card-text); font: inherit; font-size: var(--fs-sm);
+}
+[data-theme="dark"] .story-share-note { background: color-mix(in srgb, var(--g900) 50%, transparent); color: var(--fixed-white); }
+
+/* ── หน้าเพื่อน/แชท ── */
+.story-empty-state--compact { padding: 14px 0; }
+.story-subpage .story-friend-row { background: var(--lb-card-bg); border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 55%, transparent); border-radius: 16px; }
+.story-subpage .story-friend-row__name { color: var(--lb-card-text); }
+.story-follow-btn { font-family: inherit; cursor: pointer; }
+.story-follow-btn:not(.story-follow-btn--following) { background: var(--lb-btn-bg); color: var(--lb-btn-text); border: 1.5px solid var(--lb-gold-edge); }
+.story-follow-btn--following { background: transparent; color: var(--text); border: 1.5px dashed var(--lb-gold-edge); }
+.story-follow-btn:disabled { cursor: default; opacity: .8; }
+
+.story-chat-list { display: flex; flex-direction: column; gap: 8px; }
+.story-chat-list__row {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; text-align: left; cursor: pointer;
+  border-radius: 16px; background: var(--lb-card-bg); border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 55%, transparent);
+  color: var(--lb-card-text); font-family: inherit;
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--lb-gold-edge) 35%, transparent);
+}
+.story-chat-list__row:hover { border-color: var(--lb-gold-edge); }
+.story-chat-list__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.story-chat-list__name { font-weight: 700; font-size: var(--fs-md); }
+.story-chat-list__preview { font-size: var(--fs-xs); color: var(--lb-card-text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.story-chat-list__time { font-size: var(--fs-xs); color: var(--lb-card-text-sub); flex-shrink: 0; }
+.story-chat-new { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+.story-chat-new__item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 72px; padding: 8px 4px;
+  border: none; background: none; cursor: pointer; font-family: inherit; font-size: var(--fs-xs); color: var(--text);
+}
+.story-chat-new__item .story-avatar { width: 54px; height: 54px; border: 2px solid var(--lb-gold-edge); background: var(--leaf-soft-strong); color: var(--n900); }
+
+.story-chat { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.story-chat__head {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  background: var(--leaf-soft-strong); border-bottom: 2px solid var(--story-edge);
+}
+[data-theme="dark"] .story-chat__head { background: var(--g800); }
+.story-chat__who { display: flex; align-items: center; gap: 10px; border: none; background: none; cursor: pointer; font-family: inherit; color: var(--text); }
+.story-chat__name { font-size: var(--fs-md); font-weight: 700; }
+.story-chat__messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: none; }
+.story-chat__messages::-webkit-scrollbar { display: none; }
+.story-chat__msg { display: flex; flex-direction: column; align-items: flex-start; max-width: min(78%, 420px); gap: 2px; }
+.story-chat__msg--me { align-self: flex-end; align-items: flex-end; }
+.story-chat__msg .story-post-mini { margin-bottom: 0; max-width: 320px; }
+.story-chat__bubble {
+  padding: 9px 14px; border-radius: 18px 18px 18px 6px; font-size: var(--fs-sm); line-height: 1.55; white-space: pre-wrap; word-break: break-word;
+  background: var(--lb-card-bg); color: var(--lb-card-text); border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 50%, transparent);
+}
+.story-chat__msg--me .story-chat__bubble {
+  border-radius: 18px 18px 6px 18px;
+  background: linear-gradient(180deg, var(--leaf-soft-strong), var(--leaf-soft-active)); color: var(--n900);
+  border-color: var(--lb-gold-edge);
+}
+[data-theme="dark"] .story-chat__msg--me .story-chat__bubble { background: linear-gradient(180deg, var(--g600), var(--g700)); color: var(--fixed-white); }
+.story-chat__bubble--muted { opacity: .6; font-style: italic; }
+.story-chat__time { font-size: 10.5px; color: var(--text-muted); padding: 0 4px; }
+.story-chat__composer {
+  display: flex; gap: 8px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 2px solid var(--story-edge); background: var(--leaf-soft);
+}
+[data-theme="dark"] .story-chat__composer { background: var(--g800); }
+.story-chat__composer input {
+  flex: 1; min-height: 44px; padding: 0 16px; border-radius: 999px; font: inherit; font-size: var(--fs-sm);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 60%, transparent); background: var(--input-bg); color: var(--text);
+}
+.story-chat__composer button {
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--lb-btn-bg); color: var(--lb-btn-text); border: 2px solid var(--lb-gold-edge);
+}
+.story-chat__composer button:disabled { opacity: .5; cursor: default; }
+
+/* แถบเมนูล่างไม่แสดงบนหน้าสตอรี่แล้ว → ไม่ต้องเว้นที่ด้านล่างให้มัน */
+.story-overlay { --gpf-safe-bottom: 12px; }

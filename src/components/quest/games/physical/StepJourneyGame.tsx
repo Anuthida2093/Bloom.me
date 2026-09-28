@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { QuestGameProps } from '../../../../types.mental'
 import type { JourneyRecord } from '../../../../types.journey'
@@ -24,12 +25,16 @@ import StatsOverlay from './StatsOverlay'
 import MapFogTransition from './MapFogTransition'
 import DestinationPicker from './DestinationPicker'
 import { BADGE_ICONS } from '../../../../config/iconAssets'
+import { getStepJourneyDaysDone, getTodayJourneySteps, recordJourneySteps, resetStepJourneyDays, STEP_JOURNEY_DAYS } from '../../../../utils/stepJourneyDays'
 import '../games.css'
 import './StepJourneyGame.css'
+import '../../../leaderboard/leaderboardRow.css'
 
 export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
   const { userData, logActivity, updateProfile } = useAppContext()
 
+  /** [แก้ตามที่ระบุ] ยืนยันเปลี่ยนจุดหมาย — การ์ดกลางจอแบบกระดานจัดอันดับ แทน window.confirm ของเบราว์เซอร์ */
+  const [confirmReset, setConfirmReset] = useState(false)
   const [journey, setJourney] = useState<JourneyRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [transitioning, setTransitioning] = useState(false)
@@ -38,6 +43,9 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
   const [visualMapIndex, setVisualMapIndex] = useState(0)
   const [isFogging, setIsFogging] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
+  /** [แก้ตามที่ระบุ] ทริป 3 วัน — จำนวนวันที่เดินครบเป้าหมาย (0/3 → 3/3 = รับรางวัล) + ก้าวรวมของวันนี้ */
+  const [daysDone, setDaysDone] = useState(0)
+  const [todaySteps, setTodaySteps] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -45,6 +53,7 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
       const active = await getActiveJourney()
       if (!cancelled) {
         setJourney(active)
+        if (active) { setDaysDone(getStepJourneyDaysDone(active.id)); setTodaySteps(getTodayJourneySteps(active.id)) }
         setLoading(false)
         if (active && active.status !== 'IN_PROGRESS') setShowSummary(true)
       }
@@ -96,7 +105,6 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
   
   const stopDeviceMotionRef = useRef<(() => void) | null>(null)
   const lastSyncedStepsRef = useRef(0)
-  const sessionSteps = Number(stepsInput) || 0
 
   useEffect(() => {
     return () => stopDeviceMotionRef.current?.()
@@ -111,9 +119,14 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
     const currentMapId = journey.routeMapIds?.[activeMapIndex] || journey.destinationMapId
 
     logActivity({ activityType: 'STEPS', durationSeconds: 0, meta: { steps: delta, mapId: currentMapId } })
-    addSteps(journey.id, delta).then((updated) => {
+    // [แก้ตามที่ระบุ] นับเข้าทริปได้วันละไม่เกินเป้าหมายรายวัน → ทริปจบเมื่อสำเร็จครบ 3 วัน (3/3) เท่านั้น
+    const { countable, daysDone: nextDays } = recordJourneySteps(journey.id, delta, dailyStepTarget)
+    setDaysDone(nextDays)
+    setTodaySteps(getTodayJourneySteps(journey.id))
+    if (countable <= 0) return
+    addSteps(journey.id, countable).then((updated) => {
       setJourney(updated)
-      if (updated.status !== 'IN_PROGRESS') setShowSummary(true)
+      if (updated.status !== 'IN_PROGRESS' || nextDays >= STEP_JOURNEY_DAYS) setShowSummary(true)
     })
   }
 
@@ -183,8 +196,15 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
 
   const handlePickDestination = (mapId: string) => {
     setFailedNotice(false)
+    // [แก้ตามที่ระบุ] หมอกขาวเล่นครั้งเดียว — เดิมเล่นที่หน้าเลือกจุดหมายรอบหนึ่ง แล้วพอแผนที่ขึ้นก็เล่นซ้ำอีกรอบ
+    // (คนละ element กัน) ตอนนี้เล่นแค่ตอนแผนที่ขึ้น
     setTransitioning(true)
-    startJourney(mapId).then(setJourney)
+    startJourney(mapId).then((j) => {
+      resetStepJourneyDays(j.id)
+      setDaysDone(0)
+      setTodaySteps(0)
+      setJourney(j)
+    })
   }
 
   const handleClaimRewards = () => {
@@ -197,6 +217,7 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
     })
     
     const currentMapId = journey.routeMapIds?.[activeMapIndex] || journey.destinationMapId
+    resetStepJourneyDays()
     finish({ 
       destinationMapId: journey.destinationMapId, 
       mapId: currentMapId, 
@@ -212,7 +233,6 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
       <div className="step-journey-game step-journey-game--center">
         {failedNotice && <div className="qg-tag qg-tag--warn step-journey-game__failed-notice">ลองเลือกจุดหมายใหม่ได้เลย</div>}
         <DestinationPicker onPicked={handlePickDestination} />
-        {transitioning && <MapFogTransition onDone={() => setTransitioning(false)} />}
       </div>
     )
   }
@@ -243,19 +263,32 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
         )}
       </div>
 
-      <div className="step-journey-game__pill-header">
-        <span aria-hidden="true">🚶</span>
-        <span>ก้าวเพื่อสุขภาพ</span>
-      </div>
-
       {(transitioning || isFogging) && (
         <MapFogTransition onDone={() => { if (transitioning) setTransitioning(false) }} />
+      )}
+
+      {confirmReset && createPortal(
+        <div className="sjg-confirm" role="dialog" aria-modal="true" aria-labelledby="sjg-confirm-text" onClick={() => setConfirmReset(false)}>
+          <div className="sjg-confirm__card lb-card" onClick={(e) => e.stopPropagation()}>
+            <div className="lb-banner sjg-confirm__banner">เปลี่ยนจุดหมาย</div>
+            <div className="sjg-confirm__icon" aria-hidden="true">🗺️</div>
+            <p id="sjg-confirm-text" className="sjg-confirm__text">ต้องการยกเลิกทริปนี้และเลือกจุดหมายใหม่หรือไม่?</p>
+            <p className="sjg-confirm__sub">ความคืบหน้าของทริปนี้จะหายไป</p>
+            <div className="sjg-confirm__actions">
+              <button className="lb-btn lb-btn--ghost" onClick={() => setConfirmReset(false)}>เดินทางต่อ</button>
+              <button className="lb-btn" onClick={() => { setConfirmReset(false); resetStepJourneyDays(); setJourney(null) }}>เริ่มใหม่</button>
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
 
       {!showSummary && (
         <div className="step-journey-game__side-panel">
           <StatsOverlay
-            todaySteps={sessionSteps}
+            todaySteps={todaySteps}
+            daysDone={daysDone}
+            totalDays={STEP_JOURNEY_DAYS}
             dailyStepTarget={dailyStepTarget}
             bmi={bmi}
             mapName={visualMapDef?.name || ''}
@@ -288,11 +321,7 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
 
           <button 
             className="step-journey-game__reset-btn" 
-            onClick={() => {
-              if (window.confirm('คุณต้องการยกเลิกทริปนี้และเลือกจุดหมายใหม่หรือไม่? ความคืบหน้าจะหายไป')) {
-                setJourney(null)
-              }
-            }}
+            onClick={() => setConfirmReset(true)}
           >
             เปลี่ยนจุดหมาย (เริ่มใหม่)
           </button>

@@ -1,13 +1,14 @@
 import { memo, useCallback, useMemo, useRef, useState, useEffect, type PointerEvent as ReactPointerEvent } from 'react'
-import type { MbtiType, RiskLevel, PlacedItem, DecorationPositionMap, QuestCategory } from '../../types'
+import { type PostItData, type MbtiType, type RiskLevel, type PlacedItem, type DecorationPositionMap, type QuestCategory } from '../../types'
 import { DECORATION_EMOJI, DECORATION_ZONE_POSITION } from '../../config/decorationItems'
 import { ITEM_ICONS } from '../../config/iconAssets'
 import { useIsSmallScreen, usePrefersReducedMotion } from '../../hooks/useMediaQuery'
-import { toGroundVariant } from '../../config/treeAssets'
-import { GROUND_STAGE_LABEL, groundDryness, groundStage, knowledgeGrowthMultiplier } from '../../config/groundFertility'
+import { groundDryness } from '../../config/groundFertility'
 import { buildTreeModel } from './procedural/buildTreeModel'
 import ProceduralTreeCanvas from './procedural/ProceduralTreeCanvas'
-import { useAudio } from '../../context/AudioContext'
+import { toHealthPhase, type HealthPhase } from './treeHealth'
+import { playSfx } from '../../utils/audioPlayer'
+import { useAppContext } from '../../context/AppContext'
 import { useHorizontalPan } from '../../hooks/useHorizontalPan'
 import './TreeOfLife.css'
 
@@ -66,21 +67,6 @@ const RISK_FILTER: Record<RiskLevel, string> = {
   HIGH: 'grayscale(0.85) sepia(0.25) brightness(0.85) contrast(0.92)',
 }
 
-/* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3+4] "state overlay" (healthy/wilting/dying) — ไม่เคยมีระบบนี้
- * มาก่อนจริงๆ (ตรวจโค้ดจริงแล้ว ไม่ใช่แค่ riskLevel/hasSoot/daysSinceLastOracle ที่มีอยู่
- * ซึ่งผูกกับเควสเฉพาะจุดคนละเรื่อง) — สร้างใหม่ทั้งหมด ผูกกับ "จำนวนวันที่ไม่ได้ทำเควสสำเร็จ
- * ในหมวดนั้นๆ ล่าสุด" (คำนวณจริงจาก questLogs ใน Dashboard.tsx ส่งเป็น prop เข้ามา
- * เหมือน daysSinceLastOracle เดิม) N=5 เริ่ม wilting, N=10 เริ่ม dying ตามที่ระบุ
- * ใบไม้ผูกกับหมวดจิตใจ (EMOTION), พื้นดิน/หญ้าผูกกับหมวดสุขภาพกาย (HEALTH) ตามที่ระบุ */
-type HealthPhase = 'healthy' | 'wilting' | 'dying'
-
-function toHealthPhase(daysSinceLastQuest: number | null): HealthPhase {
-  if (daysSinceLastQuest === null) return 'healthy'
-  if (daysSinceLastQuest >= 10) return 'dying'
-  if (daysSinceLastQuest >= 5) return 'wilting'
-  return 'healthy'
-}
-
 /** ใบไม้ไล่สีเขียว→เหลือง/น้ำตาลอ่อนตอน wilting, เข้มขึ้นตอน dying — transition หลายวินาที
  *  (ใส่ที่ canvas ใบ — ดู .tree-of-life__canvas--foliage ใน .css) ให้ความรู้สึก "ค่อยๆ เหี่ยว" ไม่ใช่เปลี่ยนทันที */
 const LEAF_HEALTH_FILTER: Record<HealthPhase, string> = {
@@ -91,7 +77,54 @@ const LEAF_HEALTH_FILTER: Record<HealthPhase, string> = {
 
 /** พิกัดกำหนดเอง (%) ของไอเทมตกแต่งแต่ละชิ้น — key = itemId (type อยู่ที่ types.ts ใช้ร่วมกับ AppContext.tsx) */
 
+/** [แก้ตามที่ระบุ] ละอองดาวที่โปรยลงมาที่ต้นไม้ตอนทำเควสสำเร็จ — ตำแหน่ง/ขนาด/จังหวะคงที่ (ไม่สุ่มทุก render)
+ *  x = % แนวนอนของแถบต้นไม้ (กระจุกรอบทรงพุ่มกลางจอ) · land = % ความสูงที่ละอองจางหาย (บนพุ่ม→โคนต้น) */
+const STARDUST = Array.from({ length: 64 }, (_, i) => ({
+  x: 32 + ((i * 37) % 37),
+  // [แก้ตามที่ระบุ] ผงเล็กมากๆ ผสมดาวกับจุดกลม — จุด 1.5-3px / ดาว 4-6px
+  star: i % 3 === 0,
+  size: i % 3 === 0 ? 4 + (i % 3) : 1.5 + (i % 4) * 0.5,
+  delay: (i * 29) % 900,
+  duration: 1300 + ((i * 131) % 700),
+  drift: ((i * 29) % 25) - 12,
+  land: 38 + ((i * 17) % 44),
+}))
+/** ละอองโปรยก่อน แล้วต้นไม้ค่อยขยาย (ms หลังเริ่มเอฟเฟกต์) */
+const TREE_GROW_DELAY_MS = 1000
+
+/** [แก้ตามที่ระบุ] ก้อนหินบนพื้นดินรอบโคนต้น (ทานเกินแคลอรี่ติดต่อกันหลายวัน) — % ของแถบต้นไม้ */
+const GROUND_ROCKS = [
+  { left: 37, top: 88, size: 1 }, { left: 62, top: 89, size: 0.85 }, { left: 44, top: 91.5, size: 0.7 },
+  { left: 56, top: 92, size: 1.1 }, { left: 30, top: 91, size: 0.8 }, { left: 69, top: 92.5, size: 0.95 },
+]
+const ROCK_IMAGE = '/assets/images/icons/Item/stone.png'
+
+/** กอหญ้าหน้าก้อนหิน: 4-8 ใบหญ้า (จำนวน/ความสูง/ทิศเอนต่างกันต่อก้อน) — SVG ล้วน */
+function GrassTuft({ seed }: { seed: number }) {
+  const count = 4 + ((seed * 5 + 3) % 5)
+  const blades = Array.from({ length: count }, (_, i) => {
+    const x = 6 + (i + 0.5) * (88 / count) + (((seed + i) * 7) % 5) - 2
+    const h = 16 + (((seed * 3 + i * 11) % 9) * 1.6)
+    const lean = ((((seed + 1) * (i + 2) * 13) % 11) - 5) * 1.3
+    const tone = ['#4f8f3a', '#5fa044', '#3f7a31', '#6db04d'][(seed + i) % 4]
+    return { x, h, lean, tone }
+  })
+  return (
+    <svg className="tree-of-life__rock-grass" viewBox="0 0 100 34" preserveAspectRatio="none">
+      {blades.map((b, i) => (
+        <path
+          key={i}
+          d={`M ${b.x - 3.2} 34 Q ${b.x - 1 + b.lean * 0.4} ${34 - b.h * 0.55} ${b.x + b.lean} ${34 - b.h} Q ${b.x + 1.2 + b.lean * 0.4} ${34 - b.h * 0.5} ${b.x + 3.2} 34 Z`}
+          fill={b.tone}
+        />
+      ))}
+    </svg>
+  )
+}
+
 interface TreeOfLifeProps {
+  /** จำนวนก้อนหินบนพื้นดิน (0 = ไม่มี) — Dashboard คำนวณจากสตรีคทานเกินแคลอรี่ (utils/nutrition.ts) */
+  groundRocks?: number
   mbtiType?: MbtiType | null
   trunkBranchLevel?: number
   leafFlowerLevel?: number
@@ -124,11 +157,13 @@ interface TreeOfLifeProps {
   /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] เหมือนกันแต่ผูกกับหมวด "สุขภาพกาย" (HEALTH) — คุมการ
    *  จางหาย/เปลี่ยนสีของหญ้า (ground variant 2/3) แทนใบ */
   daysSinceLastPhysicalQuest?: number | null
-  showHint?: boolean
   /** ฉากกว้างกว่าจอ กดค้างที่พื้นแล้วลากซ้าย-ขวาเพื่อเลื่อนดูได้ (หน้า Home) — ต้นไม้เริ่มกึ่งกลาง */
   pannable?: boolean
   /** แจ้งตำแหน่งเลื่อน (px, -range…0) ทุกครั้งที่ลาก — Dashboard ใช้เลื่อนวิดีโอพื้นหลังช้ากว่า (parallax) */
   onPanChange?: (pan: number, range: number) => void
+  /** โพสอิท (บันทึกความรู้สึกประจำวันจากเช็คอินอารมณ์) ติดบนพุ่มต้นไม้ — positionX/Y เป็น % ของแถบต้นไม้ */
+  postIts?: PostItData[]
+  onPostItClick?: (postIt: PostItData) => void
   className?: string
 }
 
@@ -147,23 +182,19 @@ function TreeOfLifeBase({
   daysSinceLastOracle = null,
   daysSinceLastMentalQuest = null,
   daysSinceLastPhysicalQuest = null,
-  showHint = true,
   pannable = false,
   onPanChange,
+  postIts = [],
+  groundRocks = 0,
+  onPostItClick,
   className,
 }: TreeOfLifeProps) {
-  /** seed ของพื้นดิน/ลม (คงค่าเดิมของระบบเก่า — resolveFolder คืน MBTI เสมอเพราะไม่มีไฟล์ brush) */
-  const folder = mbtiType ?? 'BALANCED'
-
   /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] ใบเหี่ยว/ร่วงตามจำนวนวันที่ไม่ได้ทำเควสหมวดจิตใจ */
   const leafHealthPhase = useMemo(() => toHealthPhase(daysSinceLastMentalQuest), [daysSinceLastMentalQuest])
-
-  const groundStep = useMemo(() => toGroundVariant(grassSoilLevel), [grassSoilLevel])
 
   /* หญ้าเหี่ยว → แห้ง → ดินร้าง ตามจำนวนวันที่ไม่ได้ทำเควสหมวดสุขภาพกาย (คนละหมวดกับใบซึ่งผูกหมวดจิตใจ)
      ไล่ต่อเนื่องทีละวัน — และดินแห้งทำให้ต้นไม้โตช้าลง (ดู config/groundFertility.ts) */
   const groundDry = useMemo(() => groundDryness(daysSinceLastPhysicalQuest), [daysSinceLastPhysicalQuest])
-  const groundStg = groundStage(groundDry)
 
   /* target opacity ตาม healthVisualLevel (1: มีแค่ฐาน, 2: หญ้าเริ่มขึ้น, 3: หญ้า+ดอกหญ้าเต็ม)
      คูณด้วย decay multiplier (wilting ลดลงครึ่งหนึ่ง, dying จางจนเกือบหมด) — ค่อยๆ นุ่มนวล
@@ -183,7 +214,6 @@ function TreeOfLifeBase({
      healthVisualLevel/variant อีกต่อไป เพราะตอนนี้ทั้ง 3 variant ใช้ตำแหน่ง "ชุดเดียวกัน"
      ซ้อนทับกันเป๊ะเสมอ — เปลี่ยนแค่ opacity ต่อ variant ไม่ใช่สลับตำแหน่งไปมา) */
 
-  const [hintVisible, setHintVisible] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
   /* [ใหม่ — ตามที่ระบุรอบนี้] ต้องรู้ขนาดกล่อง .tree-of-life จริง (px) เพื่อจำลอง
@@ -218,26 +248,33 @@ function TreeOfLifeBase({
 
   // [ใหม่] เล่น burst effect ทุกครั้งที่ growthPulse.key เปลี่ยน (เควสสำเร็จ) แล้วเคลียร์เอง
   // อัตโนมัติหลัง 1.8s — ไม่ต้องให้ AppContext เป็นคนจับเวลาเคลียร์ค่าทิ้ง กัน stale closure
-  const { playGameSound } = useAudio()
   const [activePulse, setActivePulse] = useState<{ category: QuestCategory; key: number } | null>(null)
+  const { settings: audioSettings } = useAppContext()
 
   // [แก้] เดิม setActivePulse(growthPulse) เรียกตรงๆ ตอนต้น effect (react-hooks/set-state-in-effect)
   // ย้ายมาตั้งค่า "ระหว่าง render" ทันทีที่ growthPulse.key เปลี่ยน ส่วนเสียง/ตัวจับเวลาเคลียร์
   // อัตโนมัติ (ซึ่งเป็นการเชื่อมกับ external system จริง) ยังอยู่ใน effect ด้านล่างเหมือนเดิม
-  const [prevPulseKey, setPrevPulseKey] = useState(growthPulse?.key ?? null)
-  if ((growthPulse?.key ?? null) !== prevPulseKey) {
-    setPrevPulseKey(growthPulse?.key ?? null)
-    if (growthPulse) setActivePulse(growthPulse)
+  // [แก้ตามที่ระบุ] เล่นครั้งเดียวต่อ pulse (key) — Dashboard ส่ง pulse มาเฉพาะตอนเห็นต้นไม้จริง
+  // (ปิดหน้าเควสกลับมาหน้า Home แล้ว) จึงได้เห็นเอฟเฟกต์ทุกครั้ง ไม่เล่นทิ้งไว้ใต้หน้าเควส
+  const [lastPlayedPulseKey, setLastPlayedPulseKey] = useState<number | null>(null)
+  if (growthPulse && growthPulse.key !== lastPlayedPulseKey) {
+    setLastPlayedPulseKey(growthPulse.key)
+    setActivePulse(growthPulse)
   }
 
   useEffect(() => {
-    if (!growthPulse) return
-    // [ใหม่] เล่นเสียงต้นไม้โต — ตรงจุดเดียวกับที่ trigger treeOfLifeLayerGrow burst effect
-    playGameSound('tree-grow')
-    const timeoutId = window.setTimeout(() => setActivePulse(null), 1800)
-    return () => window.clearTimeout(timeoutId)
+    if (!activePulse) return
+    // [แก้ตามที่ระบุ] เควสสำเร็จ → ออร่ารอบต้นไม้ + ต้นไม้ขยายขึ้นเล็กน้อย + เสียงประกายเวทมนตร์
+    // (เอาเอฟเฟกต์/เสียง "ต้นไม้โต" เดิมออกแล้ว)
+    // ละอองโปรยก่อน → ต้นไม้ขยายนุ่มๆ พร้อมเสียงวิ้ง (จังหวะตรงกับ animation-delay ใน TreeOfLife.css)
+    const soundId = window.setTimeout(
+      () => playSfx('WING', { volume: audioSettings.sfxVolume, enabled: audioSettings.soundEnabled }),
+      TREE_GROW_DELAY_MS,
+    )
+    const timeoutId = window.setTimeout(() => setActivePulse(null), TREE_GROW_DELAY_MS + 2000)
+    return () => { window.clearTimeout(timeoutId); window.clearTimeout(soundId) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [growthPulse?.key])
+  }, [activePulse?.key])
 
   return (
     <div
@@ -262,7 +299,7 @@ function TreeOfLifeBase({
         style={{ width: worldW || '100%', transform: `translate3d(${-panRange / 2}px, 0, 0)` }}
       >
       <div
-        className="tree-of-life__stack"
+        className={`tree-of-life__stack${activePulse ? ' tree-of-life__stack--celebrate' : ''}`}
         style={{
           filter: hasSoot
             ? [RISK_FILTER[riskLevel] === 'none' ? '' : RISK_FILTER[riskLevel], 'sepia(0.3)', 'saturate(0.7)', 'brightness(0.92)'].filter(Boolean).join(' ')
@@ -295,14 +332,21 @@ function TreeOfLifeBase({
           ขยับเงียบๆ — burst แสง + ประกายไฟกระจายออกจากทรงพุ่ม สีเปลี่ยนตามหมวดเควสที่เพิ่งทำ
           (ความรู้=ทอง/น้ำตาล เรืองที่ลำต้น, จิตใจ=ชมพู/ม่วง เรืองที่ดอกไม้, สุขภาพ=เขียวมรกต
           เรืองที่พื้นดิน) เล่นแล้วหายไปเองใน 1.8s ผ่าน useEffect ด้านบน */}
+      {/* [แก้ตามที่ระบุ] ทำเควสสำเร็จ → ละอองดาวเล็กๆ ระยิบระยับโปรยลงมาที่ต้นไม้ (ไม่มีวงกลมแล้ว) */}
       {activePulse && (
-        <div className={`tree-of-life__growth-pulse tree-of-life__growth-pulse--${activePulse.category.toLowerCase()}`} aria-hidden="true">
-          <div className="tree-of-life__growth-pulse-rays" />
-          {Array.from({ length: 10 }).map((_, i) => (
+        <div key={activePulse.key} className="tree-of-life__stardust" aria-hidden="true">
+          {STARDUST.map((d, i) => (
             <span
-              key={`${activePulse.key}-${i}`}
-              className="tree-of-life__growth-pulse-spark"
-              style={{ '--spark-angle': `${(360 / 10) * i}deg`, animationDelay: `${i * 30}ms` } as React.CSSProperties}
+              key={i}
+              className={`tree-of-life__stardust-grain${d.star ? ' tree-of-life__stardust-grain--star' : ''}`}
+              style={{
+                left: `${d.x}%`,
+                width: d.size, height: d.size,
+                animationDelay: `${d.delay}ms, ${d.delay}ms`,
+                animationDuration: `${d.duration}ms, ${420 + (d.delay % 5) * 60}ms`,
+                ['--drift' as string]: `${d.drift}px`,
+                ['--land' as string]: `${d.land}vh`,
+              }}
             />
           ))}
         </div>
@@ -310,6 +354,22 @@ function TreeOfLifeBase({
 
       {/* [ใหม่] ควันจางๆ ลอยขึ้นจากคราบหมอง — โผล่เฉพาะตอน hasSoot (จากเควสเตาเผาขยะความคิด
           ที่ยังไม่ทำสำเร็จ) หายไปเองทันทีที่ hasSoot กลับเป็น false */}
+      {groundRocks > 0 && (
+        <div className="tree-of-life__rocks" aria-hidden="true">
+          {GROUND_ROCKS.slice(0, groundRocks).map((r, i) => (
+            <span
+              key={i}
+              className="tree-of-life__rock"
+              style={{ left: `${r.left}%`, top: `${r.top}%`, ['--rock-scale' as string]: r.size, animationDelay: `${i * 140}ms` }}
+            >
+              <img src={ROCK_IMAGE} alt="" className="tree-of-life__rock-img" />
+              {/* [แก้ตามที่ระบุ] ต้นหญ้า 4-8 ต้นขึ้นทับฐานก้อนหิน — ดูเหมือนก้อนหินวางจมอยู่ในหญ้าจริง */}
+              <GrassTuft seed={i} />
+            </span>
+          ))}
+        </div>
+      )}
+
       {hasSoot && (
         <div className="tree-of-life__soot" aria-hidden="true">
           {/* [เปลี่ยน] เดิมใช้ emoji 💨 เป็นควันจริง — ควันของ Apple เป็นสีฟ้าใส
@@ -363,6 +423,31 @@ function TreeOfLifeBase({
           หลายต้นพร้อมกันในหน้าเดียว (เช่น ต้นหลัก + ต้นใน GameplayFrame หมวดจิตใจ)
           global selector จะทำให้ทุกต้นเด้งพร้อมกันหมดโดยไม่ตั้งใจ */}
 
+      {/* โพสอิทบันทึกความรู้สึกติดบนพุ่ม — ค่อยๆ แปะขึ้นมาทีละใบ (หน้าล่าสุดอยู่บนสุด) กดเพื่ออ่าน */}
+      {postIts.length > 0 && (
+        <div className="tree-of-life__postits">
+          {postIts.map((p, i) => (
+            <button
+              key={p.id}
+              type="button"
+              className="tree-of-life__postit"
+              title={p.content}
+              aria-label={`โพสอิท: ${p.content}`}
+              onClick={(e) => { e.stopPropagation(); onPostItClick?.(p) }}
+              style={{
+                left: `${p.positionX}%`,
+                top: `${p.positionY}%`,
+                background: p.color,
+                ['--postit-tilt' as string]: `${((i * 37) % 13) - 6}deg`,
+                animationDelay: `${Math.min(i, 8) * 120}ms`,
+              }}
+            >
+              {p.content.length > 18 ? `${p.content.slice(0, 18)}…` : p.content}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* [ข้อกำหนดข้อ 3] ไอเทมตกแต่งลากวางอิสระได้ */}
       <DecorationLayer
         placedItems={placedItems}
@@ -371,35 +456,6 @@ function TreeOfLifeBase({
         containerRef={bandRef}
       />
 
-      {showHint && (
-        <div
-          className="tree-of-life__hint-hotspot"
-          onMouseEnter={() => setHintVisible(true)}
-          onMouseLeave={() => setHintVisible(false)}
-          onClick={(e) => { e.stopPropagation(); setHintVisible((v) => !v) }}
-          title="ดูรายละเอียดการเติบโตของต้นไม้"
-        >
-          {hintVisible && (
-            <div className="tree-of-life__tooltip">
-              <div className="tree-of-life__tooltip-title">🌳 {folder} · {treeModel.speciesName}</div>
-              <div>🪵 ลำต้น/ใบ (ความรู้): Lv.{trunkBranchLevel} (ขั้น {treeModel.visualLevel}/8){treeModel.leaves.length > 0 ? ` · ใบ ${treeModel.leaves.length} ใบ` : ' · ยังไม่มีใบ'}</div>
-              <div>🌸 ดอก (จิตใจ): Lv.{leafFlowerLevel} · ดอก {treeModel.flowers.length} ดอก</div>
-              <div>🌱 แปลงหญ้า (สุขภาพ): Lv.{grassSoilLevel} (ขั้น {groundStep}/3) · {GROUND_STAGE_LABEL[groundStg]}</div>
-              {leafHealthPhase !== 'healthy' && (
-                <div className="tree-of-life__tooltip-warn">🍂 ใบ: {leafHealthPhase === 'dying' ? 'กำลังร่วง' : 'เริ่มเหี่ยว'}</div>
-              )}
-              {groundDry > 0 && (
-                <div className="tree-of-life__tooltip-warn">
-                  🌾 ดินไม่อุดมสมบูรณ์ — ต้นไม้โตช้าลง (ได้คะแนนความรู้ {Math.round(knowledgeGrowthMultiplier(groundDry) * 100)}%) ทำเควสสุขภาพเพื่อฟื้นดิน
-                </div>
-              )}
-              {riskLevel !== 'LOW' && (
-                <div className="tree-of-life__tooltip-warn">⚠️ สุขภาพต้นไม้: {riskLevel === 'HIGH' ? 'เหี่ยวมาก' : 'เริ่มซีด'}</div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
       </div>
       </div>
     </div>

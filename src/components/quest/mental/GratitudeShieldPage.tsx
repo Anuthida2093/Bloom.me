@@ -17,7 +17,6 @@ const C_3 = '#FFB020'
 const C_4 = '#FFB020'
 /** [เพิ่มตามที่ระบุ — ข้อ 10] ปุ่ม "เริ่มเขียน" ของเควสนี้ใช้เหลืองพาสเทลของตัวเอง แทน
  *  gradient ส้ม-ม่วง (theme.gold + accent เดิม) ที่ใช้ร่วมกับ Reframer Journal */
-const YELLOW_PASTEL_BTN = 'linear-gradient(135deg, #FFF9C4, var(--coin))'
 
 /** รหัสอ้างอิงเควสเกราะแห่งความขอบคุณ */
 const QUEST_CODE = 'ment-gratitude-shield'
@@ -68,7 +67,7 @@ export default function GratitudeShieldPage({ alreadyCompleted, onComplete, onCl
       <IntroVideoSequence
         videoSrc="/assets/videos/quest-mental/Gratitude-Shield.mp4"
         audioSrc="/assets/sounds/Gratitude-Shield.mp3"
-        overlayText="คุณกำลังเข้าสู่ เกราะแห่งความขอบคุณ มาเก็บสิ่งดีๆ ของวันนี้ไว้ ทีละชิ้น จนกลายเป็นเกราะป้องกันใจของคุณ"
+        overlayText="ยินดีต้อนรับสู่ คำขอบคุณ — วันนี้คุณอยากขอบคุณใคร? สิ่งดีๆ ที่คุณทำ หรือความใจดีที่ใครสักคนมอบให้ มาเรียบเรียงเป็นถ้อยคำขอบคุณจากใจกัน"
         accent={C_1}
         onComplete={() => setShowIntro(false)}
       />
@@ -80,22 +79,23 @@ export default function GratitudeShieldPage({ alreadyCompleted, onComplete, onCl
   if (alreadyCompleted && !isWritingMore) {
     return (
       <div className="gratitude-shield-page gratitude-shield-page--done">
-        <div className="gratitude-shield-done">
+        <div className="gratitude-shield-done quest-done-card">
+          <div className="lb-banner quest-done-card__banner">ทำแล้ววันนี้</div>
           <div className="gratitude-shield-done__icon">🛡️</div>
-          <h2 className="gratitude-shield-done__title">เกราะของคุณแข็งแกร่งขึ้นแล้ว!</h2>
+          <h2 className="gratitude-shield-done__title">ถ้อยคำขอบคุณของคุณถูกเก็บไว้แล้ว</h2>
           <p className="gratitude-shield-done__body">
-            คุณได้เก็บสิ่งดีๆ ของวันนี้ลงเกราะความขอบคุณเรียบร้อย<br />
+            คุณได้เก็บคำขอบคุณของวันนี้ไว้เรียบร้อย<br />
             หากมีเรื่องดีๆ ที่อยากจดจำไว้อีก สามารถเขียนเพิ่มได้นะ
             (เก็บลงประวัติ แต่ไม่ได้รางวัลซ้ำ)
           </p>
           <div className="gratitude-shield-done__actions">
-            <button className="gratitude-shield-done__btn gratitude-shield-done__btn--primary" onClick={() => setIsWritingMore(true)}>
-              ✏️ บันทึกสิ่งดีๆ เพิ่ม
+            <button className="lb-btn lb-btn--wide" onClick={() => setIsWritingMore(true)}>
+              เขียนคำขอบคุณเพิ่ม
             </button>
-            <button className="gratitude-shield-done__btn" onClick={() => setShowHistory(true)}>
-              🛡️ ดูประวัติเกราะแห่งความขอบคุณ
+            <button className="lb-btn lb-btn--wide" onClick={() => setShowHistory(true)}>
+              ดูประวัติคำขอบคุณ
             </button>
-            <button className="gratitude-shield-done__btn gratitude-shield-done__btn--ghost" onClick={onClose}>
+            <button className="lb-btn lb-btn--ghost lb-btn--wide" onClick={onClose}>
               ปิดหน้าต่าง
             </button>
           </div>
@@ -105,7 +105,7 @@ export default function GratitudeShieldPage({ alreadyCompleted, onComplete, onCl
           <JournalHistoryModal
             theme="golden"
             accent={C_2}
-            title="ประวัติเกราะแห่งความขอบคุณ"
+            title="ประวัติคำขอบคุณ"
             entries={myEntries}
             onClose={() => setShowHistory(false)}
           />
@@ -130,12 +130,11 @@ export default function GratitudeShieldPage({ alreadyCompleted, onComplete, onCl
         theme="golden"
         accent={C_3}
         askIconSrc={QUEST_ICONS[QUEST_CODE]}
-        askButtonBg={YELLOW_PASTEL_BTN}
         askQuestion={alreadyCompleted
-          ? 'มีเรื่องดีๆ อะไรเกิดขึ้นอีก เล่ามาได้เลยนะ'
-          : 'วันนี้มีเรื่องดีๆ อะไรเกิดขึ้นบ้าง ไหนเล่าให้ฟังหน่อย?'}
-        placeholder="เขียนสิ่งดีๆ ที่เกิดขึ้น..."
-        submitLabel="🛡️ เก็บไว้ในเกราะ"
+          ? 'ยังมีใครหรือสิ่งไหนที่อยากขอบคุณเพิ่มอีกไหม?'
+          : 'วันนี้คุณอยากขอบคุณใคร? สิ่งดีๆ ที่คุณได้ทำ หรือใครสักคนที่ทำให้วันนี้ดีขึ้น เล่าให้ฟังหน่อย'}
+        placeholder="แตะที่กระดาษแล้วเริ่มเขียนคำขอบคุณ..."
+        submitLabel="บันทึก"
         generateReflection={async (text) => {
           // เรียกใช้งาน AI เพื่อสร้างคำสะท้อนแง่บวกจากสิ่งที่ผู้ใช้เขียน
           const res = await getGratitudeReflection({ gratitudeText: text })
@@ -157,7 +156,7 @@ export default function GratitudeShieldPage({ alreadyCompleted, onComplete, onCl
         <JournalHistoryModal
           theme="golden"
           accent={C_4}
-          title="ประวัติเกราะแห่งความขอบคุณ"
+          title="ประวัติคำขอบคุณ"
           entries={myEntries}
           onClose={() => setShowHistory(false)}
         />

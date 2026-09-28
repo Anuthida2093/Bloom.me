@@ -160,7 +160,7 @@ export default function MentalHealthDashboard({ renderTree, onRequestScreening, 
             </div>
           ) : (
             <div className="mh-dash__empty">
-              ยังไม่มีข้อมูลอารมณ์ — เริ่มจากเควสสมุดบันทึกรากไม้เรืองแสง ใช้เวลาไม่ถึงนาที
+              ยังไม่มีข้อมูลอารมณ์ — เริ่มจากเควสไดอะรี่ของฉัน ใช้เวลาไม่ถึงนาที
               <button onClick={() => onOpenQuest('ment-reframer-journal')}>ไปเขียนบันทึก</button>
             </div>
           )}
@@ -182,7 +182,7 @@ export default function MentalHealthDashboard({ renderTree, onRequestScreening, 
         {/* ── เกราะแห่งความขอบคุณ ── */}
         <section className="mh-dash__card">
           <div className="mh-dash__card-head">
-            <h2>เกราะแห่งความขอบคุณ</h2>
+            <h2>คำขอบคุณ</h2>
             <span>{gratitudeStreak}/{GRATITUDE_TARGET} วัน</span>
           </div>
           <div className="mh-dash__gratitude">

@@ -2,6 +2,7 @@ import { http, API_MODE, mockDelay } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import type { ActivityItem } from '../../types'
 import { MOCK_LEADERBOARD_PLAYERS } from '../../config/leaderboardData'
+import { toActivityItem } from './adapters'
 
 /** [ใหม่ — ข้อ 11] เช็คว่าโปรไฟล์ userId นี้ปิดไว้ (ทั้งบัญชี) ไหม — เรียกก่อนพยายามเปิดหน้า
  *  โปรไฟล์คนอื่นเสมอ (จาก list เพื่อน/คนกดไลค์/คอมเมนต์) บัญชีตัวเองใช้ user.isProfilePrivate
@@ -44,7 +45,8 @@ export async function sharePostToFriend(postId: string, friendUserId: string): P
     })
     return
   }
-  await http.post<void>(`/social/share-post/${postId}`, { friendUserId })
+  // backend: POST /api/social/share-post/:postId → ขึ้นเป็น SHARED_POST_TO_YOU ในกิจกรรมของเพื่อน
+  await http.post(`/social/share-post/${postId}`, { friendUserId })
 }
 
 /*============================================================================*\
@@ -68,6 +70,22 @@ export async function getFollowing(): Promise<string[]> {
   return http.get<string[]>('/social/following')
 }
 
+/** [เพิ่มตามที่ระบุ] คนที่ติดตามเรา — ใช้เช็ค "เพื่อน" = ติดตามกันทั้งสองฝ่าย (ติดตามแล้วแต่เขายังไม่ติดตามกลับ = "กำลังติดตาม")
+ *  โหมด mock: ผู้เล่นที่เคย "เริ่มติดตามคุณ" ในหน้ากิจกรรม (NEW_FOLLOWER) คือคนที่ติดตามเราอยู่
+ *  โหมด live: GET /social/followers — ถ้า backend ยังไม่มี endpoint นี้ ถือว่ายังไม่มีใครติดตาม (ไม่ทำให้หน้าพัง) */
+export async function getFollowers(): Promise<string[]> {
+  if (API_MODE === 'mock') {
+    await mockDelay(100)
+    const ids = getDb().activity.filter((a) => a.type === 'NEW_FOLLOWER').map((a) => a.actorId)
+    return [...new Set(ids)]
+  }
+  try {
+    return await http.get<string[]>('/social/followers')
+  } catch {
+    return []
+  }
+}
+
 export async function toggleFollow(userId: string): Promise<string[]> {
   if (API_MODE === 'mock') {
     await mockDelay(150)
@@ -77,7 +95,9 @@ export async function toggleFollow(userId: string): Promise<string[]> {
         : [...d.following, userId]
     }).following
   }
-  return http.post<string[]>(`/social/follow/${userId}`)
+  // backend ตอบ { following: boolean } — หน้าเว็บใช้รายชื่อที่ติดตามทั้งหมด ดึงใหม่หลัง toggle
+  await http.post<{ following: boolean }>(`/social/follow/${userId}`)
+  return getFollowing()
 }
 
 export async function getActivityFeed(): Promise<ActivityItem[]> {
@@ -85,7 +105,9 @@ export async function getActivityFeed(): Promise<ActivityItem[]> {
     await mockDelay(150)
     return [...getDb().activity].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }
-  return http.get<ActivityItem[]>('/social/activity')
+  // backend: { actor: {id, username}, postExcerpt } → แปลงเป็น actorId/actorName/excerpt
+  const raw = await http.get<Record<string, unknown>[]>('/social/activity')
+  return raw.map(toActivityItem)
 }
 
 export interface SearchUserResult {
@@ -103,4 +125,16 @@ export async function searchUsers(query: string): Promise<SearchUserResult[]> {
       .map((p) => ({ id: p.id, username: p.username }))
   }
   return http.get<SearchUserResult[]>(`/social/search?q=${encodeURIComponent(query)}`)
+}
+
+/** บล็อก/เลิกบล็อกผู้ใช้ — backend: POST/DELETE /api/social/block/:userId
+ *  (บล็อกแล้ว backend เลิกติดตามกันทั้งสองทางให้อัตโนมัติ) โหมด mock ยังไม่มีระบบบล็อก */
+export async function blockUser(userId: string): Promise<void> {
+  if (API_MODE === 'mock') { await mockDelay(120); return }
+  await http.post(`/social/block/${userId}`)
+}
+
+export async function unblockUser(userId: string): Promise<void> {
+  if (API_MODE === 'mock') { await mockDelay(120); return }
+  await http.del(`/social/block/${userId}`)
 }

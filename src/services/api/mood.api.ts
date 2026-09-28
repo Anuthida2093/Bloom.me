@@ -1,6 +1,8 @@
 import { http, API_MODE, mockDelay } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import type { MoodEntryData, MoodCategory, MoodTypeValue } from '../../types'
+import type { MoodColorCode } from '../../types.mental'
+import { MAX_PAGE_SIZE, type Paginated } from './adapters'
 
 /*============================================================================*\
   mood.api.ts — [ไฟล์ใหม่] คำขอที่เกี่ยวกับการบันทึกอารมณ์
@@ -14,11 +16,17 @@ export interface CreateMoodPayload {
   category: MoodCategory
   mood: MoodTypeValue
   note: string | null
+  /** สีน้ำยาที่เท (5 สี) — backend มีคอลัมน์ mood_entries.colorCode แล้ว */
+  colorCode?: MoodColorCode
+  /** ความเข้มอารมณ์ 1-5 — backend มีคอลัมน์ mood_entries.moodScore แล้ว */
+  moodScore?: number
 }
 
 export async function getMoodEntries(): Promise<MoodEntryData[]> {
   if (API_MODE === 'mock') { await mockDelay(120); return getDb().moodEntries }
-  return http.get<MoodEntryData[]>('/mood-entries')
+  // backend: GET /api/mood/me (แบ่งหน้า ใหม่สุดก่อน)
+  const res = await http.get<Paginated<MoodEntryData>>(`/mood/me?pageSize=${MAX_PAGE_SIZE}`)
+  return res.data
 }
 
 export async function createMoodEntry(payload: CreateMoodPayload): Promise<MoodEntryData> {
@@ -30,10 +38,19 @@ export async function createMoodEntry(payload: CreateMoodPayload): Promise<MoodE
       category: payload.category,
       mood: payload.mood,
       note: payload.note,
+      colorCode: payload.colorCode,
+      moodScore: payload.moodScore,
       createdAt: new Date().toISOString(),
     }
     updateDb((d) => { d.moodEntries.push(entry) })
     return entry
   }
-  return http.post<MoodEntryData>('/mood-entries', payload)
+  // backend: POST /api/mood — note ต้องเป็น string หรือไม่ส่งเลย (ไม่รับ null)
+  return http.post<MoodEntryData>('/mood', {
+    category: payload.category,
+    mood: payload.mood,
+    ...(payload.note ? { note: payload.note } : {}),
+    ...(payload.colorCode ? { colorCode: payload.colorCode } : {}),
+    ...(payload.moodScore ? { moodScore: payload.moodScore } : {}),
+  })
 }

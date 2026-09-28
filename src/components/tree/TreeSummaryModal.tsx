@@ -3,7 +3,9 @@ import { getMbtiDescription } from '../../config/mbtiDescriptions'
 import { speciesOf } from './procedural/species'
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import '../common/InfoPopup.css'
 import './TreeSummaryModal.css'
+import '../leaderboard/leaderboardRow.css'
 import { BADGE_ICONS } from '../../config/iconAssets'
 
 interface TreeSummaryModalProps {
@@ -42,12 +44,13 @@ export default function TreeSummaryModal({ open, onClose, mbtiType, username }: 
       />
 
       <div className="tree-mbti-panel" style={{ zIndex: 400 }}>
-        <div className="tree-mbti-panel__ring">
-          <div className="tree-mbti-panel__inner">
-            <button onClick={onClose} title="ปิด" className="tree-mbti-panel__close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
+        <div className="info-popup">
+          <div className="lb-banner tree-mbti-panel__banner">ข้อมูล MBTI</div>
+          <div className="info-popup__inner">
+            <button onClick={onClose} title="ปิด" className="info-popup__close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
             <div style={{ textAlign: 'center', marginBottom: 14 }}>
-              <div className="tree-mbti-panel__leaf" style={{ fontSize: 32 }}>🍃</div>
+              <div className="info-popup__leaf" style={{ fontSize: 32 }}>🍃</div>
               <div style={{ fontFamily: 'Fredoka One', fontSize: 13, color: 'var(--n300)', marginTop: 2 }}>
                 {theme.treeName} ของ {username}
               </div>

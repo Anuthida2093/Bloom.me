@@ -170,4 +170,22 @@ export interface QuestGameProps {
    *  GameShell ไปแล้ว) ต้องโชว์ปุ่มออกของตัวเองแล้วเรียก exit() นี้แทน ไม่งั้นผู้เล่นติดอยู่ใน
    *  หน้าเกมโดยไม่มีทางออกเลย */
   exit: () => void
+  /** จบเควส (ได้รางวัลเต็ม) แล้วปิดหน้าเควสทันที ไม่ต้องกดรับรางวัล — ใช้กับเควสที่จบเองอัตโนมัติ
+   *  เช่น ฟื้นฟูหน้าดิน (คลิปกล่อมนอนเล่นครบเวลา → ภารกิจสำเร็จ → หน้าจอปิดเอง) */
+  finishAndClose: (payload?: QuestPlayPayload) => void
 }
+
+/* ── เควส "เทกระเป๋าความจำผ่านเสียง" (know-brain-dump) — ตรงกับ brain_dump_sessions ของ backend ──
+   topics/recalled/missed backend เก็บรวมเป็น topic ช่องเดียว (ดู services/api/brainDump.api.ts) */
+export interface BrainDumpRecord {
+  id: string
+  createdAt: string
+  /** หัวข้อที่ตั้งใจจะพูดให้ครบ (คู่มือตรวจ) */
+  topics: string[]
+  /** คำที่ถอดจากเสียงที่พูด */
+  transcript: string
+  durationSec: number
+  recalledTopics: string[]
+  missedTopics: string[]
+}
+

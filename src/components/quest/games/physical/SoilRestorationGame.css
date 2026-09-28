@@ -1,0 +1,66 @@
+/* ฟื้นฟูหน้าดิน — หน้าเลือกคลิป/เสียง/เวลา (สไตล์กระดานจัดอันดับ) + ฉากเล่นเต็มจอ */
+
+.soil-setup { max-width: 560px; margin: 0 auto; }
+.soil-setup__card { padding: 16px; border-radius: 18px; }
+.soil-setup__label {
+  display: block; margin-bottom: 10px;
+  font-family: var(--font-display); font-size: var(--fs-md); color: var(--lb-card-text);
+}
+.soil-setup__hint { margin-top: 12px; font-size: 13px; line-height: 1.7; color: var(--lb-card-text-sub); }
+
+.soil-setup__clips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.soil-setup__clip {
+  display: flex; flex-direction: column; gap: 6px; padding: 0 0 8px; overflow: hidden; cursor: pointer;
+  border-radius: 14px; border: 2px solid color-mix(in srgb, var(--lb-gold-edge) 45%, transparent);
+  background: color-mix(in srgb, var(--fixed-white) 40%, transparent);
+  color: var(--lb-card-text-sub); font-family: inherit; font-size: 12.5px; font-weight: 700;
+  transition: border-color .15s ease, transform .15s ease;
+}
+.soil-setup__clip video { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--g900); pointer-events: none; }
+.soil-setup__clip.is-active { border-color: var(--lb-gold-edge); color: var(--lb-card-text); transform: translateY(-2px); }
+
+.soil-setup__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.soil-setup__chip {
+  padding: 9px 16px; border-radius: 99px; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 13.5px;
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 45%, transparent);
+  background: color-mix(in srgb, var(--fixed-white) 40%, transparent);
+  color: var(--lb-card-text-sub);
+}
+.soil-setup__chip.is-active { border-color: var(--lb-gold-edge); background: var(--lb-btn-bg); color: var(--lb-btn-text); }
+[data-theme="dark"] .soil-setup__clip,
+[data-theme="dark"] .soil-setup__chip { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+
+/* ── ฉากเล่นเต็มจอ ── */
+.soil-sleep {
+  position: fixed; inset: 0; z-index: 2000; background: #000; overflow: hidden;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.soil-sleep.is-idle { cursor: none; }
+.soil-sleep__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.soil-sleep__dim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55)); pointer-events: none; }
+.soil-sleep__hud {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 0 20px calc(env(safe-area-inset-bottom, 0px) + 36px); text-align: center;
+  color: var(--fixed-white); transition: opacity .8s ease;
+}
+.soil-sleep.is-idle .soil-sleep__hud { opacity: 0; pointer-events: none; }
+.soil-sleep__time { font-family: var(--font-display); font-size: clamp(40px, 10vw, 72px); letter-spacing: 2px; text-shadow: 0 2px 16px rgba(0,0,0,.5); }
+.soil-sleep__sub { font-size: 14px; color: rgba(255,255,255,.78); max-width: 360px; line-height: 1.6; }
+.soil-sleep__volume { display: flex; align-items: center; gap: 10px; font-size: 13px; color: rgba(255,255,255,.78); }
+.soil-sleep__volume input { width: 180px; accent-color: var(--fixed-white); }
+.soil-sleep__stop {
+  margin-top: 4px; padding: 8px 20px; border-radius: 99px; cursor: pointer; font-family: inherit; font-size: 13px;
+  background: rgba(0,0,0,.3); color: rgba(255,255,255,.85); border: 1px solid rgba(255,255,255,.35);
+}
+.soil-sleep__confirm { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.45); }
+.soil-sleep__confirm-card { max-width: 360px; width: 100%; padding: 22px; text-align: center; border-radius: 20px; }
+.soil-sleep__confirm-actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+
+/* ═══ [แก้ตามที่ระบุ] พื้นหลังหน้าเควสฟื้นฟูหน้าดิน — ฟ้าอ่อนผสมสีท้องฟ้า (โหมดมืด = ฟ้าคราม เข้มลง) ═══ */
+.game-shell.game-shell--phys-soil-restoration {
+  background: linear-gradient(180deg, #CDEBFF 0%, #A9D8F7 45%, #E6F5FF 100%) !important;
+}
+.game-shell.game-shell--phys-soil-restoration .game-shell__scenery { display: none; }
+[data-theme="dark"] .game-shell.game-shell--phys-soil-restoration {
+  background: linear-gradient(180deg, #16324A 0%, #1C4466 50%, #0F2638 100%) !important;
+}

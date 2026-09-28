@@ -4,7 +4,7 @@ import { useAppContext } from '../../../context/AppContext'
 import { playSfx, startLoopingSfx, stopLoopingSfx } from '../../../utils/audioPlayer'
 import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../../hooks/useEscapeKey'
-import { useIsLowPowerMode } from '../../../hooks/useMediaQuery'
+import { usePrefersReducedMotion } from '../../../hooks/useMediaQuery'
 import { useStepTracker } from '../../../hooks/useStepTracker'
 import { OWL_AVATAR_ICON, BADGE_ICONS } from '../../../config/iconAssets'
 import { findQuestByCode } from '../../../config/questCatalog'
@@ -72,7 +72,8 @@ type Stage = 'walk' | 'camera' | 'done'
 export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStepsQuestProps) {
   useLockBodyScroll()
   const { settings, userData, logActivity } = useAppContext()
-  const lowPower = useIsLowPowerMode()
+  // [แก้ตามที่ระบุ] วิดีโอพื้นหลังแสดงทุกขนาดจอ (เดิมจอ ≤640px ไม่แสดง) — ลดการเคลื่อนไหว = ภาพนิ่ง
+  const reducedMotion = usePrefersReducedMotion()
   const sfxOpts = useMemo(
     () => ({ volume: settings.sfxVolume, enabled: settings.soundEnabled }),
     [settings.sfxVolume, settings.soundEnabled],
@@ -152,7 +153,6 @@ export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStep
    * (ต้องเดินระหว่างที่ฟังอยู่ถึงจะนับเพิ่ม) ถ้าล้มเหลว (OAuth ปฏิเสธ/ไม่รองรับ/permission
    * ถูกปฏิเสธ) ตกกลับไปโหมดกรอกมือทันทีพร้อมข้อความอธิบายสาเหตุ ไม่ auto-approve เงียบๆ */
   const handleSyncClick = async () => {
-    playSfx('CLICK', sfxOpts)
     setSyncError(null)
 
     if (dataSource === 'google-fit') {
@@ -226,11 +226,9 @@ export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStep
 
   return (
     <div className="vitality-steps">
-      {!lowPower && (
-        <video className="vitality-steps__bg-video" autoPlay muted loop playsInline>
-          <source src={BG_VIDEO_SRC} type="video/mp4" />
-        </video>
-      )}
+      <video className="vitality-steps__bg-video" autoPlay={!reducedMotion} muted loop playsInline preload="auto">
+        <source src={`${BG_VIDEO_SRC}#t=0.1`} type="video/mp4" />
+      </video>
       <div className="vitality-steps__scrim" aria-hidden="true" />
 
       <button onClick={onClose} title="ปิด" className="vitality-steps__close" aria-label="ปิดเควสก้าวเพื่อสุขภาพ"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
@@ -348,10 +346,8 @@ export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStep
       {stage === 'camera' && (
         <CameraCapture
           hint="ถ่ายรูปยืนยันการเดิน (เช่น หน้าจอแอปนับก้าว หรือรองเท้าหลังเดินเสร็จ)"
-          onConfirm={handlePhotoConfirm}
-          onSkip={() => setStage('walk')}
-          skipLabel="ข้าม"
-          onExit={onClose}
+          onSave={() => handlePhotoConfirm()}
+          onCancel={() => setStage('walk')}
         />
       )}
 
@@ -382,8 +378,11 @@ export default function VitalityStepsQuest({ onComplete, onClose }: VitalityStep
           >
             🌳
           </motion.div>
+          <div className="quest-done-card vitality-steps__done-card">
+          <div className="lb-banner quest-done-card__banner">ภารกิจสำเร็จ</div>
           <h2 className="vitality-steps__done-title">ถึงเป้าหมายแล้ว!</h2>
           <p className="vitality-steps__done-text">รากแก้วของคุณแข็งแรงขึ้นจากการเดินวันนี้</p>
+          </div>
         </div>
       )}
     </div>

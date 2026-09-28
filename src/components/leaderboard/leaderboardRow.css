@@ -11,8 +11,7 @@
 }
 
 .leaderboard-row:hover {
-  --lc-bg-4: rgba(6, 93, 46, 0.1);
-  background-color: var(--lc-bg-4) !important;
+  background-color: color-mix(in srgb, var(--g700) 10%, transparent) !important;
   transform: translateX(2px);
 }
 
@@ -36,8 +35,7 @@
 
 .leaderboard-scroll-area {
   scrollbar-width: thin;
-  --lc-c-3: rgba(6, 93, 46, 0.25);
-  scrollbar-color: var(--lc-c-3) transparent;
+  scrollbar-color: color-mix(in srgb, var(--g700) 25%, transparent) transparent;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -50,14 +48,12 @@
 }
 
 .leaderboard-scroll-area::-webkit-scrollbar-thumb {
-  --lc-bg-2: rgba(6, 93, 46, 0.25);
-  background-color: var(--lc-bg-2);
+  background-color: color-mix(in srgb, var(--g700) 25%, transparent);
   border-radius: 10px;
 }
 
 .leaderboard-scroll-area::-webkit-scrollbar-thumb:hover {
-  --lc-bg-1: rgba(6, 93, 46, 0.4);
-  background-color: var(--lc-bg-1);
+  background-color: color-mix(in srgb, var(--g700) 40%, transparent);
 }
 
 /* ==========================================================================
@@ -70,55 +66,68 @@
    ========================================================================== */
 
 .lb-frame {
-  --lb-gold: color-mix(in srgb, var(--coin) 70%, var(--g800));
+  /* [รีธีมเขียวอ่อนมินิมอล] พื้นกรอบ/ป้ายใช้ --leaf-soft* (index.css) แทน --g800/--g900 เข้มเดิม
+     ตัวหนังสือบนป้ายเป็น --on-leaf-soft (ขาวบนเขียวอ่อนอ่านไม่ออก) */
+  --lb-gold: color-mix(in srgb, var(--coin) 70%, var(--g600));
   position: relative;
   margin-top: 14px;               /* ที่ว่างให้ป้ายหัวข้อที่ลอยทับขอบบน */
   padding: 20px 6px 6px;
   border-radius: 16px;
-  background: linear-gradient(180deg, var(--g800) 0%, var(--g900) 100%);
+  background: linear-gradient(180deg, var(--leaf-soft) 0%, var(--leaf-soft-strong) 100%);
   border: 2px solid var(--lb-gold);
-  box-shadow: 0 8px 22px var(--glass-b-30), inset 0 0 0 3px var(--g800), inset 0 0 0 4px color-mix(in srgb, var(--coin) 25%, transparent);
+  box-shadow: 0 8px 22px var(--glass-b-30), inset 0 0 0 3px var(--leaf-soft), inset 0 0 0 4px color-mix(in srgb, var(--coin) 25%, transparent);
   display: flex;
   flex-direction: column;
   gap: 6px;
   transition: opacity .2s ease;
 }
 
-/* ป้ายหัวข้อแบบม้วนกระดาษ — ตัวป้าย + ปลายม้วนสองข้าง (::before/::after) */
+/* ป้ายหัวข้อแบบม้วนกระดาษ — ตัวป้าย + ปลายม้วนสองข้าง (::before/::after)
+   .lb-banner = ป้ายเดียวกันแบบใช้เดี่ยวนอกกรอบ (เช่น ชื่อหมวดเควสใน QuestSection.tsx) — ตำแหน่ง
+   ผู้ใช้กำหนดเอง ไฟล์นี้คุมแค่หน้าตา */
 .lb-frame__banner {
   position: absolute;
   top: -13px;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 1;
+}
+.lb-banner {
+  --lb-gold: color-mix(in srgb, var(--coin) 70%, var(--g600));
+  position: relative;
+}
+.lb-frame__banner,
+.lb-banner {
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 4px 16px;
   border-radius: 8px;
-  background: linear-gradient(180deg, var(--g600) 0%, var(--g800) 100%);
+  background: linear-gradient(180deg, var(--leaf-soft-strong) 0%, var(--leaf-soft-active) 100%);
   border: 2px solid var(--lb-gold);
   box-shadow: 0 3px 8px var(--glass-b-30);
-  color: var(--fixed-white);
+  color: var(--on-leaf-soft);
   font-family: var(--font-display);
   font-size: 14px;
   line-height: 1.2;
   white-space: nowrap;
-  z-index: 1;
 }
 .lb-frame__banner::before,
-.lb-frame__banner::after {
+.lb-frame__banner::after,
+.lb-banner::before,
+.lb-banner::after {
   content: '';
   position: absolute;
   top: 50%;
   width: 10px;
   height: 18px;
-  background: var(--g900);
+  background: var(--leaf-soft-active);
   border: 2px solid var(--lb-gold);
   border-radius: 50%;
   transform: translateY(-50%);
 }
-.lb-frame__banner::before { left: -8px; }
-.lb-frame__banner::after  { right: -8px; }
+.lb-frame__banner::before, .lb-banner::before { left: -8px; }
+.lb-frame__banner::after,  .lb-banner::after  { right: -8px; }
 
 /* แผ่นเนื้อหาสีครีม (--b50 กลับเป็นน้ำตาลเข้มตอน dark mode คู่กับ --text ที่กลับเป็นสีอ่อน) */
 .lb-frame__sheet {
@@ -151,7 +160,7 @@
   transition: background .15s ease;
 }
 .lb-frame__tab:hover { background: color-mix(in srgb, var(--g700) 12%, transparent); }
-.lb-frame__tab--active { background: var(--g700); }
+.lb-frame__tab--active { background: var(--leaf-soft-active); }
 
 .lb-frame__list {
   padding: 4px;
@@ -177,9 +186,9 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 1.5px solid color-mix(in srgb, var(--coin) 70%, var(--g800));   /* อยู่นอก .lb-frame จึงอ่าน --lb-gold ไม่ได้ */
+  border: 1.5px solid color-mix(in srgb, var(--coin) 70%, var(--g600));   /* อยู่นอก .lb-frame จึงอ่าน --lb-gold ไม่ได้ */
   background: var(--fixed-white);
-  color: var(--g800);
+  color: var(--on-leaf-soft);
   font-size: 18px;
   font-weight: 700;
   line-height: 1;
@@ -213,3 +222,79 @@
   .lb-frame { padding: 18px 4px 4px; gap: 4px; }
   .lb-frame__banner { font-size: 12px; padding: 3px 12px; }
 }
+
+/* ==========================================================================
+   5. ธีมมืด — [แก้ตามที่ระบุ] กรอบนอกเขียวเข้ม / ด้านใน (แผ่นเนื้อหา) เขียวที่อ่อนกว่ากรอบนอก
+   ใช้กับทุกที่ที่ใช้ .lb-frame (กระดานจัดอันดับ + ป็อบอัพข้อมูลต้นไม้ใน TreeOfLife.tsx)
+   ========================================================================== */
+[data-theme="dark"] .lb-frame {
+  background: linear-gradient(180deg, var(--g800) 0%, var(--g900) 100%);
+  box-shadow: 0 8px 22px var(--glass-b-30), inset 0 0 0 3px var(--g800), inset 0 0 0 4px color-mix(in srgb, var(--coin) 25%, transparent);
+}
+[data-theme="dark"] .lb-frame__banner,
+[data-theme="dark"] .lb-banner {
+  background: linear-gradient(180deg, var(--g600) 0%, var(--g800) 100%);
+  color: var(--fixed-white);
+}
+[data-theme="dark"] .lb-frame__banner::before,
+[data-theme="dark"] .lb-frame__banner::after,
+[data-theme="dark"] .lb-banner::before,
+[data-theme="dark"] .lb-banner::after { background: var(--g900); }
+/* แผ่นเนื้อหา: --g700 อ่อนกว่ากรอบนอก — ตัวหนังสือ --text (#E8F5EC) ≈ 5.6:1
+   --text-muted/--text-sub ธีมมืดเดิม (#4A6B52) จมบนพื้นนี้ จึงยกให้สว่างขึ้นเฉพาะภายในแผ่น */
+[data-theme="dark"] .lb-frame__sheet,
+[data-theme="dark"] .lb-frame__plate {
+  background: var(--g700);
+  --text-muted: var(--g200);
+  --text-sub: var(--g100);
+  --lb-score: var(--g200);
+}
+[data-theme="dark"] .lb-frame__tab--active { background: var(--g500); }
+
+/* ═══ [แก้ตามที่ระบุ] ป้ายแบบกระดานจัดอันดับ — เฉดสีเฉพาะบางเควส (ทรงเดิม ตัวหนังสือดำ/ขาวตามโหมด) ═══
+   --warm   = ส้มอ่อนผสมเหลืองอ่อน (เตาเผาขยะความคิด)
+   --purple = ม่วง (ไพ่ทิพย์กระตุ้นพลัง)
+   --sky    = ฟ้าอ่อน (ฟื้นฟูหน้าดิน / คลิปกล่อมนอน) */
+.lb-banner.lb-banner--warm,
+.quest-section-title-pill--ment-cognitive-incinerator.lb-banner {
+  --lb-gold: #E0A445;
+  background: linear-gradient(180deg, #FFE7A0 0%, #FFC98A 100%) !important;
+  border-color: #E0A445 !important;
+  color: #2B1D10 !important;
+}
+.lb-banner.lb-banner--warm::before, .lb-banner.lb-banner--warm::after,
+.quest-section-title-pill--ment-cognitive-incinerator.lb-banner::before,
+.quest-section-title-pill--ment-cognitive-incinerator.lb-banner::after { background: #FFD89A !important; border-color: #E0A445 !important; }
+
+.lb-banner.lb-banner--purple,
+.quest-section-title-pill--ment-oracle-activation.lb-banner {
+  --lb-gold: #B08BE0;
+  background: linear-gradient(180deg, #EBDDFF 0%, #D2B8F5 100%) !important;
+  border-color: #9C74D6 !important;
+  color: #1E1030 !important;
+}
+.lb-banner.lb-banner--purple::before, .lb-banner.lb-banner--purple::after,
+.quest-section-title-pill--ment-oracle-activation.lb-banner::before,
+.quest-section-title-pill--ment-oracle-activation.lb-banner::after { background: #D9C4F7 !important; border-color: #9C74D6 !important; }
+[data-theme="dark"] .lb-banner.lb-banner--purple,
+[data-theme="dark"] .quest-section-title-pill--ment-oracle-activation.lb-banner {
+  background: linear-gradient(180deg, #6B4AA0 0%, #43296E 100%) !important;
+  color: var(--fixed-white) !important;
+}
+[data-theme="dark"] .lb-banner.lb-banner--purple::before, [data-theme="dark"] .lb-banner.lb-banner--purple::after,
+[data-theme="dark"] .quest-section-title-pill--ment-oracle-activation.lb-banner::before,
+[data-theme="dark"] .quest-section-title-pill--ment-oracle-activation.lb-banner::after { background: #55378A !important; }
+
+.lb-banner.lb-banner--sky {
+  --lb-gold: #6FB3E0;
+  background: linear-gradient(180deg, #E3F4FF 0%, #BFE3FA 100%) !important;
+  border-color: #5FA6D8 !important;
+  color: #1D5F93 !important;
+}
+.lb-banner.lb-banner--sky::before, .lb-banner.lb-banner--sky::after { background: #CDE9FB !important; border-color: #5FA6D8 !important; }
+.lb-banner.lb-banner--sky * { color: inherit !important; }
+[data-theme="dark"] .lb-banner.lb-banner--sky {
+  background: linear-gradient(180deg, #2E6A99 0%, #1C4466 100%) !important;
+  color: #BFE6FF !important;
+}
+[data-theme="dark"] .lb-banner.lb-banner--sky::before, [data-theme="dark"] .lb-banner.lb-banner--sky::after { background: #25557D !important; }

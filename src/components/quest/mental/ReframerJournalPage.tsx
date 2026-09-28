@@ -19,7 +19,6 @@ const C_4 = '#9B59D0'
 /** [เพิ่มตามที่ระบุ — ข้อ 10/11] ปุ่ม "เริ่มเขียน"/"ส่งให้รากไม้อ่าน" ของเควสนี้ ใช้เขียว
  *  พาสเทลของตัวเอง แทน gradient ส้ม-ม่วง (theme.gold + accent เดิม) ที่ใช้ร่วมกับ Gratitude
  *  Shield — ให้แต่ละเควสมีสีเป็นของตัวเองตามที่ระบุ */
-const GREEN_PASTEL_BTN = 'linear-gradient(135deg, var(--g100), var(--g400))'
 
 const QUEST_CODE = 'ment-reframer-journal'
 
@@ -61,7 +60,7 @@ export default function ReframerJournalPage({ moodEntry, alreadyCompleted, onCom
       <IntroVideoSequence
         videoSrc="/assets/videos/quest-mental/Reframer-Journal.mp4"
         audioSrc="/assets/sounds/Reframer-Journal.mp3"
-        overlayText="คุณกำลังเข้าสู่ สมุดบันทึกรากไม้เรืองแสง มาบันทึกเรื่องของคุณและเก็บความรู้สึกเหล่านี้ไว้ ฉันช่วยคุณได้นะ"
+        overlayText="ยินดีต้อนรับสู่ ไดอะรี่ของฉัน — พื้นที่ส่วนตัวที่คุณเล่าได้ทุกเรื่อง ทั้งวันที่ดีและวันที่ร้าย ความสุขและความทุกข์ ทุกถ้อยคำของคุณมีพลังเสมอ"
         accent={C_1}
         onComplete={() => setShowIntro(false)}
       />
@@ -72,7 +71,8 @@ export default function ReframerJournalPage({ moodEntry, alreadyCompleted, onCom
   if (alreadyCompleted && !isWritingMore) {
     return (
       <div className="reframer-journal-page reframer-journal-page--done">
-        <div className="reframer-journal-done">
+        <div className="reframer-journal-done quest-done-card">
+          <div className="lb-banner quest-done-card__banner">ทำแล้ววันนี้</div>
           <div className="reframer-journal-done__icon">🌿</div>
           <h2 className="reframer-journal-done__title">วันนี้คุณบันทึกเรื่องราวแล้ว!</h2>
           <p className="reframer-journal-done__body">
@@ -81,13 +81,13 @@ export default function ReframerJournalPage({ moodEntry, alreadyCompleted, onCom
             (ข้อความจะถูกเก็บลงประวัติ แต่จะไม่ได้รับรางวัลซ้ำ)
           </p>
           <div className="reframer-journal-done__actions">
-            <button className="reframer-journal-done__btn reframer-journal-done__btn--primary" onClick={() => setIsWritingMore(true)}>
-              ✏️ เขียนระบายเพิ่ม
+            <button className="lb-btn lb-btn--wide" onClick={() => setIsWritingMore(true)}>
+              เขียนเพิ่ม
             </button>
-            <button className="reframer-journal-done__btn" onClick={() => setShowHistory(true)}>
-              📜 ดูประวัติสมุดบันทึก
+            <button className="lb-btn lb-btn--wide" onClick={() => setShowHistory(true)}>
+              ดูประวัติไดอะรี่ของฉัน
             </button>
-            <button className="reframer-journal-done__btn reframer-journal-done__btn--ghost" onClick={onClose}>
+            <button className="lb-btn lb-btn--ghost lb-btn--wide" onClick={onClose}>
               ปิดหน้าต่าง
             </button>
           </div>
@@ -97,7 +97,7 @@ export default function ReframerJournalPage({ moodEntry, alreadyCompleted, onCom
           <JournalHistoryModal
             theme="mystic"
             accent={C_2}
-            title="ประวัติสมุดบันทึกรากไม้เรืองแสง"
+            title="ประวัติไดอะรี่ของฉัน"
             entries={myEntries}
             onClose={() => setShowHistory(false)}
           />
@@ -116,13 +116,11 @@ export default function ReframerJournalPage({ moodEntry, alreadyCompleted, onCom
         theme="mystic"
         accent={C_3}
         askIconSrc={QUEST_ICONS[QUEST_CODE]}
-        askButtonBg={GREEN_PASTEL_BTN}
-        submitButtonBg={GREEN_PASTEL_BTN}
         askQuestion={alreadyCompleted
-          ? 'มีอะไรอยากเล่าให้ฉันฟังเพิ่มอีกไหม?'
-          : 'วันนี้คุณรู้สึกอย่างไร มีอะไรอยากบอกกับฉันไหม?'}
-        placeholder="เขียนสิ่งที่อยู่ในใจวันนี้ลงตรงนี้..."
-        submitLabel="🌿 ส่งให้รากไม้อ่าน"
+          ? 'ยังมีเรื่องราวไหนอยากบันทึกเพิ่มอีกไหม? เล่าต่อได้เลยนะ'
+          : 'วันนี้เป็นอย่างไรบ้าง? เรื่องดีหรือเรื่องร้าย ความสุขหรือความทุกข์ บันทึกไว้ที่นี่ได้ทุกเรื่อง'}
+        placeholder="แตะที่กระดาษแล้วเริ่มเล่าเรื่องราวของคุณ..."
+        submitLabel="บันทึก"
         generateReflection={async (text) => {
           const res = await getJournalReflection({ moodEntry, journalText: text })
           return res.reflection
@@ -139,7 +137,7 @@ export default function ReframerJournalPage({ moodEntry, alreadyCompleted, onCom
         <JournalHistoryModal
           theme="mystic"
           accent={C_4}
-          title="ประวัติสมุดบันทึกรากไม้เรืองแสง"
+          title="ประวัติไดอะรี่ของฉัน"
           entries={myEntries}
           onClose={() => setShowHistory(false)}
         />

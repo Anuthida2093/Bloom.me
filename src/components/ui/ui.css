@@ -141,20 +141,31 @@
 
 /* ═══ GameAlert ═══ */
 .ui-game-alert {
+  position: relative;
   width: 100%;
-  max-width: 320px;
+  max-width: 360px;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
+  padding: 36px 22px 22px;
+  border-radius: 22px;
+  font-family: var(--font-display);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--lb-gold-edge) 60%, var(--g800)), 0 16px 36px var(--glass-b-30);
 }
-.ui-game-alert__icon { font-size: 40px; line-height: 1; }
+.ui-game-alert__banner {
+  position: absolute; top: -17px; left: 50%; transform: translateX(-50%);
+  font-size: 15px; max-width: calc(100% - 40px);
+}
+.ui-game-alert__icon { font-size: 44px; line-height: 1; }
+.ui-game-alert__icon-img { width: 72px; height: 72px; object-fit: contain; filter: drop-shadow(0 4px 8px var(--glass-b-25)); }
 .ui-game-alert__message {
   font-size: var(--fs-md);
-  color: var(--text);
+  color: var(--lb-card-text);
   line-height: var(--lh-body);
   margin: 0;
+  white-space: pre-line;
 }
 
 /* ═══ SceneFrame ═══ */
@@ -178,3 +189,5 @@
   .ui-overlay { padding: 12px; }
   .ui-surface--pad-lg { padding: 16px; }
 }
+/* ป้ายหัวการ์ด GameAlert ยื่นเหนือขอบการ์ด — ไม่ให้กล่อง panel (overflow auto) ตัดทิ้ง */
+.ui-overlay__panel:has(> .ui-game-alert) { overflow: visible; padding-top: 18px; width: min(360px, 100%); }

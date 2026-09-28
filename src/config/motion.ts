@@ -23,11 +23,14 @@ export const EASE_OUT_SOFT = [0.22, 1, 0.36, 1] as const
 /** EASE_OUT_SOFT ในรูปแบบ CSS — ใช้กับ transition ที่เขียนเป็น inline style (ไม่ใช่ framer-motion) */
 export const EASE_OUT_SOFT_CSS = `cubic-bezier(${EASE_OUT_SOFT.join(', ')})`
 
-/** ฉากเต็มจอ / full-screen section (เควส ร้านค้า คลังไอเทม) */
+/** ฉากเต็มจอ / full-screen section (เควส ร้านค้า คลังไอเทม)
+ *  [แก้ตามที่ระบุ — เปิดเควสไม่ลื่น/จอรัว] เดิมจาง + ย่อขยาย (scale .97→1) ทั้งชั้นเต็มจอ — ชั้นนี้มี
+ *  วิดีโอ/canvas ต้นไม้อยู่ข้างใน การ scale ทำให้เบราว์เซอร์ต้องวาดทั้งชั้นใหม่ทุกเฟรม (กระตุกบน
+ *  มือถือ + ขอบภาพสั่น) — เหลือแค่จาง opacity ซึ่ง GPU ทำให้ได้โดยไม่ต้องวาดใหม่ ลื่นและไม่รัว */
 export const sceneEnter = {
-  initial: { opacity: 0, scale: 0.97 },
-  animate: { opacity: 1, scale: 1, transition: { duration: 0.32, ease: EASE_OUT_SOFT } },
-  exit: { opacity: 0, scale: 0.98, transition: { duration: 0.2, ease: EASE_OUT_SOFT } },
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.26, ease: EASE_OUT_SOFT } },
+  exit: { opacity: 0, transition: { duration: 0.18, ease: EASE_OUT_SOFT } },
 }
 
 /** โมดัลกลางจอที่มีพื้นหลังมืด */

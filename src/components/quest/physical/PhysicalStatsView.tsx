@@ -1,7 +1,6 @@
 import type { QuestDef } from '../../../config/questCatalog'
 import type { UserData } from '../../../types'
 
-const C_4 = '#E8A020'
 
 interface PhysicalStatsViewProps {
   userData: UserData
@@ -26,7 +25,6 @@ export default function PhysicalStatsView({ userData, pathQuests, sideQuests, is
   const weight = userData.weight ?? 60
   const bmi = userData.bmi ?? weight / (height / 100) ** 2
   const bmiLabel = bmi < 18.5 ? 'น้ำหนักน้อย' : bmi < 23 ? 'ปกติ' : bmi < 25 ? 'น้ำหนักเกิน' : 'อ้วน'
-  const bmiColor = bmi < 18.5 ? 'var(--blue)' : bmi < 23 ? 'var(--g600)' : bmi < 25 ? C_4 : 'var(--red)'
 
   const allPhysicalQuests = [...pathQuests, ...sideQuests]
   const completedCount = allPhysicalQuests.filter((q) => isCompleted(q.code)).length
@@ -49,7 +47,7 @@ export default function PhysicalStatsView({ userData, pathQuests, sideQuests, is
         </div>
         <div className="physical-stats-view__card" style={{ gridColumn: 'span 2' }}>
           <div className="physical-stats-view__card-icon">📊</div>
-          <div className="physical-stats-view__card-value" style={{ color: bmiColor }}>{bmi.toFixed(1)}</div>
+          <div className="physical-stats-view__card-value" style={{ color: 'var(--n900)' }}>{bmi.toFixed(1)}</div>
           <div className="physical-stats-view__card-label">BMI · {bmiLabel}</div>
         </div>
       </div>
@@ -57,7 +55,7 @@ export default function PhysicalStatsView({ userData, pathQuests, sideQuests, is
       <div className="physical-stats-view__progress-block">
         <div className="physical-stats-view__progress-header">
           <span>🏃 ความคืบหน้าเควสสุขภาพวันนี้</span>
-          <span style={{ color: accent, fontWeight: 800 }}>{completedCount}/{allPhysicalQuests.length} · {pct}%</span>
+          <span style={{ color: 'var(--n900)', fontWeight: 800 }}>{completedCount}/{allPhysicalQuests.length} · {pct}%</span>
         </div>
         <div className="physical-stats-view__progress-track">
           <div className="physical-stats-view__progress-fill" style={{ width: `${pct}%`, background: accent }} />

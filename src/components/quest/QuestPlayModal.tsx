@@ -49,7 +49,7 @@ export default function QuestPlayModal({ quest, accent, accentBg, onComplete, on
       forced={atRisk && !!quest.isCalming}
       fullscreenGame={!!quest.fullscreenGame}
     >
-      {(api) => <Game accent={api.accent} accentBg={api.accentBg} finish={api.finish} strictMode={api.strictMode} skip={api.skip} exit={api.exit} />}
+      {(api) => <Game accent={api.accent} accentBg={api.accentBg} finish={api.finish} strictMode={api.strictMode} skip={api.skip} exit={api.exit} finishAndClose={api.finishAndClose} />}
     </GameShell>
   )
 }

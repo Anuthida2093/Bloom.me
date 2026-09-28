@@ -13,18 +13,23 @@ export function useTypewriter(
   text: string,
   speedMs = 26,
   startDelayMs = 200,
-  onCharacterReveal?: () => void
+  onCharacterReveal?: () => void,
+  /** [แก้ตามที่ระบุ] เรียกเมื่อพิมพ์จบ และตอนข้อความถูกเปลี่ยน/ปิดกลางคัน — ใช้หยุดเสียงแป้นพิมพ์
+   *  ให้จบพร้อมข้อความ (ไม่ค้างเล่นต่อหลังตัวอักษรตัวสุดท้ายขึ้นแล้ว) */
+  onDone?: () => void,
 ): { displayedText: string; isDone: boolean } {
   const [prevText, setPrevText] = useState(text)
   const [displayedText, setDisplayedText] = useState('')
   const [isDone, setIsDone] = useState(text.length === 0)
   const indexRef = useRef(0)
   const onCharacterRevealRef = useRef(onCharacterReveal)
+  const onDoneRef = useRef(onDone)
 
   // เก็บ callback ล่าสุดไว้ใน ref ผ่าน effect (แทนการเขียน ref ตรงๆ ระหว่าง render)
   // กัน stale closure โดยไม่ต้องใส่เป็น dependency ของ effect หลักด้านล่าง
   useEffect(() => {
     onCharacterRevealRef.current = onCharacterReveal
+    onDoneRef.current = onDone
   })
 
   // [แก้] รีเซ็ตข้อความ/สถานะ "ระหว่าง render" ทันทีที่ text เปลี่ยน แทนการ setState
@@ -56,6 +61,7 @@ export function useTypewriter(
         if (indexRef.current >= text.length) {
           window.clearInterval(intervalId)
           setIsDone(true)
+          onDoneRef.current?.()
         }
       }, speedMs)
     }, startDelayMs)
@@ -63,6 +69,7 @@ export function useTypewriter(
     return () => {
       window.clearTimeout(startTimeoutId)
       window.clearInterval(intervalId)
+      onDoneRef.current?.()
     }
   }, [text, speedMs, startDelayMs])
 

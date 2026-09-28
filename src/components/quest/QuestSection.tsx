@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLanguage } from '../../context/LanguageContext'
 import GameplayFrame from './GameplayFrame'
 import type { QuestLogEntry, UserData, TreeStats, PlacedItem, DecorationPositionMap, MoodEntryData, QuestCategory } from '../../types'
 import { DEFAULT_USER_DATA, DEFAULT_TREE_STATS } from '../../types'
@@ -7,12 +8,14 @@ import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { QUEST_TABS, QUEST_CATALOG_BY_TAB, SPECIAL_QUEST_CODES, findQuestByCode, type QuestTabId, type QuestDef } from '../../config/questCatalog'
 import { Z_INDEX } from '../../config/zIndex'
-import { QUEST_TAB_ICONS } from '../../config/iconAssets'
+import { QUEST_ICONS, QUEST_TAB_ICONS } from '../../config/iconAssets'
 import { useAppContext, DAILY_FOCUS_QUOTA_MINUTES } from '../../context/AppContext'
 import QuestRewardCelebration, { type QuestCelebrationData } from './QuestRewardCelebration'
 import QuestFeedbackPrompt, { type QuestFeedbackPromptData } from './QuestFeedbackPrompt'
 import { playSfx } from '../../utils/audioPlayer'
+import GameAlert from '../ui/GameAlert'
 import { BADGE_ICONS } from '../../config/iconAssets'
+import '../leaderboard/leaderboardRow.css'
 
 interface QuestSectionProps {
   questLogs?: QuestLogEntry[]
@@ -29,14 +32,10 @@ interface QuestSectionProps {
   onToggle?: (questId: string, payload?: QuestPlayPayload) => void
   onClose?: () => void
   initialTab?: QuestTabId
+  /** [แก้ตามที่ระบุ] เปิดหน้าเล่นของเควสนี้ทันที (กดจากแจ้งเตือน) — key เปลี่ยนทุกครั้งที่กด ให้เปิดซ้ำได้ */
+  initialQuest?: { code: string; key: number } | null
 }
 
-const ZONE_TITLES: Record<QuestTabId, string> = {
-  // [แก้ตามที่ระบุ] เปลี่ยนแค่ชื่อหัวข้อ ไม่แตะ layout แผนที่โหนดใน LearningQuestMap.tsx เลย
-  knowledge: 'เควสด้านการเรียนรู้',
-  physical: 'เควสสุขภาพ',
-  mental: 'เควสสุขภาพจิต',
-}
 
 
 function getTodaysMoodEntry(entries: MoodEntryData[]): MoodEntryData | null {
@@ -71,11 +70,16 @@ function isInCurfew(curfew: { bedtime: string; curfewHours: number } | null): bo
  *   3) อยู่ในช่วงเวลาตัดจอก่อนนอนที่ตั้งไว้เอง → ล็อกเควสเรียนหนักเช่นกัน
  *   ทุกกรณีมีแถบอธิบายเหตุผลอยู่หัว sidebar เสมอ ไม่ปล่อยให้ผู้ใช้งงว่าทำไมกดไม่ได้
  */
+/** เควสที่ทำสำเร็จแล้วยังกดเข้าไปใช้งานต่อได้ (ไม่ได้รางวัลซ้ำ) */
+// [แก้ตามที่ระบุ] คำขอบคุณ/ไดอะรี่ของฉัน ทำสำเร็จแล้วกดอีก → เปิดการ์ด "ทำแล้ววันนี้" ของเควส (เขียนเพิ่ม/
+// ดูประวัติ/ปิด) แทนป็อปอัพเตือน — เขียนเพิ่มเก็บลงประวัติได้ทุกเมื่อ แต่ไม่ได้รางวัลซ้ำ
+const REOPENABLE_WHEN_DONE = ['phys-balanced-nutrients', 'ment-gratitude-shield', 'ment-reframer-journal']
+
 export default function QuestSection({
   questLogs = [], userData = DEFAULT_USER_DATA, treeStats = DEFAULT_TREE_STATS,
   placedItems = [], decorationPositions = {}, onDecorationMove = () => {}, treeGrowthPulse = null,
   moodEntries = [], onRequestMoodCheckin = () => {}, onFailIncinerator = () => {},
-  onToggle = () => {}, onClose = () => {}, initialTab = 'knowledge',
+  onToggle = () => {}, onClose = () => {}, initialTab = 'knowledge', initialQuest = null,
 }: QuestSectionProps) {
   useLockBodyScroll()
 
@@ -83,8 +87,11 @@ export default function QuestSection({
   const sfxOpts = { volume: settings.sfxVolume, enabled: settings.soundEnabled }
 
   const [activeTab, setActiveTab] = useState<QuestTabId>(initialTab)
+  const { t } = useLanguage()
   const [confirmQuest, setConfirmQuest] = useState<QuestDef | null>(null)
   const [playingQuest, setPlayingQuest] = useState<QuestDef | null>(null)
+  /** ป็อบอัพแจ้งเหตุผลที่กดเควสไม่ได้ (ล็อก/ทำแล้ววันนี้) */
+  const [questNotice, setQuestNotice] = useState<{ icon: string; message: string; title?: string; iconImg?: string } | null>(null)
   const [specialQuest, setSpecialQuest] = useState<QuestDef | null>(null)
 
   /** [ตัดรอบนี้ — เอาวิดีโอ "เดินเปลี่ยนฉาก" เต็มจอออก] เดิมมี isTransitioning/transitionQuestCode/
@@ -110,7 +117,8 @@ export default function QuestSection({
     // ของตัวเอง (GameShell.claim / MindfulAnchorPage.handleClaim / IncineratorPage.handleClaimReward)
     // ถ้าป้ายนี้เล่นซ้ำเสียงเดียวกันจะกลายเป็นเสียงซ้อนกันสองรอบ — ใช้เสียง "ต้นไม้โต" แทน
     // ซึ่งตรงธีม "ได้รางวัล" แต่ชนกับเสียงเดิมของเส้นทางอื่นน้อยกว่ามาก
-    playSfx('TREE_GROW', sfxOpts)
+    // [แก้ตามที่ระบุ] เอาเสียง "ต้นไม้โต" ออก — ใช้เสียงประกายเวทมนตร์แทน (ออร่าที่ต้นไม้เล่นเสียงของตัวเองอีกครั้ง)
+    playSfx('WING', sfxOpts)
     setCelebration({ quest: questDef, skipped, key: Date.now() })
     if (!earnedBadges.includes('mirror-of-truth')) {
       setFeedbackPrompt({ questCode, completedAt: new Date().toISOString(), key: Date.now() })
@@ -232,9 +240,22 @@ export default function QuestSection({
     else setPlayingQuest(quest)
   }
 
+  /** [แก้ตามที่ระบุ] กดเควสไหนเข้าเควสนั้นทันที — ไม่มีป็อบอัพ "เริ่มทำภารกิจ" คั่นอีกแล้ว
+   *  เควสที่เล่นไม่ได้ (ล็อก/ครบโควตา/ทำสำเร็จแล้ววันนี้) แจ้งเหตุผลเป็นป็อบอัพแทน (เดิมข้อความนี้
+   *  อยู่ในป็อบอัพยืนยัน — ตอนนี้โชว์เฉพาะตอนที่ต้องบอกจริงๆ) */
   const handleSelectQuest = (q: QuestDef) => {
-    if (isQuestLocked(q) || q.isPassive) return
-    setConfirmQuest(q)
+    if (q.isPassive) return
+    const lockReason = getLockReason(q)
+    if (lockReason) { setQuestNotice({ icon: '🔒', title: 'ยังเล่นไม่ได้', message: `${q.titleTh}
+${lockReason}` }); return }
+    // [แก้ตามที่ระบุ] เควสแคลอรี่ตาม BMI ถ่ายบันทึกมื้อได้เรื่อยๆ ทั้งวัน — ทำสำเร็จแล้วก็ยังเข้าได้
+    // (ข้างในซ่อนปุ่มรับรางวัลซ้ำเอง ดู BalancedNutrientsQuest.tsx)
+    if (!q.maxPerDay && isCompleted(q.code) && !REOPENABLE_WHEN_DONE.includes(q.code)) {
+      setQuestNotice({ icon: '✅', iconImg: QUEST_ICONS[q.code], title: 'ภารกิจสำเร็จแล้ว', message: `${q.titleTh}
+ทำสำเร็จแล้ววันนี้ กลับมาเล่นใหม่พรุ่งนี้นะ` })
+      return
+    }
+    openQuest(q)
   }
 
   const handleStartQuest = () => {
@@ -255,6 +276,14 @@ export default function QuestSection({
     handleChangeTab(targetTab)
     setConfirmQuest(null)
     openQuest(quest)
+  }
+
+  // [แก้ตามที่ระบุ] กดแจ้งเตือนเควส → เปิดหน้าเล่นเควสนั้นเลย (เช่นคำขอบคุณ → วิดีโอหน้าแรกของเควส)
+  // ใช้แพทเทิร์น "ปรับ state ระหว่าง render เมื่อ prop เปลี่ยน" (ไม่ setState ใน effect)
+  const [handledQuestKey, setHandledQuestKey] = useState<number | null>(null)
+  if (initialQuest && initialQuest.key !== handledQuestKey) {
+    setHandledQuestKey(initialQuest.key)
+    handleOpenQuestByCode(initialQuest.code)
   }
 
   const handleCompletePlaying = (questCode: string, payload?: QuestPlayPayload) => {
@@ -285,17 +314,19 @@ export default function QuestSection({
           สลับหมวดทำผ่านเมนูลอย "เควส" ที่ ActionMenuBar ด้านล่างจอแทน (เหมือน V1) */}
       {/* [แก้] แยกป้ายชื่อโซน (กึ่งกลางจอ) กับปุ่มปิด (มุมขวาบน) ออกจากกันเป็นคนละ element
           เดิมรวมกันเป็นก้อนเดียวชิดขวา ย้ายแค่ป้ายไปกึ่งกลางจะลากปุ่มปิดตามไปด้วยโดยไม่ตั้งใจ */}
-      <div className="quest-section-title-pill">
+      <div className={`quest-section-title-pill lb-banner${specialQuest ? ` quest-section-title-pill--${specialQuest.code}` : ''}`}>
         {/* [อัปเดตรอบนี้] ทั้ง 3 หมวดมีไฟล์รูปจริงครบแล้ว (ดู iconAssets.ts) */}
         <span>
           {QUEST_TAB_ICONS[tab.id]
             ? <img src={QUEST_TAB_ICONS[tab.id]} className="icon-img" alt="" />
-            : tab.emoji} {ZONE_TITLES[activeTab]}
+            : tab.emoji} {/* [แก้ตามที่ระบุ] ระหว่างเปิดเควสแบบเต็มหน้า (เช่น ไดอะรี่ของฉัน) ป้ายกลางบนเป็นชื่อเควสนั้น */}
+          {specialQuest ? specialQuest.titleTh : t(`questZone.${activeTab}`)}
         </span>
       </div>
       <button onClick={onClose} title="ปิด" className="quest-section-close-btn"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       <QuestRewardCelebration data={celebration} onDone={() => setCelebration(null)} />
+      <GameAlert open={questNotice !== null} icon={questNotice?.icon} iconImg={questNotice?.iconImg} title={questNotice?.title} message={questNotice?.message ?? ''} onClose={() => setQuestNotice(null)} />
       <QuestFeedbackPrompt data={feedbackPrompt} onReact={handleQuestFeedback} onDismiss={() => setFeedbackPrompt(null)} />
 
       {globalNotice && (
@@ -356,11 +387,27 @@ export default function QuestSection({
 
         /* [แก้ตามที่ระบุ] ป้ายชื่อโซนลอยกึ่งกลางด้านบนจอ แทน NavbarQuest เดิม (แบบ V1) */
         .quest-section-title-pill {
-          position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 30;
-          display: flex; align-items: center;
-          padding: 8px 16px; border-radius: var(--r-pill);
-          background: var(--bg-card); box-shadow: var(--sh-card);
-          font-family: var(--font-display); font-weight: 700; font-size: 24px; color: var(--text);
+          /* [แก้ตามที่ระบุ] หน้าตาป้ายแบบม้วนกระดาษขอบทองเดียวกับกระดานจัดอันดับ (.lb-banner ใน
+             leaderboardRow.css) + ตัวหนังสือเล็กลงจาก 24px — ที่นี่คุมแค่ตำแหน่ง/ขนาด */
+          position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 30;
+          padding: 5px 18px; font-size: 16px;
+        }
+        @media (max-width: 480px) {
+          .quest-section-title-pill { font-size: 14px; padding: 4px 14px; }
+        }
+        /* [แก้ตามที่ระบุ] รูปประจำหมวด (สุขภาพ/การเรียนรู้/สุขภาพจิต) บนป้ายหัวหน้าเควสใหญ่ขึ้น */
+        /* ไฟล์รูปหมวด (Learning/Physical/Mental Quests.png 798x434) มีขอบโปร่งใสกว้างมาก เนื้อรูปจริง
+           แค่ ~35-40% ของไฟล์ — ขยายกล่องรูปแยกต่อไฟล์ให้เนื้อรูปสูง ~42px แล้วหักขอบโปร่งใสด้วย
+           margin ติดลบ ป้ายจึงไม่สูงตาม (มือถือเล็กลงราว 15%) */
+        .quest-section-title-pill > span { display: inline-flex; align-items: center; gap: 8px; }
+        .quest-section-title-pill .icon-img { vertical-align: middle; flex-shrink: 0; }
+        .quest-section-title-pill .icon-img[src*="Learning Quests"] { width: 118px; height: 118px; margin: -38px -32px; }
+        .quest-section-title-pill .icon-img[src*="Physical Quests"] { width: 99px; height: 99px; margin: -28px -34px; }
+        .quest-section-title-pill .icon-img[src*="Mental Quests"]   { width: 120px; height: 120px; margin: -39px -36px; }
+        @media (max-width: 768px) {
+          .quest-section-title-pill .icon-img[src*="Learning Quests"] { width: 100px; height: 100px; margin: -32px -27px; }
+          .quest-section-title-pill .icon-img[src*="Physical Quests"] { width: 84px; height: 84px; margin: -24px -29px; }
+          .quest-section-title-pill .icon-img[src*="Mental Quests"]   { width: 102px; height: 102px; margin: -33px -31px; }
         }
 
         /* [แก้] ปุ่มปิด — แยกจากป้ายชื่อโซน คงตำแหน่งมุมขวาบนเดิมไว้ นี่คือปุ่มปิดเดียวของ

@@ -348,3 +348,43 @@
 .camera-btn-save:active {
   transform: scale(0.96);
 }
+
+/* ═══ [แก้ตามที่ระบุ] หน้าตรวจรูปหลังถ่าย = ธีมกระดานจัดอันดับ (.lb-card/.lb-btn ใน index.css) ═══ */
+/* [แก้ตามที่ระบุ] เอาพื้นเขียวผืนใหญ่ด้านหลังออก (โปร่งใส เห็นฉากของเควสเดิม) เหลือการ์ดเล็กแบบกระดานจัดอันดับ
+   เว้นล่างพ้น ActionMenuBar และเลื่อนดูได้ถ้าจอเตี้ย (ไม่แสดงแถบเลื่อน) */
+.camera-preview-container {
+  background: none;
+  overflow-y: auto; scrollbar-width: none;
+  padding: 40px 20px calc(var(--gpf-safe-bottom, 90px) + 16px);
+  align-items: safe center;
+}
+.camera-preview-container::-webkit-scrollbar { display: none; }
+.camera-preview-card.lb-card {
+  position: relative;
+  background: var(--lb-card-bg);
+  border: 2px solid var(--lb-gold-edge);
+  padding: 30px 18px 18px;
+  backdrop-filter: none;
+}
+.camera-preview-card .camera-preview-image { max-height: 50vh; }
+.camera-preview-banner {
+  position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+  font-size: 14px; max-width: calc(100% - 40px); overflow: hidden; text-overflow: ellipsis;
+}
+.camera-preview-card .camera-preview-image { border: 2px solid color-mix(in srgb, var(--lb-gold-edge) 60%, transparent); }
+.camera-preview-card .camera-preview-actions { gap: 12px; }
+.camera-preview-card .camera-preview-actions .lb-btn { flex: 1; }
+/* คำแนะนำลอยบนจอกล้อง */
+.camera-hint {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 5;
+  max-width: calc(100% - 120px); white-space: normal; text-align: center; font-size: 13px;
+}
+
+
+/* [แก้ตามที่ระบุ] ปุ่มแกลเลอรี / สลับกล้อง อยู่ชิดใกล้ปุ่มถ่ายรูปตรงกลาง (ไม่กระจายไปชิดขอบซ้าย-ขวา)
+   ทุกขนาดจอ (จอกล้องลอยทับทุกอย่างรวม ActionMenuBar อยู่แล้ว จึงไม่ต้องเว้นล่างเพิ่ม) */
+.camera-controls-bottom {
+  justify-content: center;
+  gap: 28px;
+  padding: 32px 20px calc(env(safe-area-inset-bottom, 0px) + 48px);
+}

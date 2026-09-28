@@ -24,9 +24,12 @@ interface StatsOverlayProps {
   bmi: number | null
   mapName: string
   mapProgressPct: number
+  /** [แก้ตามที่ระบุ] ทริป 3 วัน — วันที่เดินครบเป้าหมายแล้ว */
+  daysDone?: number
+  totalDays?: number
 }
 
-export default function StatsOverlay({ todaySteps, dailyStepTarget, bmi, mapName, mapProgressPct }: StatsOverlayProps) {
+export default function StatsOverlay({ todaySteps, dailyStepTarget, bmi, mapName, mapProgressPct, daysDone = 0, totalDays = 3 }: StatsOverlayProps) {
   const dailyPct = dailyStepTarget > 0 ? Math.min(100, (todaySteps / dailyStepTarget) * 100) : 0
   const clampedTripPct = Math.min(100, Math.max(0, mapProgressPct))
 
@@ -41,6 +44,17 @@ export default function StatsOverlay({ todaySteps, dailyStepTarget, bmi, mapName
           </span>
           <div className="stats-overlay__track">
             <div className="stats-overlay__fill" style={{ width: `${dailyPct}%` }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="stats-overlay__tile">
+        <span className="stats-overlay__tile-icon" aria-hidden="true">📅</span>
+        <div className="stats-overlay__tile-body">
+          <span className="stats-overlay__tile-label">วันที่เดินครบเป้า</span>
+          <span className="stats-overlay__tile-value">{daysDone}/{totalDays}</span>
+          <div className="stats-overlay__track">
+            <div className="stats-overlay__fill stats-overlay__fill--trip" style={{ width: `${(Math.min(daysDone, totalDays) / totalDays) * 100}%` }} />
           </div>
         </div>
       </div>

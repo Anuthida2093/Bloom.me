@@ -34,7 +34,7 @@ export default function SafetyNetPage({ onClose, onStartCalmingQuest }: SafetyNe
       <button className="safety-net__close" onClick={onClose} title="ปิด" aria-label="ปิดกล่องพยาบาล"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       <div className="safety-net__inner">
-        <div className="safety-net__box">🧰</div>
+        <div className="safety-net__box"><img src={BADGE_ICONS.medicalBox} alt="กล่องพยาบาล" className="safety-net__box-img" /></div>
         <h1>กล่องพยาบาลเปิดอยู่ตรงนี้</h1>
         <p className="safety-net__lead">
           คุณ{userData.username ? ` ${userData.username}` : ''} ต้นไม้ของคุณกำลังส่งสัญญาณว่าคุณเหนื่อยล้าเกินไปแล้ว

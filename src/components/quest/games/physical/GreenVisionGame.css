@@ -27,3 +27,32 @@
 @media (prefers-reduced-motion: reduce) {
   .green-vision__veil { transition: none; }
 }
+/* ═══ [แก้ตามที่ระบุ] ป็อปอัพเลือกวิธีพักสายตา (กรอบแบบกระดานจัดอันดับ) + จอดำเต็มจอ ═══ */
+.green-vision__choose {
+  position: fixed; inset: 0; z-index: 2500;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(0, 0, 0, .45);
+}
+.green-vision__choose-card {
+  position: relative; width: min(360px, 100%);
+  display: flex; flex-direction: column; align-items: stretch; gap: 12px;
+  padding: 36px 22px 20px; border-radius: 22px;
+  border: 2px solid var(--lb-gold-edge);
+  font-family: var(--font-display); text-align: center;
+}
+.green-vision__choose-banner { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); font-size: 15px; }
+.green-vision__choose-text { margin: 0 0 4px; color: var(--lb-card-text); font-size: 15px; }
+.green-vision__notify {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  color: var(--lb-card-text-sub); font-size: 13.5px; cursor: pointer; margin-top: -4px;
+}
+.green-vision__notify input { width: 18px; height: 18px; accent-color: var(--g500); }
+.green-vision__choose-cancel {
+  background: none; border: none; color: var(--lb-card-text-sub);
+  font-family: var(--font-display); font-size: 13.5px; cursor: pointer; padding: 4px;
+}
+.green-vision__blackout {
+  position: fixed; inset: 0; z-index: 4000; background: #000; cursor: pointer;
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 40px;
+}
+.green-vision__blackout-hint { color: rgba(255, 255, 255, .18); font-size: 12px; font-family: var(--font-display); }

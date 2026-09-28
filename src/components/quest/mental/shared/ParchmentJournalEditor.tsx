@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTypewriter } from '../../../../hooks/useTypewriter'
-import { playSfx } from '../../../../utils/audioPlayer'
+import { playSfx, stopSfx } from '../../../../utils/audioPlayer'
 
 const C_1 = '#2D2013'
 const C_2 = '#C7A34F'
@@ -39,13 +39,6 @@ interface ParchmentJournalEditorProps {
   /** [เพิ่มตามที่ระบุ — ข้อ 10] ไอคอนรูปจริงของเควส (QUEST_ICONS) แทนอิโมจิ 📖/🛡️ เดิมบน
    *  popup แนะนำก่อนเข้า — ไม่ใส่ = fallback เป็นอิโมจิเดิมตาม theme */
   askIconSrc?: string
-  /** [เพิ่มตามที่ระบุ — ข้อ 10] สีปุ่ม "เริ่มเขียน" เฉพาะจุด — แยกสีต่อเควส (เขียวพาสเทลสำหรับ
-   *  สมุดบันทึกรากไม้เรืองแสง, เหลืองพาสเทลสำหรับเกราะแห่งความขอบคุณ) แทน gradient ส้ม-ม่วง
-   *  เดิมที่ใช้ theme.gold+accent ร่วมกันทั้ง 2 เควส ไม่ใส่ = ใช้ค่าเดิม (theme.gold→accent) */
-  askButtonBg?: string
-  /** [เพิ่มตามที่ระบุ — ข้อ 11] สีปุ่มส่ง (stage 'writing') เฉพาะจุด — ใช้เฉพาะ Reframer Journal
-   *  (เปลี่ยนเป็นเขียวพาสเทล) Gratitude Shield ไม่ส่งค่านี้มา จึงใช้สีเดิมต่อไป */
-  submitButtonBg?: string
 }
 
 /**
@@ -55,14 +48,13 @@ interface ParchmentJournalEditorProps {
  * done (โชว์คำสะท้อนจาก AI แบบพิมพ์ดีด + ปุ่มรับรางวัล)
  */
 export default function ParchmentJournalEditor({
-  theme, accent, askQuestion, placeholder, submitLabel, generateReflection, onSaveEntry, onComplete,
-  askIconSrc, askButtonBg, submitButtonBg,
+  theme, askQuestion, placeholder, submitLabel, generateReflection, onSaveEntry, onComplete, askIconSrc,
 }: ParchmentJournalEditorProps) {
   const colors = THEME_COLORS[theme]
   const [stage, setStage] = useState<Stage>('ask')
   const [text, setText] = useState('')
   const [reflection, setReflection] = useState<string | null>(null)
-  const { displayedText, isDone } = useTypewriter(reflection ?? '', 24, 200, () => playSfx('KEYPRESS'))
+  const { displayedText, isDone } = useTypewriter(reflection ?? '', 24, 200, () => playSfx('KEYPRESS'), () => stopSfx('KEYPRESS'))
 
   useEffect(() => {
     if (stage !== 'reflecting') return
@@ -85,69 +77,60 @@ export default function ParchmentJournalEditor({
   }
 
   return (
-    <div className="parchment-editor" style={{ background: colors.bg }}>
+    // [แก้ตามที่ระบุ] พื้นหลังแบบกระดานจัดอันดับ (--bg) แทนฉากเข้มเดิมของแต่ละธีม
+    <div className="parchment-editor">
       <AnimatePresence mode="wait">
         {stage === 'ask' && (
-          <motion.div key="ask" className="parchment-editor__ask-panel" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+          <motion.div key="ask" className="parchment-editor__ask-panel lb-card" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
             {askIconSrc
-              ? <img src={askIconSrc} alt="" style={{ width: 56, height: 56, objectFit: 'contain', marginBottom: 12 }} />
+              ? <img src={askIconSrc} alt="" style={{ width: 64, height: 64, objectFit: 'contain', marginBottom: 12 }} />
               : <div style={{ fontSize: 48, marginBottom: 12 }}>{theme === 'golden' ? '🛡️' : '📖'}</div>}
             <p className="parchment-editor__ask-text">{askQuestion}</p>
-            <button className="parchment-editor__btn" style={{ background: askButtonBg ?? `linear-gradient(135deg, ${colors.gold}, ${accent})` }} onClick={() => setStage('writing')}>
-              🖋️ เริ่มเขียน
+            <button className="lb-btn lb-btn--wide" onClick={() => setStage('writing')}>
+              เริ่มเขียน
             </button>
           </motion.div>
         )}
 
         {(stage === 'writing' || stage === 'reflecting') && (
           <motion.div key="writing" className="parchment-editor__writing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            {/* [ตามที่ขอ] กระดาษ parchment สไตล์แฟนตาซี/ราชวัง — ข้อความ sync แบบ real-time */}
+            {/* [แก้ตามที่ระบุ] ตัวกระดาษคือช่องพิมพ์เลย — แตะที่กระดาษแล้วเริ่มเขียนได้ทันที
+                (เอาแถบพิมพ์สีขาวด้านล่างออก) กระดาษยาวขึ้น ปุ่มบันทึกอยู่ใต้กระดาษ */}
             <div className="parchment-editor__paper" style={{ background: colors.paper, borderColor: colors.paperEdge }}>
               <div className="parchment-editor__paper-corner parchment-editor__paper-corner--tl" />
               <div className="parchment-editor__paper-corner parchment-editor__paper-corner--br" />
-              <p className="parchment-editor__paper-text" style={{ color: colors.ink }}>
-                {text || <span style={{ opacity: 0.35 }}>{placeholder}</span>}
-                <span className="parchment-editor__paper-cursor" style={{ background: colors.ink }} />
-              </p>
-            </div>
-
-            <div className="parchment-editor__input-bar">
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder={placeholder}
-                rows={2}
                 disabled={stage === 'reflecting'}
-                className="parchment-editor__textarea"
+                autoFocus
+                className="parchment-editor__paper-input"
+                style={{ color: colors.ink, caretColor: colors.ink }}
+                aria-label={placeholder}
               />
-              <button
-                className="parchment-editor__btn"
-                style={{
-                  background: submitButtonBg ?? `linear-gradient(135deg, ${colors.gold}, ${accent})`,
-                  width: 'auto',        /* ยกเลิกการขยายเต็มกว้าง */
-                  padding: '16px 16px',  /* ลดขนาดขอบบนล่างซ้ายขวาให้เล็กลง */
-                  whiteSpace: 'nowrap', /* ป้องกันข้อความตกบรรทัด */
-                  flexShrink: 0         /* ไม่ให้ปุ่มโดนบีบจนเสียทรง */
-                }}
-                onClick={handleSubmit}
-                disabled={!text.trim() || stage === 'reflecting'}
-              >
-                {stage === 'reflecting' ? '✨ กำลังอ่าน...' : submitLabel}
-              </button>
             </div>
+
+            <button
+              className="lb-btn parchment-editor__save"
+              onClick={handleSubmit}
+              disabled={!text.trim() || stage === 'reflecting'}
+            >
+              {stage === 'reflecting' ? 'กำลังอ่าน...' : submitLabel}
+            </button>
           </motion.div>
         )}
 
         {stage === 'done' && (
-          <motion.div key="done" className="parchment-editor__reflection" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="parchment-editor__reflection-title" style={{ color: colors.gold }}>✨ เสียงสะท้อนกลับมา</div>
+          <motion.div key="done" className="parchment-editor__reflection lb-card" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="parchment-editor__reflection-title">เสียงสะท้อนกลับมา</div>
             <p className="parchment-editor__reflection-text">
               {displayedText}
               {!isDone && <span className="parchment-editor__reflection-caret">▍</span>}
             </p>
             {isDone && (
-              <button className="parchment-editor__btn" style={{ background: `linear-gradient(135deg, ${colors.gold}, ${accent})`, marginTop: 16 }} onClick={handleClaim}>
-                🌟 รับพลัง
+              <button className="lb-btn lb-btn--wide" style={{ marginTop: 16 }} onClick={handleClaim}>
+                รับพลัง
               </button>
             )}
           </motion.div>
@@ -155,11 +138,13 @@ export default function ParchmentJournalEditor({
       </AnimatePresence>
 
       <style>{`
-        .parchment-editor { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; overflow-y: auto; }
+        .parchment-editor {
+          position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+          padding: 72px 20px calc(var(--gpf-safe-bottom, 90px) + 20px); overflow-y: auto;
+          background: var(--bg); font-family: var(--font-display);
+        }
 
         .parchment-editor__ask-panel {
-  --lc-bg-7: rgba(255,255,255,.97);
-  background: var(--lc-bg-7);
   border-radius: 26px;
   padding: 32px 26px;
   max-width: 380px;
@@ -169,8 +154,7 @@ export default function ParchmentJournalEditor({
 }
         .parchment-editor__ask-text {
   font-size: 20px;
-  --lc-text-6: #4A3520;
-  color: var(--lc-text-6);
+  color: var(--lb-card-text);
   line-height: 1.7;
   margin-bottom: 20px;
 }
@@ -179,7 +163,7 @@ export default function ParchmentJournalEditor({
   padding: 13px 24px;
   border: none;
   border-radius: 99px;
-  --lc-text-5: #3A2400;
+  --lc-text-5: var(--fixed-black);
   color: var(--lc-text-5);
   font-family: 'Fredoka One';
   font-size: 14px;
@@ -197,7 +181,9 @@ export default function ParchmentJournalEditor({
         .parchment-editor__paper {
   position: relative;
   width: 100%;
-  min-height: 300px;
+  /* [แก้ตามที่ระบุ] กระดาษยาวขึ้น */
+  min-height: min(62vh, 560px);
+  display: flex;
   border-radius: 8px;
   border: 3px solid;
   --lc-shadow-4: rgba(120,90,40,.15);
@@ -213,39 +199,21 @@ export default function ParchmentJournalEditor({
 }
         .parchment-editor__paper-corner--tl { top: 8px; left: 8px; border-right: none; border-bottom: none; }
         .parchment-editor__paper-corner--br { bottom: 8px; right: 8px; border-left: none; border-top: none; }
-        .parchment-editor__paper-text {
-          font-family: 'Georgia', serif; font-size: 18px; line-height: 1.9; white-space: pre-wrap; word-break: break-word;
+        .parchment-editor__paper-input {
+          flex: 1; width: 100%; min-height: 100%; resize: none; border: none; outline: none; background: transparent;
+          font-family: 'Georgia', var(--font-display), serif; font-size: 18px; line-height: 1.9;
         }
-        .parchment-editor__paper-cursor {
-          display: inline-block; width: 2px; height: 16px; margin-left: 2px; vertical-align: middle;
-          animation: parchmentCursorBlink .9s step-end infinite;
-        }
+        .parchment-editor__paper-input::placeholder { color: inherit; opacity: .38; }
+        .parchment-editor__paper-input:disabled { opacity: .7; }
+        .parchment-editor__save { min-width: min(320px, 100%); font-size: var(--fs-lg); }
         @keyframes parchmentCursorBlink { 50% { opacity: 0; } }
 
-        .parchment-editor__input-bar { width: 100%; display: flex; gap: 8px; align-items: flex-end; }
-        .parchment-editor__textarea {
-  flex: 1;
-  padding: 10px 16px;
-  border-radius: 16px;
-  border: none;
-  resize: none;
-  outline: none;
-  font-family: Nunito;
-  font-size: 16px;
-  background: var(--glass-w-95);
-  --lc-text-2: #2D2013;
-  color: var(--lc-text-2);
-}
-        .parchment-editor__textarea:disabled { opacity: .6; }
-
         .parchment-editor__reflection {
-          max-width: 480px; width: 100%; background: var(--glass-w-10); border: 1px solid var(--glass-w-25);
-          border-radius: 24px; padding: 26px; backdrop-filter: blur(8px);
+          max-width: 480px; width: 100%; border-radius: 24px; padding: 26px;
         }
-        .parchment-editor__reflection-title { font-family: 'Fredoka One'; font-size: 15px; margin-bottom: 14px; }
+        .parchment-editor__reflection-title { font-size: 15px; margin-bottom: 14px; color: var(--lb-card-text-sub); }
         .parchment-editor__reflection-text {
-  --lc-text-1: #F5EFE9;
-  color: var(--lc-text-1);
+  color: var(--lb-card-text);
   font-size: 18px;
   line-height: 1.9;
   min-height: 60px;
@@ -253,7 +221,7 @@ export default function ParchmentJournalEditor({
         .parchment-editor__reflection-caret { animation: parchmentCursorBlink .8s step-end infinite; }
 
         @media (prefers-reduced-motion: reduce) {
-          .parchment-editor__paper-cursor, .parchment-editor__reflection-caret { animation: none; }
+          .parchment-editor__reflection-caret { animation: none; }
         }
       `}</style>
     </div>

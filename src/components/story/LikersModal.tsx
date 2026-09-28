@@ -1,6 +1,7 @@
 import type { PostData } from '../../types'
 import { useSocial } from '../../context/SocialContext'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import PostPreviewMini from './PostPreviewMini'
 
 /*============================================================================*\
   LikersModal — [ใหม่ — ข้อ 10] กดตัวเลขไลค์ (ไม่ใช่ไอคอนหัวใจ) แล้วเปิด popup รายชื่อคน
@@ -12,8 +13,10 @@ export default function LikersModal({ post, onClose }: { post: PostData; onClose
 
   return (
     <div className="story-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="story-modal-card">
+      <div className="story-modal-card story-modal-card--post">
         <div className="story-modal-card__title">ถูกใจ ({post.likedBy.length})</div>
+        {/* [แก้ตามที่ระบุ] ป็อปอัพแบบการ์ดโพสต์ — โชว์โพสต์นี้ไว้บนสุด */}
+        <PostPreviewMini post={post} />
         {post.likedBy.length === 0 ? (
           <div className="story-empty-state">ยังไม่มีใครกดถูกใจโพสต์นี้เลย</div>
         ) : (

@@ -19,10 +19,9 @@
   align-items: center;
   text-align: center;
   gap: 8px;
-  padding: 22px 30px;
-  border-radius: var(--r-lg);
-  background: var(--bg-card);
-  box-shadow: var(--sh-modal);
+  position: relative;
+  padding: 30px 34px 22px;
+  min-width: 240px;
   animation: questCelebrationPop 2.2s cubic-bezier(.22,1,.36,1) both;
 }
 
@@ -39,8 +38,12 @@
 .quest-celebration__title {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: var(--fs-md);
-  color: var(--text);
+  font-size: var(--fs-lg);
+  color: var(--lb-card-text);
+}
+.quest-celebration__banner {
+  position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+  font-size: 14px;
 }
 
 .quest-celebration__rewards {
@@ -49,7 +52,7 @@
   margin-top: 2px;
   font-size: var(--fs-sm);
   font-weight: 800;
-  color: var(--text-sub);
+  color: var(--lb-card-text-sub);
 }
 
 .quest-celebration__sparkles {

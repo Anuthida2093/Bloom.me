@@ -31,8 +31,9 @@ export default function AppFeaturesFooter() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 'clamp(.5rem, 2vw, .75rem)' }}>
         {CATEGORIES.map((c) => (
           <div key={c.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <div style={{ filter: 'drop-shadow(0 2px 6px var(--glass-b-45))' }}>
-              <ImageWithFallback src={c.icon} fallback={c.fallback} size="clamp(1.6rem, 6vw, 1.9rem)" />
+            {/* [แก้ตามที่ระบุ] รูปด้านล่างหน้า Welcome ใหญ่ขึ้น — กล่องใหญ่ + margin ติดลบหักขอบโปร่งใสของไฟล์ */}
+            <div style={{ filter: 'drop-shadow(0 2px 6px var(--glass-b-45))', margin: 'calc(clamp(5.5rem, 20vw, 7rem) * -0.28) 0' }}>
+              <ImageWithFallback src={c.icon} fallback={c.fallback} size="clamp(5.5rem, 20vw, 7rem)" />
             </div>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(.85rem, 3.2vw, 1rem)', fontWeight: 600, lineHeight: 1.25 }}>
               {t(c.label)}

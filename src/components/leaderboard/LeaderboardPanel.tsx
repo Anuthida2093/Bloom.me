@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { MBTI_TREE_THEME, type MbtiType } from '../../types';
 import MiniTree from '../tree/MiniTree';
-import { RANK_CATEGORIES, MOCK_LEADERBOARD_PLAYERS, type LeaderboardPlayer, type RankCategory } from '../../config/leaderboardData';
+import { RANK_CATEGORIES, type LeaderboardPlayer, type RankCategory } from '../../config/leaderboardData';
+import { useLeaderboard } from '../../hooks/useLeaderboard';
 import { BADGE_ICONS, RANK_CATEGORY_ICONS } from '../../config/iconAssets';
 import './leaderboardRow.css';
+import { useLanguage } from '../../context/LanguageContext';
 
 const C_3 = 'rgba(244,196,48,.12)'
 const C_4 = 'rgba(180,180,180,.1)'
@@ -48,8 +50,12 @@ export default function LeaderboardPanel({
   onMyRankChange,
 }: LeaderboardPanelProps) {
   const [cat, setCat] = useState<RankCategory>('level');
+  const { t } = useLanguage();
 
-  const sorted = [...MOCK_LEADERBOARD_PLAYERS].sort(
+  // รายชื่อจาก backend จริง (GET /users/leaderboard) ในโหมด live / รายชื่อจำลองในโหมด mock
+  const players = useLeaderboard(cat);
+  const overallPlayers = useLeaderboard('level');
+  const sorted = [...players].sort(
     (a, b) => b[cat] - a[cat]
   );
 
@@ -65,7 +71,7 @@ export default function LeaderboardPanel({
     emotionStack: myEmotionStack,
   };
   const computeMyRank = (category: RankCategory) =>
-    MOCK_LEADERBOARD_PLAYERS.filter((p) => p[category] > myStatsByCategory[category]).length + 1;
+    (category === cat ? players : overallPlayers).filter((p) => p[category] > myStatsByCategory[category]).length + 1;
 
   const myRankForCurrentCat = computeMyRank(cat);
   const myRankOverall = computeMyRank('level');
@@ -92,8 +98,8 @@ export default function LeaderboardPanel({
       {/* ปุ่มเปิด/ปิด (‹ ›) — อยู่นอกเงื่อนไข collapsed เพื่อให้คงอยู่เสมอ */}
       <button
         onClick={onToggle}
-        title={collapsed ? 'กางกระดานจัดอันดับ' : 'ซ่อนกระดานจัดอันดับ'}
-        aria-label={collapsed ? 'กางกระดานจัดอันดับ' : 'ซ่อนกระดานจัดอันดับ'}
+        title={collapsed ? t('lb.expand') : t('lb.collapse')}
+        aria-label={collapsed ? t('lb.expand') : t('lb.collapse')}
         className="lb-toggle"
         style={{
           top: 24,
@@ -114,7 +120,7 @@ export default function LeaderboardPanel({
       >
         {/* ป้ายหัวข้อแบบม้วนกระดาษ ลอยทับขอบบนของกรอบ */}
         <div className="lb-frame__banner">
-          <img src={BADGE_ICONS.trophy} className="icon-img" alt="" /> จัดอันดับ
+          <img src={BADGE_ICONS.trophy} className="icon-img" alt="" /> {t('lb.title')}
         </div>
 
         {/* แผ่นเนื้อหาสีครีม: แท็บหมวด + รายชื่อ */}
@@ -124,8 +130,8 @@ export default function LeaderboardPanel({
               <button
                 key={c.id}
                 onClick={() => setCat(c.id)}
-                title={c.label}
-                aria-label={c.label}
+                title={t(`lb.cat.${c.id}`)}
+                aria-label={t(`lb.cat.${c.id}`)}
                 aria-pressed={cat === c.id}
                 className={`lb-frame__tab${cat === c.id ? ' lb-frame__tab--active' : ''}`}
               >
@@ -182,7 +188,7 @@ export default function LeaderboardPanel({
                     </div>
                   </div>
 
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, color: 'var(--g600)', flexShrink: 0 }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, color: 'var(--lb-score, var(--g700))', flexShrink: 0 }}>
                     {cat === 'level' ? p.level : p[cat]}
                   </span>
                 </div>
@@ -211,14 +217,14 @@ export default function LeaderboardPanel({
                 textOverflow: 'ellipsis',
               }}
             >
-              {myName || 'คุณ'}
+              {myName || t('lb.you')}
             </div>
             <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, lineHeight: 1.2 }}>
               {myMbti}
             </div>
           </div>
 
-          <span style={{ fontSize: 11, color: myTheme.accent, fontWeight: 800, flexShrink: 0 }}>ฉัน</span>
+          <span style={{ fontSize: 11, color: myTheme.accent, fontWeight: 800, flexShrink: 0 }}>{t('lb.me')}</span>
         </div>
       </div>
     </div>

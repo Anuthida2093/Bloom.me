@@ -1,6 +1,32 @@
 import { http, API_MODE, mockDelay, ApiError } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
-import type { PostData, PostCommentData } from '../../types'
+import type { PostData, PostCommentData, MoodTypeValue } from '../../types'
+import { notSupportedYet, toCommentData, toPostData } from './adapters'
+import { getCachedMe } from './user.api'
+
+/** โหมด live: ดึงโพสต์เดียวจากฟีด (backend ยังไม่มี GET /posts/:id) */
+async function fetchFeedPost(postId: string): Promise<PostData> {
+  const post = (await getFeedPosts()).find((p) => p.id === postId)
+  if (!post) throw new ApiError(404, 'ไม่พบโพสต์นี้ — อาจถูกลบไปแล้ว')
+  return post
+}
+
+/** โหมด live: เติมคอมเมนต์ + รายชื่อคนกดไลก์ (GET /posts/:id/comments, /likes) — ยิงเฉพาะโพสต์
+ *  ที่มีคอมเมนต์/ไลก์จริง (ดูจาก commentCount/likeCount ในฟีด) ไม่ยิงเปล่าๆ ทุกโพสต์ */
+async function withCommentsAndLikers(
+  post: PostData, counts: { commentCount: number; likeCount: number }, me: { id: string; username: string },
+): Promise<PostData> {
+  const [comments, likedBy] = await Promise.all([
+    counts.commentCount > 0
+      ? http.get<Record<string, unknown>[]>(`/posts/${post.id}/comments`).then((rows) => rows.map((c) => toCommentData(c, me)))
+      : Promise.resolve([]),
+    counts.likeCount > 0
+      ? http.get<{ userId: string; username: string }[]>(`/posts/${post.id}/likes`)
+        .then((rows) => rows.map((l) => ({ userId: l.userId, username: l.username })))
+      : Promise.resolve([]),
+  ])
+  return { ...post, comments, likedBy }
+}
 
 /*============================================================================*\
   post.api.ts — [ไฟล์ใหม่] คำขอที่เกี่ยวกับฟีดโพสต์ (Threads-style)
@@ -38,13 +64,47 @@ export async function getFeedPosts(): Promise<PostData[]> {
     // แต่ SEED_POSTS ตอนตั้งต้นเรียงตามที่เขียนไว้ตรงๆ จึง sort อีกชั้นกันพลาด
     return [...getDb().posts].map((p) => withRepostDefaults(p, myUserId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }
-  return http.get<PostData[]>('/posts')
+  // backend: GET /api/posts?scope=all → { likeCount, commentCount, likedByMe, author } ต่อโพสต์
+  const me = await getCachedMe()
+  const raw = await http.get<Record<string, unknown>[]>('/posts?scope=all')
+  const moods = readPostMoods()
+  const extras = readPostExtras()
+  return Promise.all(raw.map((p) => withCommentsAndLikers(
+    { ...toPostData(p, me), mood: moods[p.id as string] ?? null, ...(extras[p.id as string] ?? {}) },
+    { commentCount: (p.commentCount as number | undefined) ?? 0, likeCount: (p.likeCount as number | undefined) ?? 0 },
+    me,
+  )))
 }
 
 export interface CreatePostPayload {
   content: string
   imageUrl?: string | null
+  /** [เพิ่มตามที่ระบุ] รูปทั้งหมด (สูงสุด 20) — imageUrl จะเป็นรูปแรกเสมอ */
+  imageUrls?: string[]
+  tags?: string[]
   isAnonymous: boolean
+  mood?: MoodTypeValue | null
+}
+
+/* [เพิ่มตามที่ระบุ] รูปหลายรูป/แฮชแท็ก (โหมด live) — backend รับได้แค่ imageUrl รูปเดียวและยังไม่มีคอลัมน์ tags
+   จึงเก็บส่วนที่เหลือไว้ในเครื่องผูกกับ id โพสต์ (แบบเดียวกับ mood ด้านล่าง) */
+const POST_EXTRAS_KEY = 'bloom.postExtras'
+type PostExtras = { imageUrls?: string[]; tags?: string[] }
+function readPostExtras(): Record<string, PostExtras> {
+  try { return JSON.parse(localStorage.getItem(POST_EXTRAS_KEY) ?? '{}') as Record<string, PostExtras> } catch { return {} }
+}
+function rememberPostExtras(postId: string, extras: PostExtras): void {
+  try { localStorage.setItem(POST_EXTRAS_KEY, JSON.stringify({ ...readPostExtras(), [postId]: extras })) } catch { /* storage เต็ม/ปิดอยู่ */ }
+}
+
+/* ความรู้สึกของโพสต์ (โหมด live) — backend ยังไม่มีคอลัมน์ mood ใน posts จึงเก็บในเครื่อง
+   ผูกกับ id โพสต์ ให้คนโพสต์เห็นป้ายความรู้สึกของตัวเอง (เพิ่มคอลัมน์แล้วค่อยส่งขึ้นเซิร์ฟเวอร์แทน) */
+const POST_MOOD_KEY = 'bloom.postMoods'
+function readPostMoods(): Record<string, MoodTypeValue> {
+  try { return JSON.parse(localStorage.getItem(POST_MOOD_KEY) ?? '{}') as Record<string, MoodTypeValue> } catch { return {} }
+}
+function rememberPostMood(postId: string, mood: MoodTypeValue): void {
+  try { localStorage.setItem(POST_MOOD_KEY, JSON.stringify({ ...readPostMoods(), [postId]: mood })) } catch { /* storage ปิดอยู่ */ }
 }
 
 export async function createPost(payload: CreatePostPayload): Promise<PostData> {
@@ -56,7 +116,9 @@ export async function createPost(payload: CreatePostPayload): Promise<PostData> 
       userId: db.user.id,
       authorName: db.user.username,
       content: payload.content,
-      imageUrl: payload.imageUrl ?? null,
+      imageUrl: payload.imageUrls?.[0] ?? payload.imageUrl ?? null,
+      imageUrls: payload.imageUrls ?? [],
+      tags: payload.tags ?? [],
       isAnonymous: payload.isAnonymous,
       likedBy: [],
       likeCount: 0,
@@ -65,11 +127,22 @@ export async function createPost(payload: CreatePostPayload): Promise<PostData> 
       repostedByMe: false,
       repostCount: 0,
       createdAt: new Date().toISOString(),
+      mood: payload.mood ?? null,
     }
     updateDb((d) => { d.posts = [post, ...d.posts] })
     return post
   }
-  return http.post<PostData>('/posts', payload)
+  const me = await getCachedMe()
+  const raw = await http.post<Record<string, unknown>>('/posts', {
+    content: payload.content,
+    isAnonymous: payload.isAnonymous,
+    ...((payload.imageUrls?.[0] ?? payload.imageUrl) ? { imageUrl: payload.imageUrls?.[0] ?? payload.imageUrl } : {}),
+  })
+  const created = toPostData(raw, me)
+  if (payload.mood) rememberPostMood(created.id, payload.mood)
+  const extras = { imageUrls: payload.imageUrls ?? [], tags: payload.tags ?? [] }
+  if (extras.imageUrls.length > 1 || extras.tags.length > 0) rememberPostExtras(created.id, extras)
+  return { ...created, mood: payload.mood ?? null, ...extras }
 }
 
 /** [แก้รอบนี้ — ข้อ 10] ต้องเก็บ "ใครกดไลค์" จริง ไม่ใช่แค่ +1/-1 ตัวเลข เพื่อให้กดดู
@@ -92,7 +165,9 @@ export async function toggleLikePost(postId: string): Promise<PostData> {
     if (!updated) throw new ApiError(404, 'ไม่พบโพสต์นี้ — อาจถูกลบไปแล้ว')
     return updated
   }
-  return http.post<PostData>(`/posts/${postId}/like`)
+  // backend ตอบแค่ { liked, likeCount } — ประกอบกลับเป็นโพสต์เต็มจากฟีด
+  const res = await http.post<{ liked: boolean; likeCount: number }>(`/posts/${postId}/like`)
+  return { ...(await fetchFeedPost(postId)), likedByMe: res.liked, likeCount: res.likeCount }
 }
 
 /** [ใหม่ — ฟีเจอร์สตอรี่] รีโพสต์ — ยึด pattern เดียวกับ toggleLikePost เป๊ะ (toggle + กันติดลบ)
@@ -114,7 +189,7 @@ export async function toggleRepost(postId: string): Promise<PostData> {
     if (!updated) throw new ApiError(404, 'ไม่พบโพสต์นี้ — อาจถูกลบไปแล้ว')
     return updated
   }
-  return http.post<PostData>(`/posts/${postId}/repost`)
+  return notSupportedYet('การรีโพสต์')
 }
 
 /** [ใหม่ — ฟีเจอร์สตอรี่ ข้อ 6] แก้ไขโพสต์ของตัวเอง — เนื้อหา + สลับสถานะสาธารณะ/ไม่ระบุตัวตน
@@ -139,7 +214,8 @@ export async function updatePost(postId: string, patch: UpdatePostPayload): Prom
     if (!updated) throw new ApiError(404, 'ไม่พบโพสต์นี้ หรือคุณไม่ใช่เจ้าของโพสต์')
     return updated
   }
-  return http.patch<PostData>(`/posts/${postId}`, patch)
+  await http.patch(`/posts/${postId}`, patch)
+  return fetchFeedPost(postId)
 }
 
 export interface AddCommentPayload {
@@ -168,5 +244,13 @@ export async function addComment(input: AddCommentPayload): Promise<PostData> {
     if (!updated) throw new ApiError(404, 'ไม่พบโพสต์นี้ — อาจถูกลบไปแล้ว')
     return updated
   }
-  return http.post<PostData>(`/posts/${input.postId}/comments`, { text: input.text })
+  // backend: body { content } — แล้วดึงโพสต์พร้อมคอมเมนต์ทั้งหมดล่าสุดจากฟีด
+  await http.post(`/posts/${input.postId}/comments`, { content: input.text })
+  return fetchFeedPost(input.postId)
+}
+
+/** รายงานโพสต์ไม่เหมาะสม — backend: POST /api/posts/:id/report (กดซ้ำได้ 409) */
+export async function reportPost(postId: string, reason?: string): Promise<void> {
+  if (API_MODE === 'mock') { await mockDelay(120); return }
+  await http.post(`/posts/${postId}/report`, reason ? { reason } : {})
 }

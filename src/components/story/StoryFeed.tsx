@@ -1,5 +1,7 @@
+import { useMemo, useState } from 'react'
 import { usePosts } from '../../context/PostContext'
 import { useUser } from '../../context/UserContext'
+import { useSocial } from '../../context/SocialContext'
 import PostCard from './PostCard'
 
 /*============================================================================*\
@@ -16,6 +18,20 @@ function initialOf(name: string): string {
 export default function StoryFeed({ onCompose }: { onCompose: () => void }) {
   const { posts, isLoadingPosts } = usePosts()
   const { userData } = useUser()
+  const { isFollowing } = useSocial()
+  // เวลาอ้างอิงตอนเปิดฟีด (คงที่ระหว่างเปิดอยู่ — ลำดับโพสต์ไม่กระโดดเองระหว่างเลื่อนอ่าน)
+  const [openedAt] = useState(() => Date.now())
+
+  /* [แก้ตามที่ระบุ] ฟีดเห็นโพสต์ของทุกคน (ไม่ใช่แค่เพื่อน) แต่โพสต์ใหม่ของเพื่อน (คนที่เราติดตาม)
+     ภายใน 3 วันล่าสุดขึ้นก่อนเป็นพิเศษ ที่เหลือเรียงใหม่สุดก่อนตามปกติ */
+  const orderedPosts = useMemo(() => {
+    const FRIEND_BOOST_MS = 3 * 24 * 60 * 60 * 1000
+    const isFreshFriendPost = (p: typeof posts[number]) =>
+      !p.isAnonymous && p.userId !== userData.id && isFollowing(p.userId) &&
+      openedAt - new Date(p.createdAt).getTime() < FRIEND_BOOST_MS
+    const byNewest = [...posts].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    return [...byNewest.filter(isFreshFriendPost), ...byNewest.filter((p) => !isFreshFriendPost(p))]
+  }, [posts, userData.id, isFollowing, openedAt])
 
   return (
     <div className="story-feed">
@@ -36,7 +52,7 @@ export default function StoryFeed({ onCompose }: { onCompose: () => void }) {
           <div className="story-empty-state">ยังไม่มีสตอรี่ในฟีด — เป็นคนแรกที่โพสต์เลยสิ!</div>
         )}
 
-        {posts.map((post) => <PostCard key={post.id} post={post} />)}
+        {orderedPosts.map((post) => <PostCard key={post.id} post={post} />)}
       </div>
     </div>
   )

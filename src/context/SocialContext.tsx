@@ -23,6 +23,14 @@ interface SocialContextValue {
   following: string[]
   isFollowing: (userId: string) => boolean
   toggleFollow: (userId: string) => void
+  /** [เพิ่มตามที่ระบุ] คนที่ติดตามเรา */
+  followers: string[]
+  /** เพื่อน = ติดตามกันทั้งสองฝ่ายเท่านั้น */
+  friends: string[]
+  isFriend: (userId: string) => boolean
+  /** none = ยังไม่ได้ติดตาม · following = ติดตามแล้วแต่เขายังไม่ติดตามกลับ (กำลังติดตาม)
+   *  followsYou = เขาติดตามเราแต่เรายังไม่ติดตามกลับ · friend = ติดตามกันทั้งสองฝ่าย */
+  followStatus: (userId: string) => 'none' | 'following' | 'followsYou' | 'friend'
 
   activity: ActivityItem[]
   isLoadingActivity: boolean
@@ -47,6 +55,8 @@ interface SocialContextValue {
   requestViewProfile: (userId: string, username: string) => void
   showPrivacyToast: boolean
   dismissPrivacyToast: () => void
+  /** โชว์ป็อปอัพ "ผู้โพสต์ปิดโปรไฟล์" ตรงๆ (เช่น กดชื่อบนโพสต์ไม่ระบุตัวตน) */
+  notifyPrivateProfile: () => void
 
   /** [ใหม่ — ข้อ 13] แชร์โพสต์ให้เพื่อนในแอป (ไม่ใช่ native share sheet) */
   sharePostToFriend: (postId: string, friendUserId: string) => void
@@ -70,6 +80,24 @@ export function SocialProvider({ children }: { children: ReactNode }) {
     staleTime: 15_000,
   })
   const following = useMemo(() => followingData ?? [], [followingData])
+
+  const { data: followersData } = useQuery({
+    queryKey: ['followers'],
+    queryFn: socialApi.getFollowers,
+    enabled: isLoggedIn,
+    staleTime: 30_000,
+  })
+  const followers = useMemo(() => followersData ?? [], [followersData])
+  const friends = useMemo(() => following.filter((id) => followers.includes(id)), [following, followers])
+  const isFriend = useCallback((userId: string) => following.includes(userId) && followers.includes(userId), [following, followers])
+  const followStatus = useCallback((userId: string) => {
+    const iFollow = following.includes(userId)
+    const theyFollow = followers.includes(userId)
+    if (iFollow && theyFollow) return 'friend' as const
+    if (iFollow) return 'following' as const
+    if (theyFollow) return 'followsYou' as const
+    return 'none' as const
+  }, [following, followers])
 
   const { data: activityData, isLoading: isLoadingActivity } = useQuery({
     queryKey: queryKeys.activity,
@@ -112,6 +140,7 @@ export function SocialProvider({ children }: { children: ReactNode }) {
 
   const clearViewProfileTarget = useCallback(() => { setViewProfileTarget(null) }, [])
   const dismissPrivacyToast = useCallback(() => { setShowPrivacyToast(false) }, [])
+  const notifyPrivateProfile = useCallback(() => { setShowPrivacyToast(true) }, [])
 
   /** [ข้อ 11] ดูโปรไฟล์ตัวเองได้เสมอ (ไม่เช็ค privacy) — ของคนอื่นต้องเช็คก่อนทุกครั้ง
    *  ถ้าปิดโปรไฟล์ไว้ ไม่เปิดหน้าโปรไฟล์เลย โชว์แค่ toast แทน */
@@ -146,18 +175,18 @@ export function SocialProvider({ children }: { children: ReactNode }) {
   const clearRecentSearches = useCallback(() => { setRecentSearches([]) }, [setRecentSearches])
 
   const value = useMemo<SocialContextValue>(() => ({
-    following, isFollowing, toggleFollow,
+    following, isFollowing, toggleFollow, followers, friends, isFriend, followStatus,
     activity, isLoadingActivity,
     searchQuery, setSearchQuery, searchResults, isSearching,
     recentSearches, addRecentSearch, removeRecentSearch, clearRecentSearches,
-    viewProfileTarget, clearViewProfileTarget, requestViewProfile, showPrivacyToast, dismissPrivacyToast,
+    viewProfileTarget, clearViewProfileTarget, requestViewProfile, showPrivacyToast, dismissPrivacyToast, notifyPrivateProfile,
     sharePostToFriend,
   }), [
-    following, isFollowing, toggleFollow,
+    following, isFollowing, toggleFollow, followers, friends, isFriend, followStatus,
     activity, isLoadingActivity,
     searchQuery, searchResults, isSearching,
     recentSearches, addRecentSearch, removeRecentSearch, clearRecentSearches,
-    viewProfileTarget, clearViewProfileTarget, requestViewProfile, showPrivacyToast, dismissPrivacyToast,
+    viewProfileTarget, clearViewProfileTarget, requestViewProfile, showPrivacyToast, dismissPrivacyToast, notifyPrivateProfile,
     sharePostToFriend,
   ])
 

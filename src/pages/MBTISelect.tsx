@@ -5,6 +5,7 @@ import { useAppContext } from '../context/AppContext'
 import MiniTree from '../components/tree/MiniTree'
 import SceneBackground from '../components/layout/SceneBackground'
 import SoundToggleButton from '../components/layout/SoundToggleButton'
+import { BADGE_ICONS } from '../config/iconAssets'
 
 const MBTI_ORDER: MbtiType[] = [
   'INTJ', 'INTP', 'ENTJ', 'ENTP',
@@ -27,8 +28,10 @@ export default function MBTISelect() {
     if (selected) return // กันดับเบิลคลิกระหว่างที่ transition กำลังเล่นอยู่
     setSelected(mbti)
     setMbtiType(mbti)
-    // รอ exit animation ของการ์ดเล่นจบก่อน (ดู .mbti-select-card--chosen ใน <style> ท้ายไฟล์)
-    setTimeout(() => navigate('/dashboard'), 480)
+    // [แก้ตามที่ระบุ] ไม่มีเอฟเฟกต์ในหน้านี้แล้ว → ไปหน้าถัดไปทันที
+    // แล้วเล่นฉากรับต้นกล้าครั้งแรกที่หน้า Home (PlantIntro.tsx)
+    try { sessionStorage.setItem('bloom.plantIntro', '1') } catch { /* ไม่มี storage ก็แค่ข้ามฉาก */ }
+    navigate('/dashboard')
   }
 
   return (
@@ -37,6 +40,17 @@ export default function MBTISelect() {
 
       {/* ปุ่มลำโพงลอยมุมขวาบน */}
       <SoundToggleButton floating />
+
+      {/* [แก้ตามที่ระบุ] ปุ่มกลับ มุมซ้ายบน — ย้อนกลับหน้าก่อนหน้า (ไม่มีประวัติ = กลับหน้าหลัก) */}
+      <button
+        type="button"
+        className="mbti-select-back"
+        onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}
+        aria-label="กลับ"
+      >
+        <img src={BADGE_ICONS.back} alt="" />
+        <span>กลับ</span>
+      </button>
 
       <div style={{ position: 'relative', zIndex: 2, maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
         <h1 className="mbti-select-fade-in" style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--fixed-white)', textShadow: '0 4px 16px var(--glass-b-50)', marginBottom: 8 }}>
@@ -47,7 +61,7 @@ export default function MBTISelect() {
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14 }}>
-          {MBTI_ORDER.map((mbti, i) => {
+          {MBTI_ORDER.map((mbti) => {
             const theme = MBTI_TREE_THEME[mbti]
             const isChosen = selected === mbti
             const isFadingOut = selected !== null && selected !== mbti
@@ -70,7 +84,6 @@ export default function MBTISelect() {
                   alignItems: 'center',
                   gap: 8,
                   boxShadow: '0 8px 24px var(--glass-b-25)',
-                  animationDelay: `${120 + i * 35}ms`,
                   '--card-accent': theme.accent,
                 } as React.CSSProperties}
               >
@@ -84,33 +97,25 @@ export default function MBTISelect() {
       </div>
 
       <style>{`
-        @keyframes mbtiSelectFadeIn {
-          from { opacity: 0; transform: translateY(14px); }
-          to   { opacity: 1; transform: translateY(0); }
+        /* [แก้ตามที่ระบุ] หน้าเลือก MBTI ไม่มีเอฟเฟกต์เคลื่อนไหวใดๆ (ไม่มีจางเข้า/ขยายตอนชี้/เด้งตอนเลือก) */
+        .mbti-select-back {
+          position: fixed; top: 16px; left: 16px; z-index: 5;
+          display: inline-flex; align-items: center; gap: 6px;
+          min-height: 44px; padding: 6px 14px 6px 8px; border-radius: 99px; cursor: pointer;
+          border: 1.5px solid var(--glass-w-60); background: var(--glass-b-35);
+          color: var(--fixed-white); font-family: var(--font-display); font-size: 15px;
         }
-        .mbti-select-fade-in { animation: mbtiSelectFadeIn .5s cubic-bezier(.22,1,.36,1) both; }
+        .mbti-select-back img { width: 30px; height: 30px; object-fit: contain; }
 
-        .mbti-select-card { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
-        .mbti-select-card:not(:disabled):hover {
-          transform: translateY(-6px) scale(1.04);
-          box-shadow: 0 16px 34px var(--glass-b-32), 0 0 0 3px var(--card-accent);
+        /* โหมดสว่างใช้หน้าตาเดิม — โหมดมืดเท่านั้นที่เป็นการ์ดสีเขียว (ไม่มีขอบเหลือง) */
+        [data-theme="dark"] .mbti-select-card {
+          background: linear-gradient(180deg, var(--g700) 0%, var(--g800) 100%) !important;
+          border: 2px solid var(--g500) !important;
+          border-radius: 14px !important;
+          box-shadow: 0 4px 0 var(--g900), 0 10px 24px var(--glass-b-30) !important;
         }
-
-        @keyframes mbtiSelectChosenPop {
-          0%   { transform: scale(1); }
-          50%  { transform: scale(1.18); box-shadow: 0 20px 44px var(--glass-b-40), 0 0 0 4px var(--card-accent); }
-          100% { transform: scale(1.1); opacity: 0; }
-        }
-        .mbti-select-card--chosen { animation: mbtiSelectChosenPop .48s cubic-bezier(.22,1,.36,1) both; z-index: 2; }
-
-        @keyframes mbtiSelectFadeOut { to { opacity: 0; transform: scale(.92); } }
-        .mbti-select-card--fading { animation: mbtiSelectFadeOut .35s ease both; }
-
-        @media (prefers-reduced-motion: reduce) {
-          .mbti-select-fade-in, .mbti-select-card, .mbti-select-card--chosen, .mbti-select-card--fading {
-            animation: none; transition: none;
-          }
-        }
+        [data-theme="dark"] .mbti-select-card > div { color: var(--fixed-white) !important; }
+        [data-theme="dark"] .mbti-select-card > div + div { color: color-mix(in srgb, var(--fixed-white) 78%, transparent) !important; }
       `}</style>
     </div>
   )

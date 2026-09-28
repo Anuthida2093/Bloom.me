@@ -72,7 +72,7 @@ export default function Login() {
 
   return (
     <AuthLayout title="เข้าสู่ระบบ" subtitle="ยินดีต้อนรับกลับมา 🌱" logoFallback="🔑" maxWidth={400} videoSrc={VIDEO_SRC} footer={<AppFeaturesFooter />}>
-      <form onSubmit={handleSubmit} style={{ ...authCardStyle, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <form className="auth-card" onSubmit={handleSubmit} style={{ ...authCardStyle, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <label style={authLabelStyle}>
           ชื่อผู้ใช้
           <input
@@ -100,7 +100,7 @@ export default function Login() {
         </label>
 
         <div style={{ textAlign: 'right', marginTop: -8 }}>
-          <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--glass-w-85)', fontWeight: 700 }}>ลืมรหัสผ่าน?</Link>
+          <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--lb-card-text-sub)', fontWeight: 700 }}>ลืมรหัสผ่าน?</Link>
         </div>
 
         {errorMessage && <div style={authErrorBoxStyle}>⚠️ {errorMessage}</div>}
@@ -113,7 +113,7 @@ export default function Login() {
           ยังไม่มีบัญชี? <Link to="/register" style={authLinkStyle}>สมัครสมาชิก</Link>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <Link to="/" style={{ fontSize: 12, color: 'var(--glass-w-65)' }}><img src={BADGE_ICONS.back} className="icon-img" alt="" /> กลับหน้าหลัก</Link>
+          <Link to="/" style={{ fontSize: 12, color: 'var(--lb-card-text-sub)' }}><img src={BADGE_ICONS.back} className="icon-img" alt="" /> กลับหน้าหลัก</Link>
         </div>
       </form>
     </AuthLayout>

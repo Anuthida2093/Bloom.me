@@ -3,8 +3,6 @@ import type { QuestDef } from '../../config/questCatalog'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { Z_INDEX } from '../../config/zIndex'
 import { uiSounds } from '../../utils/uiSounds'
-import { playSfx } from '../../utils/audioPlayer'
-import { useAppContext } from '../../context/AppContext'
 import { BADGE_ICONS, QUEST_ICONS } from '../../config/iconAssets'
 
 const C_1 = 'rgba(10,25,20,.55)'
@@ -40,8 +38,6 @@ interface QuestConfirmModalProps {
  */
 export default function QuestConfirmModal({ quest, stageLabel, accent, accentBg, locked, completed, onStart, onCancel }: QuestConfirmModalProps) {
   useEscapeKey(onCancel, !!quest)
-  const { settings } = useAppContext()
-  const sfxOpts = { volume: settings.sfxVolume, enabled: settings.soundEnabled }
 
   return (
     <AnimatePresence>
@@ -88,7 +84,7 @@ export default function QuestConfirmModal({ quest, stageLabel, accent, accentBg,
           >
             {/* Header ไล่สีตาม accent ของหมวดเควส */}
             <div style={{ background: `linear-gradient(160deg, ${accent}, ${accent}CC)`, padding: '24px 20px 28px', position: 'relative', overflow: 'hidden' }}>
-              <button
+              <button className="popup-close"
                 onClick={() => { uiSounds.cancel(); onCancel() }}
                 title="ปิด"
                 style={{
@@ -134,7 +130,7 @@ export default function QuestConfirmModal({ quest, stageLabel, accent, accentBg,
                 {/* [แก้ตามที่ระบุรอบนี้ — ข้อ 7] ย้ายตัวเลขไว้หน้ารูป + ขยายรูปให้ใหญ่ชัดเจน
                     ขึ้น (icon-img--reward) แทน icon-img ตัวเล็กเดิม */}
                 <span className="tag" style={{ background: BG_2, color: TEXT_3, border: '1px solid var(--coin)' }}>+{quest.coinReward} <img src={BADGE_ICONS.coins} className="icon-img--reward" alt="" /></span>
-                <span className="tag" style={{ background: accentBg, color: accent, border: `1px solid ${accent}55` }}>+{quest.expReward} EXP <img src={BADGE_ICONS.exp} className="icon-img--reward" alt="" /></span>
+                <span className="tag" style={{ background: accentBg, color: 'var(--fixed-black)', border: `1px solid ${accent}55` }}>+{quest.expReward} EXP <img src={BADGE_ICONS.exp} className="icon-img--reward" alt="" /></span>
               </div>
 
               {locked ? (
@@ -142,13 +138,13 @@ export default function QuestConfirmModal({ quest, stageLabel, accent, accentBg,
                   🔒 ล็อกอยู่ — ทำเควสอื่นให้สำเร็จก่อน
                 </div>
               ) : completed ? (
-                <div style={{ textAlign: 'center', padding: '10px 0', fontSize: 16, color: accent, fontWeight: 500 }}>
+                <div style={{ textAlign: 'center', padding: '10px 0', fontSize: 16, color: 'var(--n900)', fontWeight: 500 }}>
                   ✅ ทำสำเร็จแล้ววันนี้
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <motion.button
-                    onClick={() => { playSfx('CLICK', sfxOpts); onStart() }}
+                    onClick={onStart}
                     style={{
                       width: '100%', padding: '13px', border: 'none', borderRadius: 16,
                       background: `linear-gradient(135deg, ${accent}, ${accent}CC)`, color: 'var(--fixed-white)',

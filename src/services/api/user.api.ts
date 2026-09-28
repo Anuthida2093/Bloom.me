@@ -3,6 +3,7 @@ import { getDb, updateDb, resetDb, switchActiveAccount } from '../mock/mockDb'
 import { DEFAULT_USER_DATA, type UserData, type MbtiType, type Gender } from '../../types'
 import { computeBmi, computeBodyType } from '../../utils/bmi'
 import { hashPasswordMock, verifyPasswordMock, generateMockResetToken } from '../../utils/mockAuth'
+import { setLocalExtras, toProfilePatchBody, toUserData } from './adapters'
 
 /** อายุของโทเคนกู้รหัสผ่านจำลอง — ของจริง backend มักตั้ง 15-60 นาที */
 const RESET_TOKEN_TTL_MS = 30 * 60_000
@@ -44,9 +45,9 @@ export async function login(payload: LoginPayload): Promise<UserData> {
     })
     return db.user
   }
-  const res = await http.post<{ token: string; user: UserData }>('/auth/login', payload, { skipAuth: true })
+  const res = await http.post<{ token: string; user: Record<string, unknown> }>('/auth/login', payload, { skipAuth: true })
   setAuthToken(res.token)
-  return res.user
+  return toUserData(res.user)
 }
 
 export async function register(payload: RegisterPayload): Promise<UserData> {
@@ -96,9 +97,13 @@ export async function register(payload: RegisterPayload): Promise<UserData> {
     })
     return db.user
   }
-  const res = await http.post<{ token: string; user: UserData }>('/auth/register', payload, { skipAuth: true })
+  // birthDate ว่างต้องไม่ส่ง (backend ไม่รับ '')
+  const { birthDate, ...rest } = payload
+  const res = await http.post<{ token: string; user: Record<string, unknown> }>(
+    '/auth/register', { ...rest, ...(birthDate ? { birthDate } : {}) }, { skipAuth: true },
+  )
   setAuthToken(res.token)
-  return res.user
+  return toUserData(res.user)
 }
 
 export async function logout(): Promise<void> {
@@ -136,6 +141,7 @@ export async function requestPasswordReset(email: string): Promise<RequestPasswo
     return { devToken: token }
   }
   // ของจริง: backend คืนแค่ 200 เสมอไม่ว่าจะเจออีเมลหรือไม่ (กันเปิดเผยว่าอีเมลไหนมีในระบบ)
+  // backend ตอบ 200 เหมือนกันเสมอไม่ว่าอีเมลจะมีในระบบหรือไม่ ลิงก์จริงส่งไปทางอีเมลเท่านั้น
   await http.post<void>('/auth/request-password-reset', { email }, { skipAuth: true })
   return { devToken: null }
 }
@@ -180,16 +186,39 @@ export async function changePassword(payload: { currentPassword: string; newPass
 }
 
 /** [เพิ่มรอบนี้ — ข้อ 3] ลบบัญชีถาวร — โหมด mock: เคลียร์ mockDb ทั้งก้อน (ข้อมูลเกม/เควส/
- * อารมณ์/โพสต์/คลังไอเทม/บัญชีที่สมัครไว้ทั้งหมด) กลับไปเป็นค่าเริ่มต้น */
-export async function deleteAccount(): Promise<void> {
+ * อารมณ์/โพสต์/คลังไอเทม/บัญชีที่สมัครไว้ทั้งหมด) กลับไปเป็นค่าเริ่มต้น
+ * โหมด live: backend (DELETE /api/users/me) บังคับยืนยันด้วยรหัสผ่านปัจจุบันใน body
+ * [แก้บั๊ก] เดิมล้าง token ก่อนยิงคำขอ → คำขอไปโดยไม่มี Authorization ได้ 401 เสมอ — ล้างหลังลบสำเร็จ */
+export async function deleteAccount(password?: string): Promise<void> {
+  if (API_MODE === 'mock') {
+    // [แก้ตามที่ระบุ] ต้องยืนยันรหัสผ่านก่อนเสมอ (เหมือน backend จริง) จึงจะถือว่าลบสำเร็จ
+    if (!password) throw new ApiError(400, 'กรุณากรอกรหัสผ่านเพื่อยืนยันการลบบัญชี')
+    await mockDelay()
+    const db = getDb()
+    const account = db.accounts.find((a) => a.email === db.user.email.trim().toLowerCase())
+    if (account && !(await verifyPasswordMock(password, account.passwordHash))) {
+      throw new ApiError(401, 'รหัสผ่านไม่ถูกต้อง')
+    }
+    setAuthToken(null)
+    resetDb()
+    return
+  }
+  if (!password) throw new ApiError(400, 'กรุณากรอกรหัสผ่านเพื่อยืนยันการลบบัญชี')
+  await http.del<void>('/users/me', { body: { password } })
   setAuthToken(null)
-  if (API_MODE === 'mock') { resetDb(); return }
-  await http.del<void>('/users/me')
 }
 
 export async function getMe(): Promise<UserData> {
   if (API_MODE === 'mock') { await mockDelay(120); return getDb().user }
-  return http.get<UserData>('/users/me')
+  cachedMe = toUserData(await http.get<Record<string, unknown>>('/users/me'))
+  return cachedMe
+}
+
+/** โหมด live: โปรไฟล์ล่าสุดที่ดึงมาแล้ว — ใช้แปลงข้อมูลที่ต้องรู้ "เราเป็นใคร" (เช่น ชื่อผู้โพสต์
+ *  ในโพสต์ของเราเอง) โดยไม่ต้องยิง GET /users/me ซ้ำทุกคำขอ */
+let cachedMe: UserData | null = null
+export async function getCachedMe(): Promise<UserData> {
+  return cachedMe ?? getMe()
 }
 
 export async function updateMbti(mbtiType: MbtiType): Promise<UserData> {
@@ -197,7 +226,7 @@ export async function updateMbti(mbtiType: MbtiType): Promise<UserData> {
     await mockDelay()
     return updateDb((d) => { d.user = { ...d.user, mbtiType } }).user
   }
-  return http.patch<UserData>('/users/me', { mbtiType })
+  return toUserData(await http.patch<Record<string, unknown>>('/users/me', { mbtiType }))
 }
 
 export async function updateProfile(patch: Partial<UserData>): Promise<UserData> {
@@ -215,5 +244,28 @@ export async function updateProfile(patch: Partial<UserData>): Promise<UserData>
       d.user = next
     }).user
   }
-  return http.patch<UserData>('/users/me', patch)
+  // waterDrops ยังไม่มีคอลัมน์ใน backend — เก็บในเครื่องแยกตาม user (ดู adapters.ts)
+  const current = await getMe()
+  if (patch.waterDrops !== undefined) setLocalExtras(current.id, { waterDrops: patch.waterDrops })
+  // รูปโปรไฟล์ที่เลือกจากเครื่องเป็น data URL — backend รับเฉพาะ URL จริง ต้องอัปโหลดขึ้น
+  // storage ก่อน (POST /users/me/avatar-upload-url → PUT ไฟล์ไปที่ signedUrl → ใช้ publicUrl)
+  const body = toProfilePatchBody(patch)
+  if (typeof body.avatarUrl === 'string' && body.avatarUrl.startsWith('data:')) {
+    body.avatarUrl = await uploadAvatarDataUrl(body.avatarUrl)
+  }
+  if (Object.keys(body).length === 0) return toUserData({}, current)
+  return toUserData(await http.patch<Record<string, unknown>>('/users/me', body), current)
+}
+
+/** อัปโหลดรูปโปรไฟล์ (data URL) ขึ้น Supabase Storage ผ่าน signed URL ของ backend → คืน URL สาธารณะ */
+async function uploadAvatarDataUrl(dataUrl: string): Promise<string> {
+  const blob = await (await fetch(dataUrl)).blob()
+  const subtype = blob.type.split('/')[1] ?? 'png'
+  const fileExt = (['jpg', 'jpeg', 'png', 'webp'] as const).find((e) => e === subtype) ?? 'png'
+  const { signedUrl, publicUrl } = await http.post<{ signedUrl: string; path: string; publicUrl: string }>(
+    '/users/me/avatar-upload-url', { fileExt },
+  )
+  const upload = await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': blob.type }, body: blob })
+  if (!upload.ok) throw new ApiError(upload.status, 'อัปโหลดรูปโปรไฟล์ไม่สำเร็จ ลองอีกครั้ง')
+  return publicUrl
 }

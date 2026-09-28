@@ -3,6 +3,7 @@ import type { QuestDef } from '../../config/questCatalog'
 import { Z_INDEX } from '../../config/zIndex'
 import { BADGE_ICONS } from '../../config/iconAssets'
 import './QuestRewardCelebration.css'
+import '../leaderboard/leaderboardRow.css'
 
 /*============================================================================*\
   QuestRewardCelebration — [ไฟล์ใหม่] ป้ายฉลองรางวัลกลาง "ครอบคลุมทุกเส้นทางทำเควสสำเร็จ"
@@ -52,7 +53,9 @@ export default function QuestRewardCelebration({ data, onDone }: QuestRewardCele
           <span key={i} style={{ '--i': i } as React.CSSProperties}>✨</span>
         ))}
       </div>
-      <div className="quest-celebration__card">
+      {/* [แก้ตามที่ระบุ] หน้าตาแบบกระดานจัดอันดับ — กรอบทอง + ป้ายหัวข้อ + ฟอนต์หน้า Welcome */}
+      <div className="quest-celebration__card lb-card">
+        <div className="lb-banner quest-celebration__banner">ภารกิจสำเร็จ</div>
         <span className="quest-celebration__icon">{quest.icon}</span>
         <div className="quest-celebration__text">
           <div className="quest-celebration__title">

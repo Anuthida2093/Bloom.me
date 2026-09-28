@@ -73,7 +73,7 @@
   margin-top: 16px;
   font-family: var(--font-display);
   font-size: var(--fs-xl);
-  --lc-text-3: #9B59D0;
+  --lc-text-3: var(--n900);
   color: var(--lc-text-3);
 }
 

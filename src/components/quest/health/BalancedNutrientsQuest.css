@@ -44,6 +44,9 @@
   max-width: 460px;
   max-height: calc(100% - 32px);
   overflow-y: auto;
+  /* [แก้ตามที่ระบุ] เลื่อนขึ้นลงได้แต่ไม่แสดงแถบเลื่อน */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   /* [แก้บั๊ก — ตามที่ระบุ] เดิม padding-bottom 32px คงที่ ไม่เผื่อ ActionMenuBar (ลอยทับอยู่
      นอก .gameplay-frame, z-index:1000) ทำให้ปุ่ม "แนบรูปยืนยัน"/รางวัลที่จะได้รับเลื่อนลงไป
      โดนบังอยู่หลังแถบเมนู — pattern เดียวกับที่แก้ VitalityStepsQuest.css จุดเดียวกันไปแล้ว
@@ -105,18 +108,18 @@
 .balanced-nutrients__calorie-value {
   font-family: 'Fredoka One', 'Mali', sans-serif;
   font-size: 26px;
-  color: #FFE9AE;
+  color: var(--fixed-white);
   margin-bottom: 4px;
 }
 .balanced-nutrients__calorie-value span { font-size: 14px; font-family: 'Nunito', sans-serif; opacity: 0.8; }
-.balanced-nutrients__calorie-missing { font-size: 13px; color: #FFD6D6; padding: 4px 0; }
+.balanced-nutrients__calorie-missing { font-size: 13px; color: rgba(255, 255, 255, 0.8); padding: 4px 0; }
 .balanced-nutrients__calorie-note { font-size: 11px; opacity: 0.65; margin: 4px 0 18px; line-height: 1.5; }
 
 /* [ใหม่ — เลิก mock auto-approve] error จาก analyzeFoodPhoto() จริง */
 .balanced-nutrients__analysis-error {
   font-size: 12px;
   line-height: 1.6;
-  color: #FFD9A8;
+  color: rgba(255, 255, 255, 0.85);
   background: rgba(255, 196, 100, 0.14);
   border: 1px solid rgba(255, 196, 100, 0.3);
   border-radius: 12px;
@@ -201,7 +204,7 @@
 }
 .balanced-nutrients__btn--primary {
   background: linear-gradient(135deg, #FFD166, #F4A522);
-  color: #3A2400;
+  color: var(--fixed-black);
   box-shadow: 0 10px 26px rgba(244,165,34,.4);
 }
 .balanced-nutrients__btn--primary:hover:not(:disabled) { transform: translateY(-2px); }
@@ -225,3 +228,238 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.balanced-nutrients__content::-webkit-scrollbar { display: none; }
+
+/* ═══ [แก้ตามที่ระบุ] กรอบรูปเดียว + ถ่ายได้เรื่อยๆ + ประวัติวันนี้ + ตัวเลขเขียว/เกินแดงกะพริบ ═══ */
+.balanced-nutrients__calorie-value--ok { color: #7EE08F; }
+.balanced-nutrients__calorie-value--over {
+  color: #FF5A5F;
+  animation: balancedNutrientsOverBlink 1s ease-in-out infinite;
+}
+@keyframes balancedNutrientsOverBlink {
+  0%, 100% { opacity: 1; text-shadow: 0 0 12px rgba(255, 90, 95, .55); }
+  50%      { opacity: .35; text-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) { .balanced-nutrients__calorie-value--over { animation: none; } }
+
+.balanced-nutrients__photo-frame {
+  width: min(260px, 72%);
+  margin: 0 auto 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 10px; border-radius: 18px;
+  border: 1.5px dashed rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.06);
+}
+.balanced-nutrients__photo-frame.is-done { border-style: solid; border-color: #B7E4C7; background: rgba(183,228,199,0.12); }
+.balanced-nutrients__photo-empty {
+  width: 100%; aspect-ratio: 1; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px; background: rgba(255,255,255,0.08);
+}
+.balanced-nutrients__photo-frame .balanced-nutrients__meal-label { font-size: 12.5px; line-height: 1.4; }
+.balanced-nutrients__shoot-btn { max-width: 260px; margin: 0 auto; }
+/* ไม่เน้น — สไตล์เดียวกับปุ่ม "ปิด" หน้าอาบแดด (photosynthesis-cancel-btn) */
+.balanced-nutrients__history-link {
+  display: block; margin: 6px auto 0; padding: 8px;
+  background: transparent; border: none; cursor: pointer;
+  color: rgba(255, 255, 255, 0.6); font-size: 12px; text-decoration: underline; font-family: inherit;
+}
+
+.balanced-nutrients__history {
+  position: absolute; inset: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 16px calc(var(--gpf-safe-bottom, 90px) + 12px);
+  background: rgba(0,0,0,.45);
+}
+.balanced-nutrients__history-card {
+  position: relative; width: 100%; max-width: 420px; max-height: 100%;
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 32px 16px 16px; border-radius: 20px; font-family: var(--font-display);
+}
+.balanced-nutrients__history-banner { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 14px; }
+.balanced-nutrients__history-list { overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: 8px; }
+.balanced-nutrients__history-list::-webkit-scrollbar { display: none; }
+.balanced-nutrients__history-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; text-align: left;
+  background: color-mix(in srgb, var(--fixed-white) 42%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 45%, transparent);
+}
+[data-theme="dark"] .balanced-nutrients__history-row { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+.balanced-nutrients__history-row img { width: 56px; height: 56px; object-fit: cover; border-radius: 10px; flex-shrink: 0; }
+.balanced-nutrients__history-desc { font-size: 13.5px; color: var(--lb-card-text); }
+.balanced-nutrients__history-meta { font-size: 12px; color: var(--lb-card-text-sub); }
+.balanced-nutrients__history-empty,
+.balanced-nutrients__history-total { text-align: center; font-size: 13px; color: var(--lb-card-text-sub); }
+
+/* [แก้ตามที่ระบุ] ประวัติวันนี้: รูป · แคลอรี่ · เวลา — กากบาทมุมขวาบน แตะรายการเพื่อดูรูปเต็ม */
+.balanced-nutrients__history-close {
+  position: absolute; top: 8px; right: 8px; z-index: 3;
+  background: none; border: none; padding: 0; cursor: pointer;
+}
+.balanced-nutrients__history-close img { width: 32px; height: 32px; object-fit: contain; display: block; }
+.balanced-nutrients__history-row { width: 100%; cursor: pointer; font-family: inherit; }
+.balanced-nutrients__history-row:hover { border-color: var(--lb-gold-edge); }
+.balanced-nutrients__history-kcal { flex: 1; font-size: 15px; color: var(--lb-card-text); }
+.balanced-nutrients__photo-viewer {
+  position: absolute; inset: 0; z-index: 4; border-radius: inherit;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 16px; background: var(--lb-card-bg); cursor: pointer;
+}
+.balanced-nutrients__photo-viewer img {
+  max-width: 100%; max-height: calc(100% - 70px); object-fit: contain; border-radius: 14px;
+  border: 2px solid var(--lb-gold-edge);
+}
+.balanced-nutrients__photo-viewer-meta { font-size: 15px; color: var(--lb-card-text); }
+.balanced-nutrients__photo-viewer-hint { font-size: 12px; color: var(--lb-card-text-sub); }
+.balanced-nutrients__history-card { min-height: min(420px, 100%); }
+
+/* ═══ [ใช้งานฟรี] FoodMenuPicker — จานนี้มีอะไรบ้าง (กรอบแบบกระดานจัดอันดับ) ═══ */
+.food-picker {
+  position: absolute; inset: 0; z-index: 40;
+  display: flex; justify-content: center; align-items: safe center;
+  overflow-y: auto; scrollbar-width: none;
+  padding: 44px 14px calc(var(--gpf-safe-bottom, 90px) + 12px);
+}
+.food-picker::-webkit-scrollbar { display: none; }
+.food-picker__card {
+  position: relative; width: 100%; max-width: 480px;
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 34px 14px 14px; border-radius: 22px; font-family: var(--font-display);
+}
+.food-picker__banner { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); font-size: 15px; }
+.food-picker__close { position: absolute; top: 8px; right: 8px; background: none; border: none; padding: 0; cursor: pointer; }
+.food-picker__close img { width: 32px; height: 32px; object-fit: contain; display: block; }
+.food-picker__section-title { font-size: 14px; color: var(--lb-card-text); margin-bottom: 6px; }
+
+.food-picker__plate {
+  display: flex; gap: 12px; align-items: flex-start; padding: 10px; border-radius: 14px;
+  background: color-mix(in srgb, var(--fixed-white) 40%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 55%, transparent);
+}
+[data-theme="dark"] .food-picker__plate { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+.food-picker__photo { width: 84px; height: 84px; flex-shrink: 0; object-fit: cover; border-radius: 12px; border: 2px solid var(--lb-gold-edge); }
+.food-picker__plate-body { flex: 1; min-width: 0; }
+.food-picker__plate-empty { font-size: 13px; color: var(--lb-card-text-sub); line-height: 1.5; }
+.food-picker__plate-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.food-picker__plate-line { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; }
+.food-picker__plate-name { font-size: 13.5px; color: var(--lb-card-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.food-picker__plate-kcal { font-size: 12.5px; color: var(--lb-card-text-sub); min-width: 40px; text-align: right; }
+.food-picker__stepper { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--lb-card-text); white-space: nowrap; }
+.food-picker__stepper button {
+  width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 17px; line-height: 1; font-family: inherit;
+  border: 1.5px solid var(--lb-gold-edge); background: var(--lb-btn-bg); color: var(--lb-btn-text);
+}
+
+.food-picker__search { position: relative; }
+.food-picker__field {
+  width: 100%; min-height: 44px; padding: 10px 14px; border-radius: 12px; outline: none;
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 60%, transparent);
+  background: color-mix(in srgb, var(--fixed-white) 60%, transparent);
+  color: var(--lb-card-text); font-family: inherit; font-size: 15px;
+}
+.food-picker__search .food-picker__field { padding-right: 56px; }
+[data-theme="dark"] .food-picker__field { background: color-mix(in srgb, var(--g900) 55%, transparent); }
+.food-picker__field::placeholder { color: var(--lb-card-text-sub); opacity: .75; }
+.food-picker__clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; font-family: inherit; font-size: 13px;
+  color: var(--lb-card-text-sub); text-decoration: underline;
+}
+.food-picker__cats { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.food-picker__cats::-webkit-scrollbar { display: none; }
+.food-picker__chip {
+  flex-shrink: 0; min-height: 34px; padding: 5px 12px; border-radius: 99px; cursor: pointer; font-family: inherit; font-size: 13px;
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 50%, transparent);
+  background: color-mix(in srgb, var(--fixed-white) 45%, transparent); color: var(--lb-card-text-sub);
+}
+[data-theme="dark"] .food-picker__chip { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+.food-picker__chip.is-active { background: var(--lb-btn-bg); color: var(--lb-btn-text); border-color: var(--lb-gold-edge); }
+
+.food-picker__list { display: flex; flex-direction: column; gap: 6px; max-height: 32vh; overflow-y: auto; scrollbar-width: none; }
+.food-picker__list::-webkit-scrollbar { display: none; }
+.food-picker__item {
+  display: grid; grid-template-columns: 1fr auto 34px; align-items: center; gap: 8px; width: 100%;
+  min-height: 46px; padding: 6px 8px 6px 12px; border-radius: 12px; cursor: pointer; text-align: left; font-family: inherit;
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 40%, transparent);
+  background: color-mix(in srgb, var(--fixed-white) 42%, transparent);
+}
+[data-theme="dark"] .food-picker__item { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+.food-picker__item.is-active { border-color: var(--lb-gold-edge); box-shadow: inset 0 0 0 1.5px var(--lb-gold-edge); }
+.food-picker__item-name { font-size: 14.5px; color: var(--lb-card-text); }
+.food-picker__item-kcal { font-size: 12px; color: var(--lb-card-text-sub); white-space: nowrap; }
+.food-picker__item-add {
+  width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; border: 1.5px solid var(--lb-gold-edge); background: var(--lb-btn-bg); color: var(--lb-btn-text);
+}
+.food-picker__empty { text-align: center; font-size: 13px; color: var(--lb-card-text-sub); padding: 10px 0; }
+
+.food-picker__custom { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 14px; border: 1.5px dashed color-mix(in srgb, var(--lb-gold-edge) 60%, transparent); }
+.food-picker__custom-row { display: grid; grid-template-columns: 1fr 110px; gap: 8px; }
+.food-picker__custom-hint { font-size: 12px; line-height: 1.5; color: var(--lb-card-text-sub); }
+.food-picker__custom-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+.food-picker__link {
+  align-self: center; background: none; border: none; padding: 4px; cursor: pointer; font-family: inherit;
+  color: var(--lb-card-text-sub); font-size: 13px; text-decoration: underline;
+}
+
+.food-picker__footer {
+  position: sticky; bottom: -14px; margin: 0 -14px -14px; padding: 10px 14px 14px;
+  border-radius: 0 0 20px 20px; background: var(--lb-card-bg);
+  border-top: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 50%, transparent);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.food-picker__total { text-align: center; font-size: 15px; color: var(--lb-card-text); }
+.food-picker__total strong { font-size: 24px; }
+.food-picker__actions { display: flex; gap: 10px; }
+.food-picker__actions .lb-btn { flex: 1; }
+.food-picker__note { text-align: center; font-size: 11.5px; color: var(--lb-card-text-sub); }
+
+/* ═══ [แก้ตามที่ระบุ] กรอบรูป = ปุ่มถ่ายภาพ · ประวัติวันนี้: ยอดรวมด้านบน / ชื่อเมนูแรก - kcal / รายละเอียดจาน ═══ */
+.balanced-nutrients__photo-frame--button { cursor: pointer; font-family: inherit; color: inherit; transition: transform .15s ease, border-color .15s ease; }
+.balanced-nutrients__photo-frame--button:hover:not(:disabled) { transform: translateY(-2px); border-color: #B7E4C7; }
+.balanced-nutrients__photo-frame--button:disabled { cursor: default; opacity: .8; }
+.balanced-nutrients__photo-frame--button .balanced-nutrients__photo-empty { font-size: 54px; }
+.balanced-nutrients__photo-frame--button .balanced-nutrients__meal-label { font-family: var(--font-display); font-size: 16px; }
+.balanced-nutrients__history-total {
+  font-size: 15px !important; color: var(--lb-card-text) !important; padding: 8px 10px; border-radius: 12px;
+  background: color-mix(in srgb, var(--fixed-white) 42%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 55%, transparent);
+}
+[data-theme="dark"] .balanced-nutrients__history-total { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+.balanced-nutrients__history-total strong { font-size: 20px; }
+.balanced-nutrients__history-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.balanced-nutrients__history-name { font-size: 14.5px; color: var(--lb-card-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.balanced-nutrients__meal-detail {
+  position: absolute; inset: 0; z-index: 4; border-radius: inherit;
+  display: flex; flex-direction: column; gap: 10px; padding: 34px 16px 16px;
+  background: var(--lb-card-bg); overflow-y: auto; scrollbar-width: none;
+}
+.balanced-nutrients__meal-detail::-webkit-scrollbar { display: none; }
+.balanced-nutrients__meal-detail-photo {
+  width: 100%; max-height: 38vh; object-fit: contain; border-radius: 14px; border: 2px solid var(--lb-gold-edge);
+  background: color-mix(in srgb, var(--n900) 8%, transparent);
+}
+.balanced-nutrients__meal-detail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.balanced-nutrients__meal-detail-list li {
+  display: flex; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: 10px; font-size: 14px;
+  color: var(--lb-card-text); background: color-mix(in srgb, var(--fixed-white) 42%, transparent);
+  border: 1px solid color-mix(in srgb, var(--lb-gold-edge) 40%, transparent);
+}
+[data-theme="dark"] .balanced-nutrients__meal-detail-list li { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+.balanced-nutrients__meal-detail-list li span:last-child { white-space: nowrap; color: var(--lb-card-text-sub); }
+.balanced-nutrients__meal-detail-total { text-align: center; font-size: 15px; color: var(--lb-card-text); }
+.balanced-nutrients__meal-detail-total strong { font-size: 22px; }
+
+/* ═══ [แก้ตามที่ระบุ] ป้ายชื่อเควสลอยกึ่งกลางด้านบน — แบบเดียวกับเควสอื่น (.game-shell__pill-header) ═══ */
+.balanced-nutrients__pill.lb-banner {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  z-index: 30; max-width: calc(100% - 120px);
+  display: inline-flex; gap: 6px;
+}
+[data-theme="dark"] .balanced-nutrients__pill.lb-banner {
+  background: linear-gradient(180deg, var(--g600) 0%, var(--g800) 100%);
+  color: var(--fixed-white);
+}
+/* เว้นด้านบนให้ป้าย ไม่ทับเนื้อหา */
+.balanced-nutrients:has(.balanced-nutrients__pill) .balanced-nutrients__content { margin-top: 56px; max-height: calc(100% - 88px); }

@@ -22,7 +22,7 @@ export default function GuardianOfRestGame({ finish }: QuestGameProps) {
       <div className="qg-card qg-center">
         <div style={{ fontSize: 44 }}>{overQuota ? '🛑' : '🛡️'}</div>
         <div className="qg-title">โควตาการฝึกหนักวันนี้</div>
-        <div style={{ fontFamily: "'Fredoka One', 'Mali', sans-serif", fontSize: 30, color: 'var(--fixed-white)', margin: '4px 0 10px' }}>
+        <div style={{ fontFamily: "'Fredoka One', 'Mali', sans-serif", fontSize: 30, color: 'var(--n900)', margin: '4px 0 10px' }}>
           {Math.floor(focusMinutesToday / 60)} ชม. {focusMinutesToday % 60} นาที
           <span style={{ fontSize: 14, color: 'var(--glass-w-50)' }}> / 5 ชม.</span>
         </div>

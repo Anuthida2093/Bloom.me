@@ -37,7 +37,7 @@ export default function PanelModal({ children, onClose = () => {} }: PanelModalP
           position: 'relative',
         }}
       >
-        <button
+        <button className="popup-close"
           onClick={onClose}
           title="ปิด"
           style={{

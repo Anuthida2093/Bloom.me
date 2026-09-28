@@ -12,7 +12,7 @@
   font-family: 'Mali', 'Fredoka One', sans-serif;
   font-size: 22px;
   margin: 0 0 8px 0;
-  color: #fde047; /* สีเหลืองอ่อนสว่าง */
+  color: var(--fixed-white);
 }
 
 .photosynthesis-desc {
@@ -71,7 +71,7 @@
 /* ปุ่มกด */
 .photosynthesis-submit-btn {
   background: linear-gradient(135deg, #fde047, #f59e0b);
-  color: #78350f; /* ตัวหนังสือสีน้ำตาลเข้มให้อ่านง่ายบนพื้นเหลือง */
+  color: var(--fixed-black); /* ตัวหนังสือสีน้ำตาลเข้มให้อ่านง่ายบนพื้นเหลือง */
   border: none;
   padding: 12px 32px;
   border-radius: 99px;
@@ -102,3 +102,7 @@
   0% { transform: scale(0.8); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
+/* [แก้ตามที่ระบุ] ตัวหนังสือดำ (สว่าง) / ขาว (มืด) — --n900 สลับตามธีมเอง */
+.photosynthesis-game, .photosynthesis-title { color: var(--n900); }
+.photosynthesis-title { font-family: var(--font-display); }
+.photosynthesis-cancel-btn { color: color-mix(in srgb, var(--n900) 60%, transparent); }

@@ -128,39 +128,108 @@
   }
 }
 
-/* Hotspot โชว์ tooltip เลเวล — วางไว้แถวโคนต้น (ล่างกึ่งกลาง) */
-.tree-of-life__hint-hotspot {
-  position: absolute;
-  left: 50%;
-  bottom: 2%;
-  transform: translateX(-50%);
-  width: 38%;
-  height: 10%;
-  min-width: 90px;
-  min-height: 36px;
-  cursor: pointer;
-  z-index: 6;
-}
 
 .tree-of-life__tooltip {
+  /* หน้าตากรอบมาจาก .lb-frame (leaderboard/leaderboardRow.css) — ที่นี่คุมตำแหน่ง/ขนาด/ฟอนต์ */
   position: absolute;
   bottom: 110%;
   left: 50%;
   transform: translateX(-50%);
-  --lc-bg-20: rgba(20, 30, 25, 0.88);
-  background: var(--lc-bg-20);
-  color: var(--fixed-white);
-  border-radius: 12px;
-  padding: 10px 14px;
-  font-size: 11.5px;
-  font-family: 'Nunito', 'Sarabun', sans-serif;
-  white-space: nowrap;
-  box-shadow: 0 6px 18px var(--glass-b-35);
+  width: min(340px, calc(100vw - 32px));
+  max-height: 62vh;
+  font-family: var(--font-display);   /* ฟอนต์เดียวกับกระดานจัดอันดับ */
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: normal;
+  text-align: left;
+  cursor: default;
+  z-index: 20;
+  animation: treeOfLifeTooltipIn 0.24s cubic-bezier(.22,1,.36,1) both;
+}
+
+/* [แก้ตามที่ระบุ] พื้นทึบเขียวอ่อนสีเดียวกับกระดานจัดอันดับ (ไม่โปร่งใส) ตัวหนังสือดำ —
+   ธีมมืด: พื้นเขียวเข้ม ตัวหนังสือขาว */
+.tree-of-life__tooltip {
+  --ti-bg: var(--leaf-soft);
+  --ti-row: var(--leaf-soft-strong);
+  --ti-text: var(--n900);
+}
+[data-theme="dark"] .tree-of-life__tooltip {
+  --ti-bg: var(--g800);
+  --ti-row: var(--g700);
+  --ti-text: var(--fixed-white);
+}
+.tree-of-life__tooltip .tree-of-life__tooltip-sheet {
+  padding: 14px 12px 12px;
+  overflow-y: auto;
+  background: var(--ti-bg);
+  color: var(--ti-text);
+}
+.tree-of-life__tooltip-sub { font-size: 13px; color: var(--ti-text); opacity: .75; }
+.tree-of-life__tooltip-title { font-size: 20px; margin-top: 2px; color: var(--ti-text); }
+
+.tree-of-life__tooltip-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  border-radius: 99px;
+  border: none;
+  background: var(--glass-b-15);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* จอเล็ก: เต็มจอแบบหน้าตั้งค่า (SettingsModal Overlay) — อยู่ใต้ ActionMenuBar (z-index 1000)
+   เว้นล่างด้วย --gpf-safe-bottom ไม่ให้แถบเมนูบังเนื้อหาท้ายสุด */
+.tree-of-life__tooltip-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: var(--leaf-soft);
+  overflow-y: auto;
+  padding: 40px 16px calc(var(--gpf-safe-bottom, 100px) + 24px);
+  font-family: var(--font-display);
+}
+[data-theme="dark"] .tree-of-life__tooltip-screen { background: var(--g900); }
+.tree-of-life__tooltip-screen .tree-of-life__tooltip {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  width: 100%;
+  max-width: 760px;
+  max-height: none;
+  margin: 14px auto 0;
+  font-size: 14px;
+  animation: treeOfLifeTooltipScreenIn .32s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes treeOfLifeTooltipScreenIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tree-of-life__tooltip-rows {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  animation: treeOfLifeTooltipIn 0.18s ease both;
+  gap: 8px;
 }
+
+.tree-of-life__tooltip-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: var(--ti-row);
+  border: 1px solid color-mix(in srgb, var(--ti-text) 12%, transparent);
+  color: var(--ti-text);
+}
+.tree-of-life__tooltip-row b { color: var(--ti-text); margin-right: 4px; }
 
 @keyframes treeOfLifeTooltipIn {
   from {
@@ -173,15 +242,17 @@
   }
 }
 
-.tree-of-life__tooltip-title {
-  font-weight: 800;
-  margin-bottom: 2px;
+.tree-of-life__tooltip-warn {
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--orange) 14%, transparent);
+  color: var(--b700);
+  font-weight: 700;
 }
 
-.tree-of-life__tooltip-warn {
-  --lc-text-19: #ffd6a0;
-  color: var(--lc-text-19);
-  font-weight: 700;
+@media (prefers-reduced-motion: reduce) {
+  .tree-of-life__tooltip,
+  .tree-of-life__tooltip-screen .tree-of-life__tooltip { animation: none; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -514,4 +585,211 @@
 .tree-of-life__hotline-badge {
     animation: none;
   }
+}
+
+/* ═══ โพสอิทบนต้นไม้ (บันทึกความรู้สึกจากเช็คอินอารมณ์) ═══ */
+.tree-of-life__postits {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.tree-of-life__postit {
+  position: absolute;
+  transform: translate(-50%, -50%) rotate(var(--postit-tilt, -3deg));
+  width: clamp(54px, 9vw, 78px);
+  min-height: clamp(44px, 7vw, 62px);
+  padding: 8px 6px 6px;
+  border: none;
+  border-radius: 3px;
+  box-shadow: 0 4px 10px var(--glass-b-30);
+  color: var(--b700);
+  font-family: var(--font-display);
+  font-size: clamp(8.5px, 1.2vw, 11px);
+  line-height: 1.3;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  pointer-events: auto;
+  animation: treeOfLifePostitIn .6s cubic-bezier(.22,1,.36,1) both;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+/* เทปใสแปะหัวโพสอิท */
+.tree-of-life__postit::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 26px;
+  height: 10px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: var(--glass-w-50);
+  border: 1px solid var(--glass-b-8);
+  border-radius: 2px;
+}
+.tree-of-life__postit:hover {
+  transform: translate(-50%, -50%) rotate(0deg) scale(1.08);
+  box-shadow: 0 8px 18px var(--glass-b-35);
+  z-index: 1;
+}
+@keyframes treeOfLifePostitIn {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 4px)) rotate(var(--postit-tilt, -3deg)) scale(.85); }
+  to   { opacity: 1; transform: translate(-50%, -50%) rotate(var(--postit-tilt, -3deg)) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tree-of-life__postit { animation: none; }
+}
+
+/* ═══ แผงข้อมูลต้นไม้ (TreeInfoPanel.tsx) ในคอลัมน์ขวาของหน้า Home ═══
+   ใช้หน้าตา .tree-of-life__tooltip เดิม แต่ไม่ลอยเหนือโคนต้นแล้ว — วางตามคอลัมน์ขวาปกติ */
+.tree-info-panel {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  width: min(320px, calc(100vw - 32px));
+  max-height: none;
+  animation: treeInfoPanelIn .32s cubic-bezier(.22,1,.36,1) both;
+}
+.tree-info-panel .tree-of-life__tooltip-sheet { max-height: none; overflow: visible; }  /* คอลัมน์ขวาเลื่อนเอง */
+.tree-info-panel__extra { margin-top: 12px; }
+@keyframes treeInfoPanelIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tree-info-panel { animation: none; }
+}
+
+/* ต้นไม้ประจำ MBTI (MiniTree) หัวแผงข้อมูลต้นไม้ — กึ่งกลาง */
+.tree-info-panel__tree { display: flex; justify-content: center; margin-bottom: 6px; }
+
+/* [แก้ตามที่ระบุ] ธีมมืด: ตัวหนังสือในแผงข้อมูลต้นไม้เป็นสีขาวทั้งหมด — รวมชื่อต้นไม้ (เดิมสีประจำ MBTI)
+   ตัวเลข % สถิติ (เดิมสีตามหมวด) และคำเตือน (!important ทับสี inline style ของแต่ละจุด) */
+[data-theme="dark"] .tree-info-panel .tree-of-life__tooltip-sheet,
+[data-theme="dark"] .tree-info-panel .tree-of-life__tooltip-sheet * { color: var(--fixed-white) !important; }
+[data-theme="dark"] .tree-info-panel .tree-of-life__tooltip-warn { background: color-mix(in srgb, var(--orange) 22%, transparent); }
+
+/* ═══ แผงแจ้งเตือน (NotificationPanel.tsx) — กรอบเดียวกับแผงข้อมูลต้นไม้ (InfoFramePanel) ═══ */
+.notification-panel__empty { text-align: center; padding: 24px 0; font-size: var(--fs-sm); opacity: .75; color: var(--ti-text); }
+.notification-panel__item { align-items: center; }
+.notification-panel__item--clickable { cursor: pointer; transition: transform .15s ease, filter .15s ease; }
+.notification-panel__item--clickable:hover { transform: translateX(3px); filter: brightness(1.04); }
+.notification-panel__icon { width: 52px; height: 46px; object-fit: contain; flex-shrink: 0; }
+.notification-panel__icon--emoji { font-size: 34px; line-height: 1; text-align: center; }
+.notification-panel__text { font-size: 14px; line-height: 1.5; color: var(--ti-text); }
+.notification-panel__time { font-size: 11.5px; margin-top: 2px; color: var(--ti-text); opacity: .7; }
+/* [เพิ่มตามที่ระบุ] อ่านแล้ว/ยังไม่อ่าน — ยังไม่อ่าน: พื้นเข้มขึ้น + ขอบทอง + จุดแจ้งมุมขวา
+   อ่านแล้ว: พื้นจางลง ตัวหนังสือจางลงเล็กน้อย (ธีมมืดตัวหนังสือยังขาวล้วน) */
+.notification-panel__item { position: relative; }
+.notification-panel__item--unread {
+  border: 2px solid color-mix(in srgb, var(--coin) 70%, var(--g600));
+  box-shadow: 0 3px 10px var(--glass-b-15);
+}
+.notification-panel__item--unread::after {
+  content: '';
+  position: absolute; top: 8px; right: 8px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 2px var(--ti-row);
+}
+.notification-panel__item--read { background: transparent; opacity: .72; }
+
+
+/* ═══ [แก้ตามที่ระบุ] ก้อนหินบนพื้นดิน — ทานเกินแคลอรี่ที่กำหนดติดต่อกันหลายวัน ═══ */
+.tree-of-life__rocks { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+/* [แก้ตามที่ระบุ] ก้อนหินใหญ่ขึ้น (เดิม 38-66px) + กอหญ้าขึ้นทับฐาน */
+.tree-of-life__rock {
+  position: absolute;
+  width: calc(clamp(54px, 7.5vw, 96px) * var(--rock-scale, 1));
+  transform: translate(-50%, -50%);
+  animation: treeOfLifeRockDrop .7s cubic-bezier(.22, 1.4, .36, 1) both;
+}
+.tree-of-life__rock-img {
+  display: block; width: 100%; height: auto;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .35));
+}
+.tree-of-life__rock-grass {
+  position: absolute; left: -12%; bottom: -8%;
+  width: 124%; height: 46%;
+  pointer-events: none;
+}
+@keyframes treeOfLifeRockDrop {
+  from { opacity: 0; transform: translate(-50%, calc(-50% - 40px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+@media (prefers-reduced-motion: reduce) { .tree-of-life__rock { animation: none; } }
+
+/* ═══ [แก้ตามที่ระบุ] เควสสำเร็จ: ออร่ารอบต้นไม้ + ต้นไม้ขยายขึ้นนิดหน่อยแล้วกลับขนาดเดิม ═══ */
+/* [แก้ตามที่ระบุ] หลังผงละอองโปรยลงมา → ตัวต้นไม้ (ลำต้น+พุ่ม ไม่รวมพื้นหญ้า) ขยายใหญ่ขึ้นชัดๆ (~10%)
+   แล้วค่อยกลับขนาดเดิมอย่างนุ่มนวล — การ "โตจริง" ยังเป็นไปตามเกณฑ์เลเวลเดิม (buildTreeModel) */
+.tree-of-life__stack--celebrate .tree-of-life__canvas:not(.tree-of-life__canvas--ground):not(.tree-of-life__canvas--meadow):not(.tree-of-life__canvas--meadow-front) {
+  transform-origin: 50% 84%;
+  animation: treeOfLifeCelebrate 1.6s cubic-bezier(.45, 0, .25, 1) 1s both;
+  will-change: transform;
+}
+@keyframes treeOfLifeCelebrate {
+  0%   { transform: scale(1); }
+  42%  { transform: scale(1.1); }
+  62%  { transform: scale(1.085); }
+  78%  { transform: scale(1.095); }
+  100% { transform: scale(1); }
+}
+/* แสงออร่าเปล่งออกมาจากตัวต้นไม้ระหว่างขยาย — ชั้นแสงอยู่ "หลัง" ต้นไม้ (::before มาก่อน canvas)
+   ใช้แค่ opacity/transform จึงลื่น ไม่มีวงแหวน ไม่มีสีส้มจัด (ขาวอมทองนวล) */
+.tree-of-life__stack--celebrate::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 46%;
+  width: min(92vw, 760px); height: min(92vh, 760px);
+  transform: translate(-50%, -50%) scale(.6);
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle, rgba(255, 252, 230, .75) 0%, rgba(255, 240, 180, .38) 30%, rgba(255, 240, 180, .12) 52%, transparent 70%),
+    repeating-conic-gradient(from 0deg, rgba(255, 248, 210, .22) 0deg 6deg, transparent 6deg 20deg);
+  -webkit-mask-image: radial-gradient(circle, #000 25%, transparent 70%);
+  mask-image: radial-gradient(circle, #000 25%, transparent 70%);
+  opacity: 0;
+  animation: treeOfLifeAuraFromTree 1.9s ease-out 1s both;
+}
+@keyframes treeOfLifeAuraFromTree {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.6) rotate(0deg); }
+  30%  { opacity: 1; }
+  70%  { opacity: .75; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.15) rotate(18deg); }
+}
+/* [แก้ตามที่ระบุ] ผงละอองเล็กมากๆ (จุดกลม + ดาวสี่แฉก) สีทองนวล โปรยลงใส่ต้นไม้ แล้วจางหาย */
+.tree-of-life__stardust { position: absolute; inset: 0; z-index: 6; pointer-events: none; overflow: hidden; }
+.tree-of-life__stardust-grain {
+  position: absolute; top: -3%;
+  border-radius: 50%;
+  background: #FFF6C8;
+  box-shadow: 0 0 3px 1px rgba(255, 236, 160, .85);
+  opacity: 0;
+  animation-name: treeOfLifeStardustFall, treeOfLifeStardustTwinkle;
+  animation-timing-function: cubic-bezier(.35, .1, .55, 1), ease-in-out;
+  animation-fill-mode: both, none;
+  animation-iteration-count: 1, infinite;
+}
+.tree-of-life__stardust-grain--star {
+  border-radius: 0;
+  background: #FFF0A8;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  box-shadow: none;
+  filter: drop-shadow(0 0 2px rgba(255, 240, 170, .95));
+}
+@keyframes treeOfLifeStardustFall {
+  0%   { opacity: 0; transform: translate(0, 0); }
+  15%  { opacity: 1; }
+  75%  { opacity: .9; }
+  100% { opacity: 0; transform: translate(var(--drift, 0px), var(--land, 60vh)); }
+}
+@keyframes treeOfLifeStardustTwinkle {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tree-of-life__stack--celebrate .tree-of-life__canvas, .tree-of-life__stack--celebrate::before { animation: none; }
+  .tree-of-life__stardust { display: none; }
 }

@@ -5,6 +5,7 @@ import { playSfx, startLoopingSfx, stopLoopingSfx } from '../../../utils/audioPl
 import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import './IncineratorPage.css'
+import '../../leaderboard/leaderboardRow.css'
 import { BADGE_ICONS } from '../../../config/iconAssets'
 
 type Stage = 'ask' | 'write' | 'reading' | 'crumpling' | 'drag' | 'burning' | 'done'
@@ -227,20 +228,21 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
         {stage === 'ask' && (
           <motion.div
             key="ask"
-            className="incinerator-frame__ask-panel"
+            className="incinerator-frame__ask-panel lb-card incinerator-popup"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: -10 }}
             transition={{ type: 'spring', stiffness: 260, damping: 22 }}
           >
+            <div className="lb-banner incinerator-popup__banner">เตาเผาขยะความคิด</div>
             <div className="incinerator-frame__icon-lg">🔥</div>
             <h2 className="incinerator-frame__title">วันนี้มีเรื่องอะไรหนักใจไหม?</h2>
             <p className="incinerator-frame__desc">หยิบมันออกมาจากหัว แล้วสลักลงบนแผ่นหินเพื่อนำไปเผาทำลายทิ้งกัน</p>
             <div className="incinerator-frame__btn-row">
-              <button className="incinerator-action-btn incinerator-action-btn--ghost" onClick={requestClose}>
+              <button className="lb-btn lb-btn--ghost" style={{ flex: 1 }} onClick={requestClose}>
                 ยังไม่มี
               </button>
-              <button className="incinerator-action-btn incinerator-action-btn--primary" onClick={() => setStage('write')}>
+              <button className="lb-btn" style={{ flex: 1 }} onClick={() => setStage('write')}>
                 ปลดปล่อยความคิด
               </button>
             </div>
@@ -376,15 +378,16 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
         )}
 
         {stage === 'done' && (
-          <motion.div key="done" className="incinerator-frame__ask-panel" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+          <motion.div key="done" className="incinerator-frame__ask-panel quest-done-card incinerator-popup" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+            <div className="lb-banner quest-done-card__banner">ภารกิจสำเร็จ</div>
             <div className="incinerator-frame__icon-md">✨</div>
             <h2 className="incinerator-frame__title">ทำลายขยะความคิดสำเร็จ!</h2>
             <p className="incinerator-frame__desc">{selectedAffirmation}</p>
             <button
-              className="incinerator-action-btn incinerator-action-btn--primary incinerator-frame__claim-btn"
+              className="lb-btn lb-btn--wide"
               onClick={handleClaimReward}
             >
-              🌟 รับพลังใจ & ปล่อยวาง
+              รับพลังใจและปล่อยวาง
             </button>
           </motion.div>
         )}

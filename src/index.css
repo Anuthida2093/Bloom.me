@@ -17,9 +17,24 @@
 
 /* ─── Light Mode tokens ─── */
 :root {
-  --g900: #0B2F1E; --g800: #1B4332; --g700: #2D6A4F;
-  --g600: #40916C; --g500: #52B788; --g400: #74C69D;
-  --g300: #95D5B2; --g200: #B7E4C7; --g100: #D8F3DC; --g50: #F0FBF4;
+  /* เขียวแบรนด์ — [รีธีม 2026-09-27] เปลี่ยนจากเขียวอมฟ้า (hue ~153°) เป็นเขียวใบไม้สดอมเหลือง
+     (hue 96°) ตามโทนใบของภาพอ้างอิงต้นมะฮอกกานี ทุกเฉดคง "ความสว่างสัมพัทธ์ (luminance)" เท่าเดิม
+     เป๊ะ ตัวหนังสือขาว/ดำที่วางบนเขียวเฉดเดิมทั่วแอปจึงคอนทราสต์เท่าเดิมทุกจุด (ไม่ต้องไล่แก้ทีละหน้า)
+     เดิม: 900 #0B2F1E · 800 #1B4332 · 700 #2D6A4F · 600 #40916C · 500 #52B788
+           400 #74C69D · 300 #95D5B2 · 200 #B7E4C7 · 100 #D8F3DC · 50 #F0FBF4 */
+  --g900: #192E0B; --g800: #2B421B; --g700: #44682C;
+  --g600: #5F8F3F; --g500: #76B54D; --g400: #90C46E;
+  --g300: #ABD390; --g200: #C6E2B3; --g100: #DFF2D3; --g50: #F3FBEE;
+
+  /* เขียวใบไม้อ่อนมินิมอล — พื้นผิวสีเขียวอ่อน (แถบเมนูล่าง ActionMenuBar + กระดานจัดอันดับ)
+     ตัวหนังสือ/ไอคอนบนพื้นนี้ใช้ --on-leaf-soft (เขียวเข้มเกือบดำ) ห้ามใช้ขาว — ขาวบน --g200
+     คอนทราสต์แค่ 1.4:1 อ่านไม่ออก / --on-leaf-soft บน --leaf-soft ≈ 10:1, บน --leaf-soft-active ≈ 5.8:1 */
+  --leaf-soft:        var(--g200);   /* พื้นหลัก */
+  --leaf-soft-strong: var(--g300);   /* พื้นไล่เฉด / hover */
+  --leaf-soft-edge:   var(--g400);   /* เส้นขอบ / วงรอบ */
+  --leaf-soft-active: var(--g500);   /* สถานะที่เลือกอยู่ */
+  --on-leaf-soft:     var(--g900);   /* ตัวหนังสือ/ไอคอนหลักบนพื้นเขียวอ่อน */
+  --on-leaf-soft-sub: var(--g800);   /* ตัวหนังสือรอง (≈ 7.9:1 บน --leaf-soft) */
 
   --b900: #3B1F0A; --b700: #5C3D1E; --b500: #8B5E3C;
   --b300: #C4956A; --b100: #EDD9C0; --b50:  #FBF4EC;
@@ -33,13 +48,16 @@
      ใช้ตัวนี้กับตัวหนังสือ/ไอคอน/เส้นขอบสีขาวที่วางทับพื้นมืดตายตัวเสมอ เช่น วิดีโอพื้นหลัง
      ฉากเวทมนตร์ (Aether) หรือปุ่มลอยกระจกดำ ที่ไม่เกี่ยวกับธีมสว่าง/มืดของแอปเลย */
   --fixed-white: #FFFFFF;
+  /* ดำตายตัว ไม่กลับสีตอน dark mode (คู่กับ --fixed-white) — ตัวหนังสือบนการ์ดพื้นขาวตายตัว เช่น ชื่อไอเทมในร้าน */
+  --fixed-black: #1A1F1B;
 
   --coin: #F4C430; --exp: #FFD60A;
   --blue: #4CC9F0; --pink: #FF85A1; --purple: #C77DFF;
   --orange: #F4845F; --red: #EF476F;
 
   /* Semantic */
-  --bg:         var(--n50);
+  /* [แก้ตามที่ระบุ] พื้นหลังทุกหน้า = สีกรอบกระดานจัดอันดับ (เขียวอ่อน) — ธีมมืดใช้เขียวเข้มแบบกรอบธีมมืด */
+  --bg:         var(--leaf-soft);
   --bg-card:    var(--white);
   --bg-sidebar: var(--white);
   --bg-modal:   rgba(0,0,0,.45);
@@ -61,9 +79,10 @@
      อยู่ล่างสุดของเนื้อหาที่ scroll ได้ */
   --gpf-safe-bottom: 90px;   /* [Part E] แถบเมนูล่าง 60px + bottom 25px ≈ 85 → 90 */
 
-  --sh-card:  0 2px 12px rgba(27,67,50,.09), 0 1px 3px rgba(27,67,50,.05);
-  --sh-hover: 0 8px 28px rgba(27,67,50,.15), 0 2px 6px rgba(27,67,50,.07);
-  --sh-btn:   0 4px 14px rgba(45,106,79,.35);
+  /* เงาอมเขียวอ้างอิงโทเคนเขียวแทนค่า rgba ดิบ (เดิมเป็นเขียวอมฟ้าชุดเก่าฝังตายตัว) */
+  --sh-card:  0 2px 12px color-mix(in srgb, var(--g800) 9%, transparent), 0 1px 3px color-mix(in srgb, var(--g800) 5%, transparent);
+  --sh-hover: 0 8px 28px color-mix(in srgb, var(--g800) 15%, transparent), 0 2px 6px color-mix(in srgb, var(--g800) 7%, transparent);
+  --sh-btn:   0 4px 14px color-mix(in srgb, var(--g700) 35%, transparent);
   --sh-coin:  0 4px 14px rgba(244,196,48,.40);
   --sh-modal: 0 24px 64px rgba(0,0,0,.22);
 
@@ -198,7 +217,7 @@
 
 /* ─── Dark Mode tokens ─── */
 [data-theme="dark"] {
-  --bg:         #0F1A13;
+  --bg:         var(--g900);
   --bg-card:    #192A1E;
   --bg-sidebar: #162119;
   --bg-modal:   rgba(0,0,0,.65);
@@ -447,3 +466,169 @@ input, select, textarea { font-family: var(--font-body); }
     scroll-behavior: auto !important;
   }
 }
+
+/* [แก้ตามที่ระบุ] หน้าเควส/หน้าเล่นเควส: ปุ่มกากบาท (Cross.png) และย้อนกลับ (Return.png) แสดงแค่รูป
+   ไม่มีวงกลม/พื้นหลัง/ขอบ — ครอบทุกหน้าเควส (แต่ละหน้ามีคลาสปุ่มปิดของตัวเอง จึงจับจาก "ปุ่มที่มีแค่รูป
+   กากบาท/ย้อนกลับรูปเดียว" แทนการไล่แก้ทีละคลาส) เงารอบตัวรูปแทนวงกลม ให้ยังเห็นชัดบนทุกพื้นหลัง */
+:is(.quest-section-root, .game-shell, .camera-fullscreen-container) button:has(> img:only-child:is([src*="Cross.png"], [src*="Return.png"])) {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0;
+}
+:is(.quest-section-root, .game-shell, .camera-fullscreen-container) button:has(> img:only-child:is([src*="Cross.png"], [src*="Return.png"])) > img {
+  width: 36px !important;
+  height: 36px !important;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 5px var(--glass-b-35));
+  transition: transform .15s ease;
+}
+:is(.quest-section-root, .game-shell, .camera-fullscreen-container) button:has(> img:only-child:is([src*="Cross.png"], [src*="Return.png"])):hover > img { transform: scale(1.08); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ธีมกระดานจัดอันดับ (ใช้ซ้ำทั่วแอป) — การ์ด/ปุ่ม/ตัวหนังสือชุดเดียวกับกรอบ .lb-frame
+   ────────────────────────────────────────────────────────────────────────────
+   .lb-card  : ขอบทอง + วงในบาง + พื้นเขียวอ่อนไล่เฉด (มืด: เขียวเข้ม ตัวหนังสือขาว)
+   .lb-btn   : ปุ่มแบบป้ายกระดาน (เขียวไล่เฉด ขอบทอง ขอบล่างหนาแบบปุ่มเกม) — ไม่มีอีโมจิ
+   .lb-text / .lb-text-sub : ตัวหนังสือขาว-ดำเท่านั้น ไล่ความเข้ม 2 ระดับ (ไม่ใช้เหลือง/ส้ม/แดง)
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --lb-gold-edge: color-mix(in srgb, var(--coin) 70%, var(--g600));
+  --lb-card-bg: linear-gradient(180deg, color-mix(in srgb, var(--fixed-white) 55%, var(--leaf-soft)) 0%, var(--leaf-soft) 100%);
+  --lb-card-text: var(--n900);
+  --lb-card-text-sub: color-mix(in srgb, var(--n900) 72%, transparent);
+  --lb-btn-bg: linear-gradient(180deg, var(--leaf-soft-strong) 0%, var(--leaf-soft-active) 100%);
+  --lb-btn-text: var(--on-leaf-soft);
+}
+[data-theme="dark"] {
+  --lb-card-bg: linear-gradient(180deg, var(--g700) 0%, var(--g800) 100%);
+  --lb-card-text: var(--fixed-white);
+  --lb-card-text-sub: color-mix(in srgb, var(--fixed-white) 78%, transparent);
+  --lb-btn-bg: linear-gradient(180deg, var(--g600) 0%, var(--g800) 100%);
+  --lb-btn-text: var(--fixed-white);
+}
+.lb-card {
+  background: var(--lb-card-bg);
+  border: 2px solid var(--lb-gold-edge);
+  border-radius: 18px;
+  box-shadow: 0 10px 28px var(--glass-b-25), inset 0 0 0 3px color-mix(in srgb, var(--fixed-white) 35%, transparent), inset 0 0 0 4px color-mix(in srgb, var(--coin) 25%, transparent);
+  color: var(--lb-card-text);
+  font-family: var(--font-display);
+}
+.lb-text { color: var(--lb-card-text) !important; }
+.lb-text-sub { color: var(--lb-card-text-sub) !important; }
+.lb-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 10px 28px;
+  border: 2px solid var(--lb-gold-edge); border-radius: 14px;
+  background: var(--lb-btn-bg); color: var(--lb-btn-text);
+  font-family: var(--font-display); font-size: var(--fs-md);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--lb-gold-edge) 70%, var(--g800)), 0 6px 14px var(--glass-b-20);
+  cursor: pointer; transition: transform .15s ease, filter .15s ease;
+}
+.lb-btn:hover { transform: translateY(-1px); filter: brightness(1.04); }
+.lb-btn:active { transform: translateY(1px); }
+.lb-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.lb-btn--wide { width: 100%; }
+.lb-btn--ghost { background: var(--lb-card-bg); color: var(--lb-card-text); }
+
+
+/* ═══ [แก้ตามที่ระบุ] ป็อปอัพ "ทำภารกิจสำเร็จ" ของทุกเควส — การ์ดแบบกระดานจัดอันดับ ═══
+   ใช้คู่กับ .lb-banner.quest-done-card__banner (ป้ายหัวการ์ด) และปุ่ม .lb-btn
+   ตัวหนังสือ: ดำ (สว่าง) / ขาว (มืด) ไล่ 2 ระดับ ไม่ใช้เหลือง/ส้ม/แดง */
+.quest-done-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 36px 22px 22px !important;
+  border-radius: 22px !important;
+  background: var(--lb-card-bg) !important;
+  border: 2px solid var(--lb-gold-edge) !important;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--lb-gold-edge) 60%, var(--g800)), 0 14px 32px var(--glass-b-30) !important;
+  backdrop-filter: none !important;
+  color: var(--lb-card-text) !important;
+  font-family: var(--font-display);
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.quest-done-card :is(h1, h2, h3, strong) { color: var(--lb-card-text) !important; font-family: var(--font-display) !important; text-shadow: none !important; }
+.quest-done-card :is(p, li, span:not(.lb-banner)) { color: var(--lb-card-text-sub) !important; text-shadow: none !important; }
+.quest-done-card > div:not(.quest-done-card__banner) { color: var(--lb-card-text) !important; }
+.quest-done-card .lb-btn { color: var(--lb-btn-text) !important; margin-top: 4px; }
+.quest-done-card .lb-btn + .lb-btn { margin-top: 0; }
+.quest-done-card__banner {
+  position: absolute !important; top: -17px; left: 50%; transform: translateX(-50%);
+  font-size: 15px; max-width: calc(100% - 40px);
+}
+
+/* ═══ [แก้ตามที่ระบุ] ปุ่มกากบาททั้งแอป (ตั้งค่า/ข้อมูลต้นไม้/ตั้งค่าโปรไฟล์/แจ้งเตือน/ความเป็นส่วนตัว/
+   เปลี่ยนรหัสผ่าน/ลบบัญชี/เช็คอินอารมณ์/สตอรี่ ฯลฯ) — แสดงแค่รูปกากบาท ไม่มีวงกลม/พื้นหลัง/ขอบล้อมรอบ
+   จับจาก "ปุ่มที่มีรูป Cross.png เป็น element ลูกตัวเดียว" จึงครอบทุกหน้าโดยไม่ต้องไล่แก้ทีละคลาส
+   (!important เพื่อชนะ inline style/คลาสเดิมของแต่ละหน้า) — ขนาดรูปคงเดิมของแต่ละที่
+   เงารอบตัวรูปแทนวงกลม ให้ยังมองเห็นชัดบนทุกพื้นหลัง ═══ */
+button:has(> img:only-child[src*="Cross.png"]) {
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline-offset: 2px;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+button:has(> img:only-child[src*="Cross.png"])::before,
+button:has(> img:only-child[src*="Cross.png"])::after { content: none !important; }
+button:has(> img:only-child[src*="Cross.png"]) > img {
+  filter: drop-shadow(0 2px 4px var(--glass-b-30));
+  transition: transform .15s ease;
+}
+button:has(> img:only-child[src*="Cross.png"]):hover > img { transform: scale(1.08); }
+
+/* ═══ [แก้ตามที่ระบุ] ขนาดปุ่มกากบาทมาตรฐานเดียวทั้งแอป ═══
+   • หน้าเต็มจอ (ตั้งค่า/ร้านค้า/โปรไฟล์/สตอรี่/หน้าเควส/ประวัติ ฯลฯ) = 36px เท่าปุ่มกากบาทหน้าหลักเควสสุขภาพ
+   • ป็อปอัพ (เช็คอินอารมณ์รายวัน/ข้อมูลต้นไม้/แจ้งเตือน/ป็อปอัพทุกอัน) = 28px เท่ากันหมด */
+button:has(> img:only-child[src*="Cross.png"]) > img {
+  width: 36px !important;
+  height: 36px !important;
+  object-fit: contain;
+}
+:is(.popup-close, .mood-checkin-close, .tree-of-life__tooltip-close, .medical-box-alert__close, .info-popup__close,
+    .quest-feedback-prompt__dismiss, .balanced-nutrients__history-close, .food-picker__close):has(> img:only-child[src*="Cross.png"]) > img,
+:is(.mood-checkin-card, .ui-overlay__panel, .story-modal-card, .player-detail-modal-card, .quest-confirm-card, .lb-card)
+  button:has(> img:only-child[src*="Cross.png"]) > img {
+  width: 28px !important;
+  height: 28px !important;
+}
+/* ปุ่มลบเล็กๆ ในรายการ (ไม่ใช่ปุ่มปิดหน้า/ป็อปอัพ) */
+:is(.story-search-row__remove, .story-image-preview button):has(> img:only-child[src*="Cross.png"]) > img {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+/* ═══ [แก้ตามที่ระบุ] แถบกึ่งกลางด้านบนทุกหน้า = ขนาด/ฟอนต์เดียวกับป้ายหัวหน้าเควส (.quest-section-title-pill)
+   ใช้กับ: ป้ายหน้าเควส · ป้ายชื่อเควสใน GameShell · ป้าย "ต้นไม้ของ…" · ป้ายหัวหน้าประวัติ/สร้างสตอรี่ ═══ */
+:is(.quest-section-title-pill, .top-center-pill, .dashboard__viewing-name-pill,
+    .journal-history__banner, .voice-history__banner, .postit-history__banner, .story-compose-page__banner).lb-banner {
+  padding: 5px 18px !important;
+  font-size: 16px !important;
+  font-family: var(--font-display);
+  line-height: 1.2;
+}
+@media (max-width: 480px) {
+  :is(.quest-section-title-pill, .top-center-pill, .dashboard__viewing-name-pill,
+      .journal-history__banner, .voice-history__banner, .postit-history__banner, .story-compose-page__banner).lb-banner {
+    padding: 4px 14px !important;
+    font-size: 14px !important;
+  }
+}
+
+/* [แก้ตามที่ระบุ] การ์ดฟอร์มสมัครสมาชิก/เข้าสู่ระบบ — ไม่มีเอฟเฟกต์เคลื่อนไหวใดๆ (ไม่มีแสงวิ่ง/รัศมี/การขยับ) */
+.auth-card :is(label, p, span, a) { text-shadow: none; }
+.auth-card input::placeholder { color: color-mix(in srgb, #1a2e22 45%, transparent); }
+
+/* [แก้ตามที่ระบุ] รูปท้ายข้อความแนะนำหน้า Welcome — ขยายแต่ไม่ดันความสูงบรรทัด */
+.welcome-msg-icon { display: inline-block; vertical-align: middle; margin: -1.75em -1.35em; line-height: 0; }
+.welcome-msg-icon--logo { margin: -.55em .05em -.45em .2em; }
+.welcome-msg-icon img { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .45)); }

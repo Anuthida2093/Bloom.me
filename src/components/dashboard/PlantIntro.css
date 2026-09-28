@@ -1,0 +1,182 @@
+/* ═══ PlantIntro — ฉากรับต้นกล้าหลังเลือก MBTI (transform/opacity ล้วน) ═══ */
+.plant-intro {
+  position: fixed; inset: 0; z-index: 1500;
+  pointer-events: none;
+  overflow: hidden;
+  font-family: var(--font-display);
+  --base-y: 84vh;          /* โคนต้นไม้หน้า Home (TREE_BASE_Y_RATIO 0.84) */
+}
+
+/* หรี่ฉากหลังเล็กน้อยช่วงโชว์ต้นกล้า แล้วจางออก */
+.plant-intro__dim {
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 45%, rgba(0, 0, 0, .05) 0%, rgba(0, 0, 0, .45) 75%);
+  animation: plantIntroDim 5s ease both;
+}
+@keyframes plantIntroDim {
+  0% { opacity: 0; } 8% { opacity: 1; } 30% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 0; }
+}
+
+/* แสงหมุนด้านหลัง (เหมือนได้รับไอเทมพิเศษ) */
+.plant-intro__rays {
+  position: absolute; left: 50%; top: 44%;
+  width: min(120vmin, 900px); height: min(120vmin, 900px);
+  margin: calc(min(120vmin, 900px) / -2) 0 0 calc(min(120vmin, 900px) / -2);
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 246, 200, .32) 0deg 8deg, transparent 8deg 22deg);
+  -webkit-mask-image: radial-gradient(circle, #000 12%, transparent 68%);
+  mask-image: radial-gradient(circle, #000 12%, transparent 68%);
+  animation: plantIntroRaysSpin 6s linear both, plantIntroRaysFade 5s ease both;
+}
+@keyframes plantIntroRaysSpin { to { rotate: 120deg; } }
+@keyframes plantIntroRaysFade {
+  0% { opacity: 0; scale: .5; } 12% { opacity: 1; scale: 1; } 42% { opacity: 1; } 55% { opacity: 0; scale: 1.1; } 100% { opacity: 0; }
+}
+
+/* ป้ายชื่อ + คำอธิบาย */
+.plant-intro__title {
+  position: absolute; left: 50%; top: calc(44% - min(30vh, 250px));
+  translate: -50% 0;
+  font-size: clamp(18px, 4.5vw, 24px) !important;
+  padding: 8px 26px !important;
+  white-space: nowrap;
+  animation: plantIntroTextIn 5s ease both;
+}
+.plant-intro__subtitle {
+  position: absolute; left: 50%; top: calc(44% + min(26vh, 220px));
+  translate: -50% 0;
+  width: min(90vw, 460px);
+  margin: 0; text-align: center;
+  color: var(--fixed-white); font-size: clamp(13px, 3.4vw, 15px); line-height: 1.6;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .6);
+  animation: plantIntroTextIn 5s ease both;
+  animation-delay: .15s;
+}
+@keyframes plantIntroTextIn {
+  0% { opacity: 0; transform: translateY(10px); }
+  10% { opacity: 1; transform: none; }
+  40% { opacity: 1; }
+  50% { opacity: 0; transform: translateY(-8px); }
+  100% { opacity: 0; }
+}
+
+/* ต้นกล้า: พอดีจอกลางจอ → ขยาย → เล็กลงลงไปที่ดิน */
+.plant-intro__seedling-wrap {
+  --h: min(62vmin, 440px);
+  /* ยกจากโคนต้น (84vh) ขึ้นมาให้กึ่งกลางต้นกล้าอยู่ ~46% ของจอ — พอดีจอทุกขนาด */
+  --lift: calc(-38vh + var(--h) / 2);
+  position: absolute; left: 50%; top: var(--base-y);
+  width: calc(var(--h) * .75); height: var(--h);
+  margin-left: calc(var(--h) * -.375);
+  margin-top: calc(var(--h) * -.96);
+  transform-origin: 50% 96%;
+  animation: plantIntroSeedling 5s cubic-bezier(.45, 0, .2, 1) both;
+  will-change: transform, opacity;
+}
+/* 0-46%: อยู่กลางจอ (ยกขึ้นจากโคนต้น) · 46-56% ขยายนิดหนึ่ง · 56-70% หดลงไปปักดิน · 70-86% อยู่ที่ดิน · แล้วจางแทนที่ด้วยต้นจริง */
+@keyframes plantIntroSeedling {
+  0%   { opacity: 0; transform: translateY(var(--lift)) scale(.2); }
+  9%   { opacity: 1; transform: translateY(var(--lift)) scale(1.05); }
+  14%  { transform: translateY(var(--lift)) scale(1); }
+  46%  { transform: translateY(var(--lift)) scale(1); }
+  52%  { transform: translateY(calc(var(--lift) - 3vh)) scale(1.08); animation-timing-function: cubic-bezier(.5, 0, .75, 1); }
+  64%  { opacity: 1; transform: translateY(0) scale(var(--land-scale, .4)); }
+  67%  { transform: translateY(0) scale(calc(var(--land-scale, .4) * 1.04)); }
+  71%  { opacity: 1; transform: translateY(0) scale(var(--land-scale, .4)); }
+  80%  { opacity: 0; transform: translateY(0) scale(var(--land-scale, .4)); }
+  100% { opacity: 0; transform: translateY(0) scale(var(--land-scale, .4)); }
+}
+.plant-intro__seedling { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .35)); }
+.plant-intro__glow {
+  position: absolute; left: 50%; top: 42%;
+  width: 130%; height: 110%;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 250, 215, .75) 0%, rgba(255, 240, 170, .25) 40%, transparent 70%);
+  animation: plantIntroGlow 2.4s ease-in-out infinite alternate;
+}
+@keyframes plantIntroGlow { from { opacity: .55; scale: .92; } to { opacity: 1; scale: 1.05; } }
+.plant-intro__sparkle {
+  position: absolute; left: 50%; top: 45%;
+  border-radius: 50%;
+  background: #FFF6C8;
+  box-shadow: 0 0 6px 2px rgba(255, 236, 160, .9);
+  opacity: 0;
+  animation: plantIntroSparkle 1.6s ease-out infinite;
+}
+@keyframes plantIntroSparkle {
+  0%   { opacity: 0; transform: rotate(var(--a)) translateX(20px) scale(.4); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scale(1); }
+}
+
+/* แสงจ้า/ออร่าตอนต้นกล้าเข้าที่ */
+.plant-intro__flash {
+  position: absolute; left: 50%; top: calc(var(--base-y) - 12vh);
+  width: min(160vmin, 1200px); height: min(160vmin, 1200px);
+  margin: calc(min(160vmin, 1200px) / -2) 0 0 calc(min(160vmin, 1200px) / -2);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 240, .95) 0%, rgba(255, 246, 200, .55) 18%, rgba(255, 240, 180, .18) 38%, transparent 62%);
+  opacity: 0;
+  animation: plantIntroFlash 5s ease-out both;
+}
+@keyframes plantIntroFlash {
+  0%, 66% { opacity: 0; transform: scale(.2); }
+  72%     { opacity: .85; transform: scale(.7); }
+  88%     { opacity: .25; transform: scale(1.1); }
+  100%    { opacity: 0; transform: scale(1.2); }
+}
+
+/* เงาที่โคนต้น + ฝุ่นดินตอนแตะพื้น (อยู่บนพื้นจริงของหน้า Home) */
+.plant-intro__contact-shadow {
+  position: absolute; left: 50%; top: var(--base-y);
+  width: min(30vw, 160px); height: 18px; translate: -50% -50%;
+  border-radius: 50%; background: radial-gradient(closest-side, rgba(40, 25, 10, .45), transparent);
+  animation: plantIntroShadow 5s ease both;
+}
+@keyframes plantIntroShadow { 0%, 52% { opacity: 0; scale: .4; } 64% { opacity: 1; scale: 1; } 78% { opacity: .6; } 90%, 100% { opacity: 0; } }
+.plant-intro__dust { position: absolute; left: 50%; top: var(--base-y); width: 0; height: 0; }
+.plant-intro__dust-grain {
+  position: absolute; left: 0; top: 0; border-radius: 50%;
+  background: rgba(139, 104, 68, .75); opacity: 0;
+  animation: plantIntroDust .9s ease-out 3.2s both;
+}
+@keyframes plantIntroDust {
+  0% { opacity: 0; transform: translate(0, 0) scale(.5); }
+  15% { opacity: .9; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.3); }
+}
+
+/* ═══ [แก้ตามที่ระบุ] หน้า Home ระหว่างฉาก — ฉากเดียวกัน: พื้นหญ้าจริงค่อยขึ้นมารอ ต้นกล้าลงไปปัก
+   แล้วต้นจริงโตขึ้นตรงนั้นใต้แสงออร่า · ปุ่ม/แผง/ป้ายทั้งหมดซ่อนจนต้นเข้าที่ แล้วเลื่อนขึ้นมาพร้อมกัน ═══ */
+:is(.dashboard--intro, .dashboard--intro-reveal) { --intro-hidden: 1; }
+.dashboard--intro > :not(.dashboard__bg-still, .dashboard__bg-video, .dashboard__tree-layer),
+.dashboard--intro .dashboard__tree-layer > :not(.dashboard__tree-capture-target),
+.dashboard--intro .tree-of-life > :not(.tree-of-life__world),
+.dashboard--intro .tree-of-life__world > :not(.tree-of-life__stack) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.dashboard--intro .dashboard__tree-layer { pointer-events: none; }
+/* พื้นจริง (ดิน/ทุ่งหญ้า) ค่อยๆ ขึ้นมาตอนฉากสว่าง */
+.dashboard--intro :is(.tree-of-life__canvas--ground, .tree-of-life__canvas--meadow, .tree-of-life__canvas--meadow-front) {
+  animation: plantIntroGroundIn 5s cubic-bezier(.22, 1, .36, 1) both;
+}
+@keyframes plantIntroGroundIn {
+  0%, 28% { opacity: 0; translate: 0 5vh; }
+  48%, 100% { opacity: 1; translate: 0 0; }
+}
+/* ต้นจริง: ใช้แอนิเมชันโตเดิมของมันเอง (treeOfLifeLayerGrow) แค่หน่วงให้เริ่มตอนต้นกล้าปักดินแล้ว
+   (ชื่อแอนิเมชันเดิม → ตอนเอาคลาสออกจะไม่เล่นซ้ำ) */
+:is(.dashboard--intro, .dashboard--intro-reveal) :is(.tree-of-life__canvas--branches, .tree-of-life__canvas--foliage) {
+  animation-delay: 3.55s;
+  animation-duration: .7s;
+}
+/* ปุ่ม/แผง/ป้าย/ของตกแต่ง เลื่อนขึ้นมาพร้อมกัน */
+.dashboard--intro-reveal > :not(.dashboard__bg-still, .dashboard__bg-video, .dashboard__tree-layer),
+.dashboard--intro-reveal .dashboard__tree-layer > :not(.dashboard__tree-capture-target),
+.dashboard--intro-reveal .tree-of-life > :not(.tree-of-life__world),
+.dashboard--intro-reveal .tree-of-life__world > :not(.tree-of-life__stack) {
+  animation: plantIntroUiIn .8s cubic-bezier(.22, 1, .36, 1) .2s both;
+}
+@keyframes plantIntroUiIn { from { opacity: 0; translate: 0 26px; } to { opacity: 1; translate: 0 0; } }

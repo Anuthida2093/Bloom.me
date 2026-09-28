@@ -70,7 +70,7 @@
   margin-top: 16px;
   font-family: var(--font-display);
   font-size: var(--fs-xl);
-  --lc-text-5: #FFB020;
+  --lc-text-5: var(--n900);
   color: var(--lc-text-5);
 }
 
@@ -106,7 +106,7 @@
   --lc-bg-1: #FFD166;
   --lc-bg-2: #FFB020;
   background: linear-gradient(135deg, var(--lc-bg-1), var(--lc-bg-2));
-  --lc-text-3: #4A2C0A;
+  --lc-text-3: var(--fixed-black);
   color: var(--lc-text-3);
   --lc-shadow-4: rgba(255, 176, 32, 0.4);
   box-shadow: 0 8px 20px var(--lc-shadow-4);

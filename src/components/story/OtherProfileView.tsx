@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { usePosts } from '../../context/PostContext'
+import { useSocial } from '../../context/SocialContext'
 import PostCard from './PostCard'
 import { MOCK_LEADERBOARD_PLAYERS, type LeaderboardPlayer } from '../../config/leaderboardData'
 import { BADGE_ICONS } from '../../config/iconAssets'
@@ -18,10 +19,15 @@ interface OtherProfileViewProps {
   username: string
   onBack: () => void
   onViewTree: (player: LeaderboardPlayer) => void
+  /** [ใหม่ตามที่ระบุ] เปิดแชทกับคนนี้ (เฉพาะเพื่อน = ติดตามกันทั้งสองฝ่าย) */
+  onOpenChat?: (friendId: string, friendName: string) => void
 }
 
-export default function OtherProfileView({ userId, username, onBack, onViewTree }: OtherProfileViewProps) {
+export default function OtherProfileView({ userId, username, onBack, onViewTree, onOpenChat }: OtherProfileViewProps) {
   const { posts } = usePosts()
+  const { followStatus, toggleFollow } = useSocial()
+  const status = followStatus(userId)
+  const FOLLOW_LABEL = { none: 'ติดตาม', followsYou: 'ติดตามกลับ', following: 'กำลังติดตาม', friend: 'เพื่อน ✓' } as const
   const player = useMemo(() => MOCK_LEADERBOARD_PLAYERS.find((p) => p.id === userId), [userId])
   const publicPosts = useMemo(
     () => posts.filter((p) => p.userId === userId && !p.isAnonymous),
@@ -40,7 +46,18 @@ export default function OtherProfileView({ userId, username, onBack, onViewTree 
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--g800)' }}>{username}</div>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 22 }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
+        {/* [แก้ตามที่ระบุ] ติดตามแล้วแต่เขายังไม่ติดตามกลับ = "กำลังติดตาม" · ติดตามกันทั้งสองฝ่าย = เพื่อน */}
+        <button
+          className={`story-follow-btn${status === 'following' || status === 'friend' ? ' story-follow-btn--following' : ''}`}
+          onClick={() => toggleFollow(userId)}
+          title={status === 'following' || status === 'friend' ? 'แตะเพื่อเลิกติดตาม' : undefined}
+        >
+          {FOLLOW_LABEL[status]}
+        </button>
+        {status === 'friend' && onOpenChat && (
+          <button className="story-follow-btn" onClick={() => onOpenChat(userId, username)}>💬 แชท</button>
+        )}
         {player ? (
           <button className="story-btn-outline" style={{ padding: '9px 18px', borderRadius: 999 }} onClick={() => onViewTree(player)}>
             <img src={BADGE_ICONS.tree} className="icon-img" alt="" /> ดูต้นไม้

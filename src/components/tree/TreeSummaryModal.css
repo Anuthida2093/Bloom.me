@@ -40,55 +40,53 @@
   }
 }
 
-/* [แก้ตามที่ระบุ — เอฟเฟกต์ขอบ] เลือกทำ "เส้นขอบไล่เฉด + glow เรืองจางๆ ที่หายใจเบาๆ"
-   (ไม่ใช้ shimmer เคลื่อนที่ เพราะจะรบกวนสายตาระหว่างอ่านคำอธิบายยาวๆ) ทำด้วย CSS ล้วน:
-   .ring เป็นกล่องนอกพื้นหลังไล่เฉดฟ้า→เขียว (มีความหมายผสมสีฟ้าตามที่ระบุ + สีเขียวของธีม
-   ต้นไม้ให้กลมกลืน) หนา 2px แล้วเว้น padding ให้ .inner ทึบด้านในบังจนเหลือแค่ขอบบางๆ —
-   วิธีนี้ได้เส้นขอบไล่เฉดจริงโดยไม่ต้องพึ่ง border-image ที่เบราว์เซอร์บางตัวจัดการมุมโค้งได้
-   ไม่สวย ส่วน glow มาจาก box-shadow สีฟ้าอ่อนที่ pulse ความเข้มขึ้น-ลงช้าๆ (คีย์เฟรมเดียว
-   กับแนวคิด treeSummaryLeafSway ของโมดัลเดิม) */
-.tree-mbti-panel__ring {
-  position: relative;
-  border-radius: 26px;
-  padding: 2px;
-  background: linear-gradient(135deg, #7DD3FC 0%, #BAE6FD 45%, var(--g300) 100%);
-  animation: treeMbtiGlowPulse 3.2s ease-in-out infinite;
-}
-@keyframes treeMbtiGlowPulse {
-  0%, 100% { box-shadow: 0 0 14px rgba(125, 211, 252, .35), 0 14px 40px var(--glass-b-20); }
-  50%      { box-shadow: 0 0 26px rgba(125, 211, 252, .55), 0 14px 40px var(--glass-b-20); }
-}
-
-.tree-mbti-panel__inner {
-  position: relative;
-  border-radius: 24px;
-  background: linear-gradient(165deg, #EFF9FF 0%, var(--g50) 100%);
-  padding: 22px 20px 20px;
-}
-
-.tree-mbti-panel__close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 32px;
-  height: 32px;
-  border-radius: 99px;
-  border: none;
-  background: var(--glass-b-8);
-  cursor: pointer;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.tree-mbti-panel__close:hover { background: var(--glass-b-15); }
-
-@keyframes treeMbtiLeafSway {
-  0%, 100% { transform: rotate(-6deg); }
-  50%      { transform: rotate(6deg); }
-}
-.tree-mbti-panel__leaf { display: inline-block; animation: treeMbtiLeafSway 2.4s ease-in-out infinite; }
-
+/* หน้าตากรอบ (ขอบไล่เฉด/glow/ปุ่มปิด/ใบไม้ไหว) ย้ายไป common/InfoPopup.css แล้ว
+   — ใช้ร่วมกับป็อบอัพข้อมูลต้นไม้ที่โคนต้น (TreeOfLife.tsx) */
 @media (prefers-reduced-motion: reduce) {
-  .tree-mbti-panel, .tree-mbti-panel__ring, .tree-mbti-panel__leaf { animation: none; }
+  .tree-mbti-panel { animation: none; }
 }
+
+/* [แก้ตามที่ระบุ] จอโน้ตบุ๊ก (แผงข้างขวา): แผงข้อมูล MBTI ขึ้นตรงตำแหน่งเดียวกับแผงข้อมูลต้นไม้
+   (ในคลัสเตอร์ขวาบน: ห่างขอบบน 16px, ชิดซ้ายของแถวปุ่มลอย 56px + ช่องว่าง 12px + ขอบ 16px = 84px)
+   จอเล็กยังเป็นแบบเดิม */
+@media (min-width: 769px) {
+  .tree-mbti-panel {
+    top: 16px;
+    right: 84px;
+    transform: none;
+    max-height: calc(100vh - 190px);
+    animation-name: treeMbtiPanelInSide;
+  }
+  @keyframes treeMbtiPanelInSide {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+}
+
+/* ═══ [แก้ตามที่ระบุ] แผงข้อมูล MBTI — กรอบ/ขอบแบบกระดานจัดอันดับ (พื้นเขียวไล่เฉด ขอบทอง ป้ายหัว) ═══ */
+.tree-mbti-panel { overflow: visible; padding-top: 18px; }
+.tree-mbti-panel .info-popup {
+  padding: 0;
+  border-radius: 20px;
+  background: var(--lb-card-bg);
+  border: 2px solid var(--lb-gold-edge);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--lb-gold-edge) 60%, var(--g800)), 0 14px 32px var(--glass-b-30);
+  animation: none;
+}
+.tree-mbti-panel__banner { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); z-index: 2; white-space: nowrap; }
+.tree-mbti-panel .info-popup__inner {
+  background: transparent;
+  padding: 30px 18px 18px;
+  color: var(--lb-card-text);
+  font-family: var(--font-display);
+  max-height: calc(100vh - 230px);
+  overflow-y: auto; scrollbar-width: none;
+}
+.tree-mbti-panel .info-popup__inner::-webkit-scrollbar { display: none; }
+.tree-mbti-panel .info-popup__inner :is(div, p, span) { color: var(--lb-card-text) !important; font-family: var(--font-display) !important; }
+.tree-mbti-panel .info-popup__inner p { color: var(--lb-card-text-sub) !important; }
+.tree-mbti-panel .info-popup__inner > div[style*="border-radius"] {
+  background: color-mix(in srgb, var(--fixed-white) 42%, transparent) !important;
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 55%, transparent) !important;
+}
+[data-theme="dark"] .tree-mbti-panel .info-popup__inner > div[style*="border-radius"] { background: color-mix(in srgb, var(--g900) 45%, transparent) !important; }

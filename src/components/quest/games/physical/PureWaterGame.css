@@ -157,3 +157,27 @@
   0% { transform: scale(0.8); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
+/* ═══ [แก้ตามที่ระบุ] กรอบรูป 2 กรอบใหญ่ขึ้น เส้นขอบชัด · ตัวหนังสือดำ (สว่าง) / ขาว (มืด) ═══ */
+.pure-water-game { color: var(--n900); }
+.pure-water-title { color: var(--n900); font-family: var(--font-display); }
+.pure-water-frames-row { gap: 14px; }
+.pure-water-frame-box {
+  width: min(42vw, 210px);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  border: 3px dashed color-mix(in srgb, var(--g800) 70%, transparent);
+  background: color-mix(in srgb, var(--fixed-white) 45%, transparent);
+  box-shadow: 0 4px 14px var(--glass-b-15);
+}
+.pure-water-frame-box:has(.pure-water-photo) { border-style: solid; border-color: var(--lb-gold-edge); }
+.pure-water-frame-box:hover { border-color: var(--g700); background: color-mix(in srgb, var(--fixed-white) 60%, transparent); }
+[data-theme="dark"] .pure-water-frame-box { border-color: rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0.08); }
+.pure-water-frame-icon { font-size: 44px; }
+.pure-water-frame-label { font-size: 13px; opacity: 0.85; color: var(--n900); }
+.pure-water-progress-container { width: 120px; height: 120px; }
+.pure-water-ring-bg { stroke: color-mix(in srgb, var(--n900) 15%, transparent); }
+.pure-water-ring-fill { stroke: var(--g600); }
+.pure-water-progress-current { color: var(--n900); font-size: 30px; }
+.pure-water-progress-max { color: var(--n900); }
+.pure-water-submit-btn { min-width: 220px; }
+.pure-water-cancel-btn { color: color-mix(in srgb, var(--n900) 60%, transparent); }

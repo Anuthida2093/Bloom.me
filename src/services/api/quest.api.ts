@@ -3,6 +3,8 @@ import { getDb, updateDb } from '../mock/mockDb'
 import { findQuestByCode } from '../../config/questCatalog'
 import { daysSinceLastHealthQuest, groundDryness, knowledgeGrowthMultiplier } from '../../config/groundFertility'
 import type { QuestLogEntry, QuestCategory, UserData } from '../../types'
+import { MAX_PAGE_SIZE, toQuestLogEntry, toUserData, type Paginated } from './adapters'
+import { getMe } from './user.api'
 
 /*============================================================================*\
   quest.api.ts — [ไฟล์ใหม่] คำขอที่เกี่ยวกับเควส
@@ -36,7 +38,9 @@ function guessCategory(code: string): QuestCategory {
 
 export async function getQuestLogs(): Promise<QuestLogEntry[]> {
   if (API_MODE === 'mock') { await mockDelay(120); return getDb().questLogs }
-  return http.get<QuestLogEntry[]>('/quest-logs')
+  // backend: GET /api/quests/logs/me (แบ่งหน้า)
+  const res = await http.get<Paginated<Record<string, unknown>>>(`/quests/logs/me?pageSize=${MAX_PAGE_SIZE}`)
+  return res.data.map(toQuestLogEntry)
 }
 
 export async function completeQuest(input: CompleteQuestPayload): Promise<CompleteQuestResult> {
@@ -135,5 +139,8 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
     return { log: resultLog, user: db.user }
   }
 
-  return http.post<CompleteQuestResult>('/quest-logs/complete', input)
+  // backend: POST /api/quest-logs/complete → { log, user } (user เป็น select ย่อย) — เติม field
+  // ที่ขาดจากโปรไฟล์เต็ม ให้หน้าจอได้ stack/เลเวลล่าสุดครบ
+  const res = await http.post<{ log: Record<string, unknown>; user: Record<string, unknown> }>('/quest-logs/complete', input)
+  return { log: toQuestLogEntry(res.log), user: toUserData(res.user, await getMe()) }
 }

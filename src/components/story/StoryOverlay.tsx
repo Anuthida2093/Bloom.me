@@ -5,7 +5,6 @@ import { usePosts } from '../../context/PostContext'
 import { useUser } from '../../context/UserContext'
 import { useSocial } from '../../context/SocialContext'
 import type { LeaderboardPlayer } from '../../config/leaderboardData'
-import GameAlert from '../ui/GameAlert'
 import StoryHeader from './StoryHeader'
 import StoryFeed from './StoryFeed'
 import StorySidebar, { type StoryView } from './StorySidebar'
@@ -14,6 +13,8 @@ import ComposeStoryModal from './ComposeStoryModal'
 import StoryProfilePage from './StoryProfilePage'
 import OtherProfileView from './OtherProfileView'
 import FriendsListPanel from './FriendsListPanel'
+import ChatListPage from './ChatListPage'
+import ChatThreadPage from './ChatThreadPage'
 import ContentSettingsPage from './ContentSettingsPage'
 import PostListPage from './PostListPage'
 import PostCard from './PostCard'
@@ -70,10 +71,18 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
   }
   useEscapeKey(handleClose)
 
-  const [view, setView] = useState<'feed' | StoryView>('feed')
+  const [view, setView] = useState<StoryView>('feed')
+  /** [ใหม่ตามที่ระบุ] ห้องแชทที่เปิดอยู่ (แสดงแทนที่หน้าฟีด) */
+  const [chatWith, setChatWith] = useState<{ id: string; name: string } | null>(null)
   const [showCompose, setShowCompose] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  /** จอกว้าง: แถบเมนูข้างแสดงอยู่ตลอด — กดสามขีดเพื่อซ่อน/แสดง */
+  const [desktopSidebarHidden, setDesktopSidebarHidden] = useState(false)
+  const handleToggleSidebar = () => {
+    if (window.matchMedia('(max-width: 900px)').matches) setMobileSidebarOpen((v) => !v)
+    else setDesktopSidebarHidden((v) => !v)
+  }
   const [openedPostId, setOpenedPostId] = useState(initialPostId)
   const openedPost = openedPostId ? posts.find((p) => p.id === openedPostId) ?? null : null
 
@@ -87,10 +96,17 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
   // โหมด "ดูโปรไฟล์คนอื่น" แล้วเช่นกัน ต้อง clear ก่อนเปลี่ยน view ทุกครั้ง
   const handleNavigate = (next: StoryView) => {
     clearViewProfileTarget()
+    setChatWith(null)
     setView(next)
     setMobileSidebarOpen(false)
   }
-  const backToFeed = () => setView('feed')
+  const backToFeed = () => { setChatWith(null); setView('feed') }
+  const openChat = (friendId: string, friendName: string) => {
+    clearViewProfileTarget()
+    setView('chat')
+    setChatWith({ id: friendId, name: friendName })
+    setMobileSidebarOpen(false)
+  }
 
   // "ดูต้นไม้" ปิด Story ทิ้งไปเลย (เหมือน handleClose) — clear เหตุผลเดียวกันเป๊ะ
   const handleViewTree = (player: LeaderboardPlayer | null) => {
@@ -102,11 +118,12 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
     <div className="story-overlay">
       <StoryHeader
         query={searchQuery}
+        searchFocused={searchFocused}
         onQueryChange={setSearchQuery}
         onFocus={() => setSearchFocused(true)}
         onBlur={() => setSearchFocused(false)}
         onOpenActivity={() => handleNavigate('activity')}
-        onToggleMobileSidebar={() => setMobileSidebarOpen((v) => !v)}
+        onToggleMobileSidebar={handleToggleSidebar}
         onClose={handleClose}
       />
 
@@ -120,13 +137,24 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
               username={viewProfileTarget.username}
               onBack={clearViewProfileTarget}
               onViewTree={handleViewTree}
+              onOpenChat={openChat}
             />
           )
         ) : (
           <>
             {view === 'feed' && <StoryFeed onCompose={() => setShowCompose(true)} />}
             {view === 'profile' && <StoryProfilePage onBack={backToFeed} onEditProfile={onEditProfile} onViewTree={() => handleViewTree(null)} />}
-            {view === 'friends' && <FriendsListPanel onBack={backToFeed} />}
+            {view === 'friends' && <FriendsListPanel onBack={backToFeed} onOpenChat={openChat} />}
+            {view === 'chat' && !chatWith && <ChatListPage onBack={backToFeed} onOpenChat={openChat} />}
+            {view === 'chat' && chatWith && (
+              <ChatThreadPage
+                key={chatWith.id}
+                friendId={chatWith.id}
+                friendName={chatWith.name}
+                onBack={() => setChatWith(null)}
+                onOpenPost={setOpenedPostId}
+              />
+            )}
             {view === 'activity' && <ActivityPanel onBack={backToFeed} />}
             {view === 'contentSettings' && <ContentSettingsPage onBack={backToFeed} />}
             {view === 'anonymousPosts' && (
@@ -139,16 +167,12 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
         )}
 
         {mobileSidebarOpen && <div className="story-sidebar__scrim" onClick={() => setMobileSidebarOpen(false)} />}
-        <div className={`story-sidebar${mobileSidebarOpen ? ' story-sidebar--open' : ''}`}>
+        <div className={`story-sidebar${mobileSidebarOpen ? ' story-sidebar--open' : ''}${desktopSidebarHidden ? ' story-sidebar--hidden' : ''}`}>
           <button className="story-subpage__back story-sidebar__close-mobile" onClick={() => setMobileSidebarOpen(false)}><img src={BADGE_ICONS.close} className="icon-img" alt="" /> ปิดเมนู</button>
-          <StorySidebar
-            query={searchQuery}
-            searchFocused={searchFocused}
-            onNavigate={handleNavigate}
-          />
+          <StorySidebar onNavigate={handleNavigate} active={viewProfileTarget ? undefined : view} />
         </div>
 
-        <button className="story-compose-fab" title="สร้างสตอรี่ใหม่" onClick={() => setShowCompose(true)}>+</button>
+        {view !== 'chat' && <button className="story-compose-fab" title="สร้างสตอรี่ใหม่" onClick={() => setShowCompose(true)}>+</button>}
       </div>
 
       {showCompose && <ComposeStoryModal onClose={() => setShowCompose(false)} />}
@@ -165,8 +189,18 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
         </div>
       )}
 
-      {/* [ข้อ 11] toast กลางจอตอนพยายามดูโปรไฟล์คนที่ปิดไว้ */}
-      <GameAlert open={showPrivacyToast} message="โพสต์ปิดโปรไฟล์" icon="🔒" onClose={dismissPrivacyToast} />
+      {/* [แก้ตามที่ระบุ] ป็อปอัพแจ้งเมื่อกดดูโปรไฟล์ของคนที่ปิดโปรไฟล์ไว้ — การ์ดแบบกระดานจัดอันดับ */}
+      {showPrivacyToast && (
+        <div className="story-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) dismissPrivacyToast() }}>
+          <div className="story-modal-card story-privacy-card" role="alertdialog" aria-labelledby="story-privacy-title">
+            <div className="story-modal-card__title">โปรไฟล์ส่วนตัว</div>
+            <div className="story-privacy-card__icon" aria-hidden="true">🔒</div>
+            <p id="story-privacy-title" className="story-privacy-card__text">ผู้โพสต์ปิดโปรไฟล์ไว้ ไม่ได้เปิดเป็นสาธารณะ</p>
+            <p className="story-privacy-card__sub">คุณยังกดถูกใจและแสดงความคิดเห็นในโพสต์ได้ตามปกติ</p>
+            <button className="lb-btn lb-btn--wide" onClick={dismissPrivacyToast}>ตกลง</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

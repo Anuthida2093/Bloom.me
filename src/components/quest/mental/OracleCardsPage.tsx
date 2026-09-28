@@ -9,6 +9,7 @@ import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import CameraCapture from '../shared/CameraCapture'
 import { MOOD_TYPE_INFO } from '../../../config/moodTypes'
 import './OracleCardsPage.css'
+import '../../leaderboard/leaderboardRow.css'
 import { BADGE_ICONS } from '../../../config/iconAssets'
 
 type Stage = 'intro' | 'spread' | 'reading' | 'camera'
@@ -37,7 +38,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
     ? generateOracleMessage(selectedCard, moodEntry.mood, `${moodEntry.id}-${selectedCard.id}`)
     : ''
 
-  const { displayedText, isDone: isTypewriterDone } = useTypewriter(affirmationText, 25)
+  const { displayedText, isDone: isTypewriterDone } = useTypewriter(affirmationText, 25, 200, undefined, () => stopSfx('KEYPRESS'))
 
   useEscapeKey(() => {
     stopSfx('KEYPRESS')
@@ -70,16 +71,17 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleConfirmPhoto = (dataUrl: string) => {
     playSfx('WATER_DROP', sfxOpts)
+    stopSfx('KEYPRESS')
+    // [แก้บั๊ก] บันทึกเควสสำเร็จก่อนเสมอ แล้วค่อยให้หยดน้ำ — onComplete (handleCompleteSpecial)
+    // ปิดหน้าเควสให้เองอยู่แล้ว ไม่เรียก onClose ซ้ำ
+    onComplete()
     updateProfile({ waterDrops: (userData.waterDrops ?? 0) + WATER_DROP_REWARD })
     triggerWateringEffect()
-    onComplete()
-    handleClose()
   }
 
   const handleSkip = () => {
     stopSfx('KEYPRESS')
     onComplete()
-    handleClose()
   }
 
   const handleClose = () => {
@@ -106,7 +108,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
 
       <div className="oracle-page__content">
         
-        <div className="oracle-page__mood-recap">
+        <div className="oracle-page__mood-recap lb-banner lb-banner--purple">
           <span style={{ fontSize: 22 }}>{MOOD_TYPE_INFO[moodEntry.mood].emoji}</span>
           <span>วันนี้คุณรู้สึก{moodEntry.note ? `: "${moodEntry.note}"` : 'แบบนี้อยู่นะ'}</span>
         </div>
@@ -158,7 +160,9 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
 
         {stage === 'reading' && selectedCard && (
           <div className="oracle-page__reading-view">
-            <div className="oracle-card--large">
+            {/* [แก้ตามที่ระบุ] ป็อบอัพข้อความไพ่แบบกระดานจัดอันดับ — กรอบทอง/พื้นเขียว/ฟอนต์หน้า Welcome */}
+            <div className="oracle-card--large lb-card">
+              <div className="lb-banner oracle-card__banner">ไพ่ของคุณวันนี้</div>
               <div className="oracle-card__header">
                 <span className="oracle-card__large-icon">{selectedCard.icon}</span>
                 <h2 className="oracle-card__large-title">{selectedCard.title}</h2>
@@ -180,11 +184,11 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
 
               {isTypewriterDone && (
                 <div className="oracle-card__actions">
-                  <button className="oracle-btn oracle-btn--ghost" onClick={handleSkip}>
+                  <button className="lb-btn lb-btn--ghost" style={{ flex: 1 }} onClick={handleSkip}>
                     ข้ามภารกิจ
                   </button>
-                  <button className="oracle-btn oracle-btn--primary" onClick={handleStartCamera}>
-                    📸 ทำภารกิจ
+                  <button className="lb-btn" style={{ flex: 1 }} onClick={handleStartCamera}>
+                    ทำภารกิจ
                   </button>
                 </div>
               )}

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useAppContext } from '../../../context/AppContext'
 import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../../hooks/useEscapeKey'
-import { playSfx } from '../../../utils/audioPlayer'
 import {
   SCREENING_QUESTIONS,
   SCORE_CHOICES,
@@ -42,8 +41,7 @@ interface ScreeningPageProps {
 export default function ScreeningPage({ pending, onFinished, onOpenSafetyNet, onStartCalmingQuest, onDismiss }: ScreeningPageProps) {
   useLockBodyScroll()
 
-  const { submitScreening, settings } = useAppContext()
-  const sfxOpts = { volume: settings.sfxVolume, enabled: settings.soundEnabled }
+  const { submitScreening } = useAppContext()
 
   const [stage, setStage] = useState<'intro' | 'quiz' | 'result'>('intro')
   const [index, setIndex] = useState(0)
@@ -56,7 +54,6 @@ export default function ScreeningPage({ pending, onFinished, onOpenSafetyNet, on
   const plan = RISK_PLANS[risk]
 
   const answer = (score: 0 | 1 | 2 | 3) => {
-    playSfx('CLICK', { ...sfxOpts, volume: sfxOpts.volume * 0.5 })
     const next = [...answers.filter((a) => a.question !== SCREENING_QUESTIONS[index].no), { question: SCREENING_QUESTIONS[index].no, score }]
     setAnswers(next)
 

@@ -3,17 +3,36 @@ import { useSocial } from '../../context/SocialContext'
 import { BADGE_ICONS } from '../../config/iconAssets'
 
 /*============================================================================*\
-  FriendsListPanel — [แก้รอบนี้ — ข้อ 3] "เพื่อน" = คนที่เราติดตามอยู่เท่านั้น (followerId
-  = เรา) ไม่ใช่ไม่ต้องรอ mutual follow — เดิมหน้านี้โชว์ผู้เล่นทุกคนพร้อมปุ่มติดตาม (เป็นหน้า
-  "ค้นหาคนติดตาม" มากกว่า) ตอนนี้เปลี่ยนเป็น list เฉพาะคนที่เราติดตามอยู่จริงเท่านั้น —
-  การค้นหาคนใหม่ไปติดตามยังทำได้ผ่านช่องค้นหา (StorySidebar) หรือหน้ากิจกรรมตามปกติ
-
-  [ข้อ 11] กดที่แถว (ไม่ใช่ปุ่มเลิกติดตาม) เปิดโปรไฟล์เพื่อนคนนั้น — requestViewProfile
-  เช็ค privacy ให้เองว่าเปิดได้จริงหรือต้องโชว์ toast "โพสต์ปิดโปรไฟล์" แทน
+  FriendsListPanel — [แก้ตามที่ระบุ] "เพื่อน" = ติดตามกันทั้งสองฝ่ายเท่านั้น
+  ────────────────────────────────────────────────────────────────────────────
+  แบ่ง 3 กลุ่ม:
+    • เพื่อน — ติดตามกันและกัน (มีปุ่ม "แชท")
+    • กำลังติดตาม — เราติดตามแล้ว รอเขาติดตามกลับ (ยังไม่นับเป็นเพื่อน)
+    • ติดตามคุณ — เขาติดตามเรา กด "ติดตามกลับ" แล้วเป็นเพื่อนกัน
+  กดที่แถวเปิดโปรไฟล์ (requestViewProfile เช็ค privacy ให้เอง)
 \*============================================================================*/
-export default function FriendsListPanel({ onBack }: { onBack: () => void }) {
-  const { following, toggleFollow, requestViewProfile } = useSocial()
-  const friends = MOCK_LEADERBOARD_PLAYERS.filter((p) => following.includes(p.id))
+interface FriendsListPanelProps {
+  onBack: () => void
+  onOpenChat: (friendId: string, friendName: string) => void
+}
+
+export default function FriendsListPanel({ onBack, onOpenChat }: FriendsListPanelProps) {
+  const { following, followers, friends, toggleFollow, requestViewProfile } = useSocial()
+  const byId = (ids: string[]) => MOCK_LEADERBOARD_PLAYERS.filter((p) => ids.includes(p.id))
+
+  const friendPlayers = byId(friends)
+  const pendingPlayers = byId(following.filter((id) => !followers.includes(id)))
+  const followBackPlayers = byId(followers.filter((id) => !following.includes(id)))
+
+  const row = (player: { id: string; username: string }, actions: React.ReactNode) => (
+    <div key={player.id} className="story-friend-row">
+      <button className="story-friend-row__clickable" onClick={() => requestViewProfile(player.id, player.username)}>
+        <div className="story-avatar story-avatar--sm">{player.username.trim().charAt(0).toUpperCase()}</div>
+        <span className="story-friend-row__name">{player.username}</span>
+      </button>
+      {actions}
+    </div>
+  )
 
   return (
     <div className="story-subpage">
@@ -22,23 +41,32 @@ export default function FriendsListPanel({ onBack }: { onBack: () => void }) {
         <span className="story-subpage__title">เพื่อน</span>
       </div>
 
-      {friends.length === 0 ? (
-        <div className="story-empty-state">ยังไม่มีเพื่อน — ลองค้นหาแล้วกดติดตามคนอื่นดูสิ</div>
-      ) : (
-        friends.map((player) => (
-          <div key={player.id} className="story-friend-row">
-            <button
-              className="story-friend-row__clickable"
-              onClick={() => requestViewProfile(player.id, player.username)}
-            >
-              <div className="story-avatar story-avatar--sm">{player.username.trim().charAt(0).toUpperCase()}</div>
-              <span className="story-friend-row__name">{player.username}</span>
-            </button>
-            <button className="story-follow-btn story-follow-btn--following" onClick={() => toggleFollow(player.id)}>
-              เลิกติดตาม
-            </button>
-          </div>
-        ))
+      <div className="story-activity-group-label">เพื่อน ({friendPlayers.length}) · ติดตามกันและกัน</div>
+      {friendPlayers.length === 0
+        ? <div className="story-empty-state story-empty-state--compact">ยังไม่มีเพื่อน — ติดตามกันทั้งสองฝ่ายแล้วจะเป็นเพื่อนกัน</div>
+        : friendPlayers.map((p) => row(p, (
+          <>
+            <button className="story-follow-btn" onClick={() => onOpenChat(p.id, p.username)}>แชท</button>
+            <button className="story-follow-btn story-follow-btn--following" onClick={() => toggleFollow(p.id)}>เลิกติดตาม</button>
+          </>
+        )))}
+
+      {pendingPlayers.length > 0 && (
+        <>
+          <div className="story-activity-group-label">กำลังติดตาม ({pendingPlayers.length}) · รอติดตามกลับ</div>
+          {pendingPlayers.map((p) => row(p, (
+            <button className="story-follow-btn story-follow-btn--following" onClick={() => toggleFollow(p.id)} title="แตะเพื่อเลิกติดตาม">กำลังติดตาม</button>
+          )))}
+        </>
+      )}
+
+      {followBackPlayers.length > 0 && (
+        <>
+          <div className="story-activity-group-label">ติดตามคุณ ({followBackPlayers.length})</div>
+          {followBackPlayers.map((p) => row(p, (
+            <button className="story-follow-btn" onClick={() => toggleFollow(p.id)}>ติดตามกลับ</button>
+          )))}
+        </>
       )}
     </div>
   )

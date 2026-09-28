@@ -341,3 +341,125 @@
   .game-shell__reward-drops img,
   .game-shell__reward-cards div { animation: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ธีมสว่าง — [แก้ตามที่ระบุ] หน้าเล่นเควสใช้พื้นเขียวอ่อนสีเดียวกับกรอบกระดานจัดอันดับ
+   ────────────────────────────────────────────────────────────────────────────
+   ดีไซน์เดิมของหน้าเกมเป็นพื้นเขียวเข้ม + ตัวหนังสือขาว + "กระจกขาวโปร่ง" (--glass-w-*) ทั้งชุด
+   ธีมสว่างจึงกลับด้านทั้งชุดในขอบเขต .game-shell เท่านั้น:
+     - พื้น → เขียวอ่อน (--leaf-soft) / ตัวหนังสือ → เข้ม (--n900)
+     - กระจกขาวโปร่ง → เงาเขียวเข้มโปร่งในเปอร์เซ็นต์เดิม (พื้นผิว/เส้นขอบ/ตัวหนังสือจางยังมีระดับเท่าเดิม)
+     - ตัวหนังสือขาวบนพื้นเกม → เข้ม, ส่วนตัวหนังสือขาวบนปุ่มสีเน้น (accent) คงขาวไว้
+   ธีมมืดไม่แตะ — ยังเป็นเขียวเข้ม/ขาวแบบเดิมทุกอย่าง
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root:not([data-theme="dark"]) .game-shell {
+  background: linear-gradient(165deg, var(--leaf-soft) 0%, var(--g100) 55%, var(--leaf-soft-strong) 100%);
+  color: var(--n900);
+  --glass-w-5: color-mix(in srgb, var(--g900) 5%, transparent);
+  --glass-w-6: color-mix(in srgb, var(--g900) 6%, transparent);
+  --glass-w-7: color-mix(in srgb, var(--g900) 7%, transparent);
+  --glass-w-9: color-mix(in srgb, var(--g900) 9%, transparent);
+  --glass-w-10: color-mix(in srgb, var(--g900) 10%, transparent);
+  --glass-w-12: color-mix(in srgb, var(--g900) 12%, transparent);
+  --glass-w-13: color-mix(in srgb, var(--g900) 13%, transparent);
+  --glass-w-14: color-mix(in srgb, var(--g900) 14%, transparent);
+  --glass-w-16: color-mix(in srgb, var(--g900) 16%, transparent);
+  --glass-w-20: color-mix(in srgb, var(--g900) 20%, transparent);
+  --glass-w-22: color-mix(in srgb, var(--g900) 22%, transparent);
+  --glass-w-28: color-mix(in srgb, var(--g900) 28%, transparent);
+  --glass-w-50: color-mix(in srgb, var(--g900) 50%, transparent);
+  --glass-w-55: color-mix(in srgb, var(--g900) 55%, transparent);
+  --glass-w-72: color-mix(in srgb, var(--g900) 72%, transparent);
+  --glass-w-80: color-mix(in srgb, var(--g900) 80%, transparent);
+  --glass-w-85: color-mix(in srgb, var(--g900) 85%, transparent);
+}
+:root:not([data-theme="dark"]) .game-shell :is(
+  .game-shell__title, .game-shell__close, .game-shell__pill-title, .game-shell__reward-title,
+  .game-shell__reward-cards strong, .qg-select, .qg-select option, .qg-ring__value, .qg-stat strong, .qg-title
+) { color: var(--n900); }
+:root:not([data-theme="dark"]) .game-shell :is(
+  .game-shell__subtitle, .game-shell__theory, .game-shell__reward-cards div
+) { color: var(--n900); }
+:root:not([data-theme="dark"]) .game-shell :is(
+  .game-shell__howto, .game-shell__reward-text, .game-shell__confirm-card p, .game-shell__confirm-actions button, .qg-chip
+) { color: var(--n900); }
+:root:not([data-theme="dark"]) .game-shell .qg-chip.is-active,
+:root:not([data-theme="dark"]) .game-shell .game-shell__confirm-actions .is-primary { color: var(--fixed-white); }
+:root:not([data-theme="dark"]) .game-shell .game-shell__confirm-card { background: var(--leaf-soft); }
+:root:not([data-theme="dark"]) .game-shell .qg-select option { background: var(--fixed-white); }
+:root:not([data-theme="dark"]) .game-shell :is(.qg-input, .qg-textarea) { color: var(--n900); }
+:root:not([data-theme="dark"]) .game-shell :is(.qg-input, .qg-textarea)::placeholder { color: color-mix(in srgb, var(--n900) 40%, transparent); }
+:root:not([data-theme="dark"]) .game-shell .qg-tag--warn { color: var(--n900); }
+:root:not([data-theme="dark"]) .game-shell .qg-tag--danger { color: var(--n900); font-weight: 800; }
+:root:not([data-theme="dark"]) .game-shell .qg-tag--ok { color: var(--g800); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   [แก้ตามที่ระบุ] หน้าเล่นเควสทุกเควส — แถบบน (หัวเควส / ป้าย pill ลอย) เขียวเข้มกว่าพื้นด้านล่าง
+   + เส้นขอบสีทอง · ธีมสว่างตัวหนังสือดำทั้งหมด · ธีมมืดตัวหนังสือขาวทั้งหมด
+   ═══════════════════════════════════════════════════════════════════════════ */
+.game-shell {
+  --gs-gold: color-mix(in srgb, var(--coin) 70%, var(--g600));
+  --gs-bar: var(--g800);
+  --gs-bar-text: var(--fixed-white);
+}
+:root:not([data-theme="dark"]) .game-shell {
+  --gs-bar: var(--leaf-soft-strong);
+  --gs-bar-text: var(--n900);
+}
+.game-shell .game-shell__header {
+  background: var(--gs-bar);
+  border-bottom: 2px solid var(--gs-gold);
+  box-shadow: 0 3px 10px var(--glass-b-15);
+}
+.game-shell .game-shell__pill-header {
+  background: var(--gs-bar);
+  border: 2px solid var(--gs-gold);
+  backdrop-filter: none;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--gs-gold) 70%, var(--g800)), 0 6px 14px var(--glass-b-20);
+}
+.game-shell :is(.game-shell__title, .game-shell__subtitle, .game-shell__pill-title) {
+  color: var(--gs-bar-text);
+  font-family: var(--font-display);
+}
+.game-shell :is(.game-shell__confirm-card, .game-shell__reward-cards div) { border-color: var(--gs-gold); }
+
+/* ธีมมืด: ตัวหนังสือรองที่เดิมเป็นขาวจาง → ขาวล้วน */
+[data-theme="dark"] .game-shell :is(
+  .game-shell__subtitle, .game-shell__howto, .game-shell__theory, .game-shell__reward-text,
+  .game-shell__reward-cards div, .game-shell__confirm-card p, .game-shell__confirm-actions button,
+  .qg-chip, .qg-hint, .qg-ring__label, .qg-stat span
+) { color: var(--fixed-white); }
+
+
+/* [แก้ตามที่ระบุ] หน้ารับรางวัลอยู่ในการ์ด .quest-done-card (index.css) — กล่องตัวเลขรางวัลโทนเดียวกับการ์ด */
+.game-shell__reward-card .game-shell__reward-cards div {
+  background: color-mix(in srgb, var(--fixed-white) 45%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 55%, transparent);
+  color: var(--lb-card-text-sub);
+}
+[data-theme="dark"] .game-shell__reward-card .game-shell__reward-cards div { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+.game-shell__reward-card .game-shell__reward-cards { margin-bottom: 8px; }
+
+/* ═══ [แก้ตามที่ระบุ] ป้ายชื่อเควสลอยกึ่งกลางด้านบน = ป้ายแบบกระดานจัดอันดับเดียวกับหน้าเควส
+   (.quest-section-title-pill) — พื้นเขียวอ่อนไล่เฉด ขอบทอง ปลายม้วนสองข้าง ขนาด/ตำแหน่งเดียวกัน ═══ */
+.game-shell .game-shell__pill-header.lb-banner {
+  top: 14px;
+  max-width: calc(100% - 120px);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--leaf-soft-strong) 0%, var(--leaf-soft-active) 100%);
+  border: 2px solid var(--lb-gold);
+  box-shadow: 0 3px 8px var(--glass-b-30);
+  backdrop-filter: none;
+  color: var(--on-leaf-soft);
+}
+[data-theme="dark"] .game-shell .game-shell__pill-header.lb-banner {
+  background: linear-gradient(180deg, var(--g600) 0%, var(--g800) 100%);
+  color: var(--fixed-white);
+}
+.game-shell .game-shell__pill-header.lb-banner .game-shell__pill-title { color: inherit; font-family: var(--font-display); font-size: inherit; }
+.game-shell .game-shell__pill-header.lb-banner .game-shell__pill-icon { font-size: inherit; }
+/* [แก้ตามที่ระบุ] ก้าวเพื่อสุขภาพ: กดเข้าแผนที่แล้วไม่ต้องมีแถบชื่อเควสด้านบน (มีเฉพาะหน้าเลือกจุดหมาย) */
+.game-shell:has(.step-journey-game__map-canvas) .game-shell__pill-header { display: none; }
+
+/* เควสปกติ (ไม่เต็มจอ) ไม่มีแถบหัวแล้ว — เว้นบนให้ป้ายชื่อเควสลอย ไม่ทับเนื้อหา */
+.game-shell__body:not(.game-shell__body--fullscreen) { padding-top: 64px; }

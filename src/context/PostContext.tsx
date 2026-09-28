@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { PostData, PostCommentData } from '../types'
+import type { PostData, PostCommentData, MoodTypeValue } from '../types'
 import { queryKeys } from '../services/queryKeys'
 import * as postApi from '../services/api/post.api'
 import { useUser } from './UserContext'
@@ -23,7 +23,7 @@ import { useUser } from './UserContext'
 interface PostContextValue {
   posts: PostData[]
   isLoadingPosts: boolean
-  createPost: (input: { content: string; isAnonymous: boolean; imageUrl?: string | null }) => void
+  createPost: (input: { content: string; isAnonymous: boolean; imageUrl?: string | null; imageUrls?: string[]; tags?: string[]; mood?: MoodTypeValue | null }) => void
   toggleLike: (postId: string) => void
   toggleRepost: (postId: string) => void
   addComment: (postId: string, text: string) => void
@@ -59,7 +59,9 @@ export function PostProvider({ children }: { children: ReactNode }) {
         userId: userData.id,
         authorName: userData.username,
         content: payload.content,
-        imageUrl: payload.imageUrl ?? null,
+        imageUrl: payload.imageUrls?.[0] ?? payload.imageUrl ?? null,
+        imageUrls: payload.imageUrls ?? [],
+        tags: payload.tags ?? [],
         isAnonymous: payload.isAnonymous,
         likedBy: [],
         likeCount: 0,
@@ -68,6 +70,7 @@ export function PostProvider({ children }: { children: ReactNode }) {
         repostedByMe: false,
         repostCount: 0,
         createdAt: new Date().toISOString(),
+        mood: payload.mood ?? null,
       }
       queryClient.setQueryData<PostData[]>(queryKeys.posts, (list) => [optimisticPost, ...(list ?? [])])
       return { previous, optimisticId }
@@ -190,8 +193,8 @@ export function PostProvider({ children }: { children: ReactNode }) {
     },
   })
 
-  const createPost = useCallback((input: { content: string; isAnonymous: boolean; imageUrl?: string | null }) => {
-    createPostMutation.mutate({ content: input.content, isAnonymous: input.isAnonymous, imageUrl: input.imageUrl })
+  const createPost = useCallback((input: { content: string; isAnonymous: boolean; imageUrl?: string | null; imageUrls?: string[]; tags?: string[]; mood?: MoodTypeValue | null }) => {
+    createPostMutation.mutate({ content: input.content, isAnonymous: input.isAnonymous, imageUrl: input.imageUrl, imageUrls: input.imageUrls, tags: input.tags, mood: input.mood ?? null })
   }, [createPostMutation])
 
   const toggleLike = useCallback((postId: string) => {

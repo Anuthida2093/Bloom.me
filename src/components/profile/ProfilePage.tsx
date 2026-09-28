@@ -17,10 +17,14 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { BADGE_ICONS, ITEM_ICONS, QUEST_ICONS } from '../../config/iconAssets'
 import { computeBmi, computeBodyType } from '../../utils/bmi'
 import { getBodyTypeImagePath } from '../../config/bodyTypeAssets'
-// [ย้ายตามที่ระบุ — ข้อ 12] ปุ่ม "ประวัติสมุดบันทึกรากไม้เรืองแสง"/"ประวัติเกราะแห่งความ
+import { useLanguage } from '../../context/LanguageContext'
+// [ย้ายตามที่ระบุ — ข้อ 12] ปุ่ม "ประวัติไดอะรี่ของฉัน"/"ประวัติเกราะแห่งความ
 // ขอบคุณ" ย้ายจากป้ายลอยมุมซ้ายบนของ ReframerJournalPage.tsx/GratitudeShieldPage.tsx มาไว้
 // ที่นี่แทน — reuse JournalHistoryModal ตัวเดิมเป๊ะ (ย้ายจุดเรียกใช้ ไม่เขียน UI แสดงผลใหม่)
 import JournalHistoryModal from '../quest/mental/shared/JournalHistoryModal'
+import VoiceMemoHistoryModal from './VoiceMemoHistoryModal'
+import PostItHistoryModal from './PostItHistoryModal'
+import { useMental } from '../../context/MentalContext'
 
 /*============================================================================*\
   ProfilePage — [ไฟล์ใหม่] หน้าโปรไฟล์เต็มจอ เปิดจากปุ่ม "โปรไฟล์" ใน ActionMenuBar
@@ -114,8 +118,10 @@ export default function ProfilePage({
   useEscapeKey(onClose)
 
   const [sparkleId, setSparkleId] = useState<string | null>(null)
+  const { t, tv } = useLanguage()
+  const { postIts } = useMental()
   /** [ย้ายตามที่ระบุ — ข้อ 12] เปิด JournalHistoryModal ของเควสไหน — null = ปิดอยู่ */
-  const [openHistoryFor, setOpenHistoryFor] = useState<'ment-reframer-journal' | 'ment-gratitude-shield' | null>(null)
+  const [openHistoryFor, setOpenHistoryFor] = useState<'ment-reframer-journal' | 'ment-gratitude-shield' | 'know-brain-dump' | 'postits' | null>(null)
   /** [เพิ่มตามที่ระบุ — ข้อ 15] แท็บกรองหมวดหมู่คลังไอเทม — pattern เดียวกับ shopCategory ใน
    *  ShopSection.tsx ('all' เพิ่มเข้ามาเป็นค่าเริ่มต้นเพื่อไม่ให้พฤติกรรมเดิม "เห็นทุกหมวด
    *  พร้อมกัน" หายไปทันทีที่อัปเดต — ผู้ใช้กดเลือกหมวดเพื่อกรองดูทีละหมวดได้เพิ่มเข้ามา) */
@@ -185,7 +191,8 @@ export default function ProfilePage({
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--bg)', overflowY: 'auto' }}>
+    // [แก้ตามที่ระบุ] ทั้งหน้าใช้ฟอนต์เดียวกับหน้า Welcome/กระดานจัดอันดับ (--font-display)
+    <div className="profile-page" style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--bg)', overflowY: 'auto', fontFamily: 'var(--font-display)' }}>
       <button
         onClick={onClose}
         title="ปิด"
@@ -200,18 +207,18 @@ export default function ProfilePage({
 
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '72px 20px 48px' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-3xl)', color: 'var(--heading-accent)' }}>👤 {userData.username || 'ผู้ใช้'}</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-3xl)', color: 'var(--heading-accent)' }}>{userData.username || 'ผู้ใช้'}</div>
           {/* [แก้ตามที่ระบุ — ข้อ 7] ขยาย MBTI/Lv./เหรียญ ให้เด่นชัดขึ้น (เดิม fs-sm เท่าตัวหนังสือรองทั่วไป) ใช้ --fs-md + ตัวหนา แทนตัวเลขแบนราบเดิม */}
           <p style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--text-sub)', marginTop: 4 }}>
-            {userData.mbtiType ?? '—'} · เลเวล {userData.level} · <img src={BADGE_ICONS.coins} className="icon-img" alt="" /> {userData.coins.toLocaleString()}
+            {userData.mbtiType ?? '—'} · {t('profile.level')} {userData.level} · <img src={BADGE_ICONS.coins} className="icon-img" style={{ width: 30, height: 30, margin: '-6px 2px -6px 0', verticalAlign: 'middle' }} alt="" /> {userData.coins.toLocaleString()}
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
+        <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
 
           {/* ═══ โซนซ้าย: คลังไอเทม ═══ */}
-          <div className="card" style={{ padding: 22, maxHeight: 640, overflowY: 'auto' }}>
-            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}><img src={BADGE_ICONS.item} className="icon-img" alt="" /> คลังไอเทม</div>
+          <div className="card profile-card--inventory" style={{ padding: 22, maxHeight: 640, overflowY: 'auto' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>{t('profile.inventory')}</div>
             <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>กดไอเทมเพื่อวางบนต้นไม้ กดซ้ำเพื่อถอด</p>
 
             {groupedInventory.length === 0 ? (
@@ -282,7 +289,7 @@ export default function ProfilePage({
                               ? <img src={ITEM_ICONS[item.shopItemId]} alt={meta?.nameTh ?? ''} style={{ width: 36, height: 36, objectFit: 'contain', margin: '0 auto' }} />
                               : meta?.emoji}
                           </div>
-                          <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xs)', color: 'var(--text)' }}>{meta?.nameTh}</div>
+                          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xs)', color: 'var(--text)' }}>{meta?.nameTh}</div>
                           <span
                             className="tag"
                             style={{
@@ -305,8 +312,8 @@ export default function ProfilePage({
           </div>
 
           {/* ═══ โซนกลาง: อวตาร BMI ═══ */}
-          <div className="card" style={{ padding: 22, textAlign: 'center' }}>
-            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 16 }}>📊 รูปร่างของคุณ</div>
+          <div className="card profile-card--body" style={{ padding: 22, textAlign: 'center' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 16 }}>{t('profile.body')}</div>
 
             {/* [แก้ — ตามที่ระบุ] เดิมเป็นอวตาร SVG วาดเองสีเขียวเดียวไม่แยกเพศ (ดู avatar.color
                 ด้านบน ยังใช้อยู่กับแท็ก/หมุดสไลเดอร์ด้านล่าง แค่ตัวรูปคนเปลี่ยนเป็นภาพจริงตาม
@@ -319,7 +326,7 @@ export default function ProfilePage({
               style={{ width: '100%', maxWidth: 200, aspectRatio: '1 / 1', objectFit: 'contain', margin: '0 auto', display: 'block' }}
             />
 
-            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-3xl)', color: avatar.color, marginTop: 8 }}>{bmi.toFixed(1)}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-3xl)', color: avatar.color, marginTop: 8 }}>{bmi.toFixed(1)}</div>
             <span className="tag" style={{ background: `color-mix(in srgb, ${avatar.color} 18%, transparent)`, color: avatar.color, fontSize: 'var(--fs-sm)' }}>
               BMI · {avatar.label}
             </span>
@@ -336,9 +343,9 @@ export default function ProfilePage({
           </div>
 
           {/* ═══ โซนขวา: กิจกรรม + ปฏิทิน ═══ */}
-          <div className="card" style={{ padding: 22 }}>
-            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>
-              📋 {isToday ? 'กิจกรรมวันนี้' : `กิจกรรมวันที่ ${selectedDate}`}
+          <div className="card profile-card--activity" style={{ padding: 22 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>
+              {isToday ? t('profile.today') : tv('profile.activityOn', { d: selectedDate })}
             </div>
 
             {!hasAnyActivity ? (
@@ -372,13 +379,13 @@ export default function ProfilePage({
                 )}
                 {journalOfDay && (
                   <div style={{ background: 'var(--n50)', borderRadius: 12, padding: '10px 12px', fontSize: 'var(--fs-sm)' }}>
-                    <b>📖 สมุดบันทึกรากไม้เรืองแสง</b>
+                    <b>ไดอะรี่ของฉัน</b>
                     <div style={{ marginTop: 2, color: 'var(--text-sub)' }}>{journalOfDay.title}</div>
                   </div>
                 )}
                 {gratitudeOfDay && (
                   <div style={{ background: 'var(--n50)', borderRadius: 12, padding: '10px 12px', fontSize: 'var(--fs-sm)' }}>
-                    <b>🛡️ เกราะแห่งความขอบคุณ</b>
+                    <b>คำขอบคุณ</b>
                     <div style={{ marginTop: 2, color: 'var(--text-sub)' }}>{gratitudeOfDay.originalText}</div>
                   </div>
                 )}
@@ -401,7 +408,7 @@ export default function ProfilePage({
                 (เดิม gap 2-3px แน่นจนอ่านยาก, ตัวอักษร 10px เล็กเกินไปเทียบกับพื้นที่การ์ด) */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <button onClick={() => changeMonth(-1)} style={{ background: 'none', border: 'none', fontSize: 'var(--fs-lg)', cursor: 'pointer', color: 'var(--text-sub)' }}>←</button>
-              <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-md)', color: 'var(--heading-accent)' }}>📅 {MONTH_NAMES_TH[calMonth]} {calYear}</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-md)', color: 'var(--heading-accent)' }}>{MONTH_NAMES_TH[calMonth]} {calYear}</div>
               <button onClick={() => changeMonth(1)} style={{ background: 'none', border: 'none', fontSize: 'var(--fs-lg)', cursor: 'pointer', color: 'var(--text-sub)' }}>→</button>
             </div>
 
@@ -446,9 +453,9 @@ export default function ProfilePage({
               ของ ReframerJournalPage.tsx/GratitudeShieldPage.tsx ย้ายมาเป็นการ์ดที่นี่แทน
               กดแล้วเปิด JournalHistoryModal ตัวเดิม (reuse component/logic เดิมทั้งหมด
               ไม่ได้เขียน UI แสดงผลประวัติใหม่) ═══ */}
-          <div className="card" style={{ padding: 22 }}>
-            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>
-              📜 ประวัติการเขียนบันทึก
+          <div className="card profile-card--history" style={{ padding: 22 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>
+              {t('profile.journal')}
             </div>
             <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>ย้อนดูสิ่งที่เคยเขียนไว้ทั้งหมด</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -459,7 +466,7 @@ export default function ProfilePage({
                 {QUEST_ICONS['ment-reframer-journal']
                   ? <img src={QUEST_ICONS['ment-reframer-journal']} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
                   : <span style={{ fontSize: 28, lineHeight: 1 }}>📖</span>}
-                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--text)' }}>ประวัติสมุดบันทึกรากไม้เรืองแสง</span>
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--text)' }}>ประวัติไดอะรี่ของฉัน</span>
               </button>
               <button
                 onClick={() => setOpenHistoryFor('ment-gratitude-shield')}
@@ -468,7 +475,25 @@ export default function ProfilePage({
                 {QUEST_ICONS['ment-gratitude-shield']
                   ? <img src={QUEST_ICONS['ment-gratitude-shield']} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
                   : <span style={{ fontSize: 28, lineHeight: 1 }}>🛡️</span>}
-                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--text)' }}>ประวัติเกราะแห่งความขอบคุณ</span>
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--text)' }}>ประวัติคำขอบคุณ</span>
+              </button>
+              {/* [เพิ่มตามที่ระบุ] ประวัติเควสเทกระเป๋าความจำผ่านเสียง — ใต้ประวัติคำขอบคุณ */}
+              <button
+                onClick={() => setOpenHistoryFor('know-brain-dump')}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: '1.5px solid var(--border)', background: 'var(--n50)', cursor: 'pointer', textAlign: 'left' }}
+              >
+                {QUEST_ICONS['know-brain-dump']
+                  ? <img src={QUEST_ICONS['know-brain-dump']} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                  : <span style={{ fontSize: 28, lineHeight: 1 }}>🧠</span>}
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--text)' }}>ประวัติเทกระเป๋าความจำผ่านเสียง</span>
+              </button>
+              {/* [เพิ่มตามที่ระบุ] ประวัติโพสอิท — ทั้งที่เก็บแล้วและที่ยังติดอยู่บนต้นไม้ พร้อมวันที่ */}
+              <button
+                onClick={() => setOpenHistoryFor('postits')}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: '1.5px solid var(--border)', background: 'var(--n50)', cursor: 'pointer', textAlign: 'left' }}
+              >
+                <span style={{ fontSize: 26, lineHeight: 1 }}>📌</span>
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--text)' }}>ประวัติโพสอิท</span>
               </button>
             </div>
           </div>
@@ -476,9 +501,9 @@ export default function ProfilePage({
           {/* ═══ [เพิ่มตามที่ระบุ] โซนความสำเร็จ — badge/achievement ตัวแรกที่มีจริงใน frontend
               เทียบกับ backend badges ใน seed.ts (BADGE_CATALOG ตอนนี้มีแค่ 2 ตัวที่ตัดสินใจ
               ให้สร้างแล้ว — Strategic Delay กับ Mirror of Truth ดู MentalContext.earnedBadges) */}
-          <div className="card" style={{ padding: 22 }}>
-            <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>
-              🏅 ความสำเร็จ
+          <div className="card profile-card--achievements" style={{ padding: 22 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>
+              {t('profile.achievements')}
             </div>
             <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>ปลดล็อกอัตโนมัติเมื่อทำเงื่อนไขสำเร็จ</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -518,11 +543,15 @@ export default function ProfilePage({
         </div>
       </div>
 
+      {openHistoryFor === 'know-brain-dump' && <VoiceMemoHistoryModal onClose={() => setOpenHistoryFor(null)} />}
+      {openHistoryFor === 'postits' && (
+        <PostItHistoryModal userId={userData.id} onTreePostIts={postIts} onClose={() => setOpenHistoryFor(null)} />
+      )}
       {openHistoryFor === 'ment-reframer-journal' && (
         <JournalHistoryModal
           theme="mystic"
           accent="#9B59D0"
-          title="ประวัติสมุดบันทึกรากไม้เรืองแสง"
+          title="ประวัติไดอะรี่ของฉัน"
           entries={journalEntries.filter((e) => e.questCode === 'ment-reframer-journal')}
           onClose={() => setOpenHistoryFor(null)}
         />
@@ -531,11 +560,47 @@ export default function ProfilePage({
         <JournalHistoryModal
           theme="golden"
           accent="#FFB020"
-          title="ประวัติเกราะแห่งความขอบคุณ"
+          title="ประวัติคำขอบคุณ"
           entries={journalEntries.filter((e) => e.questCode === 'ment-gratitude-shield')}
           onClose={() => setOpenHistoryFor(null)}
         />
       )}
+
+      <style>{`
+        .profile-page button, .profile-page input, .profile-page select { font-family: inherit; }
+        /* [แก้ตามที่ระบุ] การ์ดทุกใบใช้กรอบแบบกระดานจัดอันดับ — ขอบทอง + วงในบาง + พื้นเขียวไล่เฉด
+           (ธีมมืด: เขียวเข้ม) หัวข้อการ์ดสีเดียวกับตัวหนังสือในกรอบ */
+        .profile-page .card {
+          --pf-bg: var(--leaf-soft);
+          --pf-bg-2: var(--leaf-soft-strong);
+          --pf-text: var(--n900);
+          background: linear-gradient(180deg, color-mix(in srgb, var(--fixed-white) 55%, var(--pf-bg)) 0%, var(--pf-bg) 100%);
+          border: 2px solid color-mix(in srgb, var(--coin) 70%, var(--g600));
+          border-radius: 18px;
+          box-shadow: 0 8px 22px var(--glass-b-20), inset 0 0 0 3px color-mix(in srgb, var(--fixed-white) 45%, transparent), inset 0 0 0 4px color-mix(in srgb, var(--coin) 25%, transparent);
+          color: var(--pf-text);
+        }
+        [data-theme="dark"] .profile-page .card {
+          --pf-bg: var(--g800);
+          --pf-bg-2: var(--g900);
+          --pf-text: var(--fixed-white);
+          background: linear-gradient(180deg, var(--g700) 0%, var(--pf-bg) 100%);
+          box-shadow: 0 8px 22px var(--glass-b-30), inset 0 0 0 3px var(--g800), inset 0 0 0 4px color-mix(in srgb, var(--coin) 25%, transparent);
+        }
+        /* [แก้ตามที่ระบุ] มือถือ: เรียง รูปร่างของคุณ → คลังไอเทม → กิจกรรมวันนี้ →
+           ประวัติการเขียนบันทึก → ความสำเร็จ (จอกว้างยังเป็นกริดหลายคอลัมน์ตามเดิม) */
+        @media (max-width: 768px) {
+          /* align-items เดิมของกริด (start) ทำให้การ์ดหดตามเนื้อหา — ยืดเต็มความกว้างเท่ากันทุกใบ
+             ขนาดเท่าการ์ด "กิจกรรมวันนี้" */
+          .profile-grid { display: flex !important; flex-direction: column; align-items: stretch !important; }
+          .profile-grid > .card { width: 100%; max-height: none !important; }
+          .profile-card--body { order: 1; }
+          .profile-card--inventory { order: 2; }
+          .profile-card--activity { order: 3; }
+          .profile-card--history { order: 4; }
+          .profile-card--achievements { order: 5; }
+        }
+      `}</style>
     </div>
   )
 }

@@ -1,7 +1,10 @@
 :root {
-  --lc-c-4: rgba(42, 102, 62, 0.2);
-  --nav-cutout-color: var(--lc-c-4);
-  --nav-bg: var(--g700);
+  /* [รีธีมเขียวอ่อนมินิมอล] พื้นแถบใช้โทเคนกลาง --leaf-soft (index.css) แทน --g700 เข้มเดิม
+     ตัวหนังสือ/ไอคอนบนแถบจึงเปลี่ยนจากขาวเป็น --on-leaf-soft ด้วย (ขาวบนเขียวอ่อนอ่านไม่ออก) */
+  --nav-cutout-color: color-mix(in srgb, var(--leaf-soft-edge) 55%, transparent);
+  --nav-bg: var(--g500);   /* [แก้ตามที่ระบุ] เข้มขึ้นจาก --leaf-soft (g200) — ตัวหนังสือ --on-leaf-soft ≈ 5.9:1 */
+  --nav-fg: var(--on-leaf-soft);   /* สีตัวหนังสือ/ไอคอนบนแถบ (ธีมมืดสลับเป็นสีอ่อน ดูท้ายไฟล์) */
+  --nav-item-bg: color-mix(in srgb, var(--fixed-white) 40%, transparent);
   --nav-indicator: var(--fixed-white);/* [แก้ตามที่ระบุ] เดิมใช้ var(--lc-c-4) แต่ผู้ใช้บอกว่าไม่ค่อยเห็น เลยเปลี่ยนเป็นสีขาวให้เด่นชัดขึ้น */
   /* [Part E — ย่อแถบเมนูล่าง] แถบ 400×80 → 288×60, ไอคอน 125×130 (ใหญ่กว่าตัวแถบ และไม่ได้
      อ่านตัวแปรนี้เลย) → 62px ผูกกับ --nav-icon-size จริงแล้ว ภาพ PNG มีขอบโปร่งใสรอบตัวจึงตั้ง
@@ -31,23 +34,25 @@
   gap: 4px;
   padding: 12px;
   border-radius: var(--r-md);/* [แก้ตามที่ระบุ] ปรับ border-radius ให้กลมขึ้นเล็กน้อยจากเดิม var(--r-sm) */
-  background: var(--ae-surface);/* [แก้ตามที่ระบุ] ปรับพื้นหลังให้เป็นสีเดียวกับแถบเมนูล่างหลัก (var(--ae-surface)) */
+  background: color-mix(in srgb, var(--nav-bg) 92%, transparent);/* สีเดียวกับแถบเมนูล่างหลัก (--nav-bg) */
   backdrop-filter: var(--ae-blur);
   -webkit-backdrop-filter: var(--ae-blur);
-  border: 1px solid var(--ae-surface-edge);
+  /* [แก้ตามที่ระบุ] เมนูเลือกหมวดเควส 3 ตัวเลือก — เส้นขอบสีทอง */
+  border: 2px solid color-mix(in srgb, var(--coin) 70%, var(--g600));
   box-shadow: var(--sh-modal);
   animation: popUp .2s ease-out;
 }
 .quest-floating-menu button {
-  background: var(--glass-w-8);
+  border: 1.5px solid color-mix(in srgb, var(--coin) 55%, transparent) !important;
+  background: var(--nav-item-bg);
   border: none;
-  color: var(--fixed-white);
+  color: var(--nav-fg);
   padding: 4px 8px;
   border-radius: var(--r-sm);
   cursor: pointer;
   white-space: nowrap;
   text-align: left;
-  font-family: var(--font-body);
+  font-family: var(--font-display);   /* ฟอนต์เดียวกับหน้า Welcome */
   font-weight: 300;
   font-size: var(--fs-sm);
   display: flex;
@@ -62,15 +67,14 @@
   flex-shrink: 0;
 }
 .quest-floating-menu button:hover {
-  background: var(--ae-glow);
-  --lc-text-3: #0B241B;
-  color: var(--lc-text-3);
+  background: var(--leaf-soft-strong);
+  color: var(--on-leaf-soft);
   transform: translateX(4px);
 }
 
 .liquid-nav-bar {
   position: relative;
-  width: calc(var(--btn-width) * 4);
+  width: calc(var(--btn-width) * 5); /* [แก้ตามที่ระบุ] 5 ปุ่ม (เพิ่มสตอรี่) */
   height: var(--nav-height);
   background: var(--nav-bg);
   border-radius: var(--r-lg);
@@ -98,7 +102,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--fixed-white);
+  color: var(--nav-fg);
   opacity: .82;
   transition: .5s var(--ease-spring);
 }
@@ -111,10 +115,10 @@
 }
 .liquid-nav-bar ul li a .nav-text {
   position: absolute;
-  color: var(--fixed-white);
+  color: var(--nav-fg);
   font-weight: 500;
   font-size: var(--fs-xs, 12px);
-  font-family: var(--font-body);
+  font-family: var(--font-display);   /* ฟอนต์เดียวกับหน้า Welcome */
   opacity: 0;
   transform: translateY(20px);
   transition: .5s var(--ease-spring);
@@ -132,7 +136,7 @@
   --lc-text-1: #4A2C0A;
   color: var(--lc-text-1);
   font-size: 10px;
-  font-family: var(--font-body);
+  font-family: var(--font-display);   /* ฟอนต์เดียวกับหน้า Welcome */
   font-weight: 500;
   border-radius: var(--r-pill);
   min-width: 16px;
@@ -169,6 +173,9 @@
 @media (max-width: 768px) {
   /* จอเล็ก: แถบ 256×56 ช่องกดต่อปุ่ม 64×56 (ยังเกินขั้นต่ำ ~44px) */
   :root { --nav-icon-size: 54px; --nav-height: 56px; --btn-width: 64px; }
+}
+@media (max-width: 360px) {
+  :root { --nav-icon-size: 48px; --btn-width: 58px; }
   .action-menu-container { bottom: 12px; }
   .liquid-nav-bar ul li.active a .nav-text { transform: translateY(12px); }
 }
@@ -177,4 +184,43 @@
   .liquid-nav-bar ul li a .nav-icon,
   .liquid-nav-bar ul li a .nav-text,
   .nav-indicator { transition: none; }
+}
+
+/* [แก้ตามที่ระบุ] ธีมมืด: แถบเมนูเป็นเขียวเข้มชุดเดียวกับหน้าการตั้งค่า (--bg-card ธีมมืด)
+   ตัวหนังสือ/ไอคอนสลับเป็น --text (สีอ่อนในธีมมืด) — ประกาศบน <html> ตัวเดียวกับ index.css */
+[data-theme="dark"] {
+  --nav-bg: var(--bg-card);
+  --nav-fg: var(--text);
+  --nav-item-bg: var(--glass-w-8);
+  --nav-cutout-color: var(--border-mid);
+}
+[data-theme="dark"] .liquid-nav-bar { box-shadow: var(--sh-modal), inset 0 0 0 1px var(--border-mid); }
+
+/* ═══ [แก้ตามที่ระบุ] แถบเมนูล่าง — กรอบแบบกระดานจัดอันดับ: พื้นเขียวไล่เฉด + ขอบทอง + เส้นในบางๆ
+   วงกลมปุ่มที่เลือกอยู่ก็มีขอบทองรอบวงด้วย (ช่องเว้าใต้วงกลมคงสีเดิมไว้ให้กลืนกับพื้น) ═══ */
+.liquid-nav-bar {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--nav-bg) 88%, var(--fixed-white)) 0%, var(--nav-bg) 100%);
+  border: 2px solid var(--lb-gold-edge);
+  box-shadow:
+    0 4px 0 color-mix(in srgb, var(--lb-gold-edge) 55%, var(--g800)),
+    0 10px 24px var(--glass-b-30),
+    inset 0 0 0 2px color-mix(in srgb, var(--fixed-white) 30%, transparent),
+    inset 0 0 0 3px color-mix(in srgb, var(--coin) 22%, transparent);
+}
+[data-theme="dark"] .liquid-nav-bar {
+  background: linear-gradient(180deg, var(--g700) 0%, var(--g800) 100%);
+  box-shadow:
+    0 4px 0 color-mix(in srgb, var(--lb-gold-edge) 45%, var(--g900)),
+    0 10px 24px var(--glass-b-40),
+    inset 0 0 0 2px color-mix(in srgb, var(--fixed-white) 10%, transparent);
+}
+.nav-indicator {
+  box-shadow: 0 0 0 2px var(--lb-gold-edge), 0 6px 14px var(--glass-b-25);
+}
+
+/* [แก้ตามที่ระบุ] ปุ่มสตอรี่ยังไม่มีไฟล์รูป — ใช้อีโมจิ 📖 ขนาดใกล้เคียงไอคอนรูปอื่น */
+.liquid-nav-bar .nav-icon-emoji {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: var(--nav-icon-size); height: var(--nav-icon-size);
+  font-size: calc(var(--nav-icon-size) * .55); line-height: 1;
 }

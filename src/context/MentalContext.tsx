@@ -12,6 +12,10 @@ import {
   NEGATIVE_STREAK_TRIGGER, buildTriggerReason, computeNextDueAt, computeRiskLevel, computeTotalScore,
 } from '../config/screening'
 import { useUser } from './UserContext'
+import * as mentalApi from '../services/api/mental.api'
+import { addToPostItArchive } from '../utils/postitArchive'
+import * as postItApi from '../services/api/postit.api'
+import { getMe } from '../services/api/user.api'
 import { useProgress } from './ProgressContext'
 import { useUI } from './UIContext'
 
@@ -61,6 +65,10 @@ interface MentalContextValue {
   gratitudeStreak: number
   gratitudeAuraUnlocked: boolean
   postIts: PostItData[]
+  /** [เพิ่มตามที่ระบุ] ลากโพสอิทไปวางใหม่ — ตำแหน่งเป็น % ของจอ (0-100) */
+  movePostIt: (id: string, positionX: number, positionY: number) => void
+  /** [เพิ่มตามที่ระบุ] เก็บโพสอิทเข้าประวัติ (เอาออกจากต้นไม้) — ไม่เรียก = ติดไว้บนต้นไม้ต่อ */
+  archivePostIt: (id: string) => void
   /** [เพิ่มตามที่ระบุ] feedback สั้นๆ หลังทำเควสสำเร็จ — ใช้ประเมิน badge "Mirror of Truth" */
   questFeedbackLogs: QuestFeedbackRecord[]
   /** [เพิ่มตามที่ระบุ] code ของ badge ที่ปลดล็อกแล้ว (BADGE_CATALOG) — ประเมินสดจาก
@@ -106,6 +114,25 @@ export function MentalProvider({ children }: { children: ReactNode }) {
     () => ({ date: bangkokDateKey(), minutes: 0 }),
   )
   const [screenCurfew, setScreenCurfewState] = useState<ScreenCurfew | null>(null)
+  /** โหมด live: badge ที่เซิร์ฟเวอร์ปลดล็อกให้แล้ว (GET /badges/me) — รวมกับที่ประเมินในเครื่อง */
+  const [serverBadges, setServerBadges] = useState<string[]>([])
+
+  /* ── โหมด live: ดึงผลคัดกรองล่าสุด + badge จาก backend ตอนล็อกอิน (mock คืนค่าว่าง ไม่มีผล) ──
+     ผลคัดกรองเดิมเก็บแค่ใน state หายเมื่อรีเฟรช — จาก backend จึงคุมรอบ 30 วันได้ข้ามเครื่อง */
+  useEffect(() => {
+    if (!isLoggedIn) return
+    let cancelled = false
+    Promise.all([mentalApi.getLatestScreening(), mentalApi.getMyBadgeCodes(), postItApi.getPostIts()])
+      .then(([latest, badges, savedPostIts]) => {
+        if (cancelled) return
+        if (latest) setScreeningResults((prev) => (prev.some((r) => r.id === latest.id) ? prev : [...prev, latest]))
+        setServerBadges(badges)
+        // โพสอิทที่บันทึกไว้แล้ว (mock: mockDb / live: GET /postit/me) — ติดบนต้นไม้ทันทีหลังรีเฟรช
+        setPostIts((prev) => [...savedPostIts, ...prev.filter((p) => !savedPostIts.some((s) => s.id === p.id))])
+      })
+      .catch(() => { /* ออฟไลน์/เซิร์ฟเวอร์ล่ม — ใช้ข้อมูลในเครื่องต่อไป */ })
+    return () => { cancelled = true }
+  }, [isLoggedIn])
 
   /* ── ค่าที่คำนวณสด ไม่เก็บซ้ำเป็น state เพื่อไม่ให้ข้อมูลขัดกันเอง ── */
 
@@ -170,8 +197,11 @@ export function MentalProvider({ children }: { children: ReactNode }) {
     // ปลดล็อกตั้งแต่ครั้งแรกที่ให้ feedback
     if (questFeedbackLogs.length > 0) earned.push('mirror-of-truth')
 
+    // badge ที่ backend ประเมินให้แล้ว (cron evaluateBadges) — code ชุดเดียวกับ badgeCatalog.ts
+    for (const code of serverBadges) if (!earned.includes(code)) earned.push(code)
+
     return earned
-  }, [activityLogs, questFeedbackLogs])
+  }, [activityLogs, questFeedbackLogs, serverBadges])
   const focusMinutesToday = focusState.date === bangkokDateKey() ? focusState.minutes : 0
 
   /* ── ปรุงน้ำยาสำรวจใจ → ตัวนับวันติดต่อกัน → ตัวจุดชนวนแบบประเมิน ── */
@@ -238,6 +268,16 @@ export function MentalProvider({ children }: { children: ReactNode }) {
     // MindfulAnchorPage ใช้ถามยืนยันก่อนออกกลางคัน, แดชบอร์ดใช้เลือกแผนดูแล
     applyUserPatch({ ...userData, currentRiskLevel: riskLevel })
     setPendingScreening(null)
+    // โหมด live: บันทึกผลที่ backend (คำนวณคะแนน/ระดับความเสี่ยงซ้ำฝั่งเซิร์ฟเวอร์ สูตรเดียวกัน
+    // 0-4 LOW / 5-9 MODERATE / 10-15 HIGH) แล้วใช้ค่าจากเซิร์ฟเวอร์เป็นตัวจริง — UI ได้ผลทันที
+    // จากการคำนวณในเครื่องด้านบน ไม่ต้องรอเน็ต
+    mentalApi.submitScreening(answers, triggerType)
+      .then(async (saved) => {
+        if (!saved) return
+        setScreeningResults((prev) => prev.map((r) => (r.id === record.id ? saved : r)))
+        applyUserPatch(await getMe())
+      })
+      .catch(() => { /* บันทึกไม่สำเร็จ — ผลในเครื่องยังใช้งานได้ */ })
     return record
   }, [userData, applyUserPatch])
 
@@ -280,10 +320,12 @@ export function MentalProvider({ children }: { children: ReactNode }) {
           id: `postit-${today}`,
           content: record.bonusNote as string,
           color: TEXT_1,
-          positionX: 30 + ((prev.length * 13) % 40),
-          positionY: 25 + ((prev.length * 17) % 40),
+          // [แก้ตามที่ระบุ] โพสอิทใหม่ขึ้นกลางจอ (กลางต้นไม้) เหลื่อมกันเล็กน้อย — ลากย้ายเองได้
+          positionX: 50 + (((prev.length * 7) % 13) - 6),
+          positionY: 42 + (((prev.length * 5) % 11) - 5),
           isPinned: false,
           userId: userData.id,
+          createdAt: new Date().toISOString(),
         },
       ])
     }
@@ -297,6 +339,25 @@ export function MentalProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const setScreenCurfew = useCallback((curfew: ScreenCurfew) => setScreenCurfewState(curfew), [])
+
+  const archivePostIt = useCallback((id: string) => {
+    const target = postIts.find((p) => p.id === id)
+    if (!target) return
+    addToPostItArchive(userData.id, {
+      id: target.id, content: target.content, color: target.color,
+      createdAt: target.createdAt ?? null, savedAt: new Date().toISOString(),
+    })
+    setPostIts((prev) => prev.filter((p) => p.id !== id))
+    // โพสอิทจากเช็คอินรายวัน (id ขึ้นต้น postit-) ไม่ได้อยู่บนเซิร์ฟเวอร์
+    if (!id.startsWith('postit-')) postItApi.deletePostIt(id).catch(() => { /* ลบบนเซิร์ฟเวอร์ไม่สำเร็จ — ในเครื่องเก็บแล้ว */ })
+  }, [postIts, userData.id])
+
+  const movePostIt = useCallback((id: string, positionX: number, positionY: number) => {
+    setPostIts((prev) => prev.map((p) => (p.id === id ? { ...p, positionX, positionY } : p)))
+    // โพสอิทจากเช็คอินรายวัน (id ขึ้นต้น postit-) ยังไม่ได้ส่งขึ้นเซิร์ฟเวอร์ — ย้ายแค่ในเครื่อง
+    if (id.startsWith('postit-')) return
+    postItApi.updatePostItPosition(id, positionX, positionY).catch(() => { /* ตำแหน่งในเครื่องยังอยู่ */ })
+  }, [])
 
   const handleMoodSubmit = useCallback(async (mood: 'good' | 'neutral' | 'bad', subMood: MoodTypeValue, text: string) => {
     // เช็คอินอารมณ์ 3 ปุ่มแบบเดิมยังใช้ได้อยู่ แต่แปลงเป็นสีน้ำยาแล้วส่งเข้าท่อเดียวกับ
@@ -319,8 +380,28 @@ export function MentalProvider({ children }: { children: ReactNode }) {
     // สถานการณ์แบบนี้ได้ง่ายกว่าเดสก์ท็อปมาก — ตอนนี้ await ให้บันทึกเสร็จจริงก่อนค่อยปิด modal
     // เท่ากับตัด race condition นี้ทิ้งขาด ไม่ว่า delay จะสั้นหรือถูก throttle ยาวแค่ไหนก็ตาม
     await recordMoodEntry(mood, subMood, text)
+    // [แก้ตามที่ระบุ] บันทึกความรู้สึกที่เขียน → โพสอิทติดบนต้นไม้ (วางกระจายบนพุ่มตามลำดับ
+    // ไม่ทับกัน: x 22-78%, y 14-50% ของกล่องต้นไม้) — ต้นไม้แสดงผลที่ TreeOfLife.tsx
+    const note = text.trim()
+    if (note) {
+      const n = postIts.length
+      postItApi.createPostIt({
+        content: note,
+        color: '#FFF59D',
+        // [แก้ตามที่ระบุ] ขึ้นกลางจอ (กลางต้นไม้) เหลื่อมกันเล็กน้อยไม่ทับสนิท — ลากไปวางที่ไหนก็ได้
+        positionX: 50 + (((n * 7) % 13) - 6),
+        positionY: 42 + (((n * 5) % 11) - 5),
+      })
+        .then((created) => setPostIts((prev) => [...prev, created]))
+        .catch(() => { /* บันทึกไม่สำเร็จ — เช็คอินยังสำเร็จตามปกติ */ })
+    }
+    // โหมด live: เช็คอินอารมณ์ = "รดน้ำต้นไม้ประจำวัน" → POST /tree/water (ได้ EXP + นับ streak
+    // วันละครั้งตามเวลาไทย ซ้ำในวันเดียวกัน backend ปฏิเสธเอง) โหมด mock คืน null ไม่มีผล
+    mentalApi.waterTree()
+      .then((res) => { if (res) applyUserPatch({ ...userData, ...res.user }) })
+      .catch(() => { /* รดน้ำไม่สำเร็จ ไม่กระทบการเช็คอิน */ })
     closeModal('moodCheckin')
-  }, [submitMoodPotion, recordMoodEntry, closeModal])
+  }, [submitMoodPotion, recordMoodEntry, closeModal, applyUserPatch, userData, postIts.length])
 
   /* ── ตัวจุดชนวนตามรอบ: ถึงกำหนดตรวจประจำเดือนแล้วให้เด้งตอนเปิดแอป ──
      [หมายเหตุ react-hooks/set-state-in-effect] ที่นี่ "sync" กับนาฬิกาจริงของเครื่อง
@@ -340,14 +421,14 @@ export function MentalProvider({ children }: { children: ReactNode }) {
     gratitudeStreak, gratitudeAuraUnlocked, postIts, questFeedbackLogs, earnedBadges,
     submitMoodPotion, requestScreening, submitScreening, dismissScreening,
     logActivity, saveLearningCheckin, addFocusMinutes, setScreenCurfew, handleMoodSubmit,
-    submitQuestFeedback,
+    submitQuestFeedback, movePostIt, archivePostIt,
   }), [
     moodPotionLogs, consecutiveNegativeDays, screeningResults, nextScreeningDueAt,
     pendingScreening, activityLogs, learningCheckins, focusMinutesToday, screenCurfew,
     gratitudeStreak, gratitudeAuraUnlocked, postIts, questFeedbackLogs, earnedBadges,
     submitMoodPotion, requestScreening, submitScreening, dismissScreening,
     logActivity, saveLearningCheckin, addFocusMinutes, setScreenCurfew, handleMoodSubmit,
-    submitQuestFeedback,
+    submitQuestFeedback, movePostIt, archivePostIt,
   ])
 
   return <MentalCtx.Provider value={value}>{children}</MentalCtx.Provider>

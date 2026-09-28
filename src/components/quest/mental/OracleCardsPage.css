@@ -349,3 +349,48 @@
   --lc-text-7: #D8F3DC;
   color: var(--lc-text-7);
 }
+
+/* ═══ [แก้ตามที่ระบุ] ป็อบอัพข้อความไพ่ = ธีมกระดานจัดอันดับ (.lb-card ใน index.css)
+   ตัวหนังสือขาว/ดำเท่านั้น ไล่เข้ม-อ่อน 2 ระดับ (ไม่ใช้เหลือง/ส้ม/แดง) ═══ */
+.oracle-card--large.lb-card {
+  position: relative;
+  background: var(--lb-card-bg);
+  border: 2px solid var(--lb-gold-edge);
+  padding: 30px 22px 22px;
+  color: var(--lb-card-text);
+}
+.oracle-card__banner { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 14px; }
+.oracle-card--large.lb-card .oracle-card__large-title { color: var(--lb-card-text); font-family: var(--font-display); }
+.oracle-card--large.lb-card .oracle-card__large-body {
+  background: color-mix(in srgb, var(--fixed-white) 45%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 60%, transparent);
+}
+[data-theme="dark"] .oracle-card--large.lb-card .oracle-card__large-body { background: color-mix(in srgb, var(--g900) 55%, transparent); }
+.oracle-card--large.lb-card :is(.oracle-card__typewriter-text, .oracle-card__mission-text) { color: var(--lb-card-text); font-family: var(--font-display); }
+.oracle-card--large.lb-card .oracle-card__mission-label { color: var(--lb-card-text-sub); font-family: var(--font-display); }
+.oracle-card--large.lb-card .oracle-card__mission-block {
+  background: color-mix(in srgb, var(--fixed-white) 35%, transparent);
+  border-color: color-mix(in srgb, var(--lb-gold-edge) 50%, transparent);
+}
+[data-theme="dark"] .oracle-card--large.lb-card .oracle-card__mission-block { background: color-mix(in srgb, var(--g900) 40%, transparent); }
+.oracle-card--large.lb-card .oracle-page__caret { color: var(--lb-card-text-sub); }
+
+
+/* [แก้ตามที่ระบุ] ป้าย "วันนี้คุณรู้สึก…" กรอบแบบกระดานจัดอันดับ ห่างขอบบน ~90px
+   และเว้นระยะจากป็อปอัพไพ่มากขึ้น — ป็อปอัพไพ่เลื่อนดูได้แต่ไม่แสดงแถบเลื่อน */
+.oracle-page__content {
+  padding-top: 90px;
+  /* [แก้ตามที่ระบุ] ท้ายป็อปอัพไพ่เคยโดน ActionMenuBar บัง — เว้นล่างให้พ้นแถบเมนู แล้วเลื่อนดูได้ */
+  padding-bottom: calc(var(--gpf-safe-bottom, 90px) + 24px);
+  scrollbar-width: none;
+}
+.oracle-page__reading-view { flex-shrink: 0; }
+.oracle-page__content::-webkit-scrollbar { display: none; }
+/* [แก้ตามที่ระบุ] ป้าย "วันนี้คุณรู้สึก…" เป็นสีม่วง (.lb-banner--purple ใน leaderboardRow.css) */
+.oracle-page__mood-recap.lb-banner {
+  padding: 10px 22px;
+  border-radius: 14px;
+  font-size: 16px;
+  margin-bottom: 26px;
+  font-family: var(--font-display);
+}

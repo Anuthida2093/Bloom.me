@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, m } from 'framer-motion'
+import { useLanguage } from '../../context/LanguageContext'
 import { toBlob } from 'html-to-image'
 import TreeOfLife from '../tree/TreeOfLife'
 import LeaderboardPanel from '../leaderboard/LeaderboardPanel'
@@ -18,28 +19,38 @@ import { useProgress } from '../../context/ProgressContext'
 import { useUI } from '../../context/UIContext'
 import { useMental } from '../../context/MentalContext'
 import { useAudio } from '../../context/AudioContext'
-import { useIsLowPowerMode } from '../../hooks/useMediaQuery'
+import { usePrefersReducedMotion } from '../../hooks/useMediaQuery'
 import { useNotifications } from '../../hooks/useNotifications'
 import { usePersistentState } from '../../hooks/usePersistentState'
 import { sceneEnter } from '../../config/motion'
-import { EXP_PER_LEVEL, STACK_PER_VISUAL_LEVEL, type MbtiType, type QuestCategory } from '../../types'
+import { EXP_PER_LEVEL, STACK_PER_VISUAL_LEVEL, type MbtiType, type QuestCategory, type PostItData } from '../../types'
 import type { LeaderboardPlayer } from '../../config/leaderboardData'
 import type { QuestTabId } from '../../config/questCatalog'
 import { BADGE_ICONS } from '../../config/iconAssets'
 import './Dashboard.css'
+import '../leaderboard/leaderboardRow.css'
 
 // โมดัลหนัก — โหลดเฉพาะตอนผู้ใช้เปิดจริง (คงไว้ตาม V2 ทุกจุด)
-const QuestSection = lazy(() => import('../quest/QuestSection'))
-const ShopSection = lazy(() => import('../shop/ShopSection'))
+const loadQuestSection = () => import('../quest/QuestSection')
+const loadShopSection = () => import('../shop/ShopSection')
+const loadProfilePage = () => import('../profile/ProfilePage')
+const loadMoodCheckIn = () => import('../mood/MoodCheckIn')
+const QuestSection = lazy(loadQuestSection)
+const ShopSection = lazy(loadShopSection)
 // [แก้ตามที่ระบุ] InventoryModal เดิมถูกยุบเข้าไปเป็นโซนหนึ่งของหน้าโปรไฟล์แล้ว (ดู ProfilePage.tsx)
-const ProfilePage = lazy(() => import('../profile/ProfilePage'))
+const ProfilePage = lazy(loadProfilePage)
 const SettingsModal = lazy(() => import('../settings/SettingsModal'))
 const Leaderboard = lazy(() => import('../leaderboard/Leaderboard'))
-const MoodCheckIn = lazy(() => import('../mood/MoodCheckIn'))
+const MoodCheckIn = lazy(loadMoodCheckIn)
 const MeditationModal = lazy(() => import('../mood/MeditationModal'))
 const BrainDumpModal = lazy(() => import('../mood/BrainDumpModal'))
 const StreakCelebration = lazy(() => import('../modals/StreakCelebration'))
 const PostItModal = lazy(() => import('../modals/PostItModal'))
+import PostItLayer from './PostItLayer'
+import HomeAmbience from './HomeAmbience'
+import OverCalorieNotice from './OverCalorieNotice'
+import PlantIntro from './PlantIntro'
+import { computeCalorieTarget, getOverCalorieStreak, MEALS_CHANGED_EVENT, OVER_CALORIE_STREAK_DAYS } from '../../utils/nutrition'
 const TreeSummaryModal = lazy(() => import('../tree/TreeSummaryModal'))
 // [ใหม่ — ฟีเจอร์สตอรี่] เดิมปุ่มนี้ชื่อ "โพสต์" (📝) เป็น placeholder ล้วนๆ (setInfoAlert
 // เฉยๆ) ตอนนี้เปลี่ยนเป็น "สตอรี่" เปิดหน้า Feed/Search/Activity/Profile ภายในตัวเองจริง
@@ -65,28 +76,118 @@ export default function Dashboard() {
 
   const {
     questLogs, moodEntries, journalEntries, treeGrowthPulse, hasSoot, completedQuestCount,
-    waterPulseKey, handleToggleQuest, markIncineratorFailed,
+    waterPulseKey, handleToggleQuest, markIncineratorFailed, triggerWateringEffect,
   } = useProgress()
 
-  const { handleMoodSubmit, earnedBadges } = useMental()
+  const { handleMoodSubmit, earnedBadges, postIts, movePostIt, archivePostIt } = useMental()
   const { isMuted, toggleMute } = useAudio()
+  const { t } = useLanguage()
 
   const {
     settings, modals, leaderboardCollapsed, decorationPositions, activePostIt, anyModalOpen,
-    updateSettings, openModal, closeModal, setLeaderboardCollapsed, updateDecorationPosition,
+    updateSettings, openModal, closeModal, closeAllModals, setLeaderboardCollapsed, updateDecorationPosition,
   } = useUI()
+
+  /* [แก้บั๊ก — ตามที่ระบุ] เข้าสู่ระบบ/สมัครสมาชิกแล้วต้องเข้าหน้า Home ก่อนเสมอ — สถานะป็อปอัพเก็บอยู่ใน
+     UIContext (อยู่เหนือทุกหน้า) ออกจากระบบจากหน้าตั้งค่าแล้วค่า settings:true ค้างอยู่ เข้าระบบใหม่เลยเด้ง
+     หน้าตั้งค่าขึ้นมาทันที → เข้าหน้า Home ทุกครั้งปิดป็อปอัพที่ค้างทั้งหมดก่อน */
+  useEffect(() => { closeAllModals() }, [closeAllModals])
 
   const [viewingPlayer, setViewingPlayer] = useState<LeaderboardPlayer | null>(null)
   const [showTreeSummary, setShowTreeSummary] = useState(false)
+  /** โพสอิทบนต้นไม้ที่กดเปิดอ่านอยู่ */
+  const [openPostIt, setOpenPostIt] = useState<PostItData | null>(null)
   const [showTreeStats, setShowTreeStats] = useState(false)
+  /** [แก้ตามที่ระบุ] การ์ดต้นไม้เพื่อนเปิด/ปิดได้ — เก็บ id เพื่อนที่ถูกปิดการ์ดไว้ (ดูคนใหม่ = เปิดการ์ดเองอีกครั้ง) */
+  const [hiddenFriendCardId, setHiddenFriendCardId] = useState<string | null>(null)
+  const friendCardOpen = !!viewingPlayer && hiddenFriendCardId !== viewingPlayer.id
+  /* [แก้ตามที่ระบุ] การ์ดข้อมูลต้นไม้เพื่อนปิดเองเมื่อแตะที่อื่นบนหน้าจอ (ไม่ต้องกดกากบาท) —
+     ยกเว้นแตะในการ์ดเอง หรือปุ่มต้นไม้ที่ใช้เปิด/ปิดการ์ด */
+  useEffect(() => {
+    if (!friendCardOpen || !viewingPlayer) return
+    const playerId = viewingPlayer.id
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Element | null
+      if (target?.closest('.player-tree-card, .dashboard__friend-card-toggle')) return
+      setHiddenFriendCardId(playerId)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [friendCardOpen, viewingPlayer])
   /** [เพิ่มตามที่ระบุ — ปุ่มแจ้งเตือนใหม่] แผงเดียวกับ showTreeStats แต่คนละปุ่ม — ปิดกันเอง
    *  เสมอ (เปิดอันนึงต้องปิดอีกอันเสมอ) กันแผงสองอันซ้อนกันแน่นในคอลัมน์ขวาแคบๆ */
   const [showNotifications, setShowNotifications] = useState(false)
-  const { items: notificationItems, unreadCount: unreadNotifCount, markAllSeen: markNotificationsSeen } = useNotifications()
+
+  /* ความสูงจริงของแถบคะแนนด้านบน → --hud-h (จอเล็กใช้วางกระดานจัดอันดับ/ปุ่มขวาให้ต่ำกว่าแถบนี้
+     ดู Dashboard.css) — วัดใหม่ทุกครั้งที่ขนาดเปลี่ยน เช่น ป้ายขึ้นบรรทัดใหม่บนจอแคบ */
+  const hudRef = useRef<HTMLDivElement | null>(null)
+
+  /* [แก้ตามที่ระบุ] ฉากรับต้นกล้าหลังเลือก MBTI — หน้า Home ซ่อนต้นไม้/ปุ่มไว้ก่อน แล้วค่อยปรากฏพร้อมกัน */
+  const [introPhase, setIntroPhase] = useState<'play' | 'reveal' | null>(() => {
+    try { return sessionStorage.getItem('bloom.plantIntro') === '1' ? 'play' : null } catch { return null }
+  })
+  const finishIntro = useCallback(() => {
+    try { sessionStorage.removeItem('bloom.plantIntro') } catch { /* ไม่เป็นไร */ }
+    setIntroPhase(null)
+  }, [])
+
+  /* [แก้ตามที่ระบุ] ทานเกินแคลอรี่ที่กำหนดติดต่อกันหลายวัน → ก้อนหินบนพื้นดิน + กรอบข้อความเตือน
+     คำนวณจากมื้ออาหารที่บันทึกในเควส "แคลอรี่ตาม BMI" (utils/nutrition.ts) — อัปเดตทันทีที่บันทึกมื้อ */
+  const calorieTarget = computeCalorieTarget(userData)
+  const [overCalorieStreak, setOverCalorieStreak] = useState(() => getOverCalorieStreak(userData.id, calorieTarget))
+  useEffect(() => {
+    const refresh = () => setOverCalorieStreak(getOverCalorieStreak(userData.id, calorieTarget))
+    refresh()
+    window.addEventListener(MEALS_CHANGED_EVENT, refresh)
+    return () => window.removeEventListener(MEALS_CHANGED_EVENT, refresh)
+  }, [userData.id, calorieTarget])
+  const showOverCalorie = overCalorieStreak >= OVER_CALORIE_STREAK_DAYS
+  useEffect(() => {
+    const el = hudRef.current
+    if (!el) return
+    const root = document.documentElement
+    const apply = () => root.style.setProperty('--hud-h', `${Math.round(el.getBoundingClientRect().height)}px`)
+    apply()
+    const observer = new ResizeObserver(apply)
+    observer.observe(el)
+    return () => { observer.disconnect(); root.style.removeProperty('--hud-h') }
+    // แถบคะแนนแสดงเฉพาะบางสถานะ (ไม่แสดงตอนดูต้นไม้เพื่อน/ยังไม่ล็อกอิน) — วัดใหม่เมื่อมันโผล่กลับมา
+  }, [viewingPlayer, isLoggedIn, isGuest])
+
+  /* [แก้ตามที่ระบุ — เปิดเควสไม่ลื่น] โหลดโค้ดของแผงหลัก (เควส/ร้านค้า/โปรไฟล์/เช็คอินอารมณ์)
+     ล่วงหน้าตอนหน้า Home ว่าง — กดเปิดครั้งแรกจะขึ้นทันทีพร้อมกันทั้งหน้า ไม่มีช่วงจอว่าง
+     (Suspense fallback) ระหว่างรอดาวน์โหลดโค้ดแล้วค่อยเด้งเนื้อหาตามมาทีหลัง */
+  useEffect(() => {
+    const warm = () => { void loadQuestSection(); void loadMoodCheckIn(); void loadShopSection(); void loadProfilePage() }
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number; cancelIdleCallback?: (id: number) => void }
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(warm)
+      return () => w.cancelIdleCallback?.(id)
+    }
+    const id = window.setTimeout(warm, 1200)
+    return () => window.clearTimeout(id)
+  }, [])
+
+  /* [แก้ตามที่ระบุ] แตะตรงไหนก็ได้นอกแผงขวา (เช่น กดต้นไม้แล้วข้อมูล MBTI เด้งขึ้นมา) → ปิดแผง
+     ข้อมูลต้นไม้/แจ้งเตือนอัตโนมัติ — ยกเว้นแตะในคอลัมน์ขวาเอง (ปุ่ม/ตัวแผง) และในแผงแบบเต็มจอ */
+  useEffect(() => {
+    if (!showTreeStats && !showNotifications) return
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Element | null
+      if (target?.closest('.dashboard__right-cluster, .tree-of-life__tooltip-screen')) return
+      setShowTreeStats(false)
+      setShowNotifications(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [showTreeStats, showNotifications])
+  const { items: notificationItems, unreadCount: unreadNotifCount, markAllSeen: markNotificationsSeen, markRead: markNotificationRead } = useNotifications()
   /** พาไปเปิดโพสต์ที่เกี่ยวข้องใน Story ตอนกดแจ้งเตือนไลค์/คอมเมนต์/แชร์ — ส่งต่อเป็น
    *  initialPostId ของ StoryOverlay (ดู handleOpenNotificationPost ด้านล่าง) */
   const [storyInitialPostId, setStoryInitialPostId] = useState<string | null>(null)
   const [questsInitialTab, setQuestsInitialTab] = useState<QuestTabId>('knowledge')
+  /** เควสที่ต้องเปิดหน้าเล่นทันทีตอนเปิดหน้าเควส (มาจากแจ้งเตือน) — เปิดทางอื่นจะล้างทิ้ง */
+  const [questsInitialQuest, setQuestsInitialQuest] = useState<{ code: string; key: number } | null>(null)
   /** [ใหม่ — ฟีเจอร์สตอรี่ ข้อ 5] ให้ปุ่ม "แก้ไขโปรไฟล์" ในหน้าโปรไฟล์ Story เปิด SettingsModal
    *  ตรงไปที่หน้าย่อย "ตั้งค่าโปรไฟล์" เลย — reset กลับเป็น null ทุกครั้งที่เปิด Settings
    *  จากทางอื่น (ปุ่มเฟืองปกติ) กันค้างจากรอบก่อนแล้วเด้งผิดหน้าโดยไม่ได้ตั้งใจ */
@@ -109,7 +210,7 @@ export default function Dashboard() {
   /** [ใหม่ — ข้อ C] ครอบเฉพาะ "ต้นไม้ของตัวเอง" (ไม่รวม HUD/ปุ่ม) — ให้แชร์เป็นรูปได้เฉพาะ
    *  ต้นไม้จริงๆ ไม่ใช่ทั้งหน้าจอ ดู handleShare ด้านล่าง */
   const treeCaptureRef = useRef<HTMLDivElement>(null)
-  const lowPower = useIsLowPowerMode()
+  const reducedMotion = usePrefersReducedMotion()
 
   // [หมายเหตุ react-hooks/purity] Date.now() ในนี้จำเป็นต้องอ่าน "เวลาปัจจุบันจริง" เทียบกับ
   // เวลาที่สุ่มไพ่ล่าสุด ไม่ใช่ค่าคงที่ที่ derive จาก questLogs ได้เพียวๆ — ยังตรึงด้วย useMemo
@@ -169,14 +270,14 @@ export default function Dashboard() {
     const video = videoRef.current
     if (!video) return
     const sync = () => {
-      const shouldPause = anyModalOpen || document.hidden || lowPower
+      const shouldPause = anyModalOpen || document.hidden || reducedMotion
       if (shouldPause) video.pause()
       else video.play().catch(() => {})
     }
     sync()
     document.addEventListener('visibilitychange', sync)
     return () => document.removeEventListener('visibilitychange', sync)
-  }, [anyModalOpen, lowPower])
+  }, [anyModalOpen, reducedMotion])
 
   useEffect(() => {
     const days = userData.streak
@@ -197,6 +298,7 @@ export default function Dashboard() {
   const openMainPanel = (key: typeof MAIN_PANEL_KEYS[number]) => {
     MAIN_PANEL_KEYS.forEach((k) => { if (k !== key) closeModal(k) })
     openModal(key)
+    setQuestsInitialQuest(null)
   }
 
   const handleOpenOracleFromTooltip = () => {
@@ -211,9 +313,11 @@ export default function Dashboard() {
 
   /** [เพิ่มตามที่ระบุ] กดแจ้งเตือนเควส (ปลดล็อกใหม่/ทำสำเร็จวันนี้) → เปิดหมวดที่เกี่ยวข้อง
    *  reuse handleOpenQuestCategory ตัวเดียวกับที่ oracle-nudge ใช้อยู่แล้ว */
-  const handleOpenNotificationQuest = (tab: QuestTabId) => {
+  const handleOpenNotificationQuest = (tab: QuestTabId, questCode?: string) => {
     setShowNotifications(false)
     handleOpenQuestCategory(tab)
+    // [แก้ตามที่ระบุ] แจ้งเตือนของเควสไหน → เปิดหน้าเล่นเควสนั้นเลย
+    if (questCode) setQuestsInitialQuest({ code: questCode, key: Date.now() })
   }
 
   /** [เพิ่มตามที่ระบุ] กดแจ้งเตือนไลค์/คอมเมนต์/แชร์ → เปิด Story ไปที่โพสต์นั้นตรงๆ */
@@ -335,27 +439,38 @@ export default function Dashboard() {
       ? 'shop'
       : modals.profile
         ? 'profile'
-        : 'home'
+        : modals.story
+          ? 'story'
+          : 'home'
 
   return (
-    <div className="dashboard">
-      {!lowPower && (
-        <video
-          ref={videoRef}
-          className="dashboard__bg-video"
-          loop muted playsInline preload="metadata"
-          poster="/assets/images/ui/hero-waterfall-poster.webp"
-          aria-hidden="true"
-        >
-          <source src="/assets/videos/hero-waterfall.webm" type="video/webm" />
-          <source src="/assets/videos/intro/hero-waterfall.mp4" type="video/mp4" />
-        </video>
+    <div className={`dashboard${introPhase === 'play' ? ' dashboard--intro' : introPhase === 'reveal' ? ' dashboard--intro-reveal' : ''}`}>
+      {introPhase && (
+        <PlantIntro
+          mbtiType={userData.mbtiType as MbtiType}
+          trunkBranchLevel={treeStats.trunkBranchLevel}
+          leafFlowerLevel={treeStats.leafFlowerLevel}
+          onReveal={() => setIntroPhase('reveal')}
+          onDone={() => { window.setTimeout(finishIntro, 1200) }}
+        />
       )}
-      {lowPower && <div className="dashboard__bg-still" aria-hidden="true" />}
+      {/* [แก้ตามที่ระบุ — พื้นหลังหายบนจอเล็ก/มือถือ] เดิมจอ ≤640px ถูกนับเป็น "โหมดประหยัดพลังงาน"
+          (useIsLowPowerMode) แล้วไม่แสดงวิดีโอพื้นหลังเลย เหลือแค่พื้นไล่สี (.dashboard__bg-still) และไฟล์
+          poster/webm ที่อ้างไว้ก็ไม่มีอยู่จริง — ตอนนี้แสดงวิดีโอทุกขนาดจอ (พื้นไล่สีอยู่ใต้ไว้ระหว่างโหลด)
+          ผู้ใช้ที่ขอลดการเคลื่อนไหว: วิดีโอหยุดนิ่งที่เฟรมแรก (#t=0.1) ยังเห็นภาพพื้นหลังเหมือนเดิม */}
+      <div className="dashboard__bg-still" aria-hidden="true" />
+      <video
+        ref={videoRef}
+        className="dashboard__bg-video"
+        loop muted playsInline preload="auto"
+        aria-hidden="true"
+      >
+        <source src="/assets/videos/intro/hero-waterfall.mp4#t=0.1" type="video/mp4" />
+      </video>
 
       {/* ═══ HUD แคปซูลกลางจอ ชิดขอบบน (แบบ V1) ═══ */}
       {!viewingPlayer && (isLoggedIn || isGuest) && (
-        <div className="game-top-hud">
+        <div className="game-top-hud" ref={hudRef}>
           <div className="hud-pill">
             <img src={BADGE_ICONS.seed} className="icon-img hud-icon" alt="" />
             <span>{userData.mbtiType} Lv.{userData.level}</span>
@@ -381,14 +496,24 @@ export default function Dashboard() {
       )}
 
       {/* ═══ ต้นไม้เต็มจอ ═══ */}
+      {/* [แก้ตามที่ระบุ] แสงแดด (ธีมสว่าง) / ฉากกลางคืน (ธีมมืด) / ฝนตกตามสภาพอากาศจริง */}
+      <HomeAmbience hidden={anyModalOpen} />
+
+      {!viewingPlayer && showOverCalorie && <OverCalorieNotice streakDays={overCalorieStreak} />}
+
       <div className="dashboard__tree-layer">
         {viewingPlayer && viewingTreeStats ? (
           <>
-            <button className="dashboard__back-btn" onClick={() => setViewingPlayer(null)}>◀ กลับบ้าน</button>
-            <div className="dashboard__viewing-name-pill">ต้นไม้ของ {viewingPlayer.username}</div>
+            {/* [แก้ตามที่ระบุ] ปุ่มกลับบ้านใช้รูป Return + ป้ายชื่อแบบป้ายกระดานจัดอันดับ */}
+            <button className="dashboard__back-btn lb-banner" onClick={() => setViewingPlayer(null)}>
+              <img src={BADGE_ICONS.back} className="icon-img" alt="" /> กลับบ้าน
+            </button>
+            <div className="dashboard__viewing-name-pill lb-banner">ต้นไม้ของ {viewingPlayer.username}</div>
             <ErrorBoundary scope="ต้นไม้">
               <TreeOfLife
                 mbtiType={viewingPlayer.mbtiType as MbtiType}
+                onTreeClick={() => { setHiddenFriendCardId(viewingPlayer.id); setShowTreeSummary(true) }}
+                groundRocks={(viewingPlayer.overCalorieDays ?? 0) >= OVER_CALORIE_STREAK_DAYS ? Math.min(6, viewingPlayer.overCalorieDays ?? 0) : 0}
                 trunkBranchLevel={viewingTreeStats.trunkBranchLevel}
                 leafFlowerLevel={viewingTreeStats.leafFlowerLevel}
                 grassSoilLevel={viewingTreeStats.grassSoilLevel}
@@ -415,8 +540,9 @@ export default function Dashboard() {
                 placedItems={placedItems}
                 decorationPositions={decorationPositions}
                 onDecorationMove={updateDecorationPosition}
-                onTreeClick={() => setShowTreeSummary(true)}
-                growthPulse={treeGrowthPulse}
+                onTreeClick={() => { setShowTreeStats(false); setShowNotifications(false); setShowTreeSummary(true) }}
+                groundRocks={showOverCalorie ? Math.min(6, overCalorieStreak) : 0}
+                growthPulse={anyModalOpen ? null : treeGrowthPulse}
                 hasSoot={hasSoot}
                 daysSinceLastOracle={daysSinceLastOracle}
                 daysSinceLastMentalQuest={daysSinceLastQuestByCategory.EMOTION}
@@ -429,7 +555,10 @@ export default function Dashboard() {
         {/* [เพิ่มรอบนี้ — เควส "แคลอรี่ตาม BMI"] แอนิเมชันบัวรดน้ำ — เล่นเองตอนกลับมาที่นี่
             หลังปิดเควสสำเร็จ (เช็ค treeGrowthPulse.questCode ในตัวคอมโพเนนต์เอง) ไม่โชว์ตอน
             กำลังดูต้นไม้ของคนอื่น (viewingPlayer) เพราะ pulse เป็นของบัญชีเราเองเสมอ */}
-        {!viewingPlayer && <WateringCanFx pulse={treeGrowthPulse} waterPulseKey={waterPulseKey} />}
+        {!viewingPlayer && <WateringCanFx pulse={anyModalOpen ? null : treeGrowthPulse} waterPulseKey={waterPulseKey} />}
+
+        {/* [แก้ตามที่ระบุ] โพสอิทลอยบนจอ — ขึ้นกลางต้นไม้ ลากไปวางตรงไหนก็ได้ (ดู PostItLayer.tsx) */}
+        {!viewingPlayer && <PostItLayer postIts={postIts} onOpen={setOpenPostIt} onMove={movePostIt} />}
 
         {!viewingPlayer && daysSinceLastOracle !== null && daysSinceLastOracle >= 2 && (
           <button className="dashboard__oracle-nudge" onClick={handleOpenOracleFromTooltip}>
@@ -456,24 +585,24 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ═══ [แก้รอบสตอรี่] ปุ่มลอยมุมซ้ายล่างจอ: เดิมชื่อ "โพสต์" (placeholder) ตอนนี้เปลี่ยน
-          เป็น "สตอรี่" เปิดหน้า Feed จริง (StoryOverlay) — ข้างๆ พื้นที่ปุ่มจัดอันดับด้านบน ═══ */}
-      {!viewingPlayer && (
-        <div className="dashboard__corner-actions dashboard__corner-actions--left">
-          <button
-            className="game-icon-btn"
-            onClick={() => { setStoryInitialPostId(null); openMainPanel('story') }}
-            title="สตอรี่"
-          >
-            📖
-          </button>
-        </div>
-      )}
-
       {/* ═══ ปุ่มลอยขวา: Tree Stats / Mood / Sound (แบบ V1) — หรือการ์ดข้อมูลต้นไม้เพื่อนตอนดูคนอื่น ═══ */}
       <div className="dashboard__right-cluster">
         {viewingPlayer ? (
-          <PlayerTreeCard player={viewingPlayer} />
+          <>
+            {hiddenFriendCardId !== viewingPlayer.id && (
+              <PlayerTreeCard player={viewingPlayer} onClose={() => setHiddenFriendCardId(viewingPlayer.id)} />
+            )}
+            <div className="right-action-buttons">
+              <button
+                className="game-icon-btn tree-info-btn dashboard__friend-card-toggle"
+                onClick={() => setHiddenFriendCardId((id) => (id === viewingPlayer.id ? null : viewingPlayer.id))}
+                title={`ข้อมูลต้นไม้ของ ${viewingPlayer.username}`}
+                aria-label={`ข้อมูลต้นไม้ของ ${viewingPlayer.username}`}
+              >
+                <img src={BADGE_ICONS.tree} className="icon-img" alt="" />
+              </button>
+            </div>
+          </>
         ) : (
           <>
             {showTreeStats && (
@@ -481,8 +610,10 @@ export default function Dashboard() {
                 <TreeStatsPanel
                   userData={userData}
                   treeStats={treeStats}
-                  onOpenMoodCheckin={() => openModal('moodCheckin')}
-                  glass
+                  onOpenMoodCheckin={() => { setShowTreeStats(false); openModal('moodCheckin') }}
+                  daysSinceLastMentalQuest={daysSinceLastQuestByCategory.EMOTION}
+                  daysSinceLastPhysicalQuest={daysSinceLastQuestByCategory.HEALTH}
+                  onClose={() => setShowTreeStats(false)}
                 />
               </div>
             )}
@@ -492,29 +623,32 @@ export default function Dashboard() {
               <div className="dashboard__panel dashboard__panel--right">
                 <NotificationPanel
                   items={notificationItems}
+                  onRead={markNotificationRead}
                   onOpenQuest={handleOpenNotificationQuest}
                   onOpenPost={handleOpenNotificationPost}
-                  glass
+                  onClose={() => setShowNotifications(false)}
                 />
               </div>
             )}
             <div className="right-action-buttons">
-              <button className="game-icon-btn" onClick={() => { setShowTreeStats((v) => !v); setShowNotifications(false) }} title="สถานะต้นไม้">
-                <img src={BADGE_ICONS.tree} className="icon-img" alt="" />
-              </button>
               {/* ปุ่มตั้งค่า — จุดเข้าหน้าตั้งค่าจุดเดียวของหน้า Home (แทน NavBar ที่ลบไปแล้ว) ไม่มีปุ่ม
                   ลัดโปรไฟล์แยก เพราะหน้าตั้งค่ามีแถว "ตั้งค่าโปรไฟล์" ให้เข้าได้อยู่แล้ว */}
               {(isLoggedIn || isGuest) && (
                 <button
                   className="game-icon-btn"
                   onClick={() => { setSettingsInitialSubModal(null); openMainPanel('settings') }}
-                  title="ตั้งค่า"
-                  aria-label="ตั้งค่า"
+                  title={t('home.settings')}
+                  aria-label={t('home.settings')}
                 >
                   <img src={BADGE_ICONS.settings} className="icon-img" alt="" />
                 </button>
               )}
-          <button className="game-icon-btn mood-btn" onClick={() => openModal('moodCheckin')} title="เช็คอินอารมณ์">
+              {/* [ย้ายตามที่ระบุ] ปุ่มข้อมูลต้นไม้ — อยู่ก่อนปุ่มเช็คอินอารมณ์รายวัน (เดิมเปิดข้อมูลต้นไม้
+                  จากการกดโคนต้นไม้ ตอนนี้เปิดจากปุ่มนี้แทน รวมกับสถานะต้นไม้ในแผงเดียว) */}
+              <button className="game-icon-btn tree-info-btn" onClick={() => { setShowTreeStats((v) => !v); setShowNotifications(false) }} title={t('home.treeInfo')} aria-label={t('home.treeInfo')}>
+                <img src={BADGE_ICONS.tree} className="icon-img" alt="" />
+              </button>
+              <button className="game-icon-btn mood-btn" onClick={() => openModal('moodCheckin')} title={t('home.moodCheckin')}>
                 <img src={BADGE_ICONS.checkin} className="icon-img" alt="" />
               </button>
               {/* [เพิ่มตามที่ระบุ — ปุ่มแจ้งเตือนใหม่] แทรกระหว่างเช็คอินรายวันกับปิดเสียง
@@ -530,7 +664,7 @@ export default function Dashboard() {
                     return next
                   })
                 }}
-                title="แจ้งเตือน"
+                title={t('home.notifications')}
               >
                 <img src={BADGE_ICONS.notification} className="icon-img" alt="" />
                 {unreadNotifCount > 0 && <span className="nav-badge">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
@@ -564,13 +698,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!viewingPlayer && (
+      {/* [แก้ตามที่ระบุ] เปิดสตอรี่แล้วไม่ต้องมีแถบเมนูล่างทับ — หน้าสตอรี่มีปุ่มกากบาทปิดอยู่แล้ว */}
+      {!viewingPlayer && !modals.story && (
       <ActionMenuBar
         active={activeNavKey}
         activeQuestCount={completedQuestCount}
         onOpenQuestCategory={handleOpenQuestCategory}
         onOpenShop={() => openMainPanel('shop')}
         onOpenProfile={() => openMainPanel('profile')}
+        onOpenStory={() => { setStoryInitialPostId(null); openMainPanel('story') }}
         onQuestsMenuOpen={() => { MAIN_PANEL_KEYS.forEach((k) => { if (k !== 'quests') closeModal(k) }) }}
         onGoHome={handleGoHome}
       />
@@ -606,8 +742,9 @@ export default function Dashboard() {
                   onRequestMoodCheckin={() => openModal('moodCheckin')}
                   onFailIncinerator={markIncineratorFailed}
                   onToggle={handleToggleQuest}
-                  onClose={() => closeModal('quests')}
+                  onClose={() => { closeModal('quests'); setQuestsInitialQuest(null) }}
                   initialTab={questsInitialTab}
+                  initialQuest={questsInitialQuest}
                 />
               </ErrorBoundary>
             </m.div>
@@ -654,7 +791,7 @@ export default function Dashboard() {
                 userData={userData}
                 onUpdateSettings={updateSettings}
                 onUpdateUser={updateProfile}
-                onLogout={() => setLoggedIn(false, false)}
+                onLogout={() => { closeAllModals(); setLoggedIn(false, false) }}
                 onChangePassword={changePassword}
                 onDeleteAccount={deleteAccount}
                 onClose={() => closeModal('settings')}
@@ -679,7 +816,11 @@ export default function Dashboard() {
         <Suspense fallback={null}>
           <AnimatePresence>
             <m.div key="mood" className="dashboard__modal-layer" {...sceneEnter}>
-              <MoodCheckIn onSubmit={handleMoodSubmit} onSkip={() => closeModal('moodCheckin')} />
+              {/* [แก้ตามที่ระบุ] กด "รดน้ำต้นไม้" หลังเช็คอินเสร็จ → บัวรดน้ำขึ้นมารดน้ำต้นไม้ทันที */}
+              <MoodCheckIn
+                onSubmit={async (mood, subMood, text) => { await handleMoodSubmit(mood, subMood, text); triggerWateringEffect() }}
+                onSkip={() => closeModal('moodCheckin')}
+              />
             </m.div>
           </AnimatePresence>
         </Suspense>
@@ -738,8 +879,9 @@ export default function Dashboard() {
           <TreeSummaryModal
             open={showTreeSummary}
             onClose={() => setShowTreeSummary(false)}
-            mbtiType={userData.mbtiType as MbtiType}
-            username={userData.username}
+            // [แก้ตามที่ระบุ] ดูต้นไม้เพื่อนอยู่ → กดที่ต้นแล้วขึ้น MBTI/ต้นไม้ของเพื่อนคนนั้น
+            mbtiType={(viewingPlayer ? viewingPlayer.mbtiType : userData.mbtiType) as MbtiType}
+            username={viewingPlayer ? viewingPlayer.username : userData.username}
           />
         )}
 
@@ -748,6 +890,14 @@ export default function Dashboard() {
         )}
 
         {activePostIt && <PostItModal postIt={activePostIt} onClose={() => {}} />}
+        {/* [แก้ตามที่ระบุ] เปิดอ่านโพสอิท → เลือกเก็บเข้าประวัติ หรือติดไว้บนต้นไม้ต่อ */}
+        {openPostIt && (
+          <PostItModal
+            postIt={openPostIt}
+            onClose={() => setOpenPostIt(null)}
+            onKeep={() => { archivePostIt(openPostIt.id); setOpenPostIt(null) }}
+          />
+        )}
       </Suspense>
 
       {/* แจ้งผลปุ่มแชร์ (copy link fallback ตอนเบราว์เซอร์ไม่รองรับ navigator.share) */}

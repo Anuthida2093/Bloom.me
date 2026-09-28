@@ -82,7 +82,7 @@
 
 .incinerator-frame__desc {
   font-size: 14px;
-  --lc-text-31: #d8b9a0;
+  --lc-text-31: rgba(255, 255, 255, 0.7);
   color: var(--lc-text-31);
   line-height: 1.6;
 }
@@ -132,7 +132,7 @@
 
 .incinerator-action-btn--ghost {
   flex: 1;
-  --lc-text-28: #d8b9a0;
+  --lc-text-28: rgba(255, 255, 255, 0.7);
   color: var(--lc-text-28);
   background: var(--glass-w-10);
 }
@@ -198,7 +198,7 @@
 
 .incinerator-chips-label {
   font-size: 12px;
-  --lc-text-25: #ffb088;
+  --lc-text-25: var(--fixed-white);
   color: var(--lc-text-25);
   font-weight: 600;
 }
@@ -256,7 +256,7 @@
 }
 
 .incinerator-frame__input::placeholder {
-  --lc-text-19: rgba(255, 220, 190, 0.55);
+  --lc-text-19: rgba(255, 255, 255, 0.55);
   color: var(--lc-text-19);
 }
 
@@ -299,7 +299,7 @@
 }
 
 .incinerator-frame__thought-text {
-  --lc-text-13: #e2d3c7;
+  --lc-text-13: rgba(255, 255, 255, 0.82);
   color: var(--lc-text-13);
   font-size: 15px;
   line-height: 1.6;
@@ -341,7 +341,7 @@
 }
 
 .incinerator-frame__affirmation-title {
-  --lc-text-10: #ffb088;
+  --lc-text-10: var(--fixed-white);
   color: var(--lc-text-10);
   font-family: 'Fredoka One', cursive, sans-serif;
   font-size: 16px;
@@ -404,7 +404,7 @@
   z-index: 20;
   font-size: 14px;
   font-weight: 600;
-  --lc-text-1: #ffe8d6;
+  --lc-text-1: rgba(255, 255, 255, 0.95);
   color: var(--lc-text-1);
   padding: 8px 22px;
   --lc-bg-2: rgba(15, 8, 4, 0.75);
@@ -420,3 +420,83 @@
   .incinerator-chips-list { gap: 6px; }
   .incinerator-chip { font-size: 12px; padding: 4px 10px; }
 }
+/* ═══ [แก้ตามที่ระบุ] ป็อปอัพเตาเผาขยะความคิด (ถามเรื่องหนักใจ / ทำสำเร็จ) — กรอบแบบกระดานจัดอันดับ
+   (ขอบทอง ป้ายหัวการ์ด ปุ่มแบบป้าย) แต่โทนอุ่นเข้ากับกองไฟ: ส้มอ่อนผสมเหลืองอ่อน ตัวหนังสือดำ ═══ */
+.incinerator-frame {
+  --incin-card: linear-gradient(165deg, #FFF4CC 0%, #FFE6B8 45%, #FFD3A3 100%);
+  --incin-btn: linear-gradient(180deg, #FFD98C 0%, #FFB872 100%);
+  --incin-edge: #E0A445;
+}
+.incinerator-frame .incinerator-popup {
+  --lb-card-bg: var(--incin-card);
+  --lb-card-text: #2B1D10;
+  --lb-card-text-sub: rgba(43, 29, 16, .72);
+  --lb-gold-edge: var(--incin-edge);
+  --lb-btn-bg: var(--incin-btn);
+  --lb-btn-text: #2B1D10;
+  position: relative;
+  background: var(--incin-card) !important;
+  border: 2px solid var(--incin-edge) !important;
+  border-radius: 22px;
+  padding: 38px 24px 24px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 4px 0 #C98A36, 0 16px 36px rgba(60, 25, 5, .45) !important;
+}
+.incinerator-frame .incinerator-popup :is(.incinerator-frame__title, h2) { color: #2B1D10 !important; font-family: var(--font-display); text-shadow: none; }
+.incinerator-frame .incinerator-popup :is(.incinerator-frame__desc, p) { color: rgba(43, 29, 16, .78) !important; text-shadow: none; }
+.incinerator-frame .incinerator-popup .lb-banner {
+  --lb-gold: var(--incin-edge);
+  background: linear-gradient(180deg, #FFE7A0 0%, #FFC98A 100%) !important;
+  color: #2B1D10 !important;
+  border-color: var(--incin-edge) !important;
+}
+.incinerator-frame .incinerator-popup .lb-banner::before,
+.incinerator-frame .incinerator-popup .lb-banner::after { background: #FFD89A !important; border-color: var(--incin-edge) !important; }
+.incinerator-popup__banner { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); font-size: 15px; white-space: nowrap; }
+.incinerator-frame .incinerator-popup .lb-btn { border-color: var(--incin-edge); box-shadow: 0 3px 0 #C98A36, 0 6px 14px rgba(60, 25, 5, .25); }
+.incinerator-frame .incinerator-popup .lb-btn--ghost { background: rgba(255, 255, 255, .55); color: #2B1D10; }
+
+/* ═══ [แก้ตามที่ระบุ] หน้าเขียนความคิด / ข้อความบอกขั้นตอน / ป้าย "สลายความคิดลบสำเร็จ" —
+   ธีมเดียวกับป็อปอัพอื่น (การ์ดไล่เฉด ขอบทอง ปุ่มแบบป้าย) แต่โทนส้มอ่อนผสมเหลืองอ่อน ตัวหนังสือดำ ═══ */
+.incinerator-frame .incinerator-chips-group,
+.incinerator-frame .incinerator-frame__input-bar,
+.incinerator-frame .incinerator-frame__hint-below,
+.incinerator-frame .incinerator-frame__affirmation-banner {
+  background: var(--incin-card);
+  border: 2px solid var(--incin-edge);
+  box-shadow: 0 3px 0 #C98A36, 0 10px 24px rgba(60, 25, 5, .35);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  color: #2B1D10;
+  font-family: var(--font-display);
+}
+.incinerator-frame .incinerator-chips-group { border-radius: 18px; padding: 12px 16px; }
+.incinerator-frame .incinerator-chips-label { color: #2B1D10; font-family: var(--font-display); }
+.incinerator-frame .incinerator-chip {
+  background: rgba(255, 255, 255, .6);
+  border: 1.5px solid color-mix(in srgb, var(--incin-edge) 70%, transparent);
+  color: #2B1D10;
+  font-family: var(--font-display);
+}
+.incinerator-frame .incinerator-chip:hover {
+  background: var(--incin-btn);
+  border-color: var(--incin-edge);
+}
+.incinerator-frame .incinerator-frame__input { color: #2B1D10; font-family: var(--font-display); }
+.incinerator-frame .incinerator-frame__input::placeholder { color: rgba(43, 29, 16, .5); }
+.incinerator-frame .incinerator-action-btn--input {
+  background: var(--incin-btn);
+  color: #2B1D10;
+  border: 2px solid var(--incin-edge);
+  box-shadow: 0 3px 0 #C98A36;
+  font-family: var(--font-display);
+}
+.incinerator-frame .incinerator-action-btn--input:disabled {
+  background: rgba(255, 255, 255, .5);
+  color: rgba(43, 29, 16, .4);
+  box-shadow: none;
+}
+.incinerator-frame .incinerator-frame__affirmation-banner { border-radius: 20px; }
+.incinerator-frame .incinerator-frame__affirmation-title { color: #2B1D10; font-family: var(--font-display); }
+.incinerator-frame .incinerator-frame__affirmation-sub { color: rgba(43, 29, 16, .8); }

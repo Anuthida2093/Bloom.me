@@ -58,7 +58,8 @@ interface UserContextValue {
   /** [เพิ่มรอบนี้ — ข้อ 4] เปลี่ยนรหัสผ่านจากหน้าตั้งค่า ต้องกรอกรหัสเดิมให้ถูกก่อน */
   changePassword: (data: { currentPassword: string; newPassword: string }) => Promise<void>
   /** [เพิ่มรอบนี้ — ข้อ 3] ลบบัญชีถาวร — ล้าง mockDb ทั้งก้อนแล้วเคลียร์ session ทันที */
-  deleteAccount: () => Promise<void>
+  /** password = รหัสผ่านปัจจุบัน — backend จริงบังคับยืนยันก่อนลบ (โหมด mock ไม่ใช้) */
+  deleteAccount: (password?: string) => Promise<void>
   /** [เพิ่มรอบนี้ — ข้อ 2] ขอลิงก์กู้รหัสผ่าน — ดูคำเตือนเรื่อง devToken ใน user.api.ts */
   requestPasswordReset: (email: string) => Promise<userApi.RequestPasswordResetResult>
   /** [เพิ่มรอบนี้ — ข้อ 2] ตั้งรหัสผ่านใหม่จาก token ในลิงก์กู้รหัสผ่าน */
@@ -223,7 +224,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const changePassword = useCallback(
     (data: { currentPassword: string; newPassword: string }) => changePasswordMutation.mutateAsync(data),
     [changePasswordMutation])
-  const deleteAccount = useCallback(() => deleteAccountMutation.mutateAsync(), [deleteAccountMutation])
+  const deleteAccount = useCallback((password?: string) => deleteAccountMutation.mutateAsync(password), [deleteAccountMutation])
   // [เพิ่มรอบนี้ — ข้อ 2] ไม่ต้องผ่าน useMutation เพราะไม่มี user session ให้อัปเดต cache
   // (หน้า ForgotPassword/ResetPassword ทำงานได้ทั้งตอนล็อกอินอยู่หรือไม่อยู่ก็ได้)
   const requestPasswordReset = useCallback((email: string) => userApi.requestPasswordReset(email), [])

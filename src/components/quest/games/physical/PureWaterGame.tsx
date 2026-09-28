@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import CameraCapture from '../../shared/CameraCapture'
 import type { QuestGameProps } from '../../../../types.mental'
+import { useProgress } from '../../../../context/ProgressContext'
+import { findQuestByCode } from '../../../../config/questCatalog'
 import './PureWaterGame.css'
+
+const QUEST_CODE = 'phys-hydration-drop'
 
 export default function PureWaterGame({ finish, exit }: QuestGameProps) {
   // สเตทสำหรับจัดการหน้าจอ: 'intro' (หน้าหลัก) | 'camera-before' (กล้องถ่ายก่อนดื่ม) | 'camera-after' (กล้องถ่ายหลังดื่ม)
@@ -11,10 +15,14 @@ export default function PureWaterGame({ finish, exit }: QuestGameProps) {
   const [photoBefore, setPhotoBefore] = useState<string | null>(null)
   const [photoAfter, setPhotoAfter] = useState<string | null>(null)
   
-  // สมมติรอบที่ทำไปแล้ว (หากระบบจริงมีดึงจาก Backend ให้ใช้ค่าจาก Context แทนได้เลยครับ)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [roundsCompleted, setRoundsCompleted] = useState(0) 
-  const maxRounds = 10
+  // [แก้ตามที่ระบุ] วงกลมนับจำนวนแก้วที่ดื่มสำเร็จ "วันนี้" จริงจาก questLogs (เดิมค้าง 0 ตลอด)
+  const { questLogs } = useProgress()
+  const todayStr = new Date().toDateString()
+  const roundsCompleted = questLogs.filter((l) =>
+    l.quest?.code === QUEST_CODE && l.status === 'COMPLETED' &&
+    !!l.completedAt && new Date(l.completedAt).toDateString() === todayStr,
+  ).length
+  const maxRounds = findQuestByCode(QUEST_CODE)?.maxPerDay ?? 10
 
   // เมื่อถ่ายรูป "ก่อนดื่ม" เสร็จ
   const handleSaveBefore = (imgSrc: string) => {
@@ -58,7 +66,7 @@ export default function PureWaterGame({ finish, exit }: QuestGameProps) {
   // ==========================================
   // โหมดหน้าหลักของเควสน้ำพุหล่อเลี้ยงราก
   // ==========================================
-  const progressPct = (roundsCompleted / maxRounds) * 100
+  const progressPct = Math.min(100, (roundsCompleted / maxRounds) * 100)
   const radius = 45
   const circumference = 2 * Math.PI * radius
   const strokeDashoffset = circumference - (progressPct / 100) * circumference
@@ -120,8 +128,8 @@ export default function PureWaterGame({ finish, exit }: QuestGameProps) {
 
       {/* ปุ่มบันทึก จะโชว์ก็ต่อเมื่อถ่ายครบทั้ง 2 รูปแล้ว */}
       {photoBefore && photoAfter ? (
-        <button className="pure-water-submit-btn" onClick={handleSubmit}>
-          บันทึก (รับรางวัล)
+        <button className="lb-btn pure-water-submit-btn" onClick={handleSubmit}>
+          บันทึก
         </button>
       ) : (
         <button className="pure-water-cancel-btn" onClick={exit}>

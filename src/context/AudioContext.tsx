@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useAppContext } from './AppContext'
 import { setUiSoundsMuted } from '../utils/uiSounds'
+import { playSfx, msSinceSpecialSfx, markSpecialSfx } from '../utils/audioPlayer'
+import { isSfxSuppressed } from '../utils/sfxGate'
 
 export type GameSoundType = 'tree-grow' | 'reward-claim' | 'owl-walk'
 
@@ -24,6 +26,8 @@ interface AudioContextValue {
   toggleMute: () => void
   /** [Method 2: ไฟล์เสียงจริง] เล่นเสียงประกอบเหตุการณ์ในเกม — ดูชื่อไฟล์ที่ต้องเตรียมด้านบน */
   playGameSound: (type: GameSoundType) => void
+  /** หยุด BGM ของแอปชั่วคราว (เช่น เควสฟื้นฟูหน้าดินที่เปิดคลิป+เสียงกล่อมนอนของตัวเอง) — false = กลับมาเล่นต่อ */
+  setBgmSuspended: (suspended: boolean) => void
 }
 
 const AudioCtx = createContext<AudioContextValue | null>(null)
@@ -46,6 +50,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const bgmRef = useRef<HTMLAudioElement | null>(null)
   const gameSoundCache = useRef<Map<string, HTMLAudioElement>>(new Map())
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
+  const [bgmSuspended, setBgmSuspended] = useState(false)
 
   // ซิงค์ mute state ให้ uiSounds.ts (Method 1 — เสียงสังเคราะห์) รู้ด้วยทุกครั้งที่เปลี่ยน
   useEffect(() => {
@@ -57,13 +62,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     const bgm = bgmRef.current
     if (!bgm) return
     bgm.volume = Math.min(1, Math.max(0, settings.musicVolume / 100))
-    if (isMuted) {
+    if (isMuted || bgmSuspended) {
       bgm.pause()
     } else if (bgm.paused && !autoplayBlocked) {
       bgm.play().catch(() => {})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.musicVolume, isMuted])
+  }, [settings.musicVolume, isMuted, bgmSuspended])
 
   // [ตามที่ขอ] พยายามเล่น BGM ทันทีตอนโหลดแอป — ถ้าเบราว์เซอร์บล็อก autoplay (นโยบาย
   // มาตรฐานของเบราว์เซอร์สมัยใหม่ที่ต้องมี user gesture ก่อน) ให้ตั้ง listener ฟัง
@@ -79,6 +84,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     if (!autoplayBlocked || isMuted) return
 
     const tryStartOnInteraction = () => {
+      if (bgmSuspended) return
       bgmRef.current?.play().then(() => {
         setAutoplayBlocked(false)
         document.removeEventListener('click', tryStartOnInteraction)
@@ -92,14 +98,35 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('click', tryStartOnInteraction)
       document.removeEventListener('touchstart', tryStartOnInteraction)
     }
-  }, [autoplayBlocked, isMuted])
+  }, [autoplayBlocked, isMuted, bgmSuspended])
+
+  /* [แก้ตามที่ระบุ] เสียงคลิกเดียวกันทั้งระบบ — กดปุ่ม/ลิงก์/ตัวเลือกที่ไหนก็ได้ยินเสียงคลิกเดียวกัน
+     ฟังที่ document จุดเดียว · รอให้ handler ของปุ่มทำงานก่อน (setTimeout 0) ถ้าปุ่มนั้นเล่นเสียงของตัวเอง
+     (ชัตเตอร์/รับรางวัล/พลิกไพ่ ฯลฯ) ในจังหวะเดียวกัน → ไม่เล่นเสียงคลิกซ้อน ใช้เสียงของปุ่มนั้นอย่างเดียว */
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (isMuted) return
+      const target = e.target as Element | null
+      const clickable = target?.closest('button, a[href], [role="button"], [role="tab"], [role="option"], select, input[type="checkbox"], input[type="radio"], summary, label[for]')
+      if (!clickable || (clickable as HTMLButtonElement).disabled) return
+      const startedAt = performance.now()
+      window.setTimeout(() => {
+        // มีเสียงเฉพาะเล่นหลังจากกดครั้งนี้ → ข้ามเสียงคลิก
+        if (msSinceSpecialSfx() < performance.now() - startedAt + 5) return
+        playSfx('CLICK', { volume: settings.sfxVolume, enabled: settings.soundEnabled })
+      }, 0)
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
+  }, [isMuted, settings.sfxVolume, settings.soundEnabled])
 
   const toggleMute = () => {
     updateSettings({ soundEnabled: !settings.soundEnabled })
   }
 
   const playGameSound = (type: GameSoundType) => {
-    if (isMuted) return
+    markSpecialSfx()
+    if (isMuted || isSfxSuppressed()) return
     const fileName = GAME_SOUND_FILES[type]
     try {
       let audio = gameSoundCache.current.get(fileName)
@@ -120,7 +147,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AudioCtx.Provider value={{ isMuted, toggleMute, playGameSound }}>
+    <AudioCtx.Provider value={{ isMuted, toggleMute, playGameSound, setBgmSuspended }}>
       {/* [ตามที่ขอ] BGM element เดียวของทั้งแอป วน loop ตลอด — ไม่ต้อง render ซ้ำที่ไหนอีก */}
       <audio ref={bgmRef} src={BGM_PATH} loop />
       {children}

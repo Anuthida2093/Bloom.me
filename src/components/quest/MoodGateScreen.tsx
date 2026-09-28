@@ -1,5 +1,6 @@
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { BADGE_ICONS } from '../../config/iconAssets'
+import '../leaderboard/leaderboardRow.css'
 
 interface MoodGateScreenProps {
   title: string
@@ -20,14 +21,15 @@ interface MoodGateScreenProps {
  *
  * [3-Pane layout] position: 'absolute' ครอบแค่ GameplayFrame ("กรอบเขียว") ที่เป็นพ่อ
  */
-export default function MoodGateScreen({ title, icon, iconImg, accent, onRequestMoodCheckin, onClose }: MoodGateScreenProps) {
+export default function MoodGateScreen({ title, icon, iconImg, onRequestMoodCheckin, onClose }: MoodGateScreenProps) {
   useEscapeKey(onClose)
 
   return (
     <div
       style={{
         position: 'absolute', inset: 0, zIndex: 800,
-        background: `linear-gradient(160deg, ${accent}, var(--g800))`,
+        // [แก้ตามที่ระบุ] พื้นหลังแบบหน้าเควสอื่นๆ (เขียวอ่อน/เขียวเข้มตามธีม) แทนสีประจำหมวด
+        background: 'var(--bg)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
       }}
     >
@@ -49,22 +51,17 @@ export default function MoodGateScreen({ title, icon, iconImg, accent, onRequest
           หัวเรื่องกลายเป็นเกือบขาวบนพื้นขาว อ่านแทบไม่ออก ใช้เทคนิคเดียวกับ Login.tsx: ล็อกสี
           เป็นค่าคงที่เข้ม (เท่ากับค่า --n900/--n500 ฝั่ง light mode) แทนการอ้างโทเคนที่สลับสี
           เพราะพื้นหลังการ์ดนี้ไม่เปลี่ยนตามธีมอยู่แล้ว */}
-      <div className="mood-gate-card" style={{ textAlign: 'center', maxWidth: 420, background: 'var(--glass-w-96)', borderRadius: 28, padding: '40px 32px', boxShadow: '0 28px 70px var(--glass-b-40)' }}>
+      {/* [แก้ตามที่ระบุ] ป็อปอัพแบบกระดานจัดอันดับ — พื้นเขียวไล่เฉด ขอบทอง ป้ายหัว */}
+      <div className="mood-gate-card lb-card" style={{ position: 'relative', textAlign: 'center', maxWidth: 420, width: '100%', borderRadius: 22, padding: '40px 26px 26px', boxShadow: '0 4px 0 color-mix(in srgb, var(--lb-gold-edge) 60%, var(--g800)), 0 16px 36px var(--glass-b-30)' }}>
+        <div className="lb-banner" style={{ position: 'absolute', top: -17, left: '50%', transform: 'translateX(-50%)', fontSize: 15, whiteSpace: 'nowrap' }}>เช็คอินอารมณ์ก่อนนะ</div>
         <div className="mood-gate-icon" style={{ fontSize: 56, marginBottom: 8 }}>
           {iconImg ? <img src={iconImg} style={{ width: 56, height: 56, objectFit: 'contain' }} alt="" /> : icon}
         </div>
-        <div style={{ fontFamily: 'Fredoka One', fontSize: 22, color: '#1A1F1B', marginBottom: 8 }}>ก่อนเข้า {title}</div>
-        <p style={{ fontSize: 13.5, color: '#5A6B5D', lineHeight: 1.7, marginBottom: 24 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--lb-card-text)', marginBottom: 8 }}>ก่อนเข้า {title}</div>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--lb-card-text-sub)', lineHeight: 1.7, marginBottom: 22 }}>
           ทุกวันต้องเช็คอินอารมณ์ก่อนนะ — ความรู้สึกวันนี้ของคุณคือกุญแจสำคัญที่ทำให้ไพ่ทิพย์และสมุดบันทึกเข้าใจคุณได้ตรงจุด
         </p>
-        <button
-          onClick={onRequestMoodCheckin}
-          style={{
-            width: '100%', padding: '14px', border: 'none', borderRadius: 16,
-            background: `linear-gradient(135deg, ${accent}, var(--purple))`, color: 'var(--fixed-white)',
-            fontFamily: 'Fredoka One', fontSize: 16, cursor: 'pointer', boxShadow: `0 10px 24px ${accent}55`,
-          }}
-        >
+        <button className="lb-btn lb-btn--wide" onClick={onRequestMoodCheckin}>
           <img src={BADGE_ICONS.checkin} className="icon-img" alt="" /> ไปเช็คอินอารมณ์
         </button>
       </div>

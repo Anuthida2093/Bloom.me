@@ -99,7 +99,7 @@ export default function MedicalBoxAlert({ moodEntries, onOpenMentalQuests }: Med
               onClick={(e) => e.stopPropagation()}
             >
               <button className="medical-box-alert__close" onClick={() => setShowPopup(false)} title="ปิด" aria-label="ปิด"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
-              <div className="medical-box-alert__icon">🏥</div>
+              <div className="medical-box-alert__icon"><img src={BADGE_ICONS.medicalBox} alt="" style={{ width: 84, height: 84, objectFit: 'contain' }} /></div>
               <h3 className="medical-box-alert__title">เราเป็นห่วงคุณนะ</h3>
               <p className="medical-box-alert__body">
                 ช่วงนี้เราสังเกตว่าอารมณ์ของคุณดูไม่ค่อยสดใสมาหลายวันติดกันเลย

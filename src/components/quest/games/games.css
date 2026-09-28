@@ -141,7 +141,7 @@
   transition: transform 0.15s ease, color 0.15s ease;
 }
 .qg-stars button.is-on {
-  --lc-text-7: #F6C445;
+  --lc-text-7: var(--fixed-white);
   color: var(--lc-text-7);
   --lc-c-8: rgba(246, 196, 69, 0.5);
   text-shadow: 0 0 12px var(--lc-c-8);
@@ -177,7 +177,7 @@
 .qg-tag--warn {
   --lc-bg-5: rgba(255, 196, 100, 0.16);
   background: var(--lc-bg-5);
-  --lc-text-6: #FFD9A8;
+  --lc-text-6: rgba(255, 255, 255, 0.85);
   color: var(--lc-text-6);
 }
 .qg-tag--ok {
@@ -189,7 +189,7 @@
 .qg-tag--danger {
   --lc-bg-1: rgba(239, 71, 111, 0.18);
   background: var(--lc-bg-1);
-  --lc-text-2: #FFB3C6;
+  --lc-text-2: rgba(255, 255, 255, 0.85);
   color: var(--lc-text-2);
 }
 

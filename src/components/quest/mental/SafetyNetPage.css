@@ -165,3 +165,13 @@
 @media (prefers-reduced-motion: reduce) {
   .safety-net__aura, .safety-net__box { animation: none; }
 }
+/* [แก้ตามที่ระบุ] ใช้รูป Medical Box.png แทนอีโมจิ 🧰 */
+/* [แก้ตามที่ระบุ] กล่องพยาบาลใหญ่ขึ้น + อยู่ต่ำจากขอบบน 90px — ไฟล์ Medical Box.png (796x434) มีขอบโปร่งใส
+   บน ~11% ล่าง ~13% จึงหักด้วย margin ติดลบให้ตัวกล่องจริงเริ่มที่ 90px พอดี */
+.safety-net { align-items: flex-start; padding-top: 90px; padding-bottom: calc(var(--gpf-safe-bottom, 90px) + 16px); }
+.safety-net__box { font-size: 0; line-height: 0; margin-bottom: 8px; }
+.safety-net__box-img {
+  width: min(320px, 78vw); height: auto; display: block;
+  margin: calc(min(320px, 78vw) * -0.061) auto calc(min(320px, 78vw) * -0.072);
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,.3));
+}

@@ -3,7 +3,8 @@ import { MBTI_TREE_THEME, type MbtiType } from '../../types';
 import MiniTree from '../tree/MiniTree';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { RANK_CATEGORIES, MOCK_LEADERBOARD_PLAYERS, type LeaderboardPlayer, type RankCategory } from '../../config/leaderboardData';
+import { RANK_CATEGORIES, type LeaderboardPlayer, type RankCategory } from '../../config/leaderboardData';
+import { useLeaderboard } from '../../hooks/useLeaderboard';
 import { BADGE_ICONS, RANK_CATEGORY_ICONS } from '../../config/iconAssets';
 import './leaderboardRow.css';
 
@@ -31,7 +32,8 @@ export default function Leaderboard({ onClose = () => {}, myMbti = 'INFP', myNam
   useEscapeKey(onClose);
   const [cat, setCat] = useState<RankCategory>('level');
 
-  const sorted = [...MOCK_LEADERBOARD_PLAYERS].sort(
+  const players = useLeaderboard(cat);
+  const sorted = [...players].sort(
     (a, b) => b[cat] - a[cat]
   );
 
@@ -79,7 +81,7 @@ export default function Leaderboard({ onClose = () => {}, myMbti = 'INFP', myNam
         <div
           style={{
             background:
-              'linear-gradient(135deg, var(--g800), var(--g700))',
+              'linear-gradient(135deg, var(--leaf-soft), var(--leaf-soft-strong))',
             padding: '20px 24px',
             display: 'flex',
             alignItems: 'center',
@@ -93,7 +95,7 @@ export default function Leaderboard({ onClose = () => {}, myMbti = 'INFP', myNam
               style={{
                 fontFamily: 'Fredoka One',
                 fontSize: 24,
-                color: 'var(--fixed-white)',
+                color: 'var(--on-leaf-soft)',
               }}
             >
               <img src={BADGE_ICONS.trophy} className="icon-img" alt="" /> กระดานจัดอันดับ
@@ -102,7 +104,7 @@ export default function Leaderboard({ onClose = () => {}, myMbti = 'INFP', myNam
             <div
               style={{
                 fontSize: 13,
-                color: 'var(--g300)',
+                color: 'var(--on-leaf-soft-sub)',
                 marginTop: 2,
               }}
             >
@@ -110,15 +112,15 @@ export default function Leaderboard({ onClose = () => {}, myMbti = 'INFP', myNam
             </div>
           </div>
 
-          <button
+          <button className="popup-close"
             onClick={onClose}
             style={{
-              background: 'var(--glass-w-15)',
+              background: 'color-mix(in srgb, var(--fixed-white) 45%, transparent)',
               border: 'none',
               borderRadius: 99,
               width: 36,
               height: 36,
-              color: 'var(--fixed-white)',
+              color: 'var(--on-leaf-soft)',
               fontSize: 18,
               cursor: 'pointer',
               display: 'flex',
@@ -151,9 +153,9 @@ export default function Leaderboard({ onClose = () => {}, myMbti = 'INFP', myNam
                 border: 'none',
                 borderRadius: 'var(--r-pill)',
                 background:
-                  cat === c.id ? 'var(--g700)' : 'var(--fixed-white)',
+                  cat === c.id ? 'var(--leaf-soft-active)' : 'var(--fixed-white)',
                 color:
-                  cat === c.id ? 'var(--fixed-white)' : 'var(--n700)',
+                  cat === c.id ? 'var(--on-leaf-soft)' : 'var(--n700)',
                 fontFamily: 'Fredoka One',
                 fontSize: 13,
                 cursor: 'pointer',

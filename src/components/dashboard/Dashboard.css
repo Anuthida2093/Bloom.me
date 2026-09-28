@@ -39,11 +39,14 @@
    WateringCanFx.tsx) — วางไว้ค่อนไปทางล่างขวาของ .dashboard__tree-layer ใกล้กระถาง/โคนต้น */
 .watering-can-fx {
   position: absolute;
-  right: 12%;
-  bottom: 22%;
+  /* [แก้ตามที่ระบุ] รดตรงตำแหน่งต้นไม้เท่านั้น — โคนต้นอยู่กึ่งกลางจอ (x 50%) สูง 84% ของฉาก
+     (TREE_BASE_Y_RATIO ใน drawTree2D.ts) วางกล่องให้หัวพวย (หลังเอียง -25°) อยู่เหนือลำต้นพอดี */
+  left: calc(50% - 28px);
+  top: calc(84% - 190px);
   z-index: 6;
-  width: 90px;
-  height: 90px;
+  /* [แก้ตามที่ระบุ] บัวรดน้ำใหญ่ขึ้นนิดหน่อย (เดิม 90px) */
+  width: 120px;
+  height: 120px;
   pointer-events: none;
 }
 .watering-can-fx__can {
@@ -53,15 +56,20 @@
   filter: drop-shadow(0 8px 14px var(--glass-b-35));
 }
 .watering-can-fx__drops {
+  /* จุดหัวพวยหลังเอียง -25° ในกล่อง 120px ≈ (28, 64) */
   position: absolute;
-  bottom: 6px;
-  left: 8px;
+  top: 60px;
+  left: 24px;
 }
 .watering-can-fx__drop {
   position: absolute;
   top: 0;
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
+}
+@media (max-width: 640px) {
+  .watering-can-fx { width: 100px; height: 100px; left: calc(50% - 23px); top: calc(84% - 165px); }
+  .watering-can-fx__drops { top: 50px; left: 20px; }
 }
 
 /* [ใหม่ — ข้อ C] ตัวครอบต้นไม้ของตัวเอง ใช้เป็นเป้าหมายของ html-to-image ตอนกดแชร์
@@ -183,43 +191,58 @@
 }
 .game-top-hud > * { pointer-events: auto; }
 
+/* [แก้ตามที่ระบุ] ป้ายคะแนนแบบเกมน่ารัก — ขอบทอง + ขอบล่างหนาเหมือนปุ่มเกม + ไฮไลต์ด้านบน
+   สีชุดเดียวกับกรอบกระดานจัดอันดับ (สว่าง: เขียวอ่อน/ตัวหนังสือเข้ม, มืด: เขียวเข้ม/ขาว) */
 .hud-pill {
+  --hud-bg: var(--leaf-soft);
+  --hud-bg-2: var(--leaf-soft-strong);
+  --hud-text: var(--on-leaf-soft);
+  --hud-edge: color-mix(in srgb, var(--coin) 70%, var(--g600));
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 6px 14px 7px;
   border-radius: var(--r-pill);
-  --lc-bg-4: rgba(20, 30, 25, .6);
-  background: var(--lc-bg-4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1.5px solid var(--glass-w-20);
-  color: var(--fixed-white);
+  background: linear-gradient(180deg, var(--hud-bg) 0%, var(--hud-bg-2) 100%);
+  border: 2px solid var(--hud-edge);
+  color: var(--hud-text);
   font-family: var(--font-display);
   /* [แก้ตามที่ระบุ] ตัวอักษร HUD (INTJ Lv.1 / เหรียญ / streak) เล็กไป ขยายจาก --fs-sm (13px)
      เป็น --fs-lg (18px) — ยังใช้ design token เดิมตามที่เคยระบุห้ามใส่ค่า px มั่ว */
   font-size: var(--fs-lg);
-  box-shadow: var(--sh-card);
+  box-shadow:
+    0 3px 0 color-mix(in srgb, var(--hud-edge) 80%, var(--g800)),
+    0 6px 14px var(--glass-b-25),
+    inset 0 2px 0 color-mix(in srgb, var(--fixed-white) 55%, transparent);
+  transition: transform .15s ease;
 }
-.hud-icon { font-size: 20px; line-height: 1; }
+.hud-pill:hover { transform: translateY(-1px); }
+[data-theme="dark"] .hud-pill {
+  --hud-bg: var(--g700);
+  --hud-bg-2: var(--g800);
+  --hud-text: var(--fixed-white);
+}
+/* [แก้ตามที่ระบุ] รูปเหรียญ/ดาว/ไอคอนบนแถบด้านบนใหญ่ขึ้น */
+.hud-icon { font-size: 20px; line-height: 1; width: 32px; height: 32px; margin: -4px 0; }
 .hud-bar-container { display: flex; align-items: center; gap: 6px; }
 .hud-bar-bg {
-  width: 60px; height: 8px; border-radius: var(--r-pill);
-  background: var(--glass-b-50); overflow: hidden;
+  width: 60px; height: 10px; border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--hud-text) 22%, transparent); overflow: hidden;
+  box-shadow: inset 0 1px 2px var(--glass-b-25);
 }
 .hud-bar-fill { height: 100%; background: linear-gradient(90deg, var(--exp), var(--coin)); border-radius: var(--r-pill); }
 /* [แก้ตามที่ระบุ] เลข "99/100" ก็ขยายตาม — จาก --fs-xs (11.5px) เป็น --fs-sm (13px) */
 .hud-bar-text {
   font-size: var(--fs-sm);/* 13px */
-  --lc-text-3: #E2E8F0;
-  color: var(--lc-text-3);
-  font-family: var(--font-body);
+  color: var(--hud-text);
+  font-family: var(--font-display);
 }
 
 @media (max-width: 768px) {
   .game-top-hud { top: 8px; gap: 6px; }  /* เดิม 68px เว้นใต้ NavBar มือถือ (56px) ที่ลบไปแล้ว */
   .hud-pill { padding: 5px 10px; font-size: var(--fs-md); }
-  .hud-icon { font-size: 18px; }
+  .hud-icon { font-size: 18px; width: 27px; height: 27px; margin: -3px 0; }
 }
 
 /* ═══════════════════════════════════════════
@@ -354,4 +377,132 @@
 @media (max-width: 768px) {
   .dashboard__back-btn { top: 8px; left: 8px; padding: 8px 14px; font-size: var(--fs-xs); }
   .dashboard__viewing-name-pill { top: 8px; padding: 8px 18px; font-size: var(--fs-sm); }
+}
+
+/* [แก้ตามที่ระบุ] จอเล็ก/มือถือ: กระดานจัดอันดับ (ซ้าย) และปุ่มฝั่งขวา เริ่มต่ำกว่าแถบคะแนนด้านบน
+   (INTJ Lv / EXP / เหรียญ / streak) ไม่ซ้อนทับกัน — ความสูงแถบคะแนนวัดจริงทุกครั้งที่เปลี่ยน
+   (ขึ้นบรรทัดใหม่ได้บนจอแคบ) แล้วเก็บไว้ที่ --hud-h (ดู Dashboard.tsx) */
+@media (max-width: 768px) {
+  .dashboard__panel--left,
+  .dashboard__right-cluster {
+    top: calc(8px + var(--hud-h, 44px) + 10px);
+  }
+  .dashboard__panel--right { max-height: calc(100vh - var(--hud-h, 44px) - 200px); }
+}
+
+/* [แก้ตามที่ระบุ] หน้าต้นไม้ของเพื่อน: ปุ่มกลับบ้าน + ป้ายชื่อใช้หน้าตาป้ายกระดานจัดอันดับ (.lb-banner)
+   — ที่นี่คุมแค่ตำแหน่ง/ขนาด (สี/ขอบทอง/พื้นเขียวมาจาก .lb-banner ใน leaderboardRow.css) */
+.dashboard__back-btn.lb-banner,
+.dashboard__viewing-name-pill.lb-banner { position: fixed; box-shadow: 0 3px 8px var(--glass-b-30); }
+.dashboard__back-btn.lb-banner { font-size: var(--fs-sm); padding: 6px 16px; gap: 6px; cursor: pointer; }
+.dashboard__back-btn.lb-banner .icon-img { width: 26px; height: 26px; }
+.dashboard__viewing-name-pill.lb-banner { font-size: var(--fs-md); padding: 7px 24px; }
+.player-tree-card { width: min(260px, calc(100vw - 32px)); }
+/* [แก้ตามที่ระบุ] ปุ่มกลับบ้าน: ไม่มีจุดกลม (ปลายม้วนกระดาษ) ซ้าย-ขวาแบบป้าย .lb-banner */
+.dashboard__back-btn.lb-banner::before,
+.dashboard__back-btn.lb-banner::after { content: none; }
+
+
+/* ═══ [แก้ตามที่ระบุ] โพสอิทลอยบนจอหลัก (PostItLayer.tsx) — ลากวางได้ทั่วจอ ═══ */
+.postit-layer { position: fixed; inset: 0; z-index: 45; pointer-events: none; }
+.postit-layer__note {
+  position: absolute;
+  transform: translate(-50%, -50%) rotate(var(--postit-tilt, -3deg));
+  width: clamp(64px, 9vw, 86px);
+  min-height: clamp(52px, 7vw, 68px);
+  padding: 9px 7px 7px;
+  border: none;
+  border-radius: 3px;
+  box-shadow: 0 4px 10px var(--glass-b-30);
+  color: var(--fixed-black);
+  font-family: var(--font-display);
+  font-size: clamp(9.5px, 1.2vw, 12px);
+  line-height: 1.3;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;           /* ลากด้วยนิ้วได้โดยหน้าจอไม่เลื่อนตาม */
+  user-select: none;
+  -webkit-user-select: none;
+  animation: postitLayerIn .6s cubic-bezier(.22,1,.36,1) both;
+  transition: box-shadow .18s ease, transform .18s ease;
+}
+.postit-layer__note::before {
+  content: '';
+  position: absolute; top: -6px; left: 50%;
+  width: 28px; height: 10px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: var(--glass-w-50);
+  border: 1px solid var(--glass-b-8);
+  border-radius: 2px;
+}
+.postit-layer__note:hover { transform: translate(-50%, -50%) rotate(0deg) scale(1.06); box-shadow: 0 8px 18px var(--glass-b-35); }
+.postit-layer__note.is-dragging {
+  cursor: grabbing;
+  transition: none;
+  transform: translate(-50%, -50%) rotate(0deg) scale(1.1);
+  box-shadow: 0 14px 28px var(--glass-b-40);
+}
+@keyframes postitLayerIn {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 4px)) rotate(var(--postit-tilt, -3deg)) scale(.85); }
+  to   { opacity: 1; transform: translate(-50%, -50%) rotate(var(--postit-tilt, -3deg)) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .postit-layer__note { animation: none; } }
+
+/* ═══ [แก้ตามที่ระบุ] ปุ่มข้างหน้า Home (ข้อมูลต้นไม้/เช็คอินรายวัน/แจ้งเตือน/แชร์/เพื่อน/สตอรี่) ให้ "ขนาดที่ตาเห็น"
+   เท่าปุ่มตั้งค่า — ไฟล์ PNG แต่ละรูปมีขอบโปร่งใสไม่เท่ากัน (วัดจริงด้วย sharp: Settings.png เนื้อรูปเต็ม ~83%
+   ของไฟล์ ส่วน tree/Check-in/Notification/Share/Friends.png เนื้อรูปแค่ ~40-50% ของความกว้างไฟล์)
+   ขนาดกล่องเท่ากันเลยทำให้รูปอื่นดูเล็กกว่าครึ่ง — ขยายกล่องรูปแยกต่อไฟล์ให้เนื้อรูปจริงสูง ~52px เท่าตั้งค่า
+   (มือถือ ~43px) รูปล้นกล่องปุ่มได้แต่ไม่รับคลิก (pointer-events:none) ช่องกดยังเป็นขนาดปุ่มเดิม ═══ */
+.game-icon-btn { position: relative; }
+.game-icon-btn .icon-img { pointer-events: none; flex-shrink: 0; }
+.game-icon-btn .icon-img[src$="/tree.png"]         { width: 110px; height: 110px; }
+.game-icon-btn .icon-img[src$="/Check-in.png"]     { width: 134px; height: 134px; }
+.game-icon-btn .icon-img[src$="/Notification.png"] { width: 115px; height: 115px; }
+.game-icon-btn .icon-img[src$="/Share.png"]        { width: 116px; height: 116px; }
+.game-icon-btn .icon-img[src$="/Friends.png"]      { width: 104px; height: 104px; }
+/* สตอรี่ยังเป็นอีโมจิ 📖 — ขยายให้สูงใกล้เคียงรูปตั้งค่า */
+.dashboard__corner-actions--left .game-icon-btn { font-size: 50px; }
+@media (max-width: 768px) {
+  .game-icon-btn .icon-img[src$="/tree.png"]         { width: 91px; height: 91px; }
+  .game-icon-btn .icon-img[src$="/Check-in.png"]     { width: 111px; height: 111px; }
+  .game-icon-btn .icon-img[src$="/Notification.png"] { width: 95px; height: 95px; }
+  .game-icon-btn .icon-img[src$="/Share.png"]        { width: 96px; height: 96px; }
+  .game-icon-btn .icon-img[src$="/Friends.png"]      { width: 86px; height: 86px; }
+  .dashboard__corner-actions--left .game-icon-btn { font-size: 42px; }
+}
+
+/* ═══ [แก้ตามที่ระบุ] กรอบข้อความเตือนทานเกินแคลอรี่ (OverCalorieNotice.tsx) — ใต้แถบคะแนนด้านบน ═══ */
+.over-calorie-notice {
+  position: fixed;
+  top: calc(16px + var(--hud-h, 44px) + 30px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(360px, calc(100vw - 150px));
+  padding: 24px 16px 12px;
+  border-radius: 18px;
+  text-align: center;
+  pointer-events: none;
+  font-family: var(--font-display);
+}
+.over-calorie-notice__banner { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 13.5px; }
+.over-calorie-notice__text {
+  margin: 0; min-height: 3.2em; display: flex; align-items: center; justify-content: center;
+  font-size: 15.5px; line-height: 1.5; color: var(--lb-card-text);
+}
+@media (max-width: 768px) {
+  .over-calorie-notice { top: calc(8px + var(--hud-h, 44px) + 26px); width: min(320px, calc(100vw - 120px)); }
+  .over-calorie-notice__text { font-size: 14px; }
+}
+
+/* [แก้ตามที่ระบุ] ป้าย "ต้นไม้ของ…" (ด้านบน + การ์ดข้อมูลต้นไม้เพื่อน) — วงรีปลายม้วนสองข้างสีอ่อนลง */
+:is(.dashboard__viewing-name-pill, .player-tree-card .lb-frame__banner)::before,
+:is(.dashboard__viewing-name-pill, .player-tree-card .lb-frame__banner)::after {
+  background: var(--leaf-soft);
+}
+[data-theme="dark"] :is(.dashboard__viewing-name-pill, .player-tree-card .lb-frame__banner)::before,
+[data-theme="dark"] :is(.dashboard__viewing-name-pill, .player-tree-card .lb-frame__banner)::after {
+  background: var(--g600);
 }

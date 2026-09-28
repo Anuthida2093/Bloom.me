@@ -138,7 +138,7 @@
   border-radius: 12px;
   background: rgba(10, 22, 16, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #F87171;
+  color: rgba(255, 255, 255, 0.85);
   font-family: 'Nunito', 'Mali', sans-serif;
   font-weight: bold;
   cursor: pointer;
@@ -196,7 +196,7 @@
 
 .sjg-summary-title {
   font-family: 'Fredoka One', 'Mali', sans-serif;
-  color: #fde047;
+  color: var(--fixed-white);
   font-size: 22px;
   margin: 0;
 }
@@ -261,7 +261,7 @@
   gap: 6px;
   font-family: 'Fredoka One', 'Mali', sans-serif;
   font-size: 20px;
-  color: #FFD166;
+  color: var(--fixed-white);
   background: rgba(0, 0, 0, 0.3);
   padding: 8px 16px;
   border-radius: 99px;
@@ -286,3 +286,98 @@
 .sjg-summary-btn:active {
   transform: scale(0.96);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   [แก้ตามที่ระบุ] เควสก้าวเพื่อสุขภาพ — ชุดสีเดียวกับหน้าเล่นเควสอื่น
+   ธีมสว่าง: พื้นเขียวอ่อน, แถบบน/แผงควบคุมเขียวเข้มกว่า, ขอบทอง, ตัวหนังสือดำทั้งหมด
+   ธีมมืด: ของเดิม (เขียวเข้ม) แต่ขอบทอง + ตัวหนังสือขาวทั้งหมด
+   ═══════════════════════════════════════════════════════════════════════════ */
+.step-journey-game { --sj-gold: color-mix(in srgb, var(--coin) 70%, var(--g600)); }
+.step-journey-game__pill-header,
+.step-journey-game__controls,
+.sjg-summary-card { border: 2px solid var(--sj-gold); }
+.step-journey-game__pill-header { font-family: var(--font-display); }
+
+:root:not([data-theme="dark"]) .step-journey-game { background-color: var(--leaf-soft); }
+:root:not([data-theme="dark"]) .step-journey-game__loading { color: var(--n900); }
+:root:not([data-theme="dark"]) .step-journey-game__pill-header,
+:root:not([data-theme="dark"]) .step-journey-game__controls {
+  background: var(--leaf-soft-strong);
+  color: var(--n900);
+}
+:root:not([data-theme="dark"]) .step-journey-game__controls * { color: var(--n900); }
+:root:not([data-theme="dark"]) .step-journey-game__reset-btn {
+  background: var(--fixed-white);
+  border-color: var(--sj-gold);
+  color: var(--n900) !important;
+}
+:root:not([data-theme="dark"]) .step-journey-game__reset-btn:hover { background: var(--leaf-soft); }
+:root:not([data-theme="dark"]) .sjg-summary-overlay { background: color-mix(in srgb, var(--leaf-soft) 80%, transparent); }
+:root:not([data-theme="dark"]) .sjg-summary-card {
+  background: linear-gradient(160deg, var(--leaf-soft), var(--leaf-soft-strong));
+  color: var(--n900);
+}
+:root:not([data-theme="dark"]) .sjg-summary-card :is(.sjg-summary-title, .sjg-summary-desc, .sjg-progress-text, .sjg-reward-item) { color: var(--n900); }
+:root:not([data-theme="dark"]) .sjg-summary-progress,
+:root:not([data-theme="dark"]) .sjg-reward-box,
+:root:not([data-theme="dark"]) .sjg-reward-item { background: color-mix(in srgb, var(--fixed-white) 55%, transparent); }
+
+[data-theme="dark"] .step-journey-game :is(.step-journey-game__loading, .sjg-summary-title, .sjg-summary-desc, .sjg-progress-text, .sjg-reward-item) { color: var(--fixed-white); }
+
+
+/* ═══ [แก้ตามที่ระบุ] ป็อปอัพยืนยันเปลี่ยนจุดหมาย — กลางจอ กรอบ/ขอบแบบกระดานจัดอันดับ ═══ */
+.sjg-confirm {
+  position: fixed; inset: 0; z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px 16px; background: var(--glass-b-45); backdrop-filter: blur(3px);
+}
+.sjg-confirm__card {
+  position: relative; width: 100%; max-width: 360px;
+  padding: 36px 22px 22px; border-radius: 22px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  font-family: var(--font-display);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--lb-gold-edge) 60%, var(--g800)), 0 16px 36px var(--glass-b-30);
+}
+.sjg-confirm__banner { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); font-size: 15px; }
+.sjg-confirm__icon { font-size: 42px; line-height: 1; }
+.sjg-confirm__text { font-size: 16px; color: var(--lb-card-text); margin: 0; line-height: 1.5; }
+.sjg-confirm__sub { font-size: 13.5px; color: var(--lb-card-text-sub); margin: 0 0 8px; }
+.sjg-confirm__actions { display: flex; gap: 10px; width: 100%; }
+.sjg-confirm__actions .lb-btn { flex: 1; }
+
+/* ═══ [แก้ตามที่ระบุ] แผงความคืบหน้า (สถิติ + ช่องกรอกก้าว + ปุ่มเปลี่ยนจุดหมาย) — กรอบ/ขอบแบบกระดานจัดอันดับ ═══ */
+.step-journey-game__side-panel .stats-overlay,
+.step-journey-game__side-panel .step-journey-game__controls {
+  background: var(--lb-card-bg) !important;
+  border: 2px solid var(--lb-gold-edge) !important;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--lb-gold-edge) 55%, var(--g800)), 0 8px 20px var(--glass-b-25) !important;
+  backdrop-filter: none !important;
+  color: var(--lb-card-text) !important;
+  font-family: var(--font-display) !important;
+}
+.step-journey-game__side-panel .stats-overlay__tile {
+  background: color-mix(in srgb, var(--fixed-white) 45%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 45%, transparent);
+}
+[data-theme="dark"] .step-journey-game__side-panel .stats-overlay__tile { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+.step-journey-game__side-panel :is(.stats-overlay__tile-label, .stats-overlay__tile-goal) { color: var(--lb-card-text-sub) !important; opacity: 1; }
+.step-journey-game__side-panel :is(.stats-overlay__tile-value, .stats-overlay *) { color: var(--lb-card-text); }
+.step-journey-game__side-panel .stats-overlay__track { background: color-mix(in srgb, var(--lb-card-text) 15%, transparent); }
+.step-journey-game__side-panel .step-journey-game__controls * { color: var(--lb-card-text); }
+.step-journey-game__side-panel .step-journey-game__reset-btn {
+  background: transparent !important;
+  border: 2px solid var(--lb-gold-edge) !important;
+  color: var(--lb-card-text) !important;
+  font-family: var(--font-display);
+}
+
+/* [แก้ตามที่ระบุ] ปุ่ม "เปลี่ยนจุดหมาย (เริ่มใหม่)" — พื้นเขียวอ่อน เส้นขอบสีขาว (ทั้งสองโหมด) */
+.step-journey-game__reset-btn,
+:root:not([data-theme="dark"]) .step-journey-game__reset-btn {
+  background: var(--leaf-soft-strong);
+  border: 2px solid var(--fixed-white);
+  color: var(--n900) !important;
+  box-shadow: 0 3px 10px var(--glass-b-20);
+}
+.step-journey-game__reset-btn:hover,
+:root:not([data-theme="dark"]) .step-journey-game__reset-btn:hover { background: var(--leaf-soft-active); }

@@ -41,6 +41,12 @@ function leafColor(sp: Species, rand: () => number, lit: number): string {
   return shade(base, (lit - 0.5) * 0.16 + (rand() - 0.5) * 0.06, (rand() - 0.5) * 0.02, (rand() - 0.5) * 0.06)
 }
 
+/** สียอดอ่อนปลายกิ่ง — ยิ่งอยู่นอก (out → 1) ยิ่งใช้เฉดสดสุดของชุด */
+function tipColor(colors: string[], rand: () => number, out: number): string {
+  const i = Math.min(colors.length - 1, Math.floor(Math.min(1, out) * colors.length * (0.7 + rand() * 0.3)))
+  return shade(colors[i], (rand() - 0.5) * 0.06, (rand() - 0.5) * 0.02)
+}
+
 const seg = (start: Vec3, end: Vec3, r0: number, r1: number, depth: number, bend = 0): BranchSegment => {
   const mid: Vec3 = [(start[0] + end[0]) / 2 + bend, (start[1] + end[1]) / 2, (start[2] + end[2]) / 2]
   return { start, mid, end, radiusStart: r0, radiusEnd: r1, depth }
@@ -54,7 +60,8 @@ function columnOrCone(inp: FormInput, cone: boolean): FormOutput {
   const { species: sp, level, rand, leafLength, widthOf, compact } = inp
   const g = (level - 1) / 7
   const H = FULL_HEIGHT * (0.42 + 0.58 * g)
-  const y0 = H * (cone ? 0.1 : 0.07)
+  // [แก้ตามที่ระบุ] ไซเปรส: ยกพุ่มขึ้นให้เห็นลำต้นด้านล่างชัดขึ้น (เดิม 3.5% ของความสูง พุ่มคลุมจนมองไม่เห็นลำต้น)
+  const y0 = H * (cone ? 0.1 : 0.13)
   const branches: BranchSegment[] = []
   const leaves: TreeLeaf[] = []
   const clumps: TreeClump[] = []
@@ -62,38 +69,53 @@ function columnOrCone(inp: FormInput, cone: boolean): FormOutput {
 
   // กรวยสปรูซแบ่งเป็นชั้น (เพิ่มชั้นตามอายุ) ขอบล่างแต่ละชั้นกว้างกว่าบน — สมมาตร เป็นระเบียบ
   const tiers = cone ? 3 + Math.round(level * 1.1) : 0
-  const Wb = H * (cone ? 0.34 : 0.13)
+  const columnTiers = 5 + level
+  const Wb = H * (cone ? 0.34 : 0.21)
   const width = (y: number) => {
     const u = Math.max(0, Math.min(1, (y - y0) / (H - y0)))
-    if (!cone) return Wb * (u < 0.3 ? 0.72 + 0.28 * (u / 0.3) : Math.pow((1 - u) / 0.7, 0.85))
+    if (!cone) {
+      // [แก้ตามที่ระบุ — ภาพอ้างอิงต้นสนไซเปรส] กรวยสมมาตร กว้างสุดที่โคนแล้วเรียวลงจนยอดแหลม
+      // กิ่งซ้อนเป็นชั้นๆ (ขอบหยักเบาๆ ล่างชั้นกว้าง บนชั้นแคบ) และฟูขึ้นเรื่อยๆ ไปทางโคน
+      // โคนสุดมนเข้านิดหน่อยไม่ตัดตรง
+      const taper = Math.pow(1 - u, 1.05)
+      const f = (u * columnTiers) % 1
+      const layered = 0.84 + 0.16 * (1 - f)
+      const roundedBase = 0.86 + 0.14 * Math.min(1, u / 0.06)
+      return Wb * taper * layered * roundedBase
+    }
     const k = Math.min(tiers - 1, Math.floor(u * tiers))
     const uB = k / tiers, uT = (k + 1) / tiers
     const s = (uT - u) / (uT - uB) // 0 = บนชั้น → 1 = ล่างชั้น
     return Wb * (1 - uB) * (0.3 + 0.7 * s)
   }
 
-  // ลำต้นตรง (โผล่ใต้พุ่มนิดเดียว) หนาตามอายุ
-  const r0 = 0.26 * (0.45 + 0.55 * g)
-  branches.push(seg([0, 0, 0], [0, H * 0.98, 0], r0, 0.03, 0))
+  // ลำต้นตรง (โผล่ใต้พุ่มนิดเดียว) หนาตามอายุ — ไซเปรสลำต้นเล็กเรียว
+  const r0 = (cone ? 0.26 : 0.13) * (0.45 + 0.55 * g)
+  // [แก้ตามที่ระบุ] ไซเปรส: ลำต้นจบในพุ่มช่วงบน (ไม่ยื่นเป็นก้านโผล่ที่ปลายยอดแหลม)
+  branches.push(seg([0, 0, 0], [0, H * (cone ? 0.98 : 0.8), 0], r0, cone ? 0.03 : r0 * 0.35, 0))
   // กิ่งสั้นๆ ตามลำต้น — ไซเปรสชี้ขึ้น / สปรูซห้อยลงตามชั้น
   const step = H * (cone ? 1 / tiers : 0.07)
   let side = 1
-  for (let y = y0 + step * 0.6; y < H * 0.92; y += step) {
+  // ไซเปรส: กิ่งหยุดก่อนช่วงยอด (ยอดแคบ กิ่งจะโผล่พ้นใบให้เห็นเป็นก้านที่ปลาย)
+  for (let y = y0 + step * 0.6; y < H * (cone ? 0.92 : 0.72); y += step) {
     const w = width(cone ? y - step * 0.45 : y) * 0.85
     for (const s of cone ? [1, -1] : [side]) {
-      const end: Vec3 = cone ? [s * w, y - step * 0.55, 0] : [s * w * 0.8, y + H * 0.06, 0]
+      const end: Vec3 = cone ? [s * w, y - step * 0.55, 0] : [s * w * 0.85, y + H * 0.035, 0]
       branches.push(seg([0, y, 0], end, r0 * 0.3, 0.02, 1))
     }
     side = -side
   }
 
   // ก้อนพุ่มสีเข้มเติมทรง (ตัวพุ่มทึบแน่นแบบสน) — ใบเข็มทับด้านบน
-  const clumpStep = H * 0.045
-  for (let y = y0 + clumpStep; y < H * 0.95; y += clumpStep) {
+  const clumpStep = H * (cone ? 0.045 : 0.03)
+  // [แก้ตามที่ระบุ] ไซเปรส: ก้อนพุ่มเขียวขึ้นไปจนถึงปลายยอดสุด (เดิมหยุดที่ 95% ของความสูงและข้าม
+  // ช่วงที่แคบกว่าขนาดขั้นต่ำ ยอดจึงเหลือแต่ใบเข็มโปร่งๆ) — ช่วงยอดใช้ก้อนเล็กลงเรื่อยๆ ตามความกว้าง
+  const clumpTop = cone ? H * 0.95 : H * 0.995
+  for (let y = y0 + clumpStep; y < clumpTop; y += clumpStep) {
     const w = width(y)
     // ก้อนอยู่ลึกในทรง (ขอบก้อนไม่เกิน 75% ของความกว้าง) — ใบเข็มคลุมขอบ ไม่เห็นเป็นลอนกลมๆ
-    const r = Math.min(w * 0.42, clumpStep * 2)
-    if (r < leafLength * 0.4) continue
+    const r = cone ? Math.min(w * 0.42, clumpStep * 2) : Math.min(w * 0.6, clumpStep * 2.4)
+    if (r < leafLength * (cone ? 0.4 : 0.08)) continue
     const span = Math.max(0, w * 0.75 - r)
     const n = Math.max(1, Math.round((2 * span) / r) + 1)
     for (let i = 0; i < n; i++) {
@@ -103,26 +125,31 @@ function columnOrCone(inp: FormInput, cone: boolean): FormOutput {
   }
 
   // ใบเข็มเต็มทรง: ไซเปรสชี้ขึ้น-ออกนิดๆ / สปรูซชี้ออก-ลงตามกิ่ง
-  const count = Math.round((compact ? 0.6 : 1) * (300 + level * (cone ? 230 : 130)))
+  const count = Math.round((compact ? 0.6 : 1) * (300 + level * (cone ? 230 : 220)))
   for (let i = 0; i < count; i++) {
-    const y = y0 + Math.pow(rand(), 1.15) * (H - y0)
+    // ไซเปรส: กระจายใบเข็มถึงยอดสุดสม่ำเสมอ (สปรูซยังเน้นช่วงล่างเหมือนเดิม)
+    const y = y0 + Math.pow(rand(), cone ? 1.15 : 1) * (H - y0) * (cone ? 1 : 0.995)
     const w = width(y)
     const x = (rand() < 0.5 ? -1 : 1) * Math.sqrt(rand()) * w // หนาแน่นค่อนไปทางขอบ คลุมก้อนพุ่มด้านใน
     const out = w > 0 ? Math.abs(x) / w : 0
     const sx = Math.sign(x) || 1
-    const dir = cone ? angleOf(sx * (0.5 + out * 0.6), 0.35 - out * 0.7) : angleOf(sx * out * 0.45, 1)
+    // ไซเปรส: ใบเข็มสั้นนุ่มชี้ออก-ขึ้นตามกิ่ง (ขอบนอกกางออกมากกว่ากลางพุ่ม)
+    const dir = cone ? angleOf(sx * (0.5 + out * 0.6), 0.35 - out * 0.7) : angleOf(sx * (0.3 + out * 0.55), 0.85 - out * 0.35)
     leaves.push({
       position: [x, y, (rand() - 0.5) * w],
-      length: leafLength * (0.8 + rand() * 0.4),
+      length: leafLength * (cone ? 0.8 + rand() * 0.4 : 0.65 + rand() * 0.3),
       angle: dir + (rand() - 0.5) * 0.5,
       widthScale: widthOf(),
-      color: leafColor(sp, rand, 0.5 - x / (2 * Wb) + (y / H - 0.5) * 0.3),
+      // ปลายกิ่ง (ขอบนอกของทรง) ใช้สียอดอ่อนเขียวสด — ยิ่งออกนอกยิ่งมีโอกาสเป็นสีปลายกิ่ง
+      color: sp.tipColors && out > 0.55 && rand() < (out - 0.45) * 1.6
+        ? tipColor(sp.tipColors, rand, out)
+        : leafColor(sp, rand, 0.5 - x / (2 * Wb) + (y / H - 0.5) * 0.3),
     })
     if (out > 0.7) flutterable.push(leaves.length - 1)
   }
   // ยอดแหลม
   for (const off of [-0.3, 0, 0.3]) {
-    leaves.push({ position: [0, H * 0.96, 0.1], length: leafLength * 1.2, angle: off, widthScale: widthOf(), color: leafColor(sp, rand, 0.8) })
+    leaves.push({ position: [0, H * 0.97, 0.1], length: leafLength * (cone ? 1.2 : 0.9), angle: off * (cone ? 1 : 0.5), widthScale: widthOf(), color: sp.tipColors ? tipColor(sp.tipColors, rand, 1) : leafColor(sp, rand, 0.8) })
   }
 
   return {
@@ -215,9 +242,11 @@ function bamboo(inp: FormInput): FormOutput {
     const lean = x0 * 0.18 + (rand() - 0.5) * 0.3
     const at = (t: number): Vec3 => [x0 + lean * t * t * h * 0.1, h * t, (rand() - 0.5) * 0.02]
     const nodes = Math.max(4, Math.round(h / 0.9))
+    // [แก้ตามที่ระบุ] ยอดไผ่แหลมขึ้น — ช่วง 25% บนสุดเรียวลงจนเกือบเป็นปลายแหลม (เดิมเรียวแค่ 30% ปลายทู่)
+    const radAt = (t: number) => (t <= 0.75 ? r * (1 - 0.3 * t) : r * 0.775 * (1 - ((t - 0.75) / 0.25) * 0.85))
     for (let i = 0; i < nodes; i++) {
       const a = at(i / nodes), b = at((i + 1) / nodes)
-      branches.push(seg(a, b, r * (1 - 0.3 * (i / nodes)), r * (1 - 0.3 * ((i + 1) / nodes)), 0))
+      branches.push(seg(a, b, radAt(i / nodes), radAt((i + 1) / nodes), 0))
       const t = (i + 1) / nodes
       if (t < 0.45) continue
       // กิ่งแขนงที่ข้อ ชี้ออก-ขึ้น แล้วกลุ่มใบห้อยลงออกนอกลำ
@@ -238,10 +267,12 @@ function bamboo(inp: FormInput): FormOutput {
       }
       minX = Math.min(minX, end[0] - leafLength); maxX = Math.max(maxX, end[0] + leafLength)
     }
-    // ยอดลำ: ใบอ่อนตั้งขึ้น
-    const tip = at(1)
-    for (const off of [-0.4, 0.1, 0.5]) {
-      leaves.push({ position: tip, length: leafLength * 0.9, angle: off, widthScale: widthOf(), color: leafColor(sp, rand, 0.8) })
+    // ยอดลำ: ปลายแหลมเรียวยื่นขึ้น + ใบอ่อนเรียวชี้ตรงขึ้นแนบยอด (ไม่กางออกเป็นพุ่ม)
+    const top = at(1)
+    const spikeTip: Vec3 = [top[0] + lean * 0.02, top[1] + Math.max(0.35, h * 0.06), top[2]]
+    branches.push(seg(top, spikeTip, radAt(1), 0.004, 0))
+    for (const off of [-0.16, 0, 0.16]) {
+      leaves.push({ position: spikeTip, length: leafLength * (off === 0 ? 1.15 : 0.85), angle: off, widthScale: widthOf() * 0.7, color: leafColor(sp, rand, 0.85) })
       flutterable.push(leaves.length - 1)
     }
   }

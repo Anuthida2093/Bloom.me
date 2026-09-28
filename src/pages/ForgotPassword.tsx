@@ -42,7 +42,7 @@ export default function ForgotPassword() {
 
   return (
     <AuthLayout title="ลืมรหัสผ่าน" subtitle="กรอกอีเมลที่ใช้สมัคร เราจะส่งลิงก์กู้รหัสผ่านให้" logoFallback="🔓">
-      <div style={authCardStyle}>
+      <div className="auth-card" style={authCardStyle}>
         {!submitted ? (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <label style={authLabelStyle}>
@@ -59,7 +59,7 @@ export default function ForgotPassword() {
         ) : (
           <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ fontSize: 36 }}>📬</div>
-            <p style={{ color: 'var(--fixed-white)', fontSize: 14, lineHeight: 1.6 }}>
+            <p style={{ color: 'var(--lb-card-text)', fontSize: 14, lineHeight: 1.6 }}>
               ถ้าอีเมลนี้มีอยู่ในระบบ เราได้ส่งลิงก์กู้รหัสผ่านไปให้แล้ว<br />กรุณาตรวจสอบกล่องจดหมายของคุณ
             </p>
 
@@ -70,10 +70,10 @@ export default function ForgotPassword() {
                 marginTop: 8, padding: 14, borderRadius: 14, background: 'color-mix(in srgb, var(--exp) 16%, transparent)',
                 border: '1.5px dashed color-mix(in srgb, var(--exp) 70%, transparent)', textAlign: 'left',
               }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--fixed-white)', marginBottom: 6, opacity: 0.85 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--lb-card-text)', marginBottom: 6, opacity: 0.85 }}>
                   🧪 สำหรับเทสระหว่างพัฒนาเท่านั้น (ยังไม่มีระบบส่งอีเมลจริง)
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--glass-w-90)', marginBottom: 10 }}>
+                <div style={{ fontSize: 12, color: 'var(--lb-card-text-sub)', marginBottom: 10 }}>
                   นี่คือลิงก์ที่ระบบจะส่งในอีเมลจริง — คลิกเพื่อทดสอบตั้งรหัสผ่านใหม่
                 </div>
                 <Link

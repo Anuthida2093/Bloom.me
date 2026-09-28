@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { JournalEntryRecord } from '../../../../types'
 import { useTypewriter } from '../../../../hooks/useTypewriter'
-import { playSfx } from '../../../../utils/audioPlayer'
+import { useEscapeKey } from '../../../../hooks/useEscapeKey'
+import { playSfx, stopSfx } from '../../../../utils/audioPlayer'
 import type { ParchmentTheme } from './ParchmentJournalEditor'
 import { BADGE_ICONS } from '../../../../config/iconAssets'
+import '../../../leaderboard/leaderboardRow.css'
 
 const C_1 = '#C7A34F'
 const C_2 = '#F3E6C8'
@@ -15,7 +18,8 @@ const C_6 = '#4A2C0A'
 
 interface JournalHistoryModalProps {
   theme: ParchmentTheme
-  accent: string
+  /** สีเน้นเดิมของแต่ละเควส — เก็บไว้ให้ผู้เรียกเดิมไม่ต้องแก้ (หน้าตาใหม่ใช้โทนกระดานจัดอันดับ) */
+  accent?: string
   title: string
   entries: JournalEntryRecord[]
   onClose: () => void
@@ -28,19 +32,30 @@ const THEME_ACCENT: Record<ParchmentTheme, { gold: string; paper: string; ink: s
 
 const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 
+function formatDate(iso: string): string {
+  const d = new Date(iso)
+  return `${d.getDate()} ${MONTHS_TH[d.getMonth()]} ${d.getFullYear() + 543}`
+}
+function formatTime(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} น.`
+}
+
 /**
- * JournalHistoryModal — [ใช้ร่วมกัน] ประวัติบันทึกของทั้ง Reframer Journal และ
- * Gratitude Shield — รายการ + ตัวกรองเดือน/ปี → คลิกแล้วเปิดเป็น storybook reader
- * (ข้อความพิมพ์ตัวเองแบบ typewriter, ประกายเวทมนตร์ + เสียง wing.mp3 ตอนเริ่มอ่าน,
- * ปุ่มสลับอ่าน "ต้นฉบับ"/"AI สรุปใหม่", ปุ่มแชร์)
+ * JournalHistoryModal — ประวัติบันทึกของ "ไดอะรี่ของฉัน" และ "คำขอบคุณ" (ใช้ร่วมกัน)
+ * [แก้ตามที่ระบุ] เปิดเป็นหน้าเต็มจอแบบหน้าตั้งค่า (portal ไปที่ body — เดิมเป็น position:absolute
+ * ในกล่องแม่ พอเปิดจากหน้าโปรไฟล์ที่เลื่อนยาวจึงไปโผล่ด้านบนสุดของหน้า มองไม่เห็น = "เปิดไม่ได้")
+ * กรอบ/สีแบบกระดานจัดอันดับ มีปุ่มกากบาทปิด แต่ละรายการแสดง ชื่อเรื่อง · วันที่ · เวลา
+ * แตะรายการเพื่ออ่านฉบับเต็ม (สลับอ่าน "ต้นฉบับ"/"AI สรุปใหม่" + แชร์ได้)
  */
-export default function JournalHistoryModal({ theme, accent, title, entries, onClose }: JournalHistoryModalProps) {
+export default function JournalHistoryModal({ theme, title, entries, onClose }: JournalHistoryModalProps) {
   const colors = THEME_ACCENT[theme]
   const [monthFilter, setMonthFilter] = useState<number | 'all'>('all')
   const [yearFilter, setYearFilter] = useState<number | 'all'>('all')
-  // [ใหม่ — ตรวจสอบกับ UX_UI.pdf แล้วพบว่ามีช่องค้นหาที่โค้ดเดิมไม่มี] ค้นหาจากหัวข้อ/เนื้อหา
   const [searchQuery, setSearchQuery] = useState('')
   const [readingEntry, setReadingEntry] = useState<JournalEntryRecord | null>(null)
+
+  useEscapeKey(() => { if (readingEntry) setReadingEntry(null); else onClose() })
 
   const availableYears = useMemo(() => {
     const years = new Set(entries.map((e) => new Date(e.createdAt).getFullYear()))
@@ -57,130 +72,119 @@ export default function JournalHistoryModal({ theme, accent, title, entries, onC
     })
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
-  return (
-    <div className="journal-history">
-      <button onClick={onClose} title="ปิด" className="journal-history__close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
+  return createPortal(
+    <div className="journal-history" role="dialog" aria-label={title}>
+      <div className="journal-history__inner">
+        <div className="journal-history__top">
+          <div className="lb-banner journal-history__banner">{title}</div>
+          <button onClick={onClose} title="ปิด" aria-label="ปิด" className="journal-history__close">
+            <img src={BADGE_ICONS.close} alt="" />
+          </button>
+        </div>
 
-      <AnimatePresence mode="wait">
-        {!readingEntry ? (
-          <motion.div key="list" className="journal-history__panel" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <h2 className="journal-history__title" style={{ color: colors.gold }}>📜 {title}</h2>
-
-            {/* [ใหม่ — ตาม UX_UI.pdf] ช่องค้นหาจากหัวข้อ/เนื้อหาบันทึก — ของเดิมมีแค่ตัวกรอง
-                เดือน/ปี ยังไม่มีช่องค้นหาข้อความเลย */}
-            <div className="journal-history__search-wrap">
-              <span className="journal-history__search-icon">🔍</span>
+        <AnimatePresence mode="wait">
+          {!readingEntry ? (
+            <motion.div key="list" className="journal-history__panel lb-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ค้นหา..."
+                placeholder="ค้นหาชื่อเรื่องหรือเนื้อหา..."
                 className="journal-history__search-input"
+                aria-label="ค้นหาบันทึก"
               />
-            </div>
 
-            <div className="journal-history__filters">
-              <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="journal-history__select">
-                <option value="all">ทุกเดือน</option>
-                {MONTHS_TH.map((m, i) => <option key={m} value={i}>{m}</option>)}
-              </select>
-              <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="journal-history__select">
-                <option value="all">ทุกปี</option>
-                {availableYears.map((y) => <option key={y} value={y}>{y + 543}</option>)}
-              </select>
-            </div>
+              <div className="journal-history__filters">
+                <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="journal-history__select" aria-label="เดือน">
+                  <option value="all">ทุกเดือน</option>
+                  {MONTHS_TH.map((m, i) => <option key={m} value={i}>{m}</option>)}
+                </select>
+                <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="journal-history__select" aria-label="ปี">
+                  <option value="all">ทุกปี</option>
+                  {availableYears.map((y) => <option key={y} value={y}>{y + 543}</option>)}
+                </select>
+              </div>
 
-            <div className="journal-history__list">
-              {filteredEntries.length === 0 ? (
-                <p className="journal-history__empty">ยังไม่มีบันทึกในช่วงนี้</p>
-              ) : (
-                filteredEntries.map((entry) => {
-                  const d = new Date(entry.createdAt)
-                  return (
+              <div className="journal-history__list">
+                {filteredEntries.length === 0 ? (
+                  <p className="journal-history__empty">ยังไม่มีบันทึกในช่วงนี้</p>
+                ) : (
+                  filteredEntries.map((entry) => (
                     <button key={entry.id} className="journal-history__item" onClick={() => { playSfx('CARD_FLIP'); setReadingEntry(entry) }}>
-                      <span className="journal-history__item-date">{d.getDate()} {MONTHS_TH[d.getMonth()]} {d.getFullYear() + 543}</span>
-                      <span className="journal-history__item-title">{entry.title}</span>
+                      <span className="journal-history__item-title">{entry.title || 'บันทึกไม่มีชื่อ'}</span>
+                      <span className="journal-history__item-meta">
+                        <span>{formatDate(entry.createdAt)}</span>
+                        <span>เวลา {formatTime(entry.createdAt)}</span>
+                      </span>
                     </button>
-                  )
-                })
-              )}
-            </div>
-          </motion.div>
-        ) : (
-          <StorybookReader key="reader" accent={accent} colors={colors} entry={readingEntry} onBack={() => setReadingEntry(null)} />
-        )}
-      </AnimatePresence>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          ) : (
+            <StorybookReader key="reader" colors={colors} entry={readingEntry} onBack={() => setReadingEntry(null)} />
+          )}
+        </AnimatePresence>
+      </div>
 
       <style>{`
         .journal-history {
-  position: absolute;
-  inset: 0;
-  z-index: 25;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  --lc-bg-2: rgba(5,10,8,.75);
-  background: var(--lc-bg-2);
-  backdrop-filter: blur(6px);
-  overflow-y: auto;
-}
-        .journal-history__close { position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 99px; border: none; background: var(--glass-w-15); color: var(--fixed-white); cursor: pointer; font-size: 15px; z-index: 5; }
-
-        .journal-history__panel {
-  width: 100%;
-  max-width: 480px;
-  --lc-bg-1: rgba(20,15,10,.9);
-  background: var(--lc-bg-1);
-  border-radius: 24px;
-  padding: 28px 24px;
-  box-shadow: 0 30px 70px var(--glass-b-50);
-}
-        .journal-history__title { font-family: 'Fredoka One'; font-size: 18px; text-align: center; margin-bottom: 18px; }
-
-        .journal-history__search-wrap {
-          position: relative; margin-bottom: 12px;
+          position: fixed; inset: 0; z-index: 900;
+          background: var(--bg);
+          overflow-y: auto; scrollbar-width: none;
+          padding: 26px 16px calc(var(--gpf-safe-bottom, 90px) + 16px);
+          font-family: var(--font-display);
         }
-        .journal-history__search-icon {
-          position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-          font-size: 13px; opacity: .6; pointer-events: none;
-        }
-        .journal-history__search-input {
-          width: 100%; padding: 9px 12px 9px 34px; border-radius: 10px;
-          border: 1px solid var(--glass-w-25); background: var(--glass-w-8);
-          color: var(--fixed-white); font-size: 12.5px; font-family: Nunito; outline: none;
-        }
-        .journal-history__search-input::placeholder { color: var(--glass-w-45); }
+        .journal-history::-webkit-scrollbar { display: none; }
+        [data-theme="dark"] .journal-history { background: var(--g900); }
+        .journal-history__inner { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+        .journal-history__top { position: relative; display: flex; justify-content: center; align-items: center; min-height: 44px; }
+        .journal-history__banner { font-size: var(--fs-lg); padding: 8px 26px; max-width: calc(100% - 120px); white-space: normal; text-align: center; }
+        /* [แก้ตามที่ระบุ] กากบาทชิดมุมขวาบนสุดของจอเสมอทุกขนาดจอ (ไม่อิงคอลัมน์เนื้อหา 640px) */
+        .journal-history__close { position: fixed; top: 16px; right: 16px; z-index: 2; background: none; border: none; padding: 0; cursor: pointer; }
+        .journal-history__close img { width: 36px; height: 36px; object-fit: contain; display: block; }
 
-        .journal-history__filters { display: flex; gap: 8px; margin-bottom: 16px; }
-        .journal-history__select { flex: 1; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--glass-w-25); background: var(--glass-w-8); color: var(--fixed-white); font-size: 12.5px; }
+        .journal-history__panel { padding: 18px; border-radius: 22px; display: flex; flex-direction: column; gap: 12px; }
+        .journal-history :is(.journal-history__search-input, .journal-history__select) {
+          width: 100%; min-height: 44px; padding: 10px 14px; border-radius: 12px; outline: none;
+          border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 60%, transparent);
+          background: color-mix(in srgb, var(--fixed-white) 55%, transparent);
+          color: var(--lb-card-text); font-family: inherit; font-size: var(--fs-sm);
+        }
+        [data-theme="dark"] .journal-history :is(.journal-history__search-input, .journal-history__select) { background: color-mix(in srgb, var(--g900) 55%, transparent); }
+        .journal-history__search-input::placeholder { color: var(--lb-card-text-sub); opacity: .75; }
+        .journal-history__select option { color: var(--n900); background: var(--fixed-white); }
+        .journal-history__filters { display: flex; gap: 8px; }
 
-        .journal-history__list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
-        .journal-history__empty { text-align: center; color: var(--glass-w-50); font-size: 13px; padding: 20px 0; }
+        .journal-history__list { display: flex; flex-direction: column; gap: 10px; }
+        .journal-history__empty { text-align: center; color: var(--lb-card-text-sub); font-size: var(--fs-sm); padding: 24px 0; }
         .journal-history__item {
-          display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 12px 14px;
-          border-radius: 14px; border: 1px solid var(--glass-w-15); background: var(--glass-w-6);
-          cursor: pointer; transition: background .15s ease;
+          display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 12px 14px; width: 100%;
+          border-radius: 14px; cursor: pointer; font-family: inherit;
+          border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 55%, transparent);
+          background: color-mix(in srgb, var(--fixed-white) 45%, transparent);
+          transition: transform .15s ease, border-color .15s ease;
         }
-        .journal-history__item:hover { background: var(--glass-w-12); }
-        .journal-history__item-date { font-size: 10.5px; color: var(--glass-w-55); font-weight: 700; }
-        .journal-history__item-title { font-size: 13.5px; color: var(--fixed-white); }
+        [data-theme="dark"] .journal-history__item { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+        .journal-history__item:hover { border-color: var(--lb-gold-edge); transform: translateY(-1px); }
+        .journal-history__item-title { font-size: var(--fs-md); color: var(--lb-card-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .journal-history__item-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: var(--fs-xs); color: var(--lb-card-text-sub); }
       `}</style>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
 interface StorybookReaderProps {
-  accent: string
   colors: { gold: string; paper: string; ink: string }
   entry: JournalEntryRecord
   onBack: () => void
 }
 
-function StorybookReader({ accent, colors, entry, onBack }: StorybookReaderProps) {
+function StorybookReader({ colors, entry, onBack }: StorybookReaderProps) {
   const [viewMode, setViewMode] = useState<'original' | 'reframed'>('reframed')
   const [showSparkle, setShowSparkle] = useState(true)
   const text = viewMode === 'reframed' ? entry.aiReframedText : entry.originalText
-  const { displayedText, isDone } = useTypewriter(text, 22, 250, () => playSfx('KEYPRESS'))
+  const { displayedText, isDone } = useTypewriter(text, 22, 250, () => playSfx('KEYPRESS'), () => stopSfx('KEYPRESS'))
 
   useState(() => {
     // เล่นประกาย+เสียงกระพือปีกครั้งเดียวตอนเปิดอ่านครั้งแรก
@@ -198,9 +202,7 @@ function StorybookReader({ accent, colors, entry, onBack }: StorybookReaderProps
   }
 
   return (
-    <motion.div className="storybook-reader" initial={{ opacity: 0, rotateY: -15, scale: 0.9 }} animate={{ opacity: 1, rotateY: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ type: 'spring', stiffness: 220, damping: 22 }}>
-      <button onClick={onBack} className="storybook-reader__back"><img src={BADGE_ICONS.back} className="icon-img" alt="" /> กลับ</button>
-
+    <motion.div className="storybook-reader lb-card" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ type: 'spring', stiffness: 220, damping: 22 }}>
       {showSparkle && (
         <div className="storybook-reader__sparkles" aria-hidden="true">
           {Array.from({ length: 10 }).map((_, i) => (
@@ -208,6 +210,11 @@ function StorybookReader({ accent, colors, entry, onBack }: StorybookReaderProps
           ))}
         </div>
       )}
+
+      <div className="storybook-reader__meta">
+        <span>{formatDate(entry.createdAt)}</span>
+        <span>เวลา {formatTime(entry.createdAt)}</span>
+      </div>
 
       <div className="storybook-reader__paper" style={{ background: colors.paper }}>
         <h3 className="storybook-reader__paper-title" style={{ color: colors.ink }}>{entry.title}</h3>
@@ -217,46 +224,40 @@ function StorybookReader({ accent, colors, entry, onBack }: StorybookReaderProps
         </p>
       </div>
 
-      <div className="storybook-reader__toolbar">
-        <div className="storybook-reader__toggle">
-          <button className={viewMode === 'original' ? 'storybook-reader__toggle-btn storybook-reader__toggle-btn--active' : 'storybook-reader__toggle-btn'} onClick={() => setViewMode('original')}>ต้นฉบับ</button>
-          <button className={viewMode === 'reframed' ? 'storybook-reader__toggle-btn storybook-reader__toggle-btn--active' : 'storybook-reader__toggle-btn'} onClick={() => setViewMode('reframed')}>AI สรุปใหม่</button>
-        </div>
-        <button className="storybook-reader__share-btn" style={{ background: `linear-gradient(135deg, ${colors.gold}, ${accent})` }} onClick={handleShare}>📤 แชร์</button>
+      <div className="storybook-reader__toggle" role="tablist">
+        <button role="tab" aria-selected={viewMode === 'original'} className={viewMode === 'original' ? 'storybook-reader__toggle-btn storybook-reader__toggle-btn--active' : 'storybook-reader__toggle-btn'} onClick={() => setViewMode('original')}>ต้นฉบับ</button>
+        <button role="tab" aria-selected={viewMode === 'reframed'} className={viewMode === 'reframed' ? 'storybook-reader__toggle-btn storybook-reader__toggle-btn--active' : 'storybook-reader__toggle-btn'} onClick={() => setViewMode('reframed')}>AI สรุปใหม่</button>
+      </div>
+
+      <div className="storybook-reader__actions">
+        <button className="lb-btn lb-btn--ghost" onClick={onBack}>กลับไปรายการ</button>
+        <button className="lb-btn" onClick={handleShare}>แชร์</button>
       </div>
 
       <style>{`
-        .storybook-reader { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 14px; position: relative; }
-        .storybook-reader__back { align-self: flex-start; background: none; border: none; color: var(--fixed-white); font-size: 13px; cursor: pointer; opacity: .8; }
+        .storybook-reader { width: 100%; display: flex; flex-direction: column; gap: 14px; position: relative; padding: 18px; border-radius: 22px; }
+        .storybook-reader__meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: var(--fs-sm); color: var(--lb-card-text-sub); }
 
-        .storybook-reader__sparkles { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+        .storybook-reader__sparkles { position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
         .storybook-reader__sparkle { position: absolute; top: -10px; font-size: 18px; animation: storybookSparkleFall 1.3s ease-in both; }
         @keyframes storybookSparkleFall { 0% { opacity: 0; transform: translateY(-10px) scale(.5); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(220px) scale(1.1); } }
 
-        .storybook-reader__paper { border-radius: 12px; padding: 26px 24px; box-shadow: 0 24px 60px var(--glass-b-45); min-height: 200px; }
-        .storybook-reader__paper-title { font-family: 'Fredoka One'; font-size: 16px; margin-bottom: 12px; }
-        .storybook-reader__paper-text { font-family: Georgia, serif; font-size: 14px; line-height: 1.85; white-space: pre-wrap; }
+        .storybook-reader__paper { border-radius: 12px; padding: 26px 24px; box-shadow: 0 10px 30px var(--glass-b-25); min-height: 42vh; border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 60%, transparent); }
+        .storybook-reader__paper-title { font-family: var(--font-display); font-size: var(--fs-lg); margin-bottom: 12px; }
+        .storybook-reader__paper-text { font-family: Georgia, var(--font-display), serif; font-size: 16px; line-height: 1.9; white-space: pre-wrap; }
         .storybook-reader__caret { display: inline-block; width: 2px; height: 15px; margin-left: 2px; vertical-align: middle; animation: storybookCaretBlink .9s step-end infinite; }
         @keyframes storybookCaretBlink { 50% { opacity: 0; } }
 
-        .storybook-reader__toolbar { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-        .storybook-reader__toggle { display: flex; background: var(--glass-w-10); border-radius: 99px; padding: 4px; gap: 2px; }
-        .storybook-reader__toggle-btn { padding: 7px 14px; border: none; border-radius: 99px; background: transparent; color: var(--glass-w-65); font-size: 11.5px; font-weight: 700; cursor: pointer; }
-        .storybook-reader__toggle-btn--active {
-  background: var(--glass-w-90);
-  --lc-text-4: #2D2013;
-  color: var(--lc-text-4);
-}
-        .storybook-reader__share-btn {
-  padding: 9px 18px;
-  border: none;
-  border-radius: 99px;
-  --lc-text-3: #3A2400;
-  color: var(--lc-text-3);
-  font-family: 'Fredoka One';
-  font-size: 12.5px;
-  cursor: pointer;
-}
+        .storybook-reader__toggle {
+          display: flex; align-self: center; gap: 4px; padding: 4px; border-radius: 99px;
+          border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 55%, transparent);
+          background: color-mix(in srgb, var(--fixed-white) 40%, transparent);
+        }
+        [data-theme="dark"] .storybook-reader__toggle { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+        .storybook-reader__toggle-btn { min-height: 38px; padding: 7px 18px; border: none; border-radius: 99px; background: transparent; color: var(--lb-card-text-sub); font-family: inherit; font-size: var(--fs-sm); cursor: pointer; }
+        .storybook-reader__toggle-btn--active { background: var(--lb-btn-bg); color: var(--lb-btn-text); }
+        .storybook-reader__actions { display: flex; gap: 12px; }
+        .storybook-reader__actions .lb-btn { flex: 1; }
 
         @media (prefers-reduced-motion: reduce) {
           .storybook-reader__sparkle, .storybook-reader__caret { animation: none; }

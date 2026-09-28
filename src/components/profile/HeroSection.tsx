@@ -265,7 +265,7 @@ export default function HeroSection({
           <button
             onClick={onOpenMood}
             style={{
-              background: `linear-gradient(135deg, ${BG_3}, ${BG_4})`, border: '2px solid var(--pink)',
+              background: `linear-gradient(135deg, ${BG_3}, ${BG_4})`, border: '2px solid var(--text)', /* ขอบดำธีมสว่าง / ขาวธีมมืด (--text สลับตามธีม) */
               borderRadius: 'var(--r-md)', padding: '14px 18px', cursor: 'pointer', textAlign: 'left',
               display: 'flex', alignItems: 'center', gap: 10, width: '100%',
             }}

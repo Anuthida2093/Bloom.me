@@ -234,7 +234,7 @@ export default function GameplayFrame({
             onClose={onCloseSpecial}
           />
         ) : (
-          <MoodGateScreen title="สมุดบันทึกรากไม้เรืองแสง" icon="📖" iconImg={QUEST_ICONS[JOURNAL_QUEST_CODE]} accent={accent} onRequestMoodCheckin={onRequestMoodCheckin} onClose={onCloseSpecial} />
+          <MoodGateScreen title="ไดอะรี่ของฉัน" icon="📖" iconImg={QUEST_ICONS[JOURNAL_QUEST_CODE]} accent={accent} onRequestMoodCheckin={onRequestMoodCheckin} onClose={onCloseSpecial} />
         )
       )}
 

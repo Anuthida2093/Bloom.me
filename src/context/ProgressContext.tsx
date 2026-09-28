@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   DEFAULT_JOURNAL_ENTRIES,
@@ -13,6 +13,7 @@ import { findQuestByCode } from '../config/questCatalog'
 import { queryKeys } from '../services/queryKeys'
 import * as questApi from '../services/api/quest.api'
 import * as moodApi from '../services/api/mood.api'
+import { legacyMoodToColor } from '../config/moodPotion'
 import { useUser } from './UserContext'
 
 /*============================================================================*\
@@ -74,9 +75,26 @@ const MOOD_CATEGORY = { good: 'POSITIVE', neutral: 'NEUTRAL', bad: 'NEGATIVE' } 
 
 export function ProgressProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
-  const { isLoggedIn, applyUserPatch } = useUser()
+  const { isLoggedIn, applyUserPatch, userData } = useUser()
 
   const [journalEntries, setJournalEntries] = useState<JournalEntryRecord[]>(DEFAULT_JOURNAL_ENTRIES)
+  /* [แก้บั๊ก — ประวัติไดอะรี่/คำขอบคุณ "เปิดไม่ได้"] เดิมเก็บแค่ใน state → รีเฟรชแล้วหายหมด
+     ประวัติจึงว่างเปล่าเสมอ ตอนนี้เก็บลงเครื่องแยกตามบัญชี (backend ยังไม่มีตาราง journal —
+     ดู docs/DB_CHANGES.md ข้อ 6.2) โหลดใหม่ทุกครั้งที่สลับบัญชี */
+  const journalStorageKey = userData.id ? `bloom.journal.${userData.id}` : null
+  const [loadedJournalKey, setLoadedJournalKey] = useState<string | null>(null)
+  if (journalStorageKey !== loadedJournalKey) {
+    setLoadedJournalKey(journalStorageKey)
+    let stored: JournalEntryRecord[] = DEFAULT_JOURNAL_ENTRIES
+    if (journalStorageKey) {
+      try { stored = JSON.parse(localStorage.getItem(journalStorageKey) ?? '[]') as JournalEntryRecord[] } catch { stored = [] }
+    }
+    setJournalEntries(Array.isArray(stored) ? stored : [])
+  }
+  useEffect(() => {
+    if (!journalStorageKey || loadedJournalKey !== journalStorageKey) return
+    try { localStorage.setItem(journalStorageKey, JSON.stringify(journalEntries.slice(-500))) } catch { /* storage เต็ม/ปิดอยู่ */ }
+  }, [journalEntries, journalStorageKey, loadedJournalKey])
   const [postIts] = useState<PostItData[]>([])
   const [treeGrowthPulse, setTreeGrowthPulse] = useState<{ category: QuestCategory; key: number; questCode?: string } | null>(null)
   const [hasSoot, setHasSoot] = useState(false)
@@ -198,10 +216,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     // [แก้รอบนี้ — เควสเล่นซ้ำได้ต่อวัน] เควสที่มี maxPerDay (เช่น phys-pure-water) ต้องได้
     // เอฟเฟกต์ต้นไม้เติบโตทุกครั้งที่เล่นสำเร็จ ไม่ใช่แค่ครั้งแรก — alreadyDone เดิมเช็คแค่
     // "เคยสำเร็จมาก่อนไหม" ซึ่งใช้ไม่ได้กับเควสที่ตั้งใจให้ทำซ้ำได้
-    if (!alreadyDone || def?.maxPerDay) {
-      setTreeGrowthPulse({ category, key: Date.now(), questCode })
-      if (questCode === 'ment-cognitive-incinerator') setHasSoot(false)
-    }
+    // [แก้ตามที่ระบุ] ทำเควสสำเร็จเควสไหนก็ตาม ต้องได้เอฟเฟกต์ที่ต้นไม้ทุกครั้ง (ละอองดาวโปรย + ต้นไม้ขยาย)
+    // หน้าเควสกันการกดทำซ้ำของเควสที่ทำแล้ววันนี้ไว้อยู่แล้ว จึงไม่ต้องกรอง alreadyDone ที่นี่อีก
+    void alreadyDone
+    setTreeGrowthPulse({ category, key: Date.now(), questCode })
+    if (questCode === 'ment-cognitive-incinerator') setHasSoot(false)
   }, [completeQuestMutation, questLogs])
 
   const markIncineratorFailed = useCallback(() => setHasSoot(true), [])
@@ -213,6 +232,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       category: MOOD_CATEGORY[mood] ?? 'NEUTRAL',
       mood: subMood,
       note: text || null,
+      // backend เก็บสีน้ำยาต่อ entry ได้แล้ว (mood_entries.colorCode) — ส่งสีตามปุ่มดี/เฉยๆ/ไม่ดี
+      colorCode: legacyMoodToColor(mood),
     })
   }, [createMoodMutation])
 
@@ -224,8 +245,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         ...entries,
         { id: `journal-${Date.now()}`, title, ...entry, createdAt: new Date().toISOString() },
       ])
-      // [ยังไม่มีที่เก็บฝั่ง backend] ตาราง journal_entries ยังไม่มีใน schema
-      // จนกว่าจะสร้าง (ดู docs/DB_CHANGES.md ข้อ 6.2) บันทึกจะหายเมื่อรีเฟรช
+      // [ยังไม่มีที่เก็บฝั่ง backend] ตาราง journal_entries ยังไม่มีใน schema (ดู docs/DB_CHANGES.md
+      // ข้อ 6.2) — ตอนนี้เก็บลงเครื่องแยกตามบัญชีแทน (ดู journalStorageKey ด้านบน)
     }, [])
 
   const completedQuestCount = useMemo(

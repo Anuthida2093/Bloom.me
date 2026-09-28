@@ -55,26 +55,28 @@ export default function StoryProfilePage({ onBack, onEditProfile, onViewTree }: 
         <span className="story-subpage__title">โปรไฟล์</span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 18 }}>
+      {/* [แก้ตามที่ระบุ] ไล่ระดับสีแยกแต่ละส่วน ไม่ใช่สีเดียวทั้งหน้า: การ์ดโปรไฟล์ (เขียวอ่อนไล่เฉด ขอบทอง)
+          → ปุ่ม (เขียวเข้มขึ้น) → แถบหัวข้อโพสต์ (เขียวเข้มกว่า) → รายการโพสต์ (พื้นขาว) */}
+      <div className="lb-card" style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14, padding: 16 }}>
         <div className="story-avatar story-avatar--lg">
           {userData.avatarUrl ? (
             <img src={userData.avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
           ) : (userData.username.trim().charAt(0).toUpperCase() || '?')}
         </div>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--g800)' }}>{userData.username}</div>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', marginBottom: 2 }}>รายละเอียด</div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-sub)' }}>{userData.bio || 'ยังไม่มีรายละเอียด — กด "แก้ไขโปรไฟล์" เพื่อเพิ่ม'}</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--lb-card-text)' }}>{userData.username}</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--lb-card-text-sub)', marginBottom: 2 }}>รายละเอียด</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--lb-card-text)' }}>{userData.bio || 'ยังไม่มีรายละเอียด — กด "แก้ไขโปรไฟล์" เพื่อเพิ่ม'}</div>
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
-        <button className="story-btn-outline" style={{ padding: '9px 18px', borderRadius: 999 }} onClick={onEditProfile}>แก้ไขโปรไฟล์</button>
-        <button className="story-btn-outline" style={{ padding: '9px 18px', borderRadius: 999 }} onClick={handleShareProfile}>แชร์โปรไฟล์</button>
-        <button className="story-btn-outline" style={{ padding: '9px 18px', borderRadius: 999 }} onClick={onViewTree}><img src={BADGE_ICONS.tree} className="icon-img" alt="" /> ดูต้นไม้</button>
+        <button className="lb-btn" onClick={onEditProfile}>แก้ไขโปรไฟล์</button>
+        <button className="lb-btn lb-btn--ghost" onClick={handleShareProfile}>แชร์โปรไฟล์</button>
+        <button className="lb-btn lb-btn--ghost" onClick={onViewTree}><img src={BADGE_ICONS.tree} className="icon-img" alt="" /> ดูต้นไม้</button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div className="story-profile__posts-bar">
         <span style={{ fontWeight: 800, fontSize: 'var(--fs-md)' }}>โพสต์ของฉัน</span>
         <select className="story-filter-select" value={filter} onChange={(e) => setFilter(e.target.value as PostFilter)}>
           <option value="public">โพสต์สาธารณะ</option>

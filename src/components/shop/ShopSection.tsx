@@ -4,6 +4,7 @@ import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { useAudio } from '../../context/AudioContext'
 import { BADGE_ICONS, ITEM_ICONS } from '../../config/iconAssets'
+import { useLanguage } from '../../context/LanguageContext'
 
 const C_1 = '#F0FBF4'
 const C_2 = '#F0FBF4'
@@ -133,6 +134,7 @@ interface ShopSectionProps {
 export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () => {}, onEquip = () => {}, onClose }: ShopSectionProps) {
   useLockBodyScroll()
   useEscapeKey(() => onClose?.())
+  const { t } = useLanguage()
   const { playGameSound } = useAudio()
   // shopCategory เป็นตัวเลือก UI ล้วนๆ ไม่มี field ไหนใน backend ตรงกับสิ่งนี้ — local state
   const [shopCategory, setShopCategory] = useState('statues')
@@ -146,16 +148,34 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
 
   return (
     // [ข้อกำหนดข้อ 2] Full Screen Overlay เหมือน QuestSection เป๊ะ — พื้นทึบเต็มจอ เลื่อนได้ มีปุ่มปิดของตัวเอง
-    <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'linear-gradient(180deg, var(--n50) 0%, var(--b50) 100%)', overflowY: 'auto' }}>
-    <section id="shop" style={{ padding: '24px 20px 48px', position: 'relative' }}>
+    // [แก้ตามที่ระบุ] ทั้งหน้าร้านใช้ฟอนต์เดียวกับหน้า Welcome (--font-display) ปุ่มสืบทอดด้วย
+    <div className="shop-page" style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--bg)', overflowY: 'auto', fontFamily: 'var(--font-display)' }}>
+      <style>{`.shop-page button { font-family: inherit; }`}</style>
+      {/* [เพิ่มตามที่ระบุ] ปุ่มปิด (กากบาท) มุมขวาบน — แบบเดียวกับหน้าโปรไฟล์/ตั้งค่า */}
+      <button
+        onClick={() => onClose?.()}
+        title={t('common.close')}
+        aria-label={t('common.close')}
+        style={{
+          position: 'fixed', top: 14, right: 14, zIndex: 20, width: 44, height: 44, borderRadius: 99,
+          border: 'none', background: 'var(--bg-card)', boxShadow: 'var(--sh-card)',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <img src={BADGE_ICONS.close} alt="" style={{ width: 26, height: 26, objectFit: 'contain' }} />
+      </button>
+    <section id="shop" style={{ padding: '72px 20px calc(var(--gpf-safe-bottom, 90px) + 24px)', position: 'relative' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <h2 style={{ fontFamily: 'Fredoka One', fontSize: 34, color: 'var(--b700)' }}><img src={BADGE_ICONS.store} className="icon-img" alt="" /> ร้านตกแต่งต้นไม้</h2>
-          <p style={{ color: 'var(--b500)', fontSize: 15, marginTop: 4 }}>ใช้เหรียญจากเควสเสริมมาตกแต่งต้นไม้ให้สวยงาม</p>
+          {/* [แก้ตามที่ระบุ] รูปร้านค้าขึ้นก่อน แล้วค่อยเป็นชื่อร้านบรรทัดถัดไป — ชื่อ/คำอธิบาย
+              ดำในธีมสว่าง ขาวในธีมมืด (--text) */}
+          <img src={BADGE_ICONS.store} alt="" style={{ width: 150, height: 150, objectFit: 'contain', display: 'block', margin: '0 auto 6px', filter: 'drop-shadow(0 6px 12px var(--glass-b-20))' }} />
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 34, color: 'var(--text)' }}>{t('shop.title')}</h2>
+          <p style={{ color: 'var(--text)', fontSize: 15, marginTop: 4 }}>ใช้เหรียญจากเควสเสริมมาตกแต่งต้นไม้ให้สวยงาม</p>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: `linear-gradient(135deg, ${BG_28}, ${BG_29})`, borderRadius: 99, padding: '8px 22px', marginTop: 12, boxShadow: 'var(--sh-coin)', border: '1.5px solid var(--coin)' }}>
-            <img src={BADGE_ICONS.coins} className="icon-img" style={{ fontSize: 22 }} alt="" />
-            <span style={{ fontFamily: 'Fredoka One', fontSize: 22, color: 'var(--b700)' }}>{coins.toLocaleString()} เหรียญ</span>
+            <img src={BADGE_ICONS.coins} className="icon-img" style={{ width: 38, height: 38, margin: '-6px 0' }} alt="" />
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--b700)' }}>{coins.toLocaleString()} เหรียญ</span>
           </div>
         </div>
 
@@ -167,10 +187,10 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
               type="button"
               onClick={() => setShopCategory(cat.id)}
               style={{
-                padding: '10px 22px', border: 'none', borderRadius: 'var(--r-pill)', cursor: 'pointer',
+                padding: '10px 22px', border: '2px solid color-mix(in srgb, var(--coin) 70%, var(--g600))', borderRadius: 'var(--r-pill)', cursor: 'pointer',
                 background: shopCategory === cat.id ? 'var(--b500)' : 'var(--fixed-white)',
                 color: shopCategory === cat.id ? 'var(--fixed-white)' : 'var(--b700)',
-                fontFamily: 'Fredoka One', fontSize: 15,
+                fontFamily: 'var(--font-display)', fontSize: 15,
                 boxShadow: shopCategory === cat.id ? `0 4px 14px ${C_30}` : 'var(--sh-card)',
                 transition: 'all .2s', display: 'flex', alignItems: 'center', gap: 6,
               }}>
@@ -189,8 +209,11 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
               <div
                 key={item.id}
                 style={{
-                  background: owned ? 'linear-gradient(135deg, var(--g50), var(--g100))' : 'var(--fixed-white)',
+                  // การ์ดพื้นอ่อนตายตัวทั้ง 2 ธีม (ชื่อไอเทมเป็นสีดำเสมอ) — เดิม --g50/--g100 กลายเป็นสีเข้มตอนธีมมืด
+                  background: owned ? 'linear-gradient(135deg, var(--fixed-white), var(--leaf-soft))' : 'var(--fixed-white)',
                   borderRadius: 20, padding: '16px 10px', textAlign: 'center',
+                  // [แก้ตามที่ระบุ] ทุกการ์ดมีขอบทอง — ไอเทมหายากยังมีวงม่วงซ้อนด้านนอกให้แยกระดับได้
+                  border: '2px solid color-mix(in srgb, var(--coin) 70%, var(--g600))',
                   boxShadow: item.rarity === '🟡 พิเศษ' ? `0 0 0 2px var(--coin), var(--sh-card)` : item.rarity === '🟣 หายาก' ? `0 0 0 2px var(--purple), var(--sh-card)` : 'var(--sh-card)',
                   transition: 'transform .15s', cursor: 'pointer', position: 'relative',
                 }}
@@ -205,18 +228,18 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
                     ITEM_ICONS) ไม่มีก็ fallback เป็น emoji เดิม — ดู src/config/iconAssets.ts */}
                 <div style={{ fontSize: 72, marginBottom: 8, filter: 'drop-shadow(0 5px 10px var(--glass-b-18)) drop-shadow(0 2px 4px var(--glass-b-12))', lineHeight: 1.1 }}>
                   {ITEM_ICONS[item.id]
-                    ? <img src={ITEM_ICONS[item.id]} alt={item.nameTh} style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto' }} />
+                    ? <img src={ITEM_ICONS[item.id]} alt={item.nameTh} style={{ width: 92, height: 92, objectFit: 'contain', margin: '0 auto' }} />
                     : item.emoji}
                 </div>
 
-                <div style={{ fontFamily: 'Fredoka One', fontSize: 14, color: 'var(--n900)', marginBottom: 2 }}>{item.nameTh}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--fixed-black)', marginBottom: 2 }}>{item.nameTh}</div>
                 <div style={{ fontSize: 10, color: 'var(--n300)', marginBottom: 12 }}>{item.name}</div>
 
                 {owned ? (
                   <button
                     type="button"
                     onClick={() => onEquip(item.id)}
-                    style={{ width: '100%', padding: '8px', border: `1.5px solid ${equipped ? 'var(--g600)' : 'var(--n200)'}`, borderRadius: 'var(--r-sm)', background: equipped ? 'var(--g100)' : 'var(--fixed-white)', fontFamily: 'Fredoka One', fontSize: 13, color: equipped ? 'var(--g700)' : 'var(--n500)', cursor: 'pointer' }}>
+                    style={{ width: '100%', padding: '8px', border: `1.5px solid ${equipped ? 'var(--g600)' : 'var(--n200)'}`, borderRadius: 'var(--r-sm)', background: equipped ? 'var(--g100)' : 'var(--fixed-white)', fontFamily: 'var(--font-display)', fontSize: 13, color: equipped ? 'var(--g700)' : 'var(--n500)', cursor: 'pointer' }}>
                     {equipped ? '✓ ถอดออก' : '🎀 สวมใส่'}
                   </button>
                 ) : (
@@ -228,10 +251,10 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
                       width: '100%', padding: '8px', border: 'none', borderRadius: 'var(--r-sm)', cursor: canAfford ? 'pointer' : 'not-allowed',
                       background: canAfford ? 'linear-gradient(135deg, var(--coin), var(--exp))' : 'var(--n100)',
                       color: canAfford ? 'var(--b700)' : 'var(--n300)',
-                      fontFamily: 'Fredoka One', fontSize: 13,
+                      fontFamily: 'var(--font-display)', fontSize: 13,
                       boxShadow: canAfford ? 'var(--sh-coin)' : 'none',
                     }}>
-                    <img src={BADGE_ICONS.coins} className="icon-img" alt="" /> {item.price.toLocaleString()}
+                    <img src={BADGE_ICONS.coins} className="icon-img" style={{ width: 24, height: 24, margin: '-4px 2px -4px 0' }} alt="" /> {item.price.toLocaleString()}
                   </button>
                 )}
               </div>

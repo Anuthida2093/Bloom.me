@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { BADGE_ICONS } from '../../config/iconAssets'
 
@@ -27,9 +27,14 @@ interface WateringCanFxProps {
 
 export default function WateringCanFx({ pulse, waterPulseKey }: WateringCanFxProps) {
   const [visible, setVisible] = useState(false)
+  // [แก้ตามที่ระบุ] Dashboard ส่ง pulse = null ระหว่างหน้าเควสยังเปิดอยู่ แล้วส่งค่าเดิมกลับมาตอนปิด →
+  // เล่นตอนกลับมาหน้า Home จริงๆ ครั้งเดียวต่อการทำเควสสำเร็จ (จำ key ที่เล่นไปแล้ว กันเล่นซ้ำตอนเปิด/ปิดป็อปอัพอื่น)
+  const lastPlayedKey = useRef<number | null>(null)
 
   useEffect(() => {
     if (!pulse || pulse.questCode !== BALANCED_NUTRIENTS_QUEST_CODE) return
+    if (lastPlayedKey.current === pulse.key) return
+    lastPlayedKey.current = pulse.key
     // [หมายเหตุ react-hooks/set-state-in-effect] ซิงค์กับสัญญาณจากภายนอกจริง (pulse prop ที่
     // เปลี่ยนมาจาก ProgressContext ตอนเควสสำเร็จ) ไม่ใช่ state ที่ derive จาก props ได้เพียวๆ —
     // ต้องตั้ง timer จริงเพื่อซ่อนเอฟเฟกต์เองหลังเล่นจบ (แพทเทิร์นเดียวกับ MindfulAnchorPage.tsx)
@@ -60,8 +65,9 @@ export default function WateringCanFx({ pulse, waterPulseKey }: WateringCanFxPro
             src={BADGE_ICONS.wateringCan}
             alt=""
             className="watering-can-fx__can"
-            initial={{ x: '-120%', y: '-40%', opacity: 0, rotate: -20 }}
-            animate={{ x: '0%', y: '0%', opacity: 1, rotate: 25 }}
+            // [แก้ตามที่ระบุ] พวยอยู่ทางซ้ายของรูป → เอียงทวนเข็ม (-25°) ให้หัวพวยก้มลงเทน้ำใส่ต้นไม้
+            initial={{ x: '60%', y: '-40%', opacity: 0, rotate: 10 }}
+            animate={{ x: '0%', y: '0%', opacity: 1, rotate: -25 }}
             exit={{ opacity: 0, y: '10%' }}
             transition={{ duration: 0.7, ease: 'easeOut' }}
           />
@@ -77,9 +83,9 @@ export default function WateringCanFx({ pulse, waterPulseKey }: WateringCanFxPro
                 src={BADGE_ICONS.water}
                 alt=""
                 className="watering-can-fx__drop"
-                style={{ left: `${i * 8}px` }}
-                initial={{ y: -6, opacity: 0 }}
-                animate={{ y: 34, opacity: [0, 1, 0] }}
+                style={{ left: `${(i % 3) * 7 - 7}px` }}
+                initial={{ y: 0, opacity: 0 }}
+                animate={{ y: 78, opacity: [0, 1, 0] }}
                 transition={{ duration: 0.9, delay: 0.65 + i * 0.08, repeat: 1, repeatDelay: 0.2 }}
               />
             ))}

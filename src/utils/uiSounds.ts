@@ -1,3 +1,4 @@
+import { isSfxSuppressed } from './sfxGate'
 /**
  * uiSounds.ts
  * ────────────
@@ -40,7 +41,7 @@ interface ToneOptions {
 }
 
 function playTone({ frequency, duration, type = 'sine', volume = 0.12, frequencyEnd }: ToneOptions): void {
-  if (isMuted) return
+  if (isMuted || isSfxSuppressed()) return
   try {
     const ctx = getAudioContext()
     if (!ctx) return

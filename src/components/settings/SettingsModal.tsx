@@ -7,9 +7,11 @@ import { useEscapeKey } from '../../hooks/useEscapeKey'
 import MiniTree from '../tree/MiniTree'
 import GameAlert from '../ui/GameAlert'
 import PasswordInput from '../ui/PasswordInput'
+import '../leaderboard/leaderboardRow.css'
 import { BADGE_ICONS } from '../../config/iconAssets'
 import { ApiError } from '../../services/http'
 import { validatePasswordStrength } from '../../utils/mockAuth'
+import { useLanguage } from '../../context/LanguageContext'
 
 const C_1 = 'rgba(116,198,157,.35)'
 const C_2 = 'rgba(116,198,157,.2)'
@@ -29,7 +31,7 @@ interface SettingsModalProps {
   /** [เพิ่มรอบนี้ — ข้อ 4] เปลี่ยนรหัสผ่าน — ต้อง throw ถ้ารหัสเดิมผิด (ดู UserContext.changePassword) */
   onChangePassword?: (data: { currentPassword: string; newPassword: string }) => Promise<void>
   /** [เพิ่มรอบนี้ — ข้อ 3] ลบบัญชีถาวร — เรียกหลังผ่าน confirm 2 ชั้นแล้วเท่านั้น */
-  onDeleteAccount?: () => Promise<void>
+  onDeleteAccount?: (password?: string) => Promise<void>
   onClose?: () => void
   /** [ใหม่ — ฟีเจอร์สตอรี่ ข้อ 5] เปิดตรงไปที่หน้าย่อยไหนทันทีตอน mount — ใช้ตอนกดปุ่ม
    *  "แก้ไขโปรไฟล์" จากหน้าโปรไฟล์ Story แล้วอยากให้เด้งมาหน้านี้ตรงๆ เลย ไม่ต้องกด "บัญชี"
@@ -45,8 +47,6 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 type SubModalType = 'profile' | 'notifications' | 'privacy' | 'security' | null
 
-/** ข้อความยืนยันที่ต้องพิมพ์ตรงเป๊ะก่อนปุ่ม "ลบถาวร" จะกดได้ — กันกดพลาด (ข้อ 3) */
-const DELETE_CONFIRM_PHRASE = 'ลบบัญชี'
 
 export default function SettingsModal({
   settings = DEFAULT_SETTINGS,
@@ -62,10 +62,13 @@ export default function SettingsModal({
 }: SettingsModalProps) {
   const { musicVolume, sfxVolume, darkMode, soundEnabled, strictMode, dailyQuestReminderEnabled, dailyQuestReminderTime, questUnlockNotifyEnabled } = settings
   const [confirmLogout, setConfirmLogout] = useState(false)
+  const { t, language, setLanguage } = useLanguage()
   /** [เพิ่มรอบนี้ — ข้อ 3] ขั้นตอน confirm ลบบัญชี: 0 = ปิดอยู่, 1 = โมดัลอธิบายผล, 2 = โมดัลพิมพ์ยืนยัน */
   const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0)
-  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  /** [แก้ตามที่ระบุ] ยืนยันด้วยรหัสผ่านปัจจุบันก่อนลบเสมอ (ทั้ง mock และ backend จริง) */
+  const [deletePassword, setDeletePassword] = useState('')
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+  const deleteReady = deletePassword.length > 0 && !isDeletingAccount
   const theme = MBTI_TREE_THEME[mbtiType as MbtiType] ?? MBTI_TREE_THEME.INFP
   const navigate = useNavigate()
 
@@ -85,10 +88,11 @@ export default function SettingsModal({
     if (!onDeleteAccount || isDeletingAccount) return
     setIsDeletingAccount(true)
     try {
-      await onDeleteAccount()
+      await onDeleteAccount(deletePassword)
       navigate('/', { replace: true })
-    } catch {
-      setAlertMessage('ลบบัญชีไม่สำเร็จ ลองอีกครั้ง')
+    } catch (error) {
+      setAlertMessage(error instanceof ApiError && error.status === 401 ? t('settings.wrongPassword') : t('settings.deleteFailed'))
+      setDeletePassword('')
       setIsDeletingAccount(false)
       setDeleteStep(0)
     }
@@ -109,7 +113,7 @@ export default function SettingsModal({
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    setAlertMessage('ส่งออกข้อมูลของคุณเรียบร้อยแล้ว (ไฟล์ JSON)')
+    setAlertMessage(t('settings.exportDone'))
   }
 
   return (
@@ -117,32 +121,32 @@ export default function SettingsModal({
       {/* [แก้ตามที่ระบุ] แถบหัวสีสันมีชีวิตชีวา แทนหัวข้อลอยเดี่ยวๆ บนพื้นขาว */}
       <div
         className="settings-hero"
-        style={{ background: `linear-gradient(135deg, ${theme.accent}22, ${theme.accent}05)` }}
+        style={{ background: SETTINGS_HERO_BG }}
       >
-        <div className="settings-hero__blob" style={{ background: `${theme.accent}18` }} aria-hidden="true" />
+        <div className="settings-hero__blob" style={{ background: 'color-mix(in srgb, var(--g400) 10%, transparent)' }} aria-hidden="true" />
         <MiniTree theme={theme} size={56} />
         <div>
-          <div className="settings-hero__title"><img src={BADGE_ICONS.settings} className="icon-img" alt="" /> ตั้งค่า</div>
-          {mbtiType && <div className="settings-hero__subtitle" style={{ color: theme.accent }}>{theme.treeName} · {mbtiType}</div>}
+          <div className="settings-hero__title"><img src={BADGE_ICONS.settings} className="icon-img" alt="" /> {t('settings.title')}</div>
+          {mbtiType && <div className="settings-hero__subtitle" style={{ color: 'var(--text)' }}>{theme.treeName} · {mbtiType}</div>}
         </div>
       </div>
 
       <div className="settings-grid">
-        <Section label="🔈 เสียงทั้งหมด" index={0} accent={theme.accent}>
+        <Section label={t('settings.sound')} index={0} accent={theme.accent}>
           <button
             type="button"
             onClick={() => onUpdateSettings({ soundEnabled: !soundEnabled })}
             className="settings-toggle-row"
             style={{
-              border: `2px solid ${soundEnabled ? theme.accent : 'var(--border-mid)'}`,
-              background: soundEnabled ? theme.accent + '14' : 'var(--bg-card)',
+              border: `1.5px solid ${soundEnabled ? SETTINGS_GOLD : 'var(--border-mid)'}`,
+              background: soundEnabled ? SETTINGS_ON_TINT : 'var(--bg-card)',
             }}
           >
-            <span>{soundEnabled ? '🔊 เปิดเสียงอยู่' : '🔇 ปิดเสียงอยู่'}</span>
+            <span>{soundEnabled ? t('settings.soundOn') : t('settings.soundOff')}</span>
             <span
               style={{
                 width: 44, height: 24, borderRadius: 99, position: 'relative',
-                background: soundEnabled ? theme.accent : 'var(--n200)', transition: 'background .25s',
+                background: soundEnabled ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s',
               }}
             >
               <span
@@ -156,7 +160,7 @@ export default function SettingsModal({
           </button>
         </Section>
 
-        <Section label="🎨 ธีม" index={1} accent={theme.accent}>
+        <Section label={t('settings.theme')} index={1} accent={theme.accent}>
           <div style={{ display: 'flex', gap: 10 }}>
             {[false, true].map(dm => (
               <button
@@ -165,41 +169,63 @@ export default function SettingsModal({
                 onClick={() => onUpdateSettings({ darkMode: dm })}
                 className="settings-choice-btn"
                 style={{
-                  border: `2px solid ${darkMode === dm ? theme.accent : 'var(--border-mid)'}`,
-                  background: darkMode === dm ? theme.accent + '14' : 'var(--bg-card)',
+                  border: `1.5px solid ${darkMode === dm ? SETTINGS_GOLD : 'var(--border-mid)'}`,
+                  background: darkMode === dm ? SETTINGS_ON_TINT : 'var(--bg-card)',
                   transform: darkMode === dm ? 'scale(1.02)' : 'scale(1)',
                 }}>
-                {dm ? '🌙 Dark Mode' : '☀️ Light Mode'}
+                {dm ? t('settings.dark') : t('settings.light')}
               </button>
             ))}
           </div>
         </Section>
 
-        <Section label="🎵 เสียงเพลงพื้นหลัง" index={2} accent={theme.accent}>
+        {/* [เพิ่มตามที่ระบุ] เลือกภาษา ไทย / English — ใช้ LanguageContext ตัวเดียวกับหน้า Welcome
+            (จำค่าในเครื่อง localStorage "bloom:language") ปุ่มหน้าตาเดียวกับเลือกธีม */}
+        <Section label={t('common.language')} index={2} accent={theme.accent}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {(['th', 'en'] as const).map((lang) => (
+              <button
+                key={lang}
+                type="button"
+                onClick={() => setLanguage(lang)}
+                className="settings-choice-btn"
+                aria-pressed={language === lang}
+                style={{
+                  border: `1.5px solid ${language === lang ? SETTINGS_GOLD : 'var(--border-mid)'}`,
+                  background: language === lang ? SETTINGS_ON_TINT : 'var(--bg-card)',
+                  transform: language === lang ? 'scale(1.02)' : 'scale(1)',
+                }}>
+                {lang === 'th' ? t('common.thai') : t('common.english')}
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        <Section label={t('settings.music')} index={2} accent={theme.accent}>
           <VolumeSlider value={musicVolume} onChange={v => onUpdateSettings({ musicVolume: v })} accent={theme.accent} />
         </Section>
 
-        <Section label="🔊 เสียงเอฟเฟกต์" index={3} accent={theme.accent}>
+        <Section label={t('settings.sfx')} index={3} accent={theme.accent}>
           <VolumeSlider value={sfxVolume} onChange={v => onUpdateSettings({ sfxVolume: v })} accent={theme.accent} />
         </Section>
 
         {/* [เพิ่มรอบนี้] สลับโหมดเคร่งครัด/ปกติ — ใช้สไตล์ปุ่มสลับเดียวกับ "เสียงทั้งหมด" ด้านบน
             ตามที่ระบุ (reuse ปุ่มสลับเดิม ไม่สร้างคอมโพเนนต์ใหม่) */}
-        <Section label="🎯 โหมดความเข้มงวด" index={4} accent={theme.accent}>
+        <Section label={t('settings.strict')} index={4} accent={theme.accent}>
           <button
             type="button"
             onClick={() => onUpdateSettings({ strictMode: !strictMode })}
             className="settings-toggle-row"
             style={{
-              border: `2px solid ${strictMode ? theme.accent : 'var(--border-mid)'}`,
-              background: strictMode ? theme.accent + '14' : 'var(--bg-card)',
+              border: `1.5px solid ${strictMode ? SETTINGS_GOLD : 'var(--border-mid)'}`,
+              background: strictMode ? SETTINGS_ON_TINT : 'var(--bg-card)',
             }}
           >
-            <span>{strictMode ? '🔥 โหมดเคร่งครัด — ห้ามข้ามตัวจับเวลา' : '🌤️ โหมดปกติ — ข้ามตัวจับเวลาได้ (ได้รางวัลครึ่งเดียว)'}</span>
+            <span>{strictMode ? t('settings.strictOn') : t('settings.strictOff')}</span>
             <span
               style={{
                 width: 44, height: 24, borderRadius: 99, position: 'relative',
-                background: strictMode ? theme.accent : 'var(--n200)', transition: 'background .25s',
+                background: strictMode ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s',
               }}
             >
               <span
@@ -213,20 +239,20 @@ export default function SettingsModal({
           </button>
         </Section>
 
-        <Section label="👤 บัญชี" index={5} accent={theme.accent} full>
+        <Section label={t('settings.account')} index={5} accent={theme.accent} full>
           <div className="settings-account-grid">
-            <SettingBtn icon="👤" label="ตั้งค่าโปรไฟล์" onClick={() => setActiveSubModal('profile')} accent={theme.accent} />
-            <SettingBtn icon={<img src={BADGE_ICONS.notification} className="icon-img" alt="" />} label="การแจ้งเตือน" onClick={() => setActiveSubModal('notifications')} accent={theme.accent} />
-            <SettingBtn icon="🔒" label="ความเป็นส่วนตัว" onClick={() => setActiveSubModal('privacy')} accent={theme.accent} />
-            <SettingBtn icon="📤" label="ส่งออกข้อมูล (Export)" onClick={handleExportData} accent={theme.accent} />
+            <SettingBtn icon="👤" label={t('settings.profile')} onClick={() => setActiveSubModal('profile')} accent={theme.accent} />
+            <SettingBtn icon={<img src={BADGE_ICONS.notification} className="icon-img" alt="" />} label={t('settings.notifications')} onClick={() => setActiveSubModal('notifications')} accent={theme.accent} />
+            <SettingBtn icon="🔒" label={t('settings.privacy')} onClick={() => setActiveSubModal('privacy')} accent={theme.accent} />
+            <SettingBtn icon="📤" label={t('settings.export')} onClick={handleExportData} accent={theme.accent} />
           </div>
         </Section>
 
         {/* [เพิ่มรอบนี้ — ข้อ 5] หมวดใหม่ที่ยังไม่มีมาก่อน — ความปลอดภัยบัญชี (เปลี่ยนรหัสผ่าน
             แยกออกมาให้ทำงานจริง + placeholder รายการอุปกรณ์) */}
-        <Section label="🔐 ความปลอดภัยบัญชี" index={6} accent={theme.accent} full>
+        <Section label={t('settings.security')} index={6} accent={theme.accent} full>
           <div className="settings-account-grid">
-            <SettingBtn icon="🔑" label="เปลี่ยนรหัสผ่าน" onClick={() => setActiveSubModal('security')} accent={theme.accent} />
+            <SettingBtn icon="🔑" label={t('settings.changePassword')} onClick={() => setActiveSubModal('security')} accent={theme.accent} />
           </div>
         </Section>
 
@@ -234,31 +260,31 @@ export default function SettingsModal({
             [หมายเหตุ] ตอนนี้บันทึกแค่ toggle+เวลาไว้ฝั่ง client (localStorage) เท่านั้น ยังไม่ได้
             ต่อกับ push notification จริง เพราะต้องมี service worker + backend ส่ง push ตามเวลา
             จริงถึงจะแจ้งเตือนได้ตอนไม่ได้เปิดแอปอยู่ — ดูสรุปท้ายบทสนทนาสำหรับสิ่งที่ต้องทำเพิ่ม */}
-        <Section label="📚 การเรียนรู้/แจ้งเตือนเควส" index={7} accent={theme.accent} full>
+        <Section label={t('settings.learning')} index={7} accent={theme.accent} full>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button
               type="button"
               onClick={() => onUpdateSettings({ dailyQuestReminderEnabled: !dailyQuestReminderEnabled })}
               className="settings-toggle-row"
               style={{
-                border: `2px solid ${dailyQuestReminderEnabled ? theme.accent : 'var(--border-mid)'}`,
-                background: dailyQuestReminderEnabled ? theme.accent + '14' : 'var(--bg-card)',
+                border: `1.5px solid ${dailyQuestReminderEnabled ? SETTINGS_GOLD : 'var(--border-mid)'}`,
+                background: dailyQuestReminderEnabled ? SETTINGS_ON_TINT : 'var(--bg-card)',
               }}
             >
-              <span>{dailyQuestReminderEnabled ? '🔔 เตือนทำเควสประจำวัน — เปิดอยู่' : '🔕 เตือนทำเควสประจำวัน — ปิดอยู่'}</span>
-              <span style={{ width: 44, height: 24, borderRadius: 99, position: 'relative', background: dailyQuestReminderEnabled ? theme.accent : 'var(--n200)', transition: 'background .25s' }}>
+              <span>{dailyQuestReminderEnabled ? t('settings.dailyReminderOn') : t('settings.dailyReminderOff')}</span>
+              <span style={{ width: 44, height: 24, borderRadius: 99, position: 'relative', background: dailyQuestReminderEnabled ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s' }}>
                 <span className="settings-toggle-knob" style={{ position: 'absolute', top: 2, left: dailyQuestReminderEnabled ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)' }} />
               </span>
             </button>
 
             {dailyQuestReminderEnabled && (
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 44, padding: '10px 14px', background: `${theme.accent}0d`, borderRadius: 12, fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--text)' }}>
-                เวลาที่อยากให้เตือน
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 44, padding: '10px 14px', background: SETTINGS_SOFT_TINT, borderRadius: 12, fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--text)' }}>
+                {t('settings.reminderTime')}
                 <input
                   type="time"
                   value={dailyQuestReminderTime}
                   onChange={(e) => onUpdateSettings({ dailyQuestReminderTime: e.target.value })}
-                  style={{ border: `1.5px solid var(--border)`, borderRadius: 8, padding: '6px 10px', fontFamily: 'Nunito', background: 'var(--input-bg)', color: 'var(--text)' }}
+                  style={{ border: `1.5px solid var(--border)`, borderRadius: 8, padding: '6px 10px', fontFamily: 'var(--font-display)', background: 'var(--input-bg)', color: 'var(--text)' }}
                 />
               </label>
             )}
@@ -268,15 +294,23 @@ export default function SettingsModal({
               onClick={() => onUpdateSettings({ questUnlockNotifyEnabled: !questUnlockNotifyEnabled })}
               className="settings-toggle-row"
               style={{
-                border: `2px solid ${questUnlockNotifyEnabled ? theme.accent : 'var(--border-mid)'}`,
-                background: questUnlockNotifyEnabled ? theme.accent + '14' : 'var(--bg-card)',
+                border: `1.5px solid ${questUnlockNotifyEnabled ? SETTINGS_GOLD : 'var(--border-mid)'}`,
+                background: questUnlockNotifyEnabled ? SETTINGS_ON_TINT : 'var(--bg-card)',
               }}
             >
-              <span>{questUnlockNotifyEnabled ? '🔓 แจ้งเตือนเควสล็อก/ปลดล็อกใหม่ — เปิดอยู่' : '🔒 แจ้งเตือนเควสล็อก/ปลดล็อกใหม่ — ปิดอยู่'}</span>
-              <span style={{ width: 44, height: 24, borderRadius: 99, position: 'relative', background: questUnlockNotifyEnabled ? theme.accent : 'var(--n200)', transition: 'background .25s' }}>
+              <span>{questUnlockNotifyEnabled ? t('settings.unlockNotifyOn') : t('settings.unlockNotifyOff')}</span>
+              <span style={{ width: 44, height: 24, borderRadius: 99, position: 'relative', background: questUnlockNotifyEnabled ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s' }}>
                 <span className="settings-toggle-knob" style={{ position: 'absolute', top: 2, left: questUnlockNotifyEnabled ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)' }} />
               </span>
             </button>
+          </div>
+        </Section>
+
+        {/* [แก้ตามที่ระบุ] ย้ายการลบบัญชีมาเป็นหมวด "จัดการบัญชี" ถัดจากการเรียนรู้/แจ้งเตือนเควส
+            (เดิมเป็นโซนอันตรายแยกท้ายหน้า) — กดแล้วเตือนผลที่ตามมาก่อน แล้วพิมพ์ยืนยันอีกชั้น */}
+        <Section label={t('settings.manageAccount')} index={8} accent={theme.accent} full>
+          <div className="settings-account-grid">
+            <SettingBtn icon="🗑️" label={t('settings.deactivateOrDelete')} onClick={() => setDeleteStep(1)} accent={theme.accent} />
           </div>
         </Section>
       </div>
@@ -286,54 +320,46 @@ export default function SettingsModal({
         onClick={onClose}
         className="settings-save-btn"
         style={{
-          background: `linear-gradient(135deg, ${theme.accent}, ${theme.trunk})`,
-          boxShadow: `0 6px 18px ${theme.accent}55`,
+          // [แก้ตามที่ระบุ] ปุ่มบันทึกสีเขียว (เดิมสีประจำ MBTI เช่น ESFP เป็นเหลือง)
+          background: 'linear-gradient(135deg, var(--g500), var(--g700))',
+          boxShadow: '0 6px 18px color-mix(in srgb, var(--g700) 35%, transparent)',
         }}>
-        บันทึกและปิด
+        {t('settings.save')}
       </button>
 
-      {/* [เพิ่มรอบนี้] ปุ่มออกจากระบบ — แยกออกจากกลุ่มปุ่มตั้งค่าอย่างชัดเจน (เส้นคั่น + สีแดง
-          อันตราย) กันกดพลาดจากปุ่ม "บันทึกและปิด" ด้านบน ต้องยืนยันอีกชั้นก่อนออกจริง */}
+      {/* ปุ่มออกจากระบบ — [แก้ตามที่ระบุ] ยาวเต็มแถวเท่าปุ่มบันทึก ขอบขาว (ธีมมืด) ไม่ใช่สีชมพู/แดง
+          ไม่มีอีโมจิ — ยังแยกจากปุ่มบันทึกด้วยเส้นคั่น และต้องยืนยันอีกชั้นก่อนออกจริง */}
       <div className="settings-logout-zone">
         <button type="button" onClick={() => setConfirmLogout(true)} className="settings-logout-btn">
-          🚪 ออกจากระบบ
+          {t('settings.logout')}
         </button>
       </div>
 
+      {/* [แก้ตามที่ระบุ] ป็อปอัพยืนยันออกจากระบบ — กรอบ/ขอบแบบกระดานจัดอันดับ ป้ายหัว "ออกจากระบบ" */}
       {confirmLogout && (
-        <div className="settings-logout-confirm">
-          <div className="settings-logout-confirm__card">
-            <div style={{ fontSize: 34 }}>🚪</div>
-            <p>ต้องการออกจากระบบตอนนี้เลยไหม?</p>
+        <div className="settings-logout-confirm" onClick={() => setConfirmLogout(false)}>
+          <div className="settings-logout-confirm__card logout-lb-card lb-card" role="alertdialog" aria-labelledby="logout-confirm-text" onClick={(e) => e.stopPropagation()}>
+            <div className="lb-banner logout-lb-card__banner">{t('settings.logout')}</div>
+            <div style={{ fontSize: 34 }} aria-hidden="true">🚪</div>
+            <p id="logout-confirm-text">{t('settings.logoutConfirmShort')}</p>
             <div className="settings-logout-confirm__actions">
-              <button type="button" onClick={() => setConfirmLogout(false)}>ยกเลิก</button>
-              <button type="button" className="is-danger" onClick={handleConfirmLogout}>ออกจากระบบ</button>
+              <button type="button" onClick={() => setConfirmLogout(false)}>{t('common.cancel')}</button>
+              <button type="button" className="logout-lb-card__confirm" onClick={handleConfirmLogout}>{t('common.confirm')}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* [เพิ่มรอบนี้ — ข้อ 3] โซนอันตราย — ลบบัญชีถาวร แยกจากโซนออกจากระบบชัดเจนด้วยเส้นคั่น
-          สีแดงของตัวเอง อยู่ท้ายสุดของหน้าเสมอ ต้อง confirm 2 ชั้นก่อนลบได้จริง */}
-      <div className="settings-danger-zone">
-        <div className="settings-danger-zone__label">⚠️ โซนอันตราย</div>
-        <button type="button" onClick={() => setDeleteStep(1)} className="settings-danger-zone__btn">
-          🗑️ ลบบัญชี
-        </button>
-      </div>
-
-      {/* Modal ขั้นที่ 1 — อธิบายผลที่ตามมา */}
+      {/* Modal ขั้นที่ 1 — อธิบายผลที่ตามมา · [แก้ตามที่ระบุ] กรอบแบบเดียวกับป็อปอัพออกจากระบบ */}
       {deleteStep === 1 && (
-        <div className="settings-logout-confirm">
-          <div className="settings-logout-confirm__card">
-            <div style={{ fontSize: 34 }}>⚠️</div>
-            <p style={{ marginBottom: 8 }}>ต้องการลบบัญชีนี้ถาวรใช่ไหม?</p>
-            <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--n300)', fontWeight: 600, marginTop: -4, marginBottom: 20 }}>
-              ข้อมูลทั้งหมด — เควส ต้นไม้ โพสต์ เพื่อน คลังไอเทม — จะถูกลบถาวรและกู้คืนไม่ได้
-            </p>
+        <div className="settings-logout-confirm" onClick={() => setDeleteStep(0)}>
+          <div className="settings-logout-confirm__card logout-lb-card lb-card" role="alertdialog" aria-labelledby="delete-confirm-title" onClick={(e) => e.stopPropagation()}>
+            <div className="lb-banner logout-lb-card__banner" id="delete-confirm-title">{t('settings.deleteTitle')}</div>
+            <div style={{ fontSize: 34 }} aria-hidden="true">⚠️</div>
+            <p className="logout-lb-card__sub">{t('settings.deleteWarning')}</p>
             <div className="settings-logout-confirm__actions">
-              <button type="button" onClick={() => setDeleteStep(0)}>ยกเลิก</button>
-              <button type="button" className="is-danger" onClick={() => setDeleteStep(2)}>ดำเนินการต่อ</button>
+              <button type="button" onClick={() => setDeleteStep(0)}>{t('common.cancel')}</button>
+              <button type="button" className="logout-lb-card__confirm" onClick={() => setDeleteStep(2)}>{t('settings.continue')}</button>
             </div>
           </div>
         </div>
@@ -341,34 +367,32 @@ export default function SettingsModal({
 
       {/* Modal ขั้นที่ 2 — พิมพ์ยืนยันก่อนปุ่มลบถาวรจะกดได้ */}
       {deleteStep === 2 && (
-        <div className="settings-logout-confirm">
-          <div className="settings-logout-confirm__card">
-            <div style={{ fontSize: 34 }}>🗑️</div>
-            <p style={{ marginBottom: 10 }}>
-              พิมพ์ "<strong>{DELETE_CONFIRM_PHRASE}</strong>" เพื่อยืนยันการลบถาวร
-            </p>
-            <input
-              type="text"
-              value={deleteConfirmText}
-              onChange={(e) => setDeleteConfirmText(e.target.value)}
-              placeholder={DELETE_CONFIRM_PHRASE}
-              autoFocus
+        <div className="settings-logout-confirm" onClick={() => { setDeleteStep(0); setDeletePassword('') }}>
+          <div className="settings-logout-confirm__card logout-lb-card lb-card" role="alertdialog" aria-labelledby="delete-password-text" onClick={(e) => e.stopPropagation()}>
+            <div className="lb-banner logout-lb-card__banner">{t('settings.deleteTitle')}</div>
+            <div style={{ fontSize: 34 }} aria-hidden="true">🗑️</div>
+            <p id="delete-password-text" style={{ marginBottom: 10 }}>{t('settings.enterPasswordToDelete')}</p>
+            <PasswordInput
+              value={deletePassword}
+              onChange={setDeletePassword}
+              placeholder={t('settings.currentPassword')}
+              autoComplete="current-password"
               style={{
                 width: '100%', minHeight: 44, padding: '10px 14px', borderRadius: 10,
-                border: '1.5px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text)',
-                fontFamily: 'Nunito', fontSize: 'var(--fs-md)', marginBottom: 16, boxSizing: 'border-box',
+                border: '1.5px solid color-mix(in srgb, var(--lb-gold-edge) 55%, transparent)', background: 'var(--input-bg)', color: 'var(--text)',
+                fontSize: 'var(--fs-md)', marginBottom: 16, boxSizing: 'border-box',
               }}
             />
             <div className="settings-logout-confirm__actions">
-              <button type="button" onClick={() => { setDeleteStep(0); setDeleteConfirmText('') }}>ยกเลิก</button>
+              <button type="button" onClick={() => { setDeleteStep(0); setDeletePassword('') }}>{t('common.cancel')}</button>
               <button
                 type="button"
-                className="is-danger"
-                disabled={deleteConfirmText !== DELETE_CONFIRM_PHRASE || isDeletingAccount}
-                style={{ opacity: deleteConfirmText !== DELETE_CONFIRM_PHRASE || isDeletingAccount ? 0.5 : 1, cursor: deleteConfirmText !== DELETE_CONFIRM_PHRASE || isDeletingAccount ? 'not-allowed' : 'pointer' }}
+                className="logout-lb-card__confirm"
+                disabled={!deleteReady}
+                style={{ opacity: !deleteReady ? 0.5 : 1, cursor: !deleteReady ? 'not-allowed' : 'pointer' }}
                 onClick={handleConfirmDelete}
               >
-                {isDeletingAccount ? 'กำลังลบ...' : 'ลบถาวร'}
+                {isDeletingAccount ? t('settings.deleting') : t('settings.deleteForever')}
               </button>
             </div>
           </div>
@@ -377,13 +401,13 @@ export default function SettingsModal({
 
       {/* ── Sub Modals ── */}
       {activeSubModal === 'profile' && (
-        <SubModalTemplate title="👤 ตั้งค่าโปรไฟล์" onClose={() => setActiveSubModal(null)} accent={theme.accent}>
+        <SubModalTemplate title={t('settings.profile')} onClose={() => setActiveSubModal(null)} accent={theme.accent}>
           <ProfileSettingsForm userData={userData} accent={theme.accent} onSave={(data) => { onUpdateUser(data); setActiveSubModal(null); }} />
         </SubModalTemplate>
       )}
 
       {activeSubModal === 'notifications' && (
-        <SubModalTemplate title="🔔 การแจ้งเตือน" onClose={() => setActiveSubModal(null)} accent={theme.accent}>
+        <SubModalTemplate title={t('settings.notifications')} onClose={() => setActiveSubModal(null)} accent={theme.accent}>
           <MockToggleSettings
             options={['แจ้งเตือนเมื่อถึงเวลาทำเควส', 'สรุปสถิติประจำสัปดาห์', 'รับข่าวสารอัปเดตระบบ']}
             accent={theme.accent}
@@ -392,7 +416,7 @@ export default function SettingsModal({
       )}
 
       {activeSubModal === 'privacy' && (
-        <SubModalTemplate title="🔒 ความเป็นส่วนตัว" onClose={() => setActiveSubModal(null)} accent={theme.accent}>
+        <SubModalTemplate title={t('settings.privacy')} onClose={() => setActiveSubModal(null)} accent={theme.accent}>
           <MockToggleSettings
             options={['อนุญาตให้ผู้อื่นเห็นระดับต้นไม้ (Leaderboard)', 'แสดงข้อมูล MBTI ของฉัน', 'แชร์ประวัติอารมณ์แบบไม่ระบุตัวตนเพื่อพัฒนาระบบ']}
             accent={theme.accent}
@@ -401,11 +425,11 @@ export default function SettingsModal({
       )}
 
       {activeSubModal === 'security' && (
-        <SubModalTemplate title="🔐 ความปลอดภัยบัญชี" onClose={() => setActiveSubModal(null)} accent={theme.accent}>
+        <SubModalTemplate title={t('settings.security')} onClose={() => setActiveSubModal(null)} accent={theme.accent}>
           <ChangePasswordForm accent={theme.accent} onChangePassword={onChangePassword} onDone={() => setActiveSubModal(null)} />
           <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px dashed var(--border)' }}>
             <div style={{ fontWeight: 800, fontSize: 'var(--fs-sm)', color: 'var(--text-sub)', marginBottom: 10 }}>💻 อุปกรณ์ที่เข้าสู่ระบบ</div>
-            <div style={{ padding: 14, borderRadius: 12, background: `${theme.accent}0d`, fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>
+            <div style={{ padding: 14, borderRadius: 12, background: SETTINGS_SOFT_TINT, fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>
               เร็วๆ นี้ — ฟีเจอร์นี้ต้องมีระบบ session ฝั่ง backend จริงถึงจะแสดงรายการอุปกรณ์/
               ตำแหน่งที่ล็อกอินอยู่ได้ถูกต้อง (mock ปัจจุบันมี session เดียวเสมอ)
             </div>
@@ -435,7 +459,7 @@ export default function SettingsModal({
           border-radius: 50%; pointer-events: none;
         }
         .settings-hero__title {
-          position: relative; font-family: 'Fredoka One'; font-size: var(--fs-xl); color: var(--heading-accent);
+          position: relative; font-family: var(--font-display); font-size: var(--fs-xl); color: var(--heading-accent);
         }
         .settings-hero__subtitle {
           position: relative; font-size: var(--fs-xs); font-weight: 700; margin-top: 2px;
@@ -462,12 +486,12 @@ export default function SettingsModal({
         .settings-toggle-row {
           width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between;
           padding: 12px 16px; border-radius: var(--r-md); cursor: pointer;
-          font-family: 'Nunito'; font-weight: 700; font-size: var(--fs-md); color: var(--text);
+          font-family: var(--font-display); font-weight: 700; font-size: var(--fs-md); color: var(--text);
           transition: all .25s cubic-bezier(.34,1.56,.64,1);
         }
         .settings-choice-btn {
           flex: 1; min-height: 44px; padding: 12px; border-radius: var(--r-md); cursor: pointer;
-          font-family: 'Nunito'; font-weight: 700; font-size: var(--fs-md);
+          font-family: var(--font-display); font-weight: 700; font-size: var(--fs-md);
           color: var(--text); transition: all .2s;
         }
         .settings-account-grid {
@@ -478,7 +502,7 @@ export default function SettingsModal({
 
         .settings-save-btn {
           width: 100%; margin-top: 8px; min-height: 48px; padding: 14px; border: none; border-radius: var(--r-md);
-          color: var(--fixed-white); font-family: 'Fredoka One'; font-size: var(--fs-lg); cursor: pointer;
+          color: var(--fixed-white); font-family: var(--font-display); font-size: var(--fs-lg); cursor: pointer;
           transition: transform .15s, box-shadow .15s;
         }
         .settings-save-btn:hover { transform: translateY(-2px) scale(1.02); }
@@ -491,16 +515,19 @@ export default function SettingsModal({
 
         /* [เพิ่มรอบนี้] โซนออกจากระบบ — แยกจากกลุ่มปุ่มตั้งค่าอย่างชัดเจนด้วยเส้นคั่น + ระยะห่าง */
         .settings-logout-zone {
-          margin-top: 28px; padding-top: 20px; border-top: 1px dashed var(--border);
-          display: flex; justify-content: center;
+          margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--border);
         }
+        /* ขนาด/ทรงเดียวกับ .settings-save-btn — ขอบขาวในธีมมืด / ขอบเข้ม (--text) ในธีมสว่าง
+           (ขอบขาวบนพื้นหน้าสีอ่อนของธีมสว่างจะมองไม่เห็นเลย) */
         .settings-logout-btn {
-          min-height: 44px; padding: 10px 24px; border-radius: var(--r-pill);
-          border: 1.5px solid var(--red); background: transparent; color: var(--red);
-          font-family: 'Nunito'; font-weight: 800; font-size: var(--fs-sm); cursor: pointer;
-          transition: background .15s ease, color .15s ease;
+          width: 100%; min-height: 48px; padding: 14px; border-radius: var(--r-md);
+          border: 2px solid var(--text); background: transparent; color: var(--text);
+          font-family: var(--font-display); font-size: var(--fs-lg); cursor: pointer;
+          transition: transform .15s, background .15s;
         }
-        .settings-logout-btn:hover { background: var(--red); color: var(--fixed-white); }
+        [data-theme="dark"] .settings-logout-btn { border-color: var(--fixed-white); color: var(--fixed-white); }
+        .settings-logout-btn:hover { transform: translateY(-2px); background: var(--glass-w-8); }
+        .settings-logout-btn:active { transform: translateY(1px) scale(.98); }
 
         .settings-logout-confirm {
           position: fixed; inset: 0; z-index: 520; background: var(--glass-b-45);
@@ -525,25 +552,38 @@ export default function SettingsModal({
         .settings-logout-confirm__actions .is-danger {
           border-color: var(--red); background: var(--red); color: var(--fixed-white);
         }
+        /* [แก้ตามที่ระบุ] ปุ่ม "ดำเนินการต่อ" สีเขียว (ปุ่มลบถาวรขั้นสุดท้ายยังเป็นสีแดง) */
+        .settings-logout-confirm__actions .is-primary {
+          border-color: var(--g600); background: var(--g600); color: var(--fixed-white);
+        }
+        /* ── ป็อปอัพออกจากระบบแบบกระดานจัดอันดับ ── */
+        .settings-logout-confirm__card.logout-lb-card {
+          position: relative; padding: 36px 22px 22px; border-radius: 22px;
+          border: 2px solid var(--lb-gold-edge); font-family: var(--font-display);
+          box-shadow: 0 4px 0 color-mix(in srgb, var(--lb-gold-edge) 60%, var(--g800)), 0 16px 36px var(--glass-b-30);
+        }
+        .logout-lb-card__banner { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); font-size: 15px; white-space: nowrap; }
+        .logout-lb-card p { color: var(--lb-card-text); font-family: var(--font-display); }
+        .logout-lb-card p.logout-lb-card__sub {
+          color: var(--lb-card-text-sub); font-size: var(--fs-sm); font-weight: 600; line-height: 1.7;
+          margin: 8px 0 20px; text-align: left;
+        }
+        .logout-lb-card .settings-logout-confirm__actions button {
+          font-family: var(--font-display); border: 2px solid color-mix(in srgb, var(--lb-gold-edge) 55%, transparent);
+          background: color-mix(in srgb, var(--fixed-white) 50%, transparent); color: var(--lb-card-text);
+        }
+        [data-theme="dark"] .logout-lb-card .settings-logout-confirm__actions button { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+        /* ปุ่มยืนยัน: เขียวอ่อน (โหมดสว่าง) / เขียวเข้ม (โหมดมืด) */
+        .logout-lb-card .settings-logout-confirm__actions .logout-lb-card__confirm {
+          background: var(--g200); border-color: var(--g400); color: var(--n900);
+        }
+        [data-theme="dark"] .logout-lb-card .settings-logout-confirm__actions .logout-lb-card__confirm {
+          background: var(--g700); border-color: var(--g500); color: var(--fixed-white);
+        }
         .settings-logout-confirm__actions .is-danger:disabled {
           opacity: 0.5; cursor: not-allowed;
         }
 
-        /* [เพิ่มรอบนี้ — ข้อ 3] โซนอันตราย (ลบบัญชี) — เส้นคั่นสีแดงของตัวเอง แยกจาก
-           settings-logout-zone ชัดเจน (ออกจากระบบ = เปลี่ยนใจได้ / ลบบัญชี = กู้คืนไม่ได้) */
-        .settings-danger-zone {
-          margin-top: 20px; padding: 18px 16px; border-radius: var(--r-md);
-          border: 1.5px dashed var(--red); background: color-mix(in srgb, var(--red) 6%, transparent);
-          display: flex; flex-direction: column; align-items: center; gap: 10px;
-        }
-        .settings-danger-zone__label { font-weight: 800; font-size: var(--fs-sm); color: var(--red); }
-        .settings-danger-zone__btn {
-          min-height: 44px; padding: 10px 24px; border-radius: var(--r-pill);
-          border: none; background: var(--red); color: var(--fixed-white);
-          font-family: 'Nunito'; font-weight: 800; font-size: var(--fs-sm); cursor: pointer;
-          transition: transform .15s ease, box-shadow .15s ease;
-        }
-        .settings-danger-zone__btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(220,60,60,.35); }
       `}</style>
     </Overlay>
   )
@@ -554,12 +594,12 @@ export default function SettingsModal({
    ==================================================================== */
 
 interface SectionProps { label: string; children: ReactNode; index: number; accent: string; full?: boolean }
-function Section({ label, children, index, accent, full = false }: SectionProps) {
+function Section({ label, children, index, full = false }: SectionProps) {
   return (
     <div
       className={`settings-section${full ? ' settings-section--full' : ''}`}
       style={{
-        background: `${accent}0d`,
+        background: SETTINGS_SOFT_TINT,
         animation: `settingsSectionFadeUp .4s ${index * 60}ms cubic-bezier(.22,1,.36,1) both`,
       }}
     >
@@ -570,7 +610,7 @@ function Section({ label, children, index, accent, full = false }: SectionProps)
 }
 
 interface VolumeSliderProps { value: number; onChange: (value: number) => void; accent: string }
-function VolumeSlider({ value, onChange, accent }: VolumeSliderProps) {
+function VolumeSlider({ value, onChange }: VolumeSliderProps) {
   const prevVal = useRef(value)
   const [pulse, setPulse] = useState(false)
   useEffect(() => {
@@ -582,24 +622,32 @@ function VolumeSlider({ value, onChange, accent }: VolumeSliderProps) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 44 }}>
       <span className={pulse ? 'speaker-pulse' : ''} style={{ fontSize: 24, display: 'inline-block', transition: 'none', width: 30, textAlign: 'center' }}>{speakerIcon}</span>
-      <input type="range" min={0} max={100} value={value} onChange={e => onChange(Number(e.target.value))} style={{ flex: 1, accentColor: accent, height: 8 }} />
-      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', width: 34, textAlign: 'right', fontWeight: 700, fontFamily: 'Fredoka One' }}>{value}%</span>
+      <input type="range" min={0} max={100} value={value} onChange={e => onChange(Number(e.target.value))} style={{ flex: 1, accentColor: 'var(--fixed-white)', height: 8 }} />
+      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', width: 34, textAlign: 'right', fontWeight: 700, fontFamily: 'var(--font-display)' }}>{value}%</span>
     </div>
   )
 }
 
 interface SettingBtnProps { icon: ReactNode; label: string; onClick: () => void; accent: string }
-function SettingBtn({ icon, label, onClick, accent }: SettingBtnProps) {
+function SettingBtn({ icon, label, onClick }: SettingBtnProps) {
   return (
     <button
       type="button" onClick={onClick}
-      style={{ width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: '1.5px solid var(--border)', borderRadius: 12, background: 'var(--bg-card)', cursor: 'pointer', textAlign: 'left', color: 'var(--text)', fontFamily: 'Nunito', fontWeight: 600, fontSize: 'var(--fs-md)', transition: 'background .15s, transform .15s' }}
-      onMouseEnter={e => { e.currentTarget.style.background = accent + '14'; e.currentTarget.style.transform = 'translateX(2px)' }}
+      style={{ width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: '1.5px solid var(--border)', borderRadius: 12, background: 'var(--bg-card)', cursor: 'pointer', textAlign: 'left', color: 'var(--text)', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 'var(--fs-md)', transition: 'background .15s, transform .15s' }}
+      onMouseEnter={e => { e.currentTarget.style.background = SETTINGS_ON_TINT; e.currentTarget.style.transform = 'translateX(2px)' }}
       onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.transform = 'none' }}>
       <span style={{ fontSize: 20 }}>{icon}</span>{label}
     </button>
   )
 }
+
+/* [แก้ตามที่ระบุ] หน้าตั้งค่าไม่ใช้สีประจำ MBTI (บางแบบเป็นเหลือง เช่น ESFP) กับตัวหนังสือ/เส้นขอบ/ปุ่มอีกต่อไป
+   เส้นขอบ = ทองบางๆ · สถานะเปิด = เขียว · พื้นไฮไลต์ = เขียวอ่อนจางๆ */
+const SETTINGS_GOLD = '#C9A13B'
+const SETTINGS_ON = 'var(--g500)'
+const SETTINGS_ON_TINT = 'color-mix(in srgb, var(--g400) 14%, transparent)'
+const SETTINGS_SOFT_TINT = 'color-mix(in srgb, var(--g400) 7%, transparent)'
+const SETTINGS_HERO_BG = 'linear-gradient(135deg, color-mix(in srgb, var(--g400) 18%, transparent), color-mix(in srgb, var(--g400) 4%, transparent))'
 
 /** [แก้ตามที่ระบุ] เอาความเป็น "ป็อบอัพลอยกลางจอ" ออก — เปลี่ยนเป็น full-screen section
  *  เหมือน InventoryModal/ShopSection ทุกจุด (พื้นทึบเต็มจอ + ปุ่มปิดกากบาทลอยมุมขวาบน
@@ -609,11 +657,12 @@ function SettingBtn({ icon, label, onClick, accent }: SettingBtnProps) {
  *  เพราะเนื้อหาเป็นฟอร์ม/รายการตั้งค่า ไม่ใช่กริดการ์ดสินค้า กว้างเกินไปจะยืดฟอร์มจนอ่านยาก
  *  แต่ section ต่างๆ เรียงเป็นกริด 2 คอลัมน์ (ดู .settings-grid) เพื่อใช้พื้นที่ที่กว้างขึ้นจริง
  *  ไม่ใช่แค่เพิ่มระยะขอบว่างๆ */
-export function Overlay({ children, onClose, accent = 'var(--g600)' }: { children: ReactNode; onClose: () => void; accent?: string }) {
+export function Overlay({ children, onClose }: { children: ReactNode; onClose: () => void; accent?: string }) {
   useLockBodyScroll()
   useEscapeKey(onClose)
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--bg)', overflowY: 'auto' }}>
+    // [แก้ตามที่ระบุ] ทั้งหน้าตั้งค่าใช้ฟอนต์เดียวกับกระดานจัดอันดับ (--font-display) — ปุ่ม/ช่องกรอกสืบทอดด้วย
+    <div className="settings-root" style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--bg)', overflowY: 'auto', fontFamily: 'var(--font-display)' }}>
       {/* ปุ่มปิด (กากบาท) ลอยมุมขวาบน — แบบเดียวกับหน้าโปรไฟล์ (ProfilePage.tsx) */}
       <button
         onClick={onClose}
@@ -637,15 +686,29 @@ export function Overlay({ children, onClose, accent = 'var(--g600)' }: { childre
           // ใช้ --gpf-safe-bottom (โทเคนกลางใน index.css) บวกระยะห่างเพิ่มอีกนิด แทนเลขตายตัว
           // 72px = เว้นปุ่มปิดลอยมุมขวาบน (top 14 + สูง 44) ไม่ให้ทับแถบหัวบนจอแคบ
           padding: '72px 20px calc(var(--gpf-safe-bottom, 100px) + 24px)',
-          boxShadow: `0 0 0 1px ${accent}14`,
+          boxShadow: 'none',
         }}>
         {children}
         <style>{`
+          /* [แก้ตามที่ระบุ — ป็อบอัพต้องขึ้นกลางจอ] จางเข้าอย่างเดียว ไม่ใช้ transform: บรรพบุรุษที่มี
+             transform ทำให้ลูกที่เป็น position:fixed (ป็อบอัพยืนยัน/หน้าย่อย) ยึดกับการ์ดนี้แทนจอ
+             ป็อบอัพจึงไปโผล่ด้านบนของหน้าให้ต้องเลื่อนขึ้นไปดู และหน้าย่อยไม่คลุมเต็มจอ */
           @keyframes settingsOverlayCardPop {
-            from { opacity: 0; transform: translateY(10px); }
-            to   { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; }
+            to   { opacity: 1; }
           }
           .settings-overlay-card { animation: settingsOverlayCardPop .32s cubic-bezier(.22,1,.36,1) both; }
+          .settings-root button, .settings-root input, .settings-root select, .settings-root textarea { font-family: inherit; }
+          /* [แก้ตามที่ระบุ] ตัวหนังสือทั้งหน้า: ดำในธีมสว่าง / ขาวในธีมมืด (--text สลับตามธีม) */
+          .settings-root { --text-sub: var(--text); --heading-accent: var(--text); color: var(--text); }
+          /* [แก้ตามที่ระบุ] เส้นขอบการ์ดทุกหมวด + แถบหัว: ทอง (ธีมสว่าง) / ขาว (ธีมมืด) */
+          .settings-root { --settings-edge: #C9A13B; }
+          [data-theme="dark"] .settings-root { --settings-edge: var(--fixed-white); }
+          .settings-root .settings-section,
+          .settings-root .settings-hero {
+            border: 1.5px solid var(--settings-edge);
+            box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--fixed-white) 55%, transparent), 0 4px 14px var(--glass-b-12);
+          }
         `}</style>
       </div>
     </div>
@@ -664,26 +727,22 @@ export function Overlay({ children, onClose, accent = 'var(--g600)' }: { childre
  *  ล่าสุดแสดง — แก้ที่ต้นตอโดยให้ SubModalTemplate เป็น position:'fixed'; inset:0 ของตัวเอง
  *  (ไม่พึ่งพา positioning context ของพ่อแม่อีกต่อไป) พร้อม padding-top:95px เท่ากับ Overlay
  *  หลักเป๊ะ และ z-index สูงกว่า Overlay (500) เพื่อให้ลอยทับหน้าตั้งค่าหลักได้ถูกต้อง */
-function SubModalTemplate({ title, onClose, accent, children }: { title: string, onClose: () => void, accent: string, children: ReactNode }) {
+function SubModalTemplate({ title, onClose, children }: { title: string, onClose: () => void, accent: string, children: ReactNode }) {
+  const { t } = useLanguage()
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-card)', zIndex: 510, padding: '24px 20px 28px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ maxWidth: 760, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexShrink: 0 }}>
-          <div style={{ fontFamily: 'Fredoka One', fontSize: 'var(--fs-lg)', color: 'var(--heading-accent)' }}>{title}</div>
-          <button
-            onClick={onClose}
-            title="ปิด"
-            style={{
-              width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: `${accent}14`, border: 'none', borderRadius: '50%', fontSize: 18, cursor: 'pointer', color: accent,
-            }}
-          ><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', zIndex: 510, overflowY: 'auto' }}>
+      <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 20px calc(var(--gpf-safe-bottom, 100px) + 24px)' }}>
+        {/* [แก้ตามที่ระบุ] หน้าตาเดียวกับหน้าตั้งค่า: แถบหัวมีกรอบ + เนื้อหาในการ์ดขอบทอง
+            ไม่มีปุ่มกากบาทด้านบน — ปิดด้วยปุ่มยาวด้านล่างปุ่มเดียว */}
+        <div className="settings-hero" style={{ background: SETTINGS_HERO_BG }}>
+          <div className="settings-hero__title">{title}</div>
         </div>
-        {/* [แก้บั๊กเดียวกับ Overlay หลัก] เนื้อหาล่างสุดของหน้าย่อย (เช่นปุ่มบันทึกโปรไฟล์)
-            ก็โดน ActionMenuBar บังได้เหมือนกันถ้า scroll จนสุด — กันชนด้วยโทเคนเดียวกัน */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: 'calc(var(--gpf-safe-bottom, 100px) + 24px)' }}>
+        <div className="settings-section" style={{ background: SETTINGS_SOFT_TINT }}>
           {children}
         </div>
+        <button type="button" onClick={onClose} className="settings-logout-btn" style={{ marginTop: 20 }}>
+          {t('common.close')}
+        </button>
       </div>
     </div>
   )
@@ -692,7 +751,7 @@ function SubModalTemplate({ title, onClose, accent, children }: { title: string,
 // ----------------------------------------------------------------------
 // ProfileSettingsForm: ดึงข้อมูลตอนสมัคร (userData) มาแสดง และเพิ่มเอฟเฟกต์ Focus
 // ----------------------------------------------------------------------
-function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData, accent: string, onSave: (d: Partial<UserData>) => void }) {
+function ProfileSettingsForm({ userData, onSave }: { userData: UserData, accent: string, onSave: (d: Partial<UserData>) => void }) {
   // นำข้อมูล UserData มาใส่เป็นค่าเริ่มต้นให้ฟอร์ม
   const [formData, setFormData] = useState({
     email: userData.email || '',
@@ -757,7 +816,7 @@ function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData,
   // และสร้างมาเพื่อพื้นหลังช่องกรอกฟอร์มโดยเฉพาะ (สลับ light/dark คู่กับ --text ถูกต้องแล้ว)
   const fieldStyle = {
     width: '100%', minHeight: 44, padding: '13px 14px', borderRadius: 12, boxSizing: 'border-box' as const,
-    border: `2px solid var(--n200, ${BORDER_3})`, fontSize: 'var(--fs-md)', fontFamily: 'Nunito',
+    border: `2px solid var(--n200, ${BORDER_3})`, fontSize: 'var(--fs-md)', fontFamily: 'var(--font-display)',
     outline: 'none', background: 'var(--input-bg)', color: 'var(--text)',
     boxShadow: BLUR_SHADOW, transition: 'all .3s ease', marginBottom: 14
   }
@@ -795,14 +854,14 @@ function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData,
         <div style={{
           width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
           background: 'var(--n200)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'Fredoka One', fontSize: 24, color: 'var(--text-sub)',
+          fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text-sub)',
         }}>
           {avatarUrl ? <img src={avatarUrl} alt="รูปโปรไฟล์" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (formData.username.trim().charAt(0).toUpperCase() || '?')}
         </div>
         <div>
           <button
             type="button" onClick={() => avatarInputRef.current?.click()}
-            style={{ minHeight: 44, padding: '9px 18px', borderRadius: 999, border: `1.5px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 'var(--fs-sm)' }}
+            style={{ minHeight: 44, padding: '9px 18px', borderRadius: 999, border: `1.5px solid ${SETTINGS_GOLD}`, background: 'transparent', color: 'var(--text)', fontWeight: 700, fontSize: 'var(--fs-sm)' }}
           >
             🖼️ เปลี่ยนรูปโปรไฟล์
           </button>
@@ -827,7 +886,7 @@ function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData,
       <textarea
         name="bio" value={formData.bio} onChange={handleChange} onFocus={handleFieldFocus} onBlur={handleFieldBlur}
         placeholder="เล่าเกี่ยวกับตัวคุณสั้นๆ..." rows={3}
-        style={{ ...fieldStyle, resize: 'vertical', fontFamily: 'Nunito' }}
+        style={{ ...fieldStyle, resize: 'vertical', fontFamily: 'var(--font-display)' }}
       />
 
       <label style={labelStyle}>วันเกิด</label>
@@ -890,20 +949,20 @@ function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData,
         onClick={() => setIsProfilePrivate((v) => !v)}
         className="settings-toggle-row"
         style={{
-          border: `2px solid ${isProfilePrivate ? accent : 'var(--border-mid)'}`,
-          background: isProfilePrivate ? accent + '14' : 'var(--bg-card)',
+          border: `1.5px solid ${isProfilePrivate ? SETTINGS_GOLD : 'var(--border-mid)'}`,
+          background: isProfilePrivate ? SETTINGS_ON_TINT : 'var(--bg-card)',
           marginBottom: 14,
         }}
       >
         <span>{isProfilePrivate ? '🔒 ปิดโปรไฟล์อยู่ — คนอื่นดูโปรไฟล์เราไม่ได้' : '🔓 เปิดโปรไฟล์อยู่ — คนอื่นดูโปรไฟล์เราได้'}</span>
-        <span style={{ width: 44, height: 24, borderRadius: 99, position: 'relative', background: isProfilePrivate ? accent : 'var(--n200)', transition: 'background .25s' }}>
+        <span style={{ width: 44, height: 24, borderRadius: 99, position: 'relative', background: isProfilePrivate ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s' }}>
           <span className="settings-toggle-knob" style={{ position: 'absolute', top: 2, left: isProfilePrivate ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)' }} />
         </span>
       </button>
 
       <button
         type="submit"
-        style={{ width: '100%', minHeight: 48, padding: 14, background: accent, color: 'var(--fixed-white)', border: 'none', borderRadius: 12, fontFamily: 'Fredoka One', fontSize: 'var(--fs-lg)', marginTop: 12, cursor: 'pointer', transition: 'transform 0.2s', boxShadow: `0 4px 12px ${SHADOW_9}` }}
+        style={{ width: '100%', minHeight: 48, padding: 14, background: 'linear-gradient(135deg, var(--g500), var(--g700))', color: 'var(--fixed-white)', border: 'none', borderRadius: 12, fontFamily: 'var(--font-display)', fontSize: 'var(--fs-lg)', marginTop: 12, cursor: 'pointer', transition: 'transform 0.2s', boxShadow: `0 4px 12px ${SHADOW_9}` }}
         onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
         onMouseLeave={e => e.currentTarget.style.transform = 'none'}
       >
@@ -916,7 +975,7 @@ function ProfileSettingsForm({ userData, accent, onSave }: { userData: UserData,
 /** [เพิ่มรอบนี้ — ข้อ 4/5] ฟอร์มเปลี่ยนรหัสผ่านจริง (แทนที่ช่องเดิมใน ProfileSettingsForm ที่
  * ไม่เคยทำงาน) ต้องกรอกรหัสผ่านปัจจุบันให้ถูกก่อน — ตรวจผ่าน userApi.changePassword (มี hash
  * เทียบจริงในโหมด mock ดู user.api.ts) */
-function ChangePasswordForm({ accent, onChangePassword, onDone }: {
+function ChangePasswordForm({ onChangePassword, onDone }: {
   accent: string
   onChangePassword?: (data: { currentPassword: string; newPassword: string }) => Promise<void>
   onDone: () => void
@@ -930,7 +989,7 @@ function ChangePasswordForm({ accent, onChangePassword, onDone }: {
 
   const fieldStyle: CSSProperties = {
     width: '100%', minHeight: 44, padding: '13px 14px', borderRadius: 12, boxSizing: 'border-box',
-    border: '2px solid var(--n200)', fontSize: 'var(--fs-md)', fontFamily: 'Nunito',
+    border: '2px solid var(--n200)', fontSize: 'var(--fs-md)', fontFamily: 'var(--font-display)',
     outline: 'none', background: 'var(--input-bg)', color: 'var(--text)', marginBottom: 14,
   }
   const labelStyle: CSSProperties = { display: 'block', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--n500)', marginBottom: 6 }
@@ -969,14 +1028,14 @@ function ChangePasswordForm({ accent, onChangePassword, onDone }: {
       <PasswordInput value={confirmPassword} onChange={setConfirmPassword} placeholder="••••••••" required style={fieldStyle} />
 
       {errorMessage && <div style={{ marginBottom: 14, fontSize: 'var(--fs-xs)', color: '#c0392b', fontWeight: 700 }}>⚠️ {errorMessage}</div>}
-      {successMessage && <div style={{ marginBottom: 14, fontSize: 'var(--fs-xs)', color: accent, fontWeight: 700 }}>✅ {successMessage}</div>}
+      {successMessage && <div style={{ marginBottom: 14, fontSize: 'var(--fs-xs)', color: 'var(--text)', fontWeight: 700 }}>✅ {successMessage}</div>}
 
       <button
         type="submit"
         disabled={isSubmitting}
         style={{
-          width: '100%', minHeight: 48, padding: 14, background: accent, color: 'var(--fixed-white)', border: 'none',
-          borderRadius: 12, fontFamily: 'Fredoka One', fontSize: 'var(--fs-lg)', cursor: isSubmitting ? 'not-allowed' : 'pointer',
+          width: '100%', minHeight: 48, padding: 14, background: 'linear-gradient(135deg, var(--g500), var(--g700))', color: 'var(--fixed-white)', border: 'none',
+          borderRadius: 12, fontFamily: 'var(--font-display)', fontSize: 'var(--fs-lg)', cursor: isSubmitting ? 'not-allowed' : 'pointer',
           opacity: isSubmitting ? 0.6 : 1,
         }}
       >
@@ -986,16 +1045,16 @@ function ChangePasswordForm({ accent, onChangePassword, onDone }: {
   )
 }
 
-function MockToggleSettings({ options, accent }: { options: string[], accent: string }) {
+function MockToggleSettings({ options }: { options: string[], accent: string }) {
   const [states, setStates] = useState(options.map(() => true))
   const toggle = (index: number) => setStates(prev => prev.map((s, i) => i === index ? !s : s))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {options.map((opt, i) => (
-        <label key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 44, padding: '12px 14px', background: `${accent}0d`, borderRadius: 12, cursor: 'pointer', fontSize: 'var(--fs-md)', color: 'var(--text)' }}>
+        <label key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 44, padding: '12px 14px', background: SETTINGS_SOFT_TINT, borderRadius: 12, cursor: 'pointer', fontSize: 'var(--fs-md)', color: 'var(--text)' }}>
           {opt}
-          <input type="checkbox" checked={states[i]} onChange={() => toggle(i)} style={{ accentColor: accent, width: 22, height: 22, flexShrink: 0 }} />
+          <input type="checkbox" checked={states[i]} onChange={() => toggle(i)} style={{ accentColor: 'var(--g600)', width: 22, height: 22, flexShrink: 0 }} />
         </label>
       ))}
       <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--n300)', textAlign: 'center', marginTop: 20 }}>

@@ -27,6 +27,8 @@ interface LanguageContextValue {
   setLanguage: (lang: Language) => void
   /** แปลคีย์เป็นข้อความตามภาษาปัจจุบัน — ไม่เจอคำแปลจะตกไปใช้ภาษาไทย → fallback → ตัวคีย์เอง */
   t: (key: TranslationKey, fallback?: string) => string
+  /** เหมือน t() แต่แทนค่า {ชื่อ} ในข้อความ เช่น tv('treeInfo.leavesCount', { n: 12 }) */
+  tv: (key: TranslationKey, vars: Record<string, string | number>) => string
 }
 
 const LanguageCtx = createContext<LanguageContextValue | null>(null)
@@ -46,7 +48,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     [language],
   )
 
-  const value = useMemo<LanguageContextValue>(() => ({ language, setLanguage, t }), [language, setLanguage, t])
+  const tv = useCallback(
+    (key: TranslationKey, vars: Record<string, string | number>) =>
+      t(key).replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m)),
+    [t],
+  )
+
+  const value = useMemo<LanguageContextValue>(() => ({ language, setLanguage, t, tv }), [language, setLanguage, t, tv])
 
   return <LanguageCtx.Provider value={value}>{children}</LanguageCtx.Provider>
 }

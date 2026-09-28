@@ -23,6 +23,8 @@ interface OwlAvatarProps {
   /** true ระหว่างที่กำลัง "เดิน" ไปยัง node ถัดไป (ตอนเควสเพิ่งสำเร็จ) — ขยับขาสลับ + เอียงตัวเดิน
    *  false = ยืนนิ่งเฉยๆ ที่ node ปัจจุบัน (แค่หายใจ/กระพือปีกเบาๆ) */
   walking?: boolean
+  /** [ใหม่] true = กางปีกบิน (ปีกกางออกกว้าง กระพือแรง ตัวลอยขึ้นเป็นโค้งแล้วร่อนลง) */
+  flying?: boolean
   size?: number
 }
 
@@ -30,10 +32,10 @@ interface OwlAvatarProps {
  * OwlAvatar — [ตามที่ขอ] "avatar เป็นนกฮูกเดินน่ารัก" แทนลูกแก้วเรืองแสงที่ระบุไว้ใน spec เดิม
  * วาดเป็น inline SVG ล้วนๆ (ไม่ต้องพึ่ง asset ภาพ) โทนสีน้ำตาล/ครีมเข้ากับธีมป่า
  */
-export default function OwlAvatar({ walking = false, size = 44 }: OwlAvatarProps) {
+export default function OwlAvatar({ walking = false, flying = false, size = 44 }: OwlAvatarProps) {
   return (
     <div
-      className={`owl-avatar ${walking ? 'owl-avatar--walking' : 'owl-avatar--idle'}`}
+      className={`owl-avatar ${flying ? 'owl-avatar--flying' : walking ? 'owl-avatar--walking' : 'owl-avatar--idle'}`}
       style={{ width: size, height: size }}
     >
       <svg viewBox="0 0 60 60" width="100%" height="100%">
@@ -115,7 +117,30 @@ export default function OwlAvatar({ walking = false, size = 44 }: OwlAvatarProps
           50% { transform: rotate(-18deg); }
         }
 
+        /* [ใหม่] บิน: ตัวลอยขึ้นเป็นโค้งแล้วร่อนลง · ปีกกางออกด้านข้างและกระพือแรง · ขาหุบ */
+        .owl-avatar--flying { animation: owlAvatarFlightArc 1.4s ease-in-out both; }
+        @keyframes owlAvatarFlightArc {
+          0%   { transform: translateY(0) rotate(0deg); }
+          20%  { transform: translateY(-26px) rotate(-4deg); }
+          50%  { transform: translateY(-40px) rotate(3deg); }
+          80%  { transform: translateY(-22px) rotate(-2deg); }
+          100% { transform: translateY(0) rotate(0deg); }
+        }
+        .owl-avatar--flying .owl-avatar__wing { animation: owlAvatarWingSpread 0.22s ease-in-out infinite; }
+        .owl-avatar--flying .owl-avatar__wing--left { transform-origin: 100% 30%; }
+        .owl-avatar--flying .owl-avatar__wing--right { transform-origin: 0% 30%; animation-name: owlAvatarWingSpreadRight; }
+        @keyframes owlAvatarWingSpread {
+          0%, 100% { transform: translateX(-4px) rotate(-70deg) scaleY(1.25); }
+          50%      { transform: translateX(-4px) rotate(-25deg) scaleY(1.1); }
+        }
+        @keyframes owlAvatarWingSpreadRight {
+          0%, 100% { transform: translateX(4px) rotate(70deg) scaleY(1.25); }
+          50%      { transform: translateX(4px) rotate(25deg) scaleY(1.1); }
+        }
+        .owl-avatar--flying .owl-avatar__leg { transform: scaleY(0.6); }
+
         @media (prefers-reduced-motion: reduce) {
+          .owl-avatar--flying,
           .owl-avatar--idle, .owl-avatar--walking, .owl-avatar__wing,
           .owl-avatar__leg--left, .owl-avatar__leg--right { animation: none; }
         }

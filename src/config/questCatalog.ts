@@ -188,7 +188,7 @@ export const PHYSICAL_DAILY: QuestDef[] = [
     // [แก้รอบนี้ — ข้อ D7] เปลี่ยนจากจับเวลา → ถ่ายรูปยืนยัน (เหมือน phys-hydration-drop)
     howTo: 'ออกไปรับแสงแดดอ่อนๆ หรือยืนใกล้หน้าต่างที่แดดส่องถึงในช่วงเช้า ก่อนเริ่มเรียนหรือทำงาน แล้วถ่ายรูปยืนยันว่าออกไปรับแดดจริง',
     theory: 'Circadian Rhythm — แสงเช้ากระตุ้น Serotonin และรีเซ็ตนาฬิกาชีวภาพ',
-    category: 'HEALTH', controlType: 'PHOTO_CAPTURE', coinReward: 35, expReward: 25, isDaily: true,
+    category: 'HEALTH', controlType: 'PHOTO', coinReward: 35, expReward: 25, isDaily: true,
     gameKey: 'photosynthesis', energyLevel: 'LOW',
   },
   {
@@ -209,7 +209,7 @@ export const PHYSICAL_DAILY: QuestDef[] = [
     desc: 'ถ่ายรูปแก้วน้ำเต็ม แล้วถ่ายอีกครั้งตอนดื่มหมดแก้ว เพื่อยืนยันว่าดื่มน้ำจริง',
     howTo: 'ถ่ายรูปแก้วน้ำตอนเต็มแก้ว 1 รูป ดื่มให้หมด แล้วถ่ายรูปแก้วเปล่าอีก 1 รูปเพื่อยืนยัน — เล่นซ้ำได้สูงสุด 10 ครั้ง/วัน ได้รางวัลเท่ากันทุกครั้ง',
     theory: 'Hydration & Cognitive Performance — ขาดน้ำ 1-2% สมาธิและความจำลดลงชัดเจน',
-    category: 'HEALTH', controlType: 'PHOTO_CAPTURE', coinReward: 25, expReward: 20, isDaily: true,
+    category: 'HEALTH', controlType: 'PHOTO', coinReward: 25, expReward: 20, isDaily: true,
     gameKey: 'pure-water', energyLevel: 'LOW', maxPerDay: 10, isRepeatable: true,
   },
   {
@@ -241,7 +241,7 @@ export const PHYSICAL_DAILY: QuestDef[] = [
     desc: 'ถ่ายรูปมื้ออาหาร ให้ระบบช่วยดูแลเป้าหมายแคลอรี่ตามรูปร่างของคุณ',
     howTo: 'ถ่ายรูปมื้ออาหารก่อนทานทุกมื้อ (ครบ 3 มื้อ/วันถือว่าสำเร็จ) ระบบจะคำนวณเป้าหมายแคลอรี่วันนี้ให้จาก BMI ของคุณ และช่วยตรวจสอบรูปเบื้องต้น',
     theory: 'Mifflin-St Jeor Equation (TDEE) ปรับตามเกณฑ์ BMI — ต่ำ/ปกติ/เกิน กำหนดส่วนเกิน/สมดุล/ส่วนขาดของพลังงานที่ต่างกัน',
-    category: 'HEALTH', controlType: 'PHOTO_CAPTURE', coinReward: 40, expReward: 30, isDaily: true,
+    category: 'HEALTH', controlType: 'PHOTO', coinReward: 40, expReward: 30, isDaily: true,
     energyLevel: 'LOW',
     config: {
       verificationMethod: 'PHOTO',
@@ -257,10 +257,10 @@ export const PHYSICAL_DAILY: QuestDef[] = [
 
 export const PHYSICAL_SIDE: QuestDef[] = [
   {
-    code: 'phys-soil-restoration', icon: '🌙', title: 'Soil Restoration', titleTh: 'ฟื้นฟูหน้าดิน / ตัดจอก่อนนอน',
-    desc: 'งดเปิดแอปพลิเคชันหรือหน้าจอ 1-2 ชั่วโมงก่อนเข้านอนจริง',
-    howTo: 'ตั้งเวลานอนของคุณ ระบบจะเริ่มโหมดตัดจอ 1-2 ชั่วโมงก่อนหน้า และล็อกเควสเรียนช่วงดึกให้อัตโนมัติ',
-    theory: 'Blue Light & Melatonin Suppression',
+    code: 'phys-soil-restoration', icon: '🌙', title: 'Soil Restoration', titleTh: 'ฟื้นฟูหน้าดิน / คลิปกล่อมนอน',
+    desc: 'เปิดคลิปวิวธรรมชาติพร้อมเสียงเพราะๆ กล่อมนอน อย่างต่ำ 30 นาที',
+    howTo: 'ถึงเวลานอนแล้ว เลือกวิวที่ชอบ เลือกเสียงกล่อมนอน และระยะเวลา (อย่างต่ำ 30 นาที) จากนั้นวางจอแล้วหลับตาฟัง เมื่อครบเวลาภารกิจจะสำเร็จเองและหน้าจอจะปิดให้อัตโนมัติ',
+    theory: 'Blue Light & Melatonin Suppression · Sleep Soundscapes',
     category: 'HEALTH', controlType: 'BELL', coinReward: 30, expReward: 20, isDaily: false,
     gameKey: 'soil-restoration', energyLevel: 'LOW',
   },
@@ -296,17 +296,17 @@ export const MENTAL_DAILY: QuestDef[] = [
 
 export const MENTAL_SIDE: QuestDef[] = [
   {
-    code: 'ment-reframer-journal', icon: '📖', title: 'The Reframer Journal', titleTh: 'สมุดบันทึกรากไม้เรืองแสง',
+    code: 'ment-reframer-journal', icon: '📖', title: 'My Diary', titleTh: 'ไดอะรี่ของฉัน',
     desc: 'เขียนระบายความรู้สึก แล้วให้ AI ช่วยปรับมุมมองให้เป็นกลางขึ้น',
-    howTo: 'เขียนบันทึกความรู้สึกของวันนี้ลงสมุด ถ้าพิมพ์ข้อความลบ ระบบ AI จะช่วยปรับมุมมอง (Cognitive Restructuring) เมื่อบันทึกเสร็จข้อความจะกลายเป็นหยดน้ำรดรากไม้',
+    howTo: 'บันทึกเรื่องราวของคุณในแบบของคุณเอง ทั้งวันที่สดใสและวันที่หม่นหมอง ความสุขและความทุกข์ ทุกเรื่องราวที่คุณเลือกแบ่งปันล้วนมีพลัง ค่อยๆ เรียบเรียงความรู้สึกให้กลายเป็นถ้อยคำ แล้วปล่อยให้หน้ากระดาษโอบรับมันไว้ — ถ้ามีความคิดที่หนักใจ AI จะช่วยชวนมองมุมใหม่ให้ใจเบาลง',
     theory: 'Expressive Writing Therapy (Pennebaker) & Cognitive Restructuring',
     category: 'EMOTION', controlType: 'GOAL_INPUT', coinReward: 40, expReward: 35, isDaily: false,
     energyLevel: 'LOW', isCalming: true,
   },
   {
-    code: 'ment-gratitude-shield', icon: '🛡️', title: 'Gratitude Shield', titleTh: 'เกราะแห่งความขอบคุณ',
+    code: 'ment-gratitude-shield', icon: '🛡️', title: 'Gratitude', titleTh: 'คำขอบคุณ',
     desc: 'พิมพ์ขอบคุณสิ่งดีๆ 1 เรื่องก่อนนอน ติดต่อกัน 14 วัน ปลดล็อกออร่าต้นไม้',
-    howTo: 'พิมพ์ขอบคุณสิ่งดีๆ ที่เกิดขึ้นในวันนี้ 1 เรื่อง ก่อนเข้านอน ทำติดต่อกันให้ครบ 14 วันเพื่อปลดล็อกออร่าเรืองแสงรอบต้นไม้',
+    howTo: 'วันนี้คุณอยากขอบคุณใคร? อาจเป็นสิ่งดีๆ ที่คุณได้ลงมือทำ หรือใครสักคนที่มอบความใจดีให้คุณ ลองบอกว่าสิ่งนั้นมีความหมายกับหัวใจคุณอย่างไร แล้วเรียบเรียงเป็นถ้อยคำขอบคุณจากใจ ทำต่อเนื่องครบ 14 วันเพื่อปลดล็อกออร่าเรืองแสงรอบต้นไม้',
     theory: 'Positive Psychology (Seligman) — สร้าง Positive Bias และ Resilience',
     category: 'EMOTION', controlType: 'GOAL_INPUT', coinReward: 35, expReward: 30, isDaily: false,
     energyLevel: 'LOW', isCalming: true,

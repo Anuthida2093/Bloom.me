@@ -1,6 +1,14 @@
 import { isQuestFullyDoneToday, type QuestDef } from '../../config/questCatalog'
 import { SAFETY_NET_CONTACTS } from '../../config/screening'
 import { QUEST_ICONS } from '../../config/iconAssets'
+import { useEffect, useState } from 'react'
+import { useAppContext } from '../../context/AppContext'
+import { computeCalorieTarget, loadMeals, totalCalories, MEALS_CHANGED_EVENT } from '../../utils/nutrition'
+import { getStepJourneyDaysDone, STEP_JOURNEY_DAYS } from '../../utils/stepJourneyDays'
+
+const STEP_JOURNEY_QUEST_CODE = 'phys-vitality-steps'
+
+const NUTRITION_QUEST_CODE = 'phys-balanced-nutrients'
 
 const C_4 = '#9b59d0'
 const BORDER_5 = '#b785f5'
@@ -58,6 +66,16 @@ export default function QuestGateView({
   needsMoodCheckin = () => false,
 }: QuestGateViewProps) {
   const theme = THEME[category]
+  const { userData } = useAppContext()
+  // [แก้ตามที่ระบุ] แถวเควสแคลอรี่ตาม BMI บอกด้านขวาว่าวันนี้ทานไปกี่แคลอรี่แล้ว (อัปเดตทันทีที่บันทึกมื้อ)
+  const calorieTarget = computeCalorieTarget(userData)
+  const [caloriesToday, setCaloriesToday] = useState(() => totalCalories(loadMeals(userData.id)))
+  useEffect(() => {
+    const refresh = () => setCaloriesToday(totalCalories(loadMeals(userData.id)))
+    refresh()
+    window.addEventListener(MEALS_CHANGED_EVENT, refresh)
+    return () => window.removeEventListener(MEALS_CHANGED_EVENT, refresh)
+  }, [userData.id])
 
   return (
     <div className="quest-gate-view" style={{ background: theme.bg }}>
@@ -119,12 +137,21 @@ export default function QuestGateView({
                   : q.icon}
               </span>
               <span className="quest-gate-view__row-title">{q.titleTh}</span>
+              {q.code === NUTRITION_QUEST_CODE && (
+                <span
+                  className={`quest-gate-view__row-kcal${calorieTarget !== null && caloriesToday > calorieTarget ? ' is-over' : ''}`}
+                  title="แคลอรี่ที่ทานไปแล้ววันนี้"
+                >
+                  ทานไปแล้ว {caloriesToday.toLocaleString()}{calorieTarget !== null ? ` / ${calorieTarget.toLocaleString()}` : ''} kcal
+                </span>
+              )}
               {q.isRepeatable && (
                 <span
                   className="quest-gate-view__row-status quest-gate-view__row-status--repeat"
-                  title={q.maxPerDay ? `เล่นซ้ำได้วันนี้ ${playsToday}/${q.maxPerDay} ครั้ง` : 'เล่นซ้ำได้หลายครั้งต่อวัน'}
+                  title={q.code === STEP_JOURNEY_QUEST_CODE ? `เดินครบเป้าหมายแล้ว ${getStepJourneyDaysDone()}/${STEP_JOURNEY_DAYS} วัน` : q.maxPerDay ? `เล่นซ้ำได้วันนี้ ${playsToday}/${q.maxPerDay} ครั้ง` : 'เล่นซ้ำได้หลายครั้งต่อวัน'}
                 >
-                  🔁{q.maxPerDay ? ` ${playsToday}/${q.maxPerDay}` : ''}
+                  {/* [แก้ตามที่ระบุ] ก้าวเพื่อสุขภาพ = ทริป 3 วัน → แสดงจำนวนวันที่สำเร็จ 0/3 */}
+                  🔁{q.code === STEP_JOURNEY_QUEST_CODE ? ` ${getStepJourneyDaysDone()}/${STEP_JOURNEY_DAYS}` : q.maxPerDay ? ` ${playsToday}/${q.maxPerDay}` : ''}
                 </span>
               )}
               {done && <span className="quest-gate-view__row-status quest-gate-view__row-status--done">✓ สำเร็จแล้ว</span>}
@@ -219,7 +246,8 @@ export default function QuestGateView({
         /* [แก้ตามที่ระบุ — ตัวเลือก B] เอาวงกลมไล่สี/เงาออก เหลือแค่กล่องขนาดคงที่ 2.5cm ไว้
            จัดตำแหน่งไอคอน ไม่มีพื้นหลัง/ขอบ/เงาอีกต่อไป */
         .quest-gate-view__row-icon {
-          flex-shrink: 0; width: 2.5cm; height: 2.5cm;
+          /* [แก้ตามที่ระบุ] รูปเควสในรายการใหญ่ขึ้นหน่อย (เดิม 2.5cm) */
+          flex-shrink: 0; width: 2.9cm; height: 2.9cm;
           display: flex; align-items: center; justify-content: center; font-size: 22px;
         }
         .quest-gate-view__row-icon-img {
@@ -228,6 +256,14 @@ export default function QuestGateView({
         .quest-gate-view__row-title {
           flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 700; font-size: 20px;
         }
+        .quest-gate-view__row-kcal {
+          flex-shrink: 0; font-family: var(--font-display); font-size: 13px; padding: 4px 10px; border-radius: 99px;
+          background: var(--glass-w-15); color: var(--fixed-white); white-space: nowrap;
+        }
+        .quest-gate-view__row-kcal.is-over { color: #FF6B6B; font-weight: 800; }
+        :root:not([data-theme="dark"]) .quest-gate-view__row-kcal { background: var(--fixed-white); color: var(--n900); border: 1px solid var(--g300); }
+        :root:not([data-theme="dark"]) .quest-gate-view__row-kcal.is-over { color: #D62828; }
+        @media (max-width: 480px) { .quest-gate-view__row-kcal { font-size: 11.5px; padding: 3px 8px; } }
         .quest-gate-view__row-status {
           flex-shrink: 0; font-size: 10.5px; font-weight: 800; padding: 6px 10px; border-radius: var(--r-pill);
           white-space: nowrap;
@@ -236,7 +272,7 @@ export default function QuestGateView({
         .quest-gate-view__row-status--locked { background: var(--glass-b-60); color: var(--fixed-white); }
         /* [ใหม่] ต้องเช็คอินอารมณ์ก่อน — ตั้งใจให้หน้าตาต่างจาก lock จริงๆ (กรอบ/ตัวอักษรสีทอง
            อ่อนบนพื้นกระจกใส ไม่ใช่ป้ายทึบสีเข้ม) เพราะไม่ได้กดไม่ได้ แค่จะพาไปเช็คอินก่อนเท่านั้น */
-        .quest-gate-view__row-status--mood { background: var(--glass-w-15); color: var(--ae-sun); border: 1px solid var(--ae-sun); }
+        .quest-gate-view__row-status--mood { background: var(--glass-w-15); color: var(--fixed-white); border: 1px solid var(--ae-sun); }
         /* [ใหม่] ป้าย "เล่นซ้ำได้" — โทนเขียวอมฟ้าของ Aether (--ae-glow) แยกจาก done/locked/mood
            ทั้งหมด เพราะไม่ใช่สถานะเควส แต่เป็นคุณสมบัติของเควสเอง โชว์คู่กับ status chip อื่นได้ */
         .quest-gate-view__row-status--repeat { background: var(--glass-w-15); color: var(--ae-glow); border: 1px solid var(--ae-glow); }
@@ -257,6 +293,32 @@ export default function QuestGateView({
         .quest-gate-view__safety-banner-text { display: flex; flex-direction: column; gap: 2px; }
         .quest-gate-view__safety-banner-text strong { font-family: var(--font-display); font-size: var(--fs-sm); }
         .quest-gate-view__safety-banner-text small { font-size: var(--fs-xs); color: var(--glass-w-70); }
+
+        /* ═══ ธีมสว่าง — [แก้ตามที่ระบุ] หน้าเควสสุขภาพกาย/สุขภาพจิตเป็นเขียวอ่อนสีเดียวกับกรอบ
+           กระดานจัดอันดับ (ธีมมืดยังเป็นฉากเข้มแบบเดิมทุกอย่าง — theme.bg/itemBg เดิมไม่แตะ)
+           พื้นมาจาก inline style (theme.bg) จึงต้อง !important ทับเฉพาะธีมสว่าง ═══ */
+        :root:not([data-theme="dark"]) .quest-gate-view {
+          background: linear-gradient(180deg, var(--leaf-soft) 0%, var(--g100) 55%, var(--leaf-soft-strong) 100%) !important;
+        }
+        :root:not([data-theme="dark"]) .quest-gate-view__star { background: var(--g500); }
+        :root:not([data-theme="dark"]) .quest-gate-view__list { background: none; }
+        :root:not([data-theme="dark"]) .quest-gate-view__row {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--fixed-white) 70%, var(--leaf-soft)) 0%, var(--leaf-soft) 100%);
+          border-color: color-mix(in srgb, var(--coin) 70%, var(--g600));
+          color: var(--n900);
+          box-shadow: 0 4px 0 color-mix(in srgb, var(--g600) 45%, transparent), 0 8px 18px var(--glass-b-15);
+        }
+        :root:not([data-theme="dark"]) .quest-gate-view__row:hover:not(:disabled) { filter: brightness(1.03); }
+        :root:not([data-theme="dark"]) .quest-gate-view__row-status--mood { background: var(--fixed-white); color: var(--n900); border-color: var(--coin); }
+        :root:not([data-theme="dark"]) .quest-gate-view__row-status--repeat { background: var(--fixed-white); color: var(--g700); border-color: var(--g400); }
+        :root:not([data-theme="dark"]) .quest-gate-view__safety-banner {
+          background: color-mix(in srgb, var(--fixed-white) 60%, transparent);
+          border-color: color-mix(in srgb, var(--g700) 25%, transparent);
+          color: var(--n900);
+        }
+        :root:not([data-theme="dark"]) .quest-gate-view__safety-banner:hover { background: color-mix(in srgb, var(--fixed-white) 80%, transparent); }
+        :root:not([data-theme="dark"]) .quest-gate-view__safety-banner-text small { color: color-mix(in srgb, var(--n900) 70%, transparent); }
+        :root:not([data-theme="dark"]) .quest-gate-view__list::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--g700) 30%, transparent); }
 
         .quest-gate-view__list::-webkit-scrollbar { width: 4px; }
         .quest-gate-view__list::-webkit-scrollbar-thumb { background: var(--glass-w-30); border-radius: 99px; }

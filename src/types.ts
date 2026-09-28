@@ -218,8 +218,9 @@ export type QuestControlType =
   | 'BELL'
   | 'BREATHING'
   | 'SWIPE_DISCARD'
-  /** [เพิ่มรอบนี้] ยืนยันงานด้วยการถ่ายรูปจริง (ผ่านกล้อง/แนบไฟล์) แทนการจับเวลา/กดปุ่มเฉยๆ */
-  | 'PHOTO_CAPTURE'
+  /** ยืนยันงานด้วยการถ่ายรูปจริง (ผ่านกล้อง/แนบไฟล์) — ชื่อตรงกับ enum QuestControlType.PHOTO
+   *  ของ backend (เดิมหน้าเว็บใช้ 'PHOTO_CAPTURE' ไม่ตรงกัน) */
+  | 'PHOTO'
   /** เควส "ก้าวเพื่อสุขภาพ" โฉมใหม่ — เลือกแผนที่ปลายทางจาก 8 ใบแล้วเดินไปถึงตามก้าวจริง
    *  (ดู types.journey.ts, src/components/quest/games/physical/StepJourneyGame.tsx) */
   | 'STEP_JOURNEY'
@@ -387,6 +388,12 @@ export interface MoodEntryData {
   category: MoodCategory
   mood: MoodTypeValue
   note: string | null
+  /** สีน้ำยา 5 สี (YELLOW/GREEN/BLUE/RED/GRAY) — ตรงกับ mood_entries.colorCode ของ backend */
+  colorCode?: 'YELLOW' | 'GREEN' | 'BLUE' | 'RED' | 'GRAY' | null
+  /** ความเข้มอารมณ์ 1-5 — ตรงกับ mood_entries.moodScore */
+  moodScore?: number | null
+  /** วันที่ (ไม่มีเวลา, โซน Asia/Bangkok) ที่ backend คำนวณให้ — mock ไม่มี */
+  logDate?: string
   createdAt: string
 }
 
@@ -424,6 +431,8 @@ export interface PostItData {
   positionY: number
   isPinned: boolean
   userId: string
+  /** วันที่เขียน (backend ส่งมาใน post_its.createdAt / mock ใส่ตอนสร้าง) */
+  createdAt?: string
 }
 
 export const DEFAULT_POST_ITS: PostItData[] = []
@@ -478,7 +487,23 @@ export interface PostData {
    *  เฉยๆ กัน TS/localStorage เก่าพัง ไม่มี UI ไหนอ่าน/แสดงผลอีกต่อไป */
   repostedByMe: boolean
   repostCount: number
+  /** [เพิ่มตามที่ระบุ] ความรู้สึกที่เลือกตอนสร้างสตอรี่ (ไม่บังคับ) — backend ยังไม่มีคอลัมน์
+   *  โหมด live จึงจำไว้ในเครื่องตาม id โพสต์ (ดู post.api.ts) */
+  mood?: MoodTypeValue | null
+  /** [เพิ่มตามที่ระบุ] แนบรูปได้สูงสุด 20 รูปต่อโพสต์ (เลื่อนซ้าย-ขวาดูในฟีด) — imageUrl = รูปแรก
+   *  (คงไว้ให้ backend เดิมที่รับได้รูปเดียว) โหมด live เก็บรูปที่เหลือไว้ในเครื่องตาม id โพสต์ */
+  imageUrls?: string[]
+  /** [เพิ่มตามที่ระบุ] แฮชแท็กของโพสต์ (ไม่มี # นำหน้า) */
+  tags?: string[]
 }
+
+/** รูปทั้งหมดของโพสต์ (รองรับโพสต์เก่าที่มีแค่ imageUrl รูปเดียว) */
+export function postImages(post: Pick<PostData, 'imageUrl' | 'imageUrls'>): string[] {
+  if (post.imageUrls && post.imageUrls.length > 0) return post.imageUrls
+  return post.imageUrl ? [post.imageUrl] : []
+}
+
+export const MAX_POST_IMAGES = 20
 
 export const DEFAULT_POSTS: PostData[] = []
 

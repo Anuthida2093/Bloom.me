@@ -76,7 +76,7 @@ export default function MeditationModal({ onClose }: MeditationModalProps) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{ background: `linear-gradient(160deg, var(--fixed-white), ${BG_2})`, borderRadius: 28, width: '100%', maxWidth: 380, padding: '28px 26px', textAlign: 'center', boxShadow: '0 28px 70px var(--glass-b-35)', position: 'relative' }}>
-        <button onClick={onClose} title="ปิด" style={{ position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: 99, border: 'none', background: 'var(--glass-b-8)', cursor: 'pointer', fontSize: 13 }}><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
+        <button className="popup-close" onClick={onClose} title="ปิด" style={{ position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: 99, border: 'none', background: 'var(--glass-b-8)', cursor: 'pointer', fontSize: 13 }}><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
         <div style={{ fontSize: 40, marginBottom: 6 }}>🧘‍♀️</div>
         <h2 style={{ fontFamily: 'Fredoka One', fontSize: 20, color: TEXT_3, marginBottom: 4 }}>โหมดทำสมาธิ</h2>

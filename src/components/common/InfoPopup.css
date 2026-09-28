@@ -1,0 +1,54 @@
+/* InfoPopup.css — กรอบป็อบอัพข้อมูลแบบเดียวกันทั้งระบบ (ย้ายมาจาก TreeSummaryModal.css)
+   ผู้ใช้: แผงข้อมูล MBTI (TreeSummaryModal.tsx) + ป็อบอัพข้อมูลต้นไม้ที่โคนต้น (TreeOfLife.tsx)
+   ตำแหน่ง/ขนาดแต่ละที่กำหนดเองในไฟล์ของตัวเอง ไฟล์นี้คุมแค่หน้าตากรอบ
+
+   เอฟเฟกต์ขอบ: "เส้นขอบไล่เฉด + glow เรืองจางๆ ที่หายใจเบาๆ" (ไม่ใช้ shimmer เคลื่อนที่
+   เพราะรบกวนสายตาระหว่างอ่าน) — .info-popup เป็นกล่องนอกพื้นไล่เฉดฟ้า→เขียว หนา 2px แล้ว
+   .info-popup__inner ทึบด้านในบังจนเหลือแค่ขอบบางๆ ได้เส้นขอบไล่เฉดจริงโดยไม่ต้องพึ่ง
+   border-image ที่บางเบราว์เซอร์จัดการมุมโค้งได้ไม่สวย */
+.info-popup {
+  position: relative;
+  border-radius: 26px;
+  padding: 2px;
+  background: linear-gradient(135deg, #7DD3FC 0%, #BAE6FD 45%, var(--g300) 100%);
+  animation: infoPopupGlowPulse 3.2s ease-in-out infinite;
+}
+@keyframes infoPopupGlowPulse {
+  0%, 100% { box-shadow: 0 0 14px rgba(125, 211, 252, .35), 0 14px 40px var(--glass-b-20); }
+  50%      { box-shadow: 0 0 26px rgba(125, 211, 252, .55), 0 14px 40px var(--glass-b-20); }
+}
+
+.info-popup__inner {
+  position: relative;
+  border-radius: 24px;
+  background: linear-gradient(165deg, #EFF9FF 0%, var(--g50) 100%);
+  padding: 22px 20px 20px;
+  color: var(--n700);
+}
+
+.info-popup__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 99px;
+  border: none;
+  background: var(--glass-b-8);
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.info-popup__close:hover { background: var(--glass-b-15); }
+
+@keyframes infoPopupLeafSway {
+  0%, 100% { transform: rotate(-6deg); }
+  50%      { transform: rotate(6deg); }
+}
+.info-popup__leaf { display: inline-block; animation: infoPopupLeafSway 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .info-popup, .info-popup__leaf { animation: none; }
+}

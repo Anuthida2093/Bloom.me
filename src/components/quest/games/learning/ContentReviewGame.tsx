@@ -49,15 +49,29 @@ export default function ContentReviewGame({ finish }: QuestGameProps) {
 
   const goalSkill = typeof todaysGoalLog?.payload?.skill === 'string' ? todaysGoalLog.payload.skill : null
 
+  /** [เชื่อมเควสเสริม] หัวข้อที่ "ลืม" จากเควสเทกระเป๋าความจำผ่านเสียงวันนี้ (BrainDumpGame ส่ง
+   *  missedTopics มาใน payload) — นัดทบทวนหัวข้อเหล่านี้ไปพร้อมกันในแคปซูลเวลา */
+  const reviewTopics = useMemo(() => {
+    const todayStr = new Date().toDateString()
+    const topics = new Set<string>()
+    for (const l of questLogs) {
+      if (l.quest?.code !== 'know-brain-dump' || l.status !== 'COMPLETED' || !l.completedAt) continue
+      if (new Date(l.completedAt).toDateString() !== todayStr) continue
+      const missed = l.payload?.missedTopics
+      if (Array.isArray(missed)) for (const t of missed) if (typeof t === 'string' && t.trim()) topics.add(t.trim())
+    }
+    return [...topics]
+  }, [questLogs])
+
   const canSubmit = reviewDate >= minDate && reviewDate <= maxDate
 
   const handleSubmit = () => {
     logActivity({
       activityType: 'REVIEW',
       durationSeconds: 0,
-      meta: { scheduledReviewDate: reviewDate, sourceQuestLogId: todaysGoalLog?.id ?? null, mode: 'content-review' },
+      meta: { scheduledReviewDate: reviewDate, sourceQuestLogId: todaysGoalLog?.id ?? null, mode: 'content-review', reviewTopics },
     })
-    finish({ scheduledReviewDate: reviewDate, sourceQuestLogId: todaysGoalLog?.id ?? null })
+    finish({ scheduledReviewDate: reviewDate, sourceQuestLogId: todaysGoalLog?.id ?? null, reviewTopics })
   }
 
   return (
@@ -70,6 +84,16 @@ export default function ContentReviewGame({ finish }: QuestGameProps) {
           <p className="qg-hint" style={{ marginTop: 6 }}>ยังไม่ได้ตั้งเป้าหมาย "เพ่งสมาธิ" ของวันนี้ — ทบทวนแบบทั่วไปแทนได้เลย</p>
         )}
       </div>
+
+      {reviewTopics.length > 0 && (
+        <div className="qg-card">
+          <span className="qg-label">หัวข้อที่ลืมจาก "เทกระเป๋าความจำผ่านเสียง" วันนี้</span>
+          <div className="qg-chips" style={{ marginTop: 6 }}>
+            {reviewTopics.map((t) => <span key={t} className="qg-chip">{t}</span>)}
+          </div>
+          <p className="qg-hint" style={{ marginTop: 6 }}>หัวข้อเหล่านี้จะถูกนัดทบทวนไปพร้อมกันในแคปซูลเวลานี้</p>
+        </div>
+      )}
 
       <div className="qg-card">
         <label className="qg-label" htmlFor="cr-date">อยากกลับมาทบทวนวันไหน</label>

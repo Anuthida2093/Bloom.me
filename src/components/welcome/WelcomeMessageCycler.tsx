@@ -51,7 +51,7 @@ export default function WelcomeMessageCycler({
         // ตั้ง 20px ตรงนี้เลย ไม่พึ่ง font-size ที่สืบทอดจากกล่องแม่ (หน้า Welcome ไม่มีการ์ดครอบแล้ว)
         fontSize: 20,
         // จองความสูงไว้ 3 บรรทัด — ประโยคยาวสุด (โดยเฉพาะภาษาอังกฤษบนจอแคบ) ไม่ดันปุ่มด้านล่างให้กระตุก
-        minHeight: '4.8em',
+        minHeight: '5.4em',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

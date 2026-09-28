@@ -103,7 +103,7 @@
   border-radius: 12px;
   background: rgba(255, 209, 102, 0.16);
   border: 1px solid rgba(255, 209, 102, 0.4);
-  color: #FFE9AE;
+  color: var(--fixed-white);
 }
 
 /* [เพิ่มรอบนี้ — ตามสเปกใหม่] ตัวเลขก้าวเดิน "ปัจจุบัน / เป้าหมาย" ชัดเจนเหนือแถบนกฮูก */
@@ -206,7 +206,7 @@
   line-height: 1.6;
   max-width: 340px;
   margin: -10px auto 18px;
-  --lc-text-vs1: #FFD9A8;
+  --lc-text-vs1: rgba(255, 255, 255, 0.85);
   color: var(--lc-text-vs1);
 }
 

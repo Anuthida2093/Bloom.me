@@ -93,7 +93,7 @@ export default function Register() {
 
   return (
     <AuthLayout title="สมัครสมาชิก" subtitle="สร้างบัญชีเพื่อเริ่มปลูกต้นไม้ของคุณ" logoFallback="🌱" maxWidth={440} videoSrc={VIDEO_SRC}>
-      <form onSubmit={handleSubmit} style={{ ...authCardStyle, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <form className="auth-card" onSubmit={handleSubmit} style={{ ...authCardStyle, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <label style={authLabelStyle}>
           อีเมล
           <input
@@ -159,7 +159,7 @@ export default function Register() {
           มีบัญชีอยู่แล้ว? <Link to="/login" style={authLinkStyle}>เข้าสู่ระบบ</Link>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <Link to="/" style={{ fontSize: 12, color: 'var(--glass-w-65)' }}><img src={BADGE_ICONS.back} className="icon-img" alt="" /> กลับหน้าหลัก</Link>
+          <Link to="/" style={{ fontSize: 12, color: 'var(--lb-card-text-sub)' }}><img src={BADGE_ICONS.back} className="icon-img" alt="" /> กลับหน้าหลัก</Link>
         </div>
       </form>
     </AuthLayout>

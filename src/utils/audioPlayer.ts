@@ -1,3 +1,4 @@
+import { isSfxSuppressed } from './sfxGate'
 /**
  * audioPlayer.ts
  * ────────────────
@@ -77,8 +78,15 @@ interface PlaySfxOptions {
  * playSfx — เล่นเสียงสั้นๆ ครั้งเดียว
  * (ใช้ cloneNode เพื่อรองรับการเล่นซ้ำถี่ๆ เช่น เสียงพิมพ์ข้อความ หรือสับไพ่)
  */
+/** [แก้ตามที่ระบุ] เวลาล่าสุดที่เล่นเสียงเฉพาะของปุ่ม (ไม่ใช่เสียงคลิก) — เสียงคลิกกลางของทั้งระบบ
+ *  (AudioContext) เช็คค่านี้แล้วข้ามไป ถ้าปุ่มนั้นเล่นเสียงของตัวเองแล้ว (ชัตเตอร์/รับรางวัล ฯลฯ) ไม่ให้เสียงซ้อน */
+let lastSpecialSfxAt = 0
+export function markSpecialSfx(): void { lastSpecialSfxAt = performance.now() }
+export function msSinceSpecialSfx(): number { return performance.now() - lastSpecialSfxAt }
+
 export function playSfx(key: SfxKey, options: PlaySfxOptions = {}): void {
-  if (options.enabled === false) return
+  if (key !== 'CLICK') markSpecialSfx()
+  if (options.enabled === false || isSfxSuppressed()) return
   const fileName = SFX_FILES[key]
   if (!fileName) return
 
@@ -144,7 +152,7 @@ export function stopSfx(key: SfxKey): void {
 
 /** startLoopingSfx — เริ่มเล่นเสียงวนซ้ำ (เช่น เพลง BGM, เสียงไฟลุก) */
 export function startLoopingSfx(key: SfxKey, options: PlaySfxOptions = {}): void {
-  if (options.enabled === false) return
+  if (options.enabled === false || isSfxSuppressed()) return
   const fileName = SFX_FILES[key]
   if (!fileName) return
 
@@ -194,7 +202,7 @@ const initSynth = () => {
 export const uiSounds = {
   /** เสียงพิมพ์ข้อความ Typewriter */
   keypress: (enabled = true) => {
-    if (!enabled) return
+    if (!enabled || isSfxSuppressed()) return
     const ctx = initSynth()
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
@@ -214,7 +222,7 @@ export const uiSounds = {
 
   /** เสียงคลิกปุ่มทั่วไป */
   click: (enabled = true) => {
-    if (!enabled) return
+    if (!enabled || isSfxSuppressed()) return
     const ctx = initSynth()
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
@@ -235,7 +243,7 @@ export const uiSounds = {
 
   /** เสียงเปิดป๊อปอัป / เลือกไพ่ */
   pop: (enabled = true) => {
-    if (!enabled) return
+    if (!enabled || isSfxSuppressed()) return
     const ctx = initSynth()
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
@@ -256,7 +264,7 @@ export const uiSounds = {
 
   /** เสียงกดกลับ / ยกเลิก */
   cancel: (enabled = true) => {
-    if (!enabled) return
+    if (!enabled || isSfxSuppressed()) return
     const ctx = initSynth()
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()

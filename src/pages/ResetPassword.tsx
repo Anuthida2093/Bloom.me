@@ -56,11 +56,11 @@ export default function ResetPassword() {
 
   return (
     <AuthLayout title="ตั้งรหัสผ่านใหม่" logoFallback="🔑">
-      <div style={authCardStyle}>
+      <div className="auth-card" style={authCardStyle}>
         {done ? (
           <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ fontSize: 36 }}>✅</div>
-            <p style={{ color: 'var(--fixed-white)', fontSize: 14 }}>ตั้งรหัสผ่านใหม่สำเร็จแล้ว</p>
+            <p style={{ color: 'var(--lb-card-text)', fontSize: 14 }}>ตั้งรหัสผ่านใหม่สำเร็จแล้ว</p>
             <button type="button" onClick={() => navigate('/login')} {...authPrimaryButtonHandlers} style={authPrimaryButtonStyle()}>
               ไปเข้าสู่ระบบ
             </button>

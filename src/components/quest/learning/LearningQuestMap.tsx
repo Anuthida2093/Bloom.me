@@ -4,7 +4,7 @@ import { QUEST_ICONS } from '../../../config/iconAssets'
 import OwlAvatar from '../OwlAvatar'
 import { useAppContext } from '../../../context/AppContext'
 import { playSfx } from '../../../utils/audioPlayer'
-import { useIsLowPowerMode } from '../../../hooks/useMediaQuery'
+import { usePrefersReducedMotion } from '../../../hooks/useMediaQuery'
 import { BADGE_ICONS } from '../../../config/iconAssets'
 
 const C_13 = '#4B5563'
@@ -97,12 +97,18 @@ interface LearningQuestMapProps {
  * เส้นทางในวิดีโอพอดี ปรับตัวเลขตรงนี้ได้ตรงๆ
  */
 const FIXED_NODE_POSITIONS: { x: number; y: number }[] = [
-  { x: 40, y: 70 },   // 1. เพ่งสมาธิ / ตั้งเป้าหมาย (จุดเริ่มทางเดินด้านล่าง)
-  { x: 36, y: 55 },   // 2. หยั่งรากลึก / โหมดจดจ่อ
-  { x: 45, y: 45 },   // 3. เทกระเป๋าความจำผ่านเสียง
-  { x: 50, y: 35 },   // 4. ผสมเกสรข้ามศาสตร์ (โค้งซ้ายขึ้นบันไดหิน)
-  { x: 44, y: 29 },   // 5. เช็กอินรายวัน (locked node, ใกล้ปากถ้ำคริสตัล)
+  { x: 53, y: 80 },   // 1. เพ่งสมาธิ / ตั้งเป้าหมาย (จุดเริ่มทางเดินด้านล่าง)
+  { x:60, y: 73 },   // 2. หยั่งรากลึก / โหมดจดจ่อ
+  { x: 56, y: 63 },   // 3. เทกระเป๋าความจำผ่านเสียง
+  { x: 50, y: 60 },   // 4. ผสมเกสรข้ามศาสตร์ (โค้งซ้ายขึ้นบันไดหิน)
+  { x: 54, y: 55 },   // 5. เช็กอินรายวัน (locked node, ใกล้ปากถ้ำคริสตัล)
 ]
+
+/** มิติ/ระยะลึก: ฐานถัดไปเล็กลงทีละขั้น (ฐาน 2 เล็กกว่า 1, ฐาน 3 เล็กกว่า 2 ...) ให้ดูไกลออกไป
+ *  ตามเส้นทางในพื้นหลังที่ไต่ขึ้นไปทางถ้ำ — ขั้นละ ×0.86 ไม่เล็กกว่า MIN_NODE_DEPTH_SCALE */
+const NODE_DEPTH_SCALE = 0.86
+const MIN_NODE_DEPTH_SCALE = 0.5
+const nodeDepthScale = (i: number) => Math.max(MIN_NODE_DEPTH_SCALE, Math.pow(NODE_DEPTH_SCALE, i))
 
 const VIDEO_NATIVE_WIDTH = 1920
 const VIDEO_NATIVE_HEIGHT = 1080
@@ -118,7 +124,10 @@ const CLICK_DRAG_THRESHOLD_PX = 5
 /** [ใหม่ — ตำแหน่งนกฮูก] ก่อนทำโหนดที่ 1 สำเร็จ — จุดบนเส้นทางก่อนถึงโหนด 1 (x:40,y:70)
  * ลงไปทางล่างขวาตามแนวทางเดินจริง (ตามที่ระบุ แทน fallback {x:42,y:67} เดิมที่คาลิเบรตกับ
  * FIXED_NODE_POSITIONS ชุดเก่าซึ่งไม่ตรงเส้นทางปัจจุบันแล้ว) */
-const FIRST_OWL_POS = { x: 51, y: 90 }
+/** ระยะเวลาบินจากด่านหนึ่งไปอีกด่าน (ms) — ตรงกับ transition ของ .learning-quest-map__owl */
+const OWL_FLIGHT_MS = 1400
+// [แก้ตามที่ระบุ] จุดเริ่มของนกฮูก (ก่อนทำด่านแรกสำเร็จ) X 50 · Y 86
+const FIRST_OWL_POS = { x: 50, y: 86 }
 
 /** [ใหม่ — กล้องอัตโนมัติ] ค้างโชว์แผนที่เต็มกี่ ms ก่อนเริ่มซูมเข้าไปหาโหนดล่าสุด (ข้อ 2) */
 const CAMERA_INTRO_HOLD_MS = 1000
@@ -346,7 +355,16 @@ export default function LearningQuestMap({
   selectedQuestCode,
 }: LearningQuestMapProps) {
   const { settings } = useAppContext()
-  const lowPower = useIsLowPowerMode()
+  // [แก้ตามที่ระบุ — แผนที่ไม่ขึ้นบนโทรศัพท์] เดิมจอ ≤640px นับเป็น low-power แล้วไม่แสดงวิดีโอแผนที่เลย
+  // ตอนนี้แสดงทุกขนาดจอ — ผู้ที่ขอลดการเคลื่อนไหวเห็นภาพแผนที่นิ่ง (เฟรมแรก) แทนการเล่นวน
+  const reducedMotion = usePrefersReducedMotion()
+  /** วิดีโอพื้นหลังโหลดเฟรมแรกเสร็จแล้ว → ค่อยจางเข้า (ดู .learning-quest-map__video--ready) */
+  const [videoReady, setVideoReady] = useState(false)
+  // กันพลาด: ไม่ว่าอย่างไรก็แสดงวิดีโอแผนที่ภายใน 2 วินาที (ไม่ปล่อยให้แผนที่หายไปทั้งหน้า)
+  useEffect(() => {
+    const id = window.setTimeout(() => setVideoReady(true), 2000)
+    return () => window.clearTimeout(id)
+  }, [])
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
@@ -734,10 +752,13 @@ export default function LearningQuestMap({
 
   useEffect(() => {
     if (!isWalking) return
-    playSfx('OWL_WALK', { volume: settings.sfxVolume, enabled: settings.soundEnabled })
-    // 900ms ให้ตรงกับระยะเวลา CSS transition ของ .learning-quest-map__owl (left/top 0.9s)
-    const id = window.setTimeout(() => setIsWalking(false), 900)
-    return () => window.clearTimeout(id)
+    // [แก้ตามที่ระบุ] นกฮูกกางปีกบินไปด่านถัดไป + เสียงกระพือปีก (และเสียงเดินเดิมตอนร่อนลง)
+    const sfx = { volume: settings.sfxVolume, enabled: settings.soundEnabled }
+    playSfx('WING', sfx)
+    const land = window.setTimeout(() => playSfx('OWL_WALK', sfx), OWL_FLIGHT_MS - 250)
+    // ให้ตรงกับระยะเวลา CSS transition ของ .learning-quest-map__owl (OWL_FLIGHT_MS)
+    const id = window.setTimeout(() => setIsWalking(false), OWL_FLIGHT_MS)
+    return () => { window.clearTimeout(id); window.clearTimeout(land) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWalking])
 
@@ -793,11 +814,19 @@ export default function LearningQuestMap({
         {/* วิดีโอพื้นหลังเส้นทางป่าเวทมนตร์ วนลูป — โหมด low-power ใช้พื้นหลังสีทึบเดิมของ
             .learning-quest-map (--lc-bg-12) แทน ไม่เล่นวิดีโอ (แพทเทิร์นเดียวกับ
             Dashboard.tsx/VitalityStepsQuest.tsx) */}
-        {!lowPower && (
-          <video className="learning-quest-map__video" autoPlay loop muted playsInline>
-            <source src="/assets/videos/quest-learning/QuestPathMap.mp4" type="video/mp4" />
-          </video>
-        )}
+        <video
+          className={`learning-quest-map__video${videoReady ? ' learning-quest-map__video--ready' : ''}`}
+          autoPlay={!reducedMotion} loop muted playsInline preload="auto"
+          // [แก้บั๊ก — แผนที่หาย] วิดีโอซ่อนไว้ (opacity 0) จนกว่าจะพร้อม — เดิมรอแค่ loadeddata ครั้งเดียว
+          // ถ้าเหตุการณ์นั้นเกิดก่อน/ไม่เกิด (แคช/เบราว์เซอร์บางตัว) แผนที่จะมองไม่เห็นตลอด
+          // ตอนนี้ฟังหลายจังหวะ + เช็ค readyState ตอน mount ด้วย ref ให้แน่ใจว่าโผล่เสมอ
+          ref={(el) => { if (el && el.readyState >= 2 && !videoReady) setVideoReady(true) }}
+          onLoadedData={() => setVideoReady(true)}
+          onCanPlay={() => setVideoReady(true)}
+          onPlaying={() => setVideoReady(true)}
+        >
+          <source src="/assets/videos/quest-learning/QuestPathMap.mp4" type="video/mp4" />
+        </video>
 
         <div className="learning-quest-map__scrim" />
 
@@ -816,7 +845,11 @@ export default function LearningQuestMap({
           <div
             key={node.quest.code}
             className="learning-quest-map__node-wrap"
-            style={{ left: `${node.xPct}%`, top: `${node.yPct}%`, animationDelay: `${i * 0.15}s` }}
+            style={{
+              left: `${node.xPct}%`, top: `${node.yPct}%`, animationDelay: `${i * 0.15}s`,
+              ['--node-scale' as string]: nodeDepthScale(i),
+              zIndex: nodes.length - i, // ฐานใกล้ (ใหญ่) ทับฐานไกล (เล็ก)
+            }}
           >
             {/* ชื่อเควสลอยเด่นเหนือกองไฟ */}
             <div className="learning-quest-map__node-label">{node.quest.titleTh}</div>
@@ -848,8 +881,15 @@ export default function LearningQuestMap({
 
         {/* ตัวละครนกฮูกน้อย — เลื่อนตำแหน่งลื่นๆ ด้วย CSS transition (ดู .learning-quest-map__owl)
             พร้อมแอนิเมชันเดิน (ขาสลับ/ปีกกระพือ) ช่วงที่ตำแหน่งกำลังเลื่อนจริง */}
-        <div className="learning-quest-map__owl" style={{ left: `${owlPos.x}%`, top: `${owlPos.y}%` }}>
-          <OwlAvatar walking={isWalking} size={46} />
+        <div
+          className="learning-quest-map__owl"
+          style={{
+            left: `${owlPos.x}%`, top: `${owlPos.y}%`,
+            // นกฮูกย่อตามระยะลึกของฐานที่ยืนอยู่ ให้ขนาดสัมพันธ์กับฐาน
+            ['--owl-scale' as string]: nodeDepthScale(Math.max(0, Math.min(completedPathCount, rawNodePositions.length) - 1)),
+          }}
+        >
+          <OwlAvatar walking={isWalking} flying={isWalking} size={72} />
         </div>
       </div>
 
@@ -925,20 +965,36 @@ export default function LearningQuestMap({
         }
         .learning-quest-map__video {
           position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center;
+          /* [แก้ตามที่ระบุ — จอรัว/ไม่พร้อมกัน] วิดีโอ 5MB โหลดช้ากว่าส่วนอื่น — ซ่อนไว้แล้วค่อยจางเข้า
+             เมื่อเฟรมแรกพร้อม แทนการเด้งโผล่ทับพื้นหลังทึบกะทันหัน */
+          opacity: 0; transition: opacity .45s cubic-bezier(.22,1,.36,1);
         }
+        .learning-quest-map__video--ready { opacity: 1; }
         .learning-quest-map__scrim {
           position: absolute; inset: 0; pointer-events: none;
           background: linear-gradient(180deg, var(--glass-b-25) 0%, transparent 20%, transparent 70%, var(--glass-b-35) 100%);
         }
 
         .learning-quest-map__node-wrap {
-          position: absolute; transform: translate(-50%, -50%);
+          position: absolute; transform: translate(-50%, -50%) scale(var(--node-scale, 1));
           display: flex; flex-direction: column; align-items: center; gap: 4px;
           animation: learningQuestNodeIn .4s cubic-bezier(.22,1,.36,1) both;
         }
         @keyframes learningQuestNodeIn {
-          from { opacity: 0; transform: translate(-50%, -50%) scale(.5); }
-          to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          from { opacity: 0; transform: translate(-50%, -50%) scale(calc(var(--node-scale, 1) * .5)); }
+          to   { opacity: 1; transform: translate(-50%, -50%) scale(var(--node-scale, 1)); }
+        }
+
+        /* ═══ ธีมสว่าง — [แก้ตามที่ระบุ] พื้นรอบแผนที่ + เงาขอบบน/ล่างเป็นเขียวอ่อนแบบกรอบกระดาน
+           จัดอันดับ (ตัววิดีโอแผนที่ป่ายังเป็นภาพเดิม) ป้ายชื่อด่านเป็นป้ายเขียวอ่อน ตัวหนังสือเข้ม ═══ */
+        :root:not([data-theme="dark"]) .learning-quest-map { background: var(--leaf-soft); }
+        :root:not([data-theme="dark"]) .learning-quest-map__scrim {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--leaf-soft) 70%, transparent) 0%, transparent 22%, transparent 72%, color-mix(in srgb, var(--leaf-soft) 75%, transparent) 100%);
+        }
+        :root:not([data-theme="dark"]) .learning-quest-map .learning-quest-map__node-label {
+          background: color-mix(in srgb, var(--leaf-soft) 88%, transparent);
+          color: var(--n900);
+          border-color: color-mix(in srgb, var(--coin) 70%, var(--g600));
         }
 
         .learning-quest-map__node-label {
@@ -1047,25 +1103,28 @@ export default function LearningQuestMap({
         }
 
         .learning-quest-map__owl {
-          position: absolute; transform: translate(-50%, -60%);
-          z-index: 5; pointer-events: none;
-          transition: left 0.9s cubic-bezier(.45,.05,.55,.95), top 0.9s cubic-bezier(.45,.05,.55,.95);
+          position: absolute; transform: translate(-50%, -60%) scale(var(--owl-scale, 1));
+          z-index: 20; pointer-events: none;
+          transition: left 1.4s cubic-bezier(.45,.05,.55,.95), top 1.4s cubic-bezier(.45,.05,.55,.95), transform 1.4s cubic-bezier(.45,.05,.55,.95);
         }
 
         /* [ใหม่] FAB เควสเสริม — สไตล์เดียวกับ quest-gate-view__fab ใน QuestGateView.tsx
            [แก้] ใช้ --gpf-safe-bottom (ประกาศที่ .gameplay-frame) กันไม่ให้ ActionMenuBar
            บัง แทนการลดขนาดกล่องแม่ทั้งกล่อง (ดู comment ใน GameplayFrame.css) */
         .learning-quest-map__fab { position: absolute; bottom: calc(var(--gpf-safe-bottom, 0px) + 24px); left: 24px; z-index: 20; }
+        /* [แก้ตามที่ระบุ] ปุ่มเควสเสริมเป็นตัวอีโมจิ/รูปเปล่าๆ ไม่มีวงกลมพื้นหลัง/ขอบ —
+           เงา drop-shadow รอบตัวรูปแทน ให้ยังเห็นชัดบนพื้นแผนที่ */
         .learning-quest-map__fab-main {
-          width: 64px; height: 64px; border-radius: 50%;
-          background: linear-gradient(135deg, var(--g400), var(--g700));
-          border: 3px solid var(--fixed-white); color: var(--fixed-white); font-size: 26px;
+          width: 52px; height: 52px; padding: 0;
+          background: none; border: none; color: var(--fixed-white); font-size: 36px;
           display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 8px 20px var(--glass-b-50); cursor: pointer; position: relative; z-index: 2;
+          filter: drop-shadow(0 4px 10px var(--glass-b-60)); cursor: pointer; position: relative; z-index: 2;
           transition: transform .3s var(--ease-spring);
         }
+        .learning-quest-map__fab-main .icon-img { width: 36px; height: 36px; }
+        .learning-quest-map__fab-main:hover { transform: scale(1.08); }
         .learning-quest-map__fab-menu {
-          position: absolute; bottom: 74px; left: 8px;
+          position: absolute; bottom: 60px; left: -8px;
           display: flex; flex-direction: column-reverse; gap: 12px; pointer-events: none;
         }
         .learning-quest-map__fab.open .learning-quest-map__fab-menu { pointer-events: auto; }
@@ -1073,21 +1132,22 @@ export default function LearningQuestMap({
            มาก) — ปุ่มนี้ยังเป็นปุ่มกดจริง (ไม่ใช่แค่กรอบตกแต่งไอคอนแบบ QuestGateView) จึงคง
            พื้นหลัง/ขอบวงกลมไว้เป็นพื้นที่กดที่มองเห็นได้ */
         .learning-quest-map__fab-item {
-          position: relative; width: calc(2.5cm + 16px); height: calc(2.5cm + 16px); border-radius: 50%;
-          background: var(--g800); border: 2px solid var(--g400); color: var(--fixed-white); font-size: 20px;
+          /* [แก้ตามที่ระบุ] เล็กลง — เดิมไอคอน 2.5cm (~94px) ต่อปุ่ม */
+          position: relative; width: 68px; height: 68px; padding: 0;
+          background: none; border: none; color: var(--fixed-white); font-size: 40px;
           display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 4px 12px var(--glass-b-35); cursor: pointer;
+          filter: drop-shadow(0 4px 10px var(--glass-b-50)); cursor: pointer;
           transform: scale(0) translateY(24px); opacity: 0;
           transition: transform .3s var(--ease-spring), opacity .3s var(--ease-spring), background .18s ease;
         }
         .learning-quest-map__fab-item:disabled { cursor: not-allowed; }
-        .learning-quest-map__fab-item:hover:not(:disabled) { background: var(--g700); }
+        .learning-quest-map__fab-item:hover:not(:disabled) { filter: drop-shadow(0 4px 14px var(--glass-b-60)) brightness(1.08); }
         .learning-quest-map__fab.open .learning-quest-map__fab-item { transform: scale(1) translateY(0); opacity: 1; }
         /* [แก้ตามที่ระบุ — ตัวเลือก B] ตัวไอคอนเองไม่มีวงกลม/พื้นหลังซ้อนอีกชั้นข้างในปุ่ม */
         .learning-quest-map__fab-item-icon {
           display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;
         }
-        .learning-quest-map__fab-item-img { width: 2.5cm; height: 2.5cm; object-fit: contain; }
+        .learning-quest-map__fab-item-img { width: 60px; height: 60px; object-fit: contain; }
         .learning-quest-map__fab-badge {
           position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; border-radius: 50%;
           font-size: 9px; display: flex; align-items: center; justify-content: center;
