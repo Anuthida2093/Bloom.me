@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   DEFAULT_USER_DATA,
   DEFAULT_TREE_STATS,
-  STACK_PER_VISUAL_LEVEL,
+  MBTI_TREE_TYPE,
   type UserData,
   type TreeStats,
   type InventoryItem,
@@ -15,7 +15,9 @@ import { DECORATION_ITEM_META } from '../config/decorationItems'
 import { queryKeys } from '../services/queryKeys'
 import * as userApi from '../services/api/user.api'
 import * as shopApi from '../services/api/shop.api'
-import { getAuthToken } from '../services/http'
+import { ApiError, getAuthToken } from '../services/http'
+import { calculateVisualLevel } from '../utils/progression'
+import { markNewWaterDrop } from '../utils/waterPrompt'
 
 /*============================================================================*\
   UserContext — [ไฟล์ใหม่ แยกออกจาก AppContext เดิม]
@@ -65,7 +67,8 @@ interface UserContextValue {
   /** [เพิ่มรอบนี้ — ข้อ 2] ตั้งรหัสผ่านใหม่จาก token ในลิงก์กู้รหัสผ่าน */
   resetPassword: (data: { token: string; newPassword: string }) => Promise<void>
 
-  handleBuy: (itemId: string, price: number) => void
+  /** คืนข้อความ error ที่แสดงผู้ใช้ได้ (เช่นเหรียญไม่พอ — backend ตอบ 400 INSUFFICIENT_COINS) หรือ null ถ้าสำเร็จ */
+  handleBuy: (itemId: string, price: number) => Promise<string | null>
   handleEquip: (itemId: string) => void
   handleClaimStreakReward: (itemId: string) => void
 
@@ -112,10 +115,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
   /** ระดับภาพของต้นไม้ derive สดจาก stack ทั้ง 3 หมวด — ไม่เก็บ state ซ้ำ */
   const treeStats: TreeStats = useMemo(() => ({
     ...DEFAULT_TREE_STATS,
-    trunkBranchLevel: Math.max(1, Math.floor(userData.knowledgeStack / STACK_PER_VISUAL_LEVEL) + 1),
-    leafFlowerLevel: Math.max(1, Math.floor(userData.emotionStack / STACK_PER_VISUAL_LEVEL) + 1),
-    grassSoilLevel: Math.max(1, Math.floor(userData.healthStack / STACK_PER_VISUAL_LEVEL) + 1),
-  }), [userData.knowledgeStack, userData.emotionStack, userData.healthStack])
+    // backend ตั้ง TreeProgress.level = เลเวลผู้เล่น และ treeType ตาม MBTI — derive ให้ตรงกันแทนค่าตั้งต้น
+    level: userData.level,
+    treeType: userData.mbtiType ? MBTI_TREE_TYPE[userData.mbtiType] : 'BALANCED',
+    trunkBranchLevel: calculateVisualLevel(userData.knowledgeStack),
+    leafFlowerLevel: calculateVisualLevel(userData.emotionStack),
+    grassSoilLevel: calculateVisualLevel(userData.healthStack),
+  }), [userData.level, userData.mbtiType, userData.knowledgeStack, userData.emotionStack, userData.healthStack])
 
   const placedItems: PlacedItem[] = useMemo(
     () => inventoryData
@@ -232,11 +238,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
     (data: { token: string; newPassword: string }) => userApi.resetPassword(data),
     [])
 
-  const handleBuy = useCallback((itemId: string, price: number) => {
-    if (inventoryData.some((i) => i.shopItemId === itemId)) return
-    if (userData.coins < price) return
-    buyMutation.mutate({ itemId, price })
-  }, [buyMutation, inventoryData, userData.coins])
+  // ไม่เช็คเหรียญเองก่อนยิง — backend หักเหรียญแบบ atomic (WHERE coins >= price) และเป็นผู้ตัดสิน
+  // ยอดเหรียญบนจออาจเก่ากว่าของจริง (เช่นซื้อจากอีกเครื่อง) จึงต้องรับมือ INSUFFICIENT_COINS เสมอ
+  const handleBuy = useCallback(async (itemId: string, price: number): Promise<string | null> => {
+    if (inventoryData.some((i) => i.shopItemId === itemId)) return null
+    try {
+      await buyMutation.mutateAsync({ itemId, price })
+      return null
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'INSUFFICIENT_COINS') {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.me }) // ดึงยอดเหรียญจริงมาแสดง
+        return 'เหรียญไม่พอสำหรับไอเทมนี้ ทำเควสเพื่อสะสมเหรียญเพิ่มได้เลย'
+      }
+      return error instanceof ApiError ? error.userMessage : 'ซื้อไม่สำเร็จ ลองอีกครั้ง'
+    }
+  }, [buyMutation, inventoryData, queryClient])
 
   const handleEquip = useCallback((itemId: string) => { equipMutation.mutate(itemId) }, [equipMutation])
 
@@ -246,8 +262,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [buyMutation, inventoryData])
 
   const updateProfile = useCallback((patch: Partial<UserData>) => {
+    // ได้หยดน้ำเพิ่มจากเควส → ธง one-shot ให้หน้า Home เล่นบัวรดน้ำครั้งเดียว (utils/waterPrompt.ts)
+    if (patch.waterDrops !== undefined && patch.waterDrops > (userData.waterDrops ?? 0)) markNewWaterDrop(userData.id)
     updateProfileMutation.mutate(patch)
-  }, [updateProfileMutation])
+  }, [updateProfileMutation, userData.waterDrops, userData.id])
 
   const value = useMemo<UserContextValue>(() => ({
     userData, treeStats, inventoryData, placedItems,

@@ -59,3 +59,11 @@
   transform: translate(-50%, -50%);
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
 }
+
+/* เส้นทางที่เดินสำเร็จแล้ว (ถึงเป้า / ดูแผนที่ย้อนหลัง) — หนาขึ้น เรืองแสงทอง เห็นชัดบนแผนที่ */
+:is(.is-route-complete, .completed-journey) .map-path-renderer__path-progress {
+  stroke: #ffd166;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 1.2px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 2.5px rgba(255, 170, 0, 0.9));
+}
+:is(.is-route-complete, .completed-journey) .map-path-renderer__path-bg { stroke: rgba(255, 255, 255, 0.55); stroke-width: 3.6; }

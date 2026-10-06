@@ -4,7 +4,8 @@ import { QUEST_ICONS } from '../../config/iconAssets'
 import { useEffect, useState } from 'react'
 import { useAppContext } from '../../context/AppContext'
 import { computeCalorieTarget, loadMeals, totalCalories, MEALS_CHANGED_EVENT } from '../../utils/nutrition'
-import { getStepJourneyDaysDone, STEP_JOURNEY_DAYS } from '../../utils/stepJourneyDays'
+import { useStepHistory } from '../../hooks/useProgression'
+import { localDateKey } from '../../services/api/progression.api'
 
 const STEP_JOURNEY_QUEST_CODE = 'phys-vitality-steps'
 
@@ -67,6 +68,10 @@ export default function QuestGateView({
 }: QuestGateViewProps) {
   const theme = THEME[category]
   const { userData } = useAppContext()
+  // วันนี้เดินถึงเป้าแล้ว → แถวเควสก้าวโชว์ "✅ ก้าวจริง · สำเร็จ" กดเปิดเควส = แผนที่เดิมที่เดินสำเร็จ (CompletedTripView)
+  const stepHistory = useStepHistory()
+  const todayKey = localDateKey()
+  const stepToday = stepHistory.find((d) => d.date === todayKey && d.goalMet) ?? null
   // [แก้ตามที่ระบุ] แถวเควสแคลอรี่ตาม BMI บอกด้านขวาว่าวันนี้ทานไปกี่แคลอรี่แล้ว (อัปเดตทันทีที่บันทึกมื้อ)
   const calorieTarget = computeCalorieTarget(userData)
   const [caloriesToday, setCaloriesToday] = useState(() => totalCalories(loadMeals(userData.id)))
@@ -114,12 +119,13 @@ export default function QuestGateView({
           // ต้องเช็คอินอารมณ์ก่อน — ไม่ใช่ "ล็อกจริง" (ยังกดเข้าไปได้ แค่จะเจอหน้าชวนไป
           // เช็คอินก่อนหน้าเควสจริง) จึงไม่ disable ปุ่ม แค่โชว์ป้ายบอกแยกจาก lock
           const moodGated = !done && !locked && needsMoodCheckin(q.code)
+          const stepSuccess = q.code === STEP_JOURNEY_QUEST_CODE && stepToday
           return (
             <button
               key={q.code}
               className="quest-gate-view__row"
-              disabled={locked}
-              title={moodGated ? 'เช็คอินอารมณ์ก่อนถึงจะเล่นได้' : q.titleTh}
+              disabled={locked && !stepSuccess}
+              title={stepSuccess ? 'ดูแผนที่ทริปที่เดินสำเร็จวันนี้' : moodGated ? 'เช็คอินอารมณ์ก่อนถึงจะเล่นได้' : q.titleTh}
               onClick={() => onSelectQuest(q)}
             >
               <span className="quest-gate-view__row-icon">
@@ -145,17 +151,21 @@ export default function QuestGateView({
                   ทานไปแล้ว {caloriesToday.toLocaleString()}{calorieTarget !== null ? ` / ${calorieTarget.toLocaleString()}` : ''} kcal
                 </span>
               )}
-              {q.isRepeatable && (
-                <span
-                  className="quest-gate-view__row-status quest-gate-view__row-status--repeat"
-                  title={q.code === STEP_JOURNEY_QUEST_CODE ? `เดินครบเป้าหมายแล้ว ${getStepJourneyDaysDone()}/${STEP_JOURNEY_DAYS} วัน` : q.maxPerDay ? `เล่นซ้ำได้วันนี้ ${playsToday}/${q.maxPerDay} ครั้ง` : 'เล่นซ้ำได้หลายครั้งต่อวัน'}
-                >
-                  {/* [แก้ตามที่ระบุ] ก้าวเพื่อสุขภาพ = ทริป 3 วัน → แสดงจำนวนวันที่สำเร็จ 0/3 */}
-                  🔁{q.code === STEP_JOURNEY_QUEST_CODE ? ` ${getStepJourneyDaysDone()}/${STEP_JOURNEY_DAYS}` : q.maxPerDay ? ` ${playsToday}/${q.maxPerDay}` : ''}
+              {stepSuccess && (
+                <span className="quest-gate-view__row-status quest-gate-view__row-status--done quest-gate-view__row-status--steps">
+                  ✅ {stepSuccess.steps.toLocaleString()} ก้าว · สำเร็จ 🗺️
                 </span>
               )}
-              {done && <span className="quest-gate-view__row-status quest-gate-view__row-status--done">✓ สำเร็จแล้ว</span>}
-              {!done && locked && <span className="quest-gate-view__row-status quest-gate-view__row-status--locked">🔒 ล็อกอยู่</span>}
+              {q.isRepeatable && q.code !== STEP_JOURNEY_QUEST_CODE && (
+                <span
+                  className="quest-gate-view__row-status quest-gate-view__row-status--repeat"
+                  title={q.maxPerDay ? `เล่นซ้ำได้วันนี้ ${playsToday}/${q.maxPerDay} ครั้ง` : 'เล่นซ้ำได้หลายครั้งต่อวัน'}
+                >
+                  🔁{q.maxPerDay ? ` ${playsToday}/${q.maxPerDay}` : ''}
+                </span>
+              )}
+              {done && !stepSuccess && <span className="quest-gate-view__row-status quest-gate-view__row-status--done">✓ สำเร็จแล้ว</span>}
+              {!done && locked && !stepSuccess && <span className="quest-gate-view__row-status quest-gate-view__row-status--locked">🔒 ล็อกอยู่</span>}
               {!done && !locked && moodGated && (
                 <span className="quest-gate-view__row-status quest-gate-view__row-status--mood">🌤️ เช็คอินก่อน</span>
               )}

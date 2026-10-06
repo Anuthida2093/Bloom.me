@@ -6,6 +6,7 @@ import { MOOD_TYPE_INFO, MOOD_CATEGORY_SUBTYPES, LEGACY_KEY_TO_CATEGORY } from '
 import { BADGE_ICONS } from '../../config/iconAssets'
 import FadeInText from '../welcome/FadeInText'
 import { useLanguage } from '../../context/LanguageContext'
+import { EVENING_CHECKIN_START_HOUR, type MoodCheckinStatus } from '../../config/moodCheckinSlots'
 import '../leaderboard/leaderboardRow.css'
 
 const C_1 = '#D8F3DC'
@@ -53,6 +54,8 @@ interface MoodCheckInProps {
    *  จะรอ (await) ให้บันทึกเสร็จจริงก่อนแล้วค่อยปิด modal เอง ไม่ใช่ปิดทันทีที่กดปุ่ม */
   onSubmit?: (mood: MoodKey, subMood: MoodTypeValue, text: string) => void | Promise<void>
   onSkip?: () => void
+  /** รอบเช็คอินเช้า/เย็นปัจจุบัน (ProgressContext.moodCheckinStatus) — ไม่ส่ง = ไม่แสดงแถบรอบ */
+  checkinStatus?: MoodCheckinStatus
 }
 
 // อิโมจิลอยตัวเบาๆ ในพื้นหลัง (ตกแต่งล้วนๆ ไม่โต้ตอบ) — ตำแหน่ง/จังหวะ/ขนาดสุ่มไว้ล่วงหน้า
@@ -74,12 +77,13 @@ const FLOATING_DECOR = [
  *  - ฟอนต์เดียวกับหน้า Welcome (--font-display) ข้อความค่อยๆ ขึ้นมาแบบรายละเอียดหน้า Welcome
  *  - เลื่อนขึ้นลงได้แต่ไม่โชว์แถบเลื่อน + เว้นล่างพ้นแถบเมนูล่าง (--gpf-safe-bottom)
  *  - ปุ่มกากบาทมุมขวาบน (= ข้ามสำหรับวันนี้)
- *  - AI วิเคราะห์แล้วเด้งผล (อารมณ์ + โพสอิท) ทับการ์ด มีกากบาทปิด และกดรดน้ำต้นไม้ได้เลย
+ *  - [แก้ตามที่ระบุ] AI วิเคราะห์แล้วแสดงอารมณ์ที่ได้ไว้ใต้ปุ่มวิเคราะห์ (ไม่เด้งป็อปอัปทับการ์ดแล้ว)
+ *    ผู้ใช้เลือก/แก้อารมณ์ต่อในกริดด้านล่าง แล้วค่อยกดรดน้ำต้นไม้ที่ปุ่มท้ายการ์ด
  */
-export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: MoodCheckInProps) {
+export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {}, checkinStatus }: MoodCheckInProps) {
   useLockBodyScroll()
   useEscapeKey(onSkip)
-  const { t } = useLanguage()
+  const { t, tv } = useLanguage()
   const [text, setText] = useState('')
   const [mood, setMood] = useState<MoodKey | null>(null)
   /** [เพิ่มตามที่ระบุ — ขยาย MoodType ให้ครบ 8 อารมณ์] อารมณ์ย่อยจริงที่จะส่งเป็น
@@ -178,10 +182,21 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
           {/* Header — โลโก้เช็คอินใหญ่ขึ้น + หัวข้อฟอนต์หน้า Welcome + ข้อความค่อยๆ ขึ้นมา */}
           <div style={{ textAlign: 'center', marginBottom: 18 }}>
             <img src={BADGE_ICONS.checkin} alt="" className="mood-checkin-header-emoji" style={{ width: 92, height: 92, objectFit: 'contain', marginBottom: 6 }} />
-            <FadeInText as="h2" className="mood-checkin-title">{t('checkin.greeting')}</FadeInText>
+            <FadeInText as="h2" className="mood-checkin-title">
+              {checkinStatus?.slot === 'evening' ? t('checkin.greetingEvening') : t('checkin.greeting')}
+            </FadeInText>
             <FadeInText as="p" delayMs={250} className="mood-checkin-subtitle">
               {t('checkin.question')}
             </FadeInText>
+            {checkinStatus && (() => {
+              const slot = t(checkinStatus.slot === 'evening' ? 'checkin.slotEvening' : 'checkin.slotMorning')
+              return (
+                <p className="mood-checkin-hint" style={{ marginTop: 6 }}>
+                  {checkinStatus.doneThisSlot ? tv('checkin.slotDone', { slot }) : tv('checkin.slotOpen', { slot })}
+                  {checkinStatus.slot === 'morning' && <> · {tv('checkin.eveningOpensAt', { hour: EVENING_CHECKIN_START_HOUR })}</>}
+                </p>
+              )
+            })()}
           </div>
 
           {/* Journal input */}
@@ -212,6 +227,17 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
                 </>
               ) : `🤖 ${t('checkin.analyze')}`}
             </button>
+            {/* ผล AI แสดงไว้ใต้ปุ่มวิเคราะห์ — เลือกอารมณ์เองต่อด้านล่างได้ แล้วค่อยรดน้ำ */}
+            {aiResult && resultInfo && resultStyle && (
+              <div className="mood-checkin-result-inline" role="status">
+                <FadeInText as="p" className="mood-checkin-label" style={{ margin: '0 0 6px' }}>{t('checkin.aiResult')}</FadeInText>
+                <FadeInText delayMs={120} className="mood-checkin-result__mood" style={{ borderColor: resultStyle.color, background: resultStyle.bg, color: resultStyle.color }}>
+                  <span style={{ fontSize: 32 }}>{resultInfo.emoji}</span>
+                  <span>{t(`mood.${aiResult}`)}</span>
+                </FadeInText>
+                <p className="mood-checkin-result__note">{t('checkin.notRight')}</p>
+              </div>
+            )}
           </div>
 
           {/* เลือกอารมณ์เอง (หรือแก้ผลที่ AI เดา) — กริด 8 อารมณ์ 4x2 */}
@@ -258,27 +284,6 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
           </button>
         </div>
 
-        {/* ผล AI เด้งทับการ์ด — อารมณ์ที่วิเคราะห์ได้ + โพสอิท + กากบาทปิด + รดน้ำได้เลย */}
-        {aiResult && resultInfo && resultStyle && (
-          <div className="mood-checkin-result-layer" onClick={() => setAiResult(null)}>
-            <div className="mood-checkin-result" onClick={(e) => e.stopPropagation()}>
-              <button type="button" className="mood-checkin-close" onClick={() => setAiResult(null)} title={t('common.close')} aria-label={t('common.close')}>
-                <img src={BADGE_ICONS.close} className="icon-img" alt="" />
-              </button>
-              <FadeInText as="p" className="mood-checkin-label" style={{ marginTop: 6 }}>{t('checkin.aiResult')}</FadeInText>
-              <FadeInText delayMs={150} className="mood-checkin-result__mood" style={{ borderColor: resultStyle.color, background: resultStyle.bg, color: resultStyle.color }}>
-                <span style={{ fontSize: 40 }}>{resultInfo.emoji}</span>
-                <span>{t(`mood.${aiResult}`)}</span>
-              </FadeInText>
-              <FadeInText delayMs={350} className="mood-checkin-postit">
-                <div className="mood-checkin-postit__tag">{t('checkin.postitTag')}</div>
-                <p>{text.slice(0, 160)}{text.length > 160 ? '...' : ''}</p>
-              </FadeInText>
-              <p className="mood-checkin-result__note">{t('checkin.notRight')}</p>
-              {waterButton}
-            </div>
-          </div>
-        )}
       </div>
 
       <style>{`
@@ -412,25 +417,13 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
           color: var(--mc-text); opacity: .65; font-size: 13px;
         }
 
-        /* ผล AI ทับการ์ด */
-        .mood-checkin-result-layer {
-          position: absolute; inset: 0; z-index: 4; border-radius: 24px;
-          background: color-mix(in srgb, var(--mc-bg-2) 55%, transparent); backdrop-filter: blur(3px);
-          display: flex; align-items: center; justify-content: center; padding: 18px;
-          animation: moodCheckinBackdropFade .2s ease both;
-        }
-        .mood-checkin-result {
-          position: relative; width: 100%; max-width: 360px; padding: 34px 20px 20px;
-          border-radius: 20px; background: var(--mc-bg); border: 2px solid var(--mc-edge);
-          box-shadow: 0 16px 40px var(--glass-b-30); text-align: center;
-          animation: moodCheckinCardPop .3s cubic-bezier(.22,1,.36,1) both;
-        }
+        /* ผล AI ใต้ปุ่มวิเคราะห์ */
+        .mood-checkin-result-inline { margin-top: 12px; text-align: center; animation: moodCheckinCardPop .3s cubic-bezier(.22,1,.36,1) both; }
         .mood-checkin-result__mood {
-          display: inline-flex; align-items: center; gap: 10px; margin: 4px auto 18px;
+          display: inline-flex; align-items: center; gap: 10px; margin: 2px auto 14px;
           padding: 8px 18px; border-radius: 99px; border: 2.5px solid; font-size: 20px; font-weight: 700;
         }
-        .mood-checkin-result .mood-checkin-postit { text-align: left; }
-        .mood-checkin-result__note { font-size: 12px; opacity: .75; margin: -4px 0 12px; color: var(--mc-text); }
+        .mood-checkin-result__note { font-size: 12px; opacity: .75; margin: -8px 0 0; color: var(--mc-text); }
 
         @keyframes moodCheckinCardPop {
           from { opacity: 0; transform: scale(.94) translateY(12px); }
@@ -483,7 +476,7 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {} }: 
           .mood-checkin-frame, .mood-checkin-backdrop, .mood-checkin-header-emoji,
           .mood-checkin-float-decor, .mood-checkin-mood-btn--picked, .mood-checkin-postit,
           .mood-checkin-submit-btn--ready, .mood-checkin-thinking-dots span,
-          .mood-checkin-result-layer, .mood-checkin-result {
+          .mood-checkin-result-inline {
             animation: none;
           }
         }

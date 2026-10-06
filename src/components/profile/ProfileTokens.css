@@ -1,0 +1,44 @@
+/* ── คลังไอเทม: การ์ดแลกซื้อไอเทม — ExchangeCards.tsx ── */
+.profile-tokens { margin-bottom: 18px; padding: 12px; border-radius: 18px; background: linear-gradient(135deg, #FFF9C4, #FFF3D6); box-shadow: inset 0 0 0 2px #f5b301; }
+.profile-tokens__title { font-family: var(--font-display); font-size: var(--fs-sm); font-weight: 800; color: #6b4a00; margin-bottom: 10px; }
+.profile-tokens__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px; }
+.profile-tokens__card-btn { padding: 0; border: none; background: none; cursor: pointer; transition: transform .15s ease; }
+.profile-tokens__card-btn:hover { transform: translateY(-3px) rotate(-1deg); }
+.profile-tokens__card-btn:active { transform: translateY(1px); }
+
+/* การ์ดสะสม: สัดส่วน 3:4 กรอบทอง พื้นไล่สี รูปไอเทมกลางการ์ด ตรา Item.png มุมซ้ายบน */
+.exchange-card {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  width: 100%; aspect-ratio: 3 / 4; padding: 10px 6px 8px; box-sizing: border-box;
+  border-radius: 14px; overflow: hidden;
+  background: radial-gradient(circle at 50% 38%, #ffffff 0%, #fff4cf 55%, #ffd36b 100%);
+  border: 3px solid #f5b301;
+  box-shadow: 0 4px 0 #c98a00, 0 8px 16px rgba(0, 0, 0, 0.16), inset 0 0 0 2px rgba(255, 255, 255, 0.7);
+  font-family: var(--font-display); color: #4A2C0A;
+}
+.exchange-card--rare { background: radial-gradient(circle at 50% 38%, #ffffff 0%, #f1e6ff 55%, #c4a1ff 100%); border-color: #9b7bea; box-shadow: 0 4px 0 #6d4fc2, 0 8px 16px rgba(0, 0, 0, 0.16), inset 0 0 0 2px rgba(255, 255, 255, 0.7); }
+.exchange-card--large { width: 168px; padding: 14px 10px 12px; }
+.exchange-card__seal { position: absolute; top: 4px; left: 4px; width: 26px; height: 26px; object-fit: contain; }
+.exchange-card--large .exchange-card__seal { width: 36px; height: 36px; }
+.exchange-card__count {
+  position: absolute; top: 5px; right: 6px; min-width: 24px; padding: 1px 6px; border-radius: 99px;
+  background: #e85d2a; color: #fff; font-size: 12px; box-shadow: 0 2px 0 #a33c15;
+}
+.exchange-card__art { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 0; }
+.exchange-card__art-img { width: 70%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25)); }
+.exchange-card__emoji { font-size: 44px; width: auto; }
+.exchange-card--large .exchange-card__emoji { font-size: 76px; }
+.exchange-card__name { width: 100%; padding: 2px 4px; border-radius: 8px; background: rgba(255, 255, 255, 0.75); font-size: 12px; line-height: 1.3; text-align: center; }
+.exchange-card--large .exchange-card__name { font-size: 15px; }
+.exchange-card__tier { margin-top: 3px; font-size: 10px; opacity: 0.75; }
+
+.profile-tokens__cell { display: flex; flex-direction: column; gap: 6px; }
+.exchange-card__count { font-size: 14px; min-width: 26px; text-align: center; }
+.exchange-card__name { font-size: 11px; }
+.profile-tokens__exchange {
+  padding: 7px 0; border: none; border-radius: 99px; cursor: pointer;
+  font-family: var(--font-display); font-size: 13px; color: #4A2C0A;
+  background: linear-gradient(180deg, #ffe08a, #f5b301);
+  box-shadow: 0 3px 0 #c98a00, inset 0 2px 0 rgba(255, 255, 255, 0.75);
+}
+.profile-tokens__exchange:active { transform: translateY(2px); box-shadow: 0 1px 0 #c98a00; }

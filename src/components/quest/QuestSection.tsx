@@ -14,6 +14,7 @@ import QuestRewardCelebration, { type QuestCelebrationData } from './QuestReward
 import QuestFeedbackPrompt, { type QuestFeedbackPromptData } from './QuestFeedbackPrompt'
 import { playSfx } from '../../utils/audioPlayer'
 import GameAlert from '../ui/GameAlert'
+import { isQuestDoneNow } from '../../utils/questCompletion'
 import { BADGE_ICONS } from '../../config/iconAssets'
 import '../leaderboard/leaderboardRow.css'
 
@@ -88,7 +89,6 @@ export default function QuestSection({
 
   const [activeTab, setActiveTab] = useState<QuestTabId>(initialTab)
   const { t } = useLanguage()
-  const [confirmQuest, setConfirmQuest] = useState<QuestDef | null>(null)
   const [playingQuest, setPlayingQuest] = useState<QuestDef | null>(null)
   /** ป็อบอัพแจ้งเหตุผลที่กดเควสไม่ได้ (ล็อก/ทำแล้ววันนี้) */
   const [questNotice, setQuestNotice] = useState<{ icon: string; message: string; title?: string; iconImg?: string } | null>(null)
@@ -150,7 +150,6 @@ export default function QuestSection({
   \*──────────────────────────────────────────────────────────────────────────*/
   const handleChangeTab = (nextTab: QuestTabId) => {
     if (nextTab === activeTab) return
-    setConfirmQuest(null)
     setPlayingQuest(null)
     setSpecialQuest(null)
     setActiveTab(nextTab)
@@ -166,14 +165,14 @@ export default function QuestSection({
     handleChangeTab(initialTab)
   }
 
-  const anyGameplayOpen = !!confirmQuest || !!playingQuest || !!specialQuest
+  const anyGameplayOpen = !!playingQuest || !!specialQuest
   useEscapeKey(onClose, !anyGameplayOpen)
 
   const tab = QUEST_TABS.find((t) => t.id === activeTab) ?? QUEST_TABS[0]
   const catalog = QUEST_CATALOG_BY_TAB[activeTab]
 
-  const isCompleted = (questCode: string): boolean =>
-    questLogs.some((l) => l.quest?.code === questCode && l.status === 'COMPLETED')
+  /** เควสรายวันนับเฉพาะวันนี้ · หมวดการเรียนรู้ทำครบทุกด่าน = เริ่มรอบใหม่จากด่านแรก (utils/questCompletion.ts) */
+  const isCompleted = (questCode: string): boolean => isQuestDoneNow(questLogs, questCode)
 
   /** [เพิ่มรอบนี้ — เควสเล่นซ้ำได้ต่อวัน] นับจำนวนครั้งที่ทำสำเร็จ "วันนี้" จริงๆ (อิง completedAt)
    *  ใช้กับเควสที่มี maxPerDay เช่น phys-pure-water — เควสอื่นไม่มี maxPerDay จึงไม่ถูกเรียกใช้ */
@@ -205,7 +204,8 @@ export default function QuestSection({
 
   /** เหตุผลที่เควสนี้ยังกดไม่ได้ (null = กดได้) — ใช้ทั้งล็อกจริงและอธิบายให้ผู้ใช้ฟัง */
   const getLockReason = (q: QuestDef): string | null => {
-    if (q.maxPerDay && getTodayCompletionCount(q.code) >= q.maxPerDay) {
+    // ก้าวเพื่อสุขภาพ: ทำครบวันนี้แล้วยังเปิดดูแผนที่ที่เดินสำเร็จได้ (ในเกมไม่ให้เริ่มทริปใหม่ซ้ำ)
+    if (q.maxPerDay && getTodayCompletionCount(q.code) >= q.maxPerDay && q.code !== 'phys-vitality-steps') {
       return `ทำครบโควตาวันนี้แล้ว (${q.maxPerDay}/${q.maxPerDay}) พรุ่งนี้มาใหม่นะ`
     }
     if (q.isLocked && completedDailyCount < (q.unlockAfterQuestCount ?? 1)) {
@@ -244,7 +244,8 @@ export default function QuestSection({
    *  เควสที่เล่นไม่ได้ (ล็อก/ครบโควตา/ทำสำเร็จแล้ววันนี้) แจ้งเหตุผลเป็นป็อบอัพแทน (เดิมข้อความนี้
    *  อยู่ในป็อบอัพยืนยัน — ตอนนี้โชว์เฉพาะตอนที่ต้องบอกจริงๆ) */
   const handleSelectQuest = (q: QuestDef) => {
-    if (q.isPassive) return
+    // [แก้บั๊ก] เดิม `if (q.isPassive) return` — เควสเสริม passive 2 ตัว (ผู้พิทักษ์การพักผ่อน / ป่าแห่งสิบปี)
+    // จึงกดแล้วไม่มีอะไรเกิดขึ้นเลย ตอนนี้เปิดหน้าข้อมูลของมันได้ (หน้านั้นปิดด้วย exit ไม่ให้รางวัลซ้ำ)
     const lockReason = getLockReason(q)
     if (lockReason) { setQuestNotice({ icon: '🔒', title: 'ยังเล่นไม่ได้', message: `${q.titleTh}
 ${lockReason}` }); return }
@@ -258,13 +259,6 @@ ${lockReason}` }); return }
     openQuest(q)
   }
 
-  const handleStartQuest = () => {
-    if (!confirmQuest) return
-    const quest = confirmQuest
-    setConfirmQuest(null)
-    openQuest(quest)
-  }
-
   /** [ใหม่] เปิดเควสจาก code ตรงๆ — ใช้โดยแดชบอร์ด/หน้าประเมิน ที่อยากพาไปทำเควสทันที */
   const handleOpenQuestByCode = (questCode: string) => {
     const quest = findQuestByCode(questCode)
@@ -274,7 +268,6 @@ ${lockReason}` }); return }
     const targetTab: QuestTabId =
       quest.category === 'EMOTION' ? 'mental' : quest.category === 'HEALTH' ? 'physical' : 'knowledge'
     handleChangeTab(targetTab)
-    setConfirmQuest(null)
     openQuest(quest)
   }
 
@@ -291,6 +284,10 @@ ${lockReason}` }); return }
     // เช็คก่อนเรียก onToggle เสมอ — หลังเรียกแล้ว questLogs (async) อาจยังไม่อัปเดตทัน
     const alreadyDone = isCompleted(questCode)
     onToggle(questCode, payload)
+    // หยั่งรากลึกครบ 3 รอบโดยไม่กดข้าม → ผู้พิทักษ์การพักผ่อนสำเร็จอัตโนมัติ (วันละครั้ง)
+    if (questCode === 'know-deep-root' && payload?.strictComplete === true && payload?.skipped !== true && !isCompleted('know-guardian-of-rest')) {
+      onToggle('know-guardian-of-rest', { auto: true, source: 'know-deep-root' })
+    }
     setPlayingQuest(null)
     if (!alreadyDone || questDef?.maxPerDay) triggerCelebration(questCode, payload?.skipped === true)
   }
@@ -345,9 +342,6 @@ ${lockReason}` }); return }
             accent={tab.accent}
             accentBg={tab.accentBg}
             onSelectQuest={handleSelectQuest}
-            confirmQuest={confirmQuest}
-            onStartQuest={handleStartQuest}
-            onCancelConfirm={() => setConfirmQuest(null)}
             playingQuest={playingQuest}
             onCompletePlaying={handleCompletePlaying}
             onClosePlaying={handleClosePlaying}

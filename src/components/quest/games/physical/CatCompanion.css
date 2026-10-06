@@ -4,8 +4,9 @@
 
 .cat-companion {
   position: absolute;
-  width: 40px;
-  height: 40px;
+  /* [แก้ตามที่ระบุ] ใหญ่ขึ้นเกือบ 2 เท่า — แผนที่ 1024px ย่อลงบนมือถือ เดิม 72px เหลือตัวเล็กมาก */
+  width: 140px;
+  height: 140px;
   object-fit: contain;
   transform: translate(-50%, -68%);
   transition: left 0.6s cubic-bezier(0.22, 1, 0.36, 1), top 0.6s cubic-bezier(0.22, 1, 0.36, 1);

@@ -13,6 +13,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { AppProvider, useUser, useProgress } from '../../../../context/AppContext'
+import { LanguageProvider } from '../../../../context/LanguageContext'
 import QuestSection from '../../QuestSection'
 
 class MockResizeObserver {
@@ -50,9 +51,11 @@ function renderHarness() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <QueryClientProvider client={queryClient}>
-      <AppProvider>
-        <Harness />
-      </AppProvider>
+      <LanguageProvider>
+        <AppProvider>
+          <Harness />
+        </AppProvider>
+      </LanguageProvider>
     </QueryClientProvider>,
   )
 }
@@ -98,9 +101,8 @@ describe('LearningQuestMap — sync ทันทีหลังทำเคว�
   it('เล่น "เพ่งสมาธิ / ตั้งเป้าหมาย" จบ 1 ครั้ง → ด่าน "หยั่งรากลึก" ต้องปลดล็อกโดยไม่ต้องรอ tick เพิ่ม', async () => {
     renderHarness()
 
-    // เปิดหน้ายืนยันเควสแรก
+    // กดเควสแรก → เข้าเกมทันที (ไม่มีป็อบอัพ "เริ่มทำภารกิจ" คั่นแล้ว ดู handleSelectQuest ใน QuestSection.tsx)
     fireEvent.click(await screen.findByTitle('เพ่งสมาธิ / ตั้งเป้าหมาย'))
-    fireEvent.click(await screen.findByText('🚩 เริ่มทำภารกิจ'))
 
     // กรอกฟอร์มขั้นต่ำให้ปุ่ม "ปักธงเป้าหมายวันนี้" กดได้ (canSubmit)
     fireEvent.change(await screen.findByLabelText('วันนี้จะฝึกอะไรให้เก่งขึ้น'), { target: { value: 'ทดสอบ SQL join' } })
@@ -109,13 +111,13 @@ describe('LearningQuestMap — sync ทันทีหลังทำเคว�
     const submitBtn = screen.getByText('ปักธงเป้าหมายวันนี้') as HTMLButtonElement
     expect(submitBtn.disabled).toBe(false)
 
-    // owl ก่อนทำเควส — ยืนอยู่ที่ FIRST_OWL_POS ({x:51,y:90}, จุดคงที่ก่อนถึงโหนด 1 บนเส้นทาง —
+    // owl ก่อนทำเควส — ยืนอยู่ที่ FIRST_OWL_POS ({x:50,y:86}, จุดคงที่ก่อนถึงโหนด 1 บนเส้นทาง —
     // ดู LearningQuestMap.tsx) เพราะยังไม่ทำอะไรสำเร็จ [แก้รอบกล้องอัตโนมัติ] เดิมทดสอบด้วยสูตร
     // offset จากโหนด 1 (rawStartPos) ซึ่งถูกตัดออกไปแล้วตามที่ระบุ (ข้อ 1: นกฮูกต้องอยู่บน
     // เส้นทางจริง ไม่ใช่ offset เดา) แทนที่ด้วย FIRST_OWL_POS คงที่
     const owlBefore = document.querySelector('.learning-quest-map__owl') as HTMLElement
-    expect(owlBefore.style.left).toBe('51%')
-    expect(owlBefore.style.top).toBe('90%')
+    expect(owlBefore.style.left).toBe('50%')
+    expect(owlBefore.style.top).toBe('86%')
 
     // ── จุดวัดผลจริง — กดครั้งเดียว แล้วเช็คทันที ไม่มี await/waitFor คั่นกลางเลย ──
     fireEvent.click(submitBtn)
@@ -124,10 +126,10 @@ describe('LearningQuestMap — sync ทันทีหลังทำเคว�
     const deepRootNode = screen.getByTitle('หยั่งรากลึก / โหมดจดจ่อ')
     expect(deepRootNode.className).not.toContain('learning-quest-map__node--locked')
 
-    // 2) นกฮูกต้องขยับไปที่ตำแหน่งโหนดที่ 1 "พอดี" ทันที (FIXED_NODE_POSITIONS[0] = {x:40,y:70}
+    // 2) นกฮูกต้องขยับไปที่ตำแหน่งโหนดที่ 1 "พอดี" ทันที (FIXED_NODE_POSITIONS[0] = {x:53,y:80}
     // — รอบกล้องอัตโนมัตินี้เปลี่ยนสูตรจาก offset เดาเป็น "ตำแหน่งโหนดพอดี" กันนกฮูกหลุดเส้นทาง)
     const owlAfter = document.querySelector('.learning-quest-map__owl') as HTMLElement
-    expect(owlAfter.style.left).toBe('40%')
-    expect(owlAfter.style.top).toBe('70%')
+    expect(owlAfter.style.left).toBe('53%')
+    expect(owlAfter.style.top).toBe('80%')
   }, 10000)
 })

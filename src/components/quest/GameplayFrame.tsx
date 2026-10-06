@@ -43,7 +43,6 @@ import type { QuestPlayPayload } from '../../types.mental'
 import { useAppContext } from '../../context/AppContext'
 import LearningQuestMap from './learning/LearningQuestMap'
 import QuestGateView from './QuestGateView'
-import QuestConfirmModal from './QuestConfirmModal'
 import QuestPlayModal from './QuestPlayModal'
 import MoodGateScreen from './MoodGateScreen'
 import OracleCardsPage from './mental/OracleCardsPage'
@@ -81,10 +80,6 @@ interface GameplayFrameProps {
 
   onSelectQuest: (quest: QuestDef) => void
 
-  confirmQuest: QuestDef | null
-  onStartQuest: () => void
-  onCancelConfirm: () => void
-
   playingQuest: QuestDef | null
   onCompletePlaying: (questCode: string, payload?: Record<string, unknown>) => void
   onClosePlaying: () => void
@@ -111,7 +106,7 @@ interface GameplayFrameProps {
 
 export default function GameplayFrame({
   activeTab, pathQuests, sideQuests, isCompleted, isLocked, getTodayCompletionCount, accent, accentBg,
-  onSelectQuest, confirmQuest, onStartQuest, onCancelConfirm,
+  onSelectQuest,
   playingQuest, onCompletePlaying, onClosePlaying,
   specialQuest, todaysMoodEntry, onRequestMoodCheckin, onCompleteSpecial, onCloseSpecial, onFailIncinerator,
   onOpenQuestByCode,
@@ -126,7 +121,6 @@ export default function GameplayFrame({
   const belongsToActiveTab = (quest: QuestDef | null): boolean =>
     !!quest && CATEGORY_TO_TAB[quest.category] === activeTab
 
-  const visibleConfirmQuest = belongsToActiveTab(confirmQuest) ? confirmQuest : null
   const visiblePlayingQuest = belongsToActiveTab(playingQuest) ? playingQuest : null
   const visibleSpecialQuest = belongsToActiveTab(specialQuest) ? specialQuest : null
 
@@ -139,13 +133,6 @@ export default function GameplayFrame({
     setPrevActiveTab(activeTab)
     setSafetyNetOpen(false)
   }
-
-  const confirmLocked = visibleConfirmQuest ? isLocked(visibleConfirmQuest) : false
-  // [แก้รอบนี้ — เควสเล่นซ้ำได้ต่อวัน] เควสที่มี maxPerDay (เช่น phys-pure-water) ต้องยัง
-  // กดเริ่มใหม่ได้แม้เคยทำสำเร็จมาแล้ววันนี้ — ปิดกั้นเฉพาะตอนครบโควตาจริง (isLocked ข้างบน
-  // เช็ค maxPerDay ให้แล้ว) ไม่ใช่ทันทีที่ "เคยสำเร็จ" แบบเควสทั่วไป
-  const confirmCompleted = visibleConfirmQuest && !visibleConfirmQuest.maxPerDay
-    ? isCompleted(visibleConfirmQuest.code) : false
 
 
   return (
@@ -163,7 +150,7 @@ export default function GameplayFrame({
             isLocked={isLocked}
             getTodayCompletionCount={getTodayCompletionCount}
             onSelectQuest={onSelectQuest}
-            selectedQuestCode={visibleConfirmQuest?.code ?? visiblePlayingQuest?.code ?? null}
+            selectedQuestCode={visiblePlayingQuest?.code ?? null}
           />
         )}
 
@@ -199,16 +186,6 @@ export default function GameplayFrame({
       </div>
 
       {/* ── Contained popups (position:absolute ครอบแค่กรอบนี้) ── */}
-      <QuestConfirmModal
-        quest={visibleConfirmQuest}
-        accent={accent}
-        accentBg={accentBg}
-        locked={confirmLocked}
-        completed={confirmCompleted}
-        onStart={onStartQuest}
-        onCancel={onCancelConfirm}
-      />
-
       <QuestPlayModal
         quest={visiblePlayingQuest}
         accent={accent}

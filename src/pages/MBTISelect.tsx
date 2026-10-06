@@ -56,8 +56,19 @@ export default function MBTISelect() {
         <h1 className="mbti-select-fade-in" style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--fixed-white)', textShadow: '0 4px 16px var(--glass-b-50)', marginBottom: 8 }}>
           คุณเป็นคนแบบไหน?
         </h1>
-        <p className="mbti-select-fade-in" style={{ color: 'var(--fixed-white)', textShadow: '0 2px 8px var(--glass-b-50)', fontSize: 14, marginBottom: 32, animationDelay: '80ms' }}>
+        <p className="mbti-select-fade-in" style={{ color: 'var(--fixed-white)', textShadow: '0 2px 8px var(--glass-b-50)', fontSize: 14, marginBottom: 10, animationDelay: '80ms' }}>
           เลือกบุคลิกภาพ (MBTI) ของคุณ เพื่อกำหนดสายพันธุ์และสีสันของต้นไม้ประจำตัว
+        </p>
+        {/* ลิงก์ทำแบบทดสอบฟรีสำหรับคนที่ยังไม่รู้ MBTI ตัวเอง — เปิดแท็บใหม่ ไม่ทิ้งหน้าเลือก */}
+        <p className="mbti-select-fade-in" style={{ fontSize: 13, marginBottom: 28, animationDelay: '120ms' }}>
+          <a
+            href="https://www.16personalities.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--fixed-white)', textShadow: '0 2px 8px var(--glass-b-50)', textDecoration: 'underline', textUnderlineOffset: 3 }}
+          >
+            ยังไม่รู้ว่าตัวเองเป็น MBTI แบบไหน? ทำแบบทดสอบก่อนได้ที่นี่ →
+          </a>
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14 }}>

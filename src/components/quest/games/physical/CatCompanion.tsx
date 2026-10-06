@@ -1,7 +1,6 @@
-import { useMemo } from 'react'
 import type { MapDef } from '../../../../types.journey'
 import { OWL_AVATAR_ICON } from '../../../../config/iconAssets'
-import { getPointAtProgress } from './journeyPathMath'
+import { getPointAtProgress, withLivePath } from './journeyPathMath'
 import './CatCompanion.css'
 
 /*============================================================================*\
@@ -21,7 +20,8 @@ interface CatCompanionProps {
 }
 
 export default function CatCompanion({ mapDef, progressPct }: CatCompanionProps) {
-  const { x, y } = useMemo(() => getPointAtProgress(mapDef, progressPct), [mapDef, progressPct])
+  // จุดล่าสุดจาก MAP_PATH_POINTS (ไม่ memo — คำนวณเบาและต้องเห็นค่าที่แก้ทันที)
+  const { x, y } = getPointAtProgress(withLivePath(mapDef), progressPct)
 
   return (
     <img

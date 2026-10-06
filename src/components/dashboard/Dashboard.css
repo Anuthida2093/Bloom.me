@@ -21,7 +21,8 @@
   z-index: 0;
   pointer-events: none;
 }
-.dashboard__bg-video { object-fit: cover; }
+.dashboard__bg-video { object-fit: cover; opacity: 0; transition: opacity .6s ease; }
+.dashboard__bg-video.is-ready { opacity: 1; }
 .dashboard__bg-still {
   --lc-bg-7: rgba(98, 217, 192, .10);
   background: radial-gradient(90% 60% at 50% 10%, var(--lc-bg-7), transparent 70%),
@@ -243,6 +244,51 @@
   .game-top-hud { top: 8px; gap: 6px; }  /* เดิม 68px เว้นใต้ NavBar มือถือ (56px) ที่ลบไปแล้ว */
   .hud-pill { padding: 5px 10px; font-size: var(--fs-md); }
   .hud-icon { font-size: 18px; width: 27px; height: 27px; margin: -3px 0; }
+}
+
+/* "+N" / "Level up!" ลอยขึ้นจากแคปซูลเมื่อค่าเพิ่ม (HudDelta.tsx) */
+.hud-delta {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(135deg, var(--exp), var(--coin));
+  color: #4A2C0A;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: hudDeltaFloat 1.6s ease-out forwards;
+}
+.game-top-hud .hud-delta { top: 100%; bottom: auto; } /* HUD ชิดขอบบน — ลอยลงแทนที่จะหลุดจอ */
+@keyframes hudDeltaFloat {
+  0% { opacity: 0; transform: translate(-50%, -4px) scale(.8); }
+  15% { opacity: 1; transform: translate(-50%, 4px) scale(1.05); }
+  80% { opacity: 1; transform: translate(-50%, 10px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, 16px) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-delta { animation: hudDeltaFade 1.6s linear forwards; }
+  @keyframes hudDeltaFade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+}
+
+/* มือถือเล็ก: 4 แคปซูลเรียงแถวเดียวไม่พอ — ย่อ padding/ไอคอน และซ่อนตัวเลข EXP (แถบยังบอกความคืบหน้า) */
+@media (max-width: 400px) {
+  .game-top-hud { gap: 4px; width: calc(100% - 16px); }
+  .hud-pill { padding: 3px 8px; gap: 4px; font-size: var(--fs-sm); border-width: 1.5px; }
+  .hud-icon { width: 22px; height: 22px; margin: -2px 0; }
+  .hud-bar-bg { width: 44px; height: 8px; }
+  .hud-bar-text { display: none; }
+}
+
+/* สมาร์ทวอทช์/จอเล็กมาก (≤ 300px): เหลือเฉพาะเลเวล + เหรียญ ซ่อน EXP และ streak (ดูต่อได้ในแผงข้อมูลต้นไม้) */
+@media (max-width: 300px) {
+  .game-top-hud { top: 4px; gap: 3px; }
+  .hud-pill { padding: 2px 6px; font-size: var(--fs-xs); box-shadow: 0 2px 0 color-mix(in srgb, var(--hud-edge) 80%, var(--g800)); }
+  .hud-icon { width: 18px; height: 18px; margin: -1px 0; }
+  .hud-pill--exp, .hud-pill--streak { display: none; }
+  .hud-delta { font-size: var(--fs-xs); padding: 0 6px; }
 }
 
 /* ═══════════════════════════════════════════
@@ -505,4 +551,42 @@
 [data-theme="dark"] :is(.dashboard__viewing-name-pill, .player-tree-card .lb-frame__banner)::before,
 [data-theme="dark"] :is(.dashboard__viewing-name-pill, .player-tree-card .lb-frame__banner)::after {
   background: var(--g600);
+}
+
+/* ═══════════════════════════════════════════
+   [Responsive — มือถือ/สมาร์ทวอทช์]
+   ═══════════════════════════════════════════ */
+/* 100vh บนมือถือรวมแถบ URL ที่ยุบ/ขยายได้ → แผงล้นจอ ใช้ dvh เมื่อเบราว์เซอร์รองรับ */
+@supports (height: 100dvh) {
+  @media (max-width: 768px) {
+    .dashboard__panel--right { max-height: calc(100dvh - var(--hud-h, 44px) - 200px); }
+  }
+  @media (max-width: 480px) {
+    .dashboard__panel--right { max-height: calc(100dvh - var(--hud-h, 44px) - 190px); }
+  }
+}
+
+/* ปุ่มมุมล่างซ้าย/ขวา (โพสต์/แชร์/เพื่อน) ชนกับแถบเมนูล่างบนจอแคบ (แถบกว้าง 5×64 = 320px
+   กินเกือบเต็มจอ 360–414px) → ยกขึ้นไปอยู่เหนือแถบเมนู (รวมวงกลมปุ่มที่เลือกที่ยื่นขึ้นครึ่งวง) */
+@media (max-width: 520px) {
+  .dashboard__corner-actions {
+    bottom: calc(25px + var(--nav-height, 56px) + var(--nav-height, 56px) / 2 + 8px + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (max-width: 360px) {
+  .dashboard__corner-actions {
+    bottom: calc(12px + var(--nav-height, 56px) + var(--nav-height, 56px) / 2 + 6px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* สมาร์ทวอทช์/จอเล็กมาก */
+@media (max-width: 300px) {
+  .game-icon-btn { width: 36px; height: 36px; font-size: 26px; }
+  .game-icon-btn .icon-img { width: 42px; height: 42px; }
+  .right-action-buttons { gap: 4px; }
+  .dashboard__right-cluster { top: calc(4px + var(--hud-h, 32px) + 6px); }
+  .dashboard__corner-actions { gap: 2px; }
+  .dashboard__back-btn,
+  .dashboard__viewing-name-pill { padding: 4px 10px; font-size: var(--fs-xs); }
+  .dashboard__viewing-name-pill { max-width: calc(100vw - 110px); overflow: hidden; text-overflow: ellipsis; }
 }

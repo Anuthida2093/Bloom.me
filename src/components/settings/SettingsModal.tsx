@@ -12,6 +12,7 @@ import { BADGE_ICONS } from '../../config/iconAssets'
 import { ApiError } from '../../services/http'
 import { validatePasswordStrength } from '../../utils/mockAuth'
 import { useLanguage } from '../../context/LanguageContext'
+import HomeBackgroundPicker from './HomeBackgroundPicker'
 
 const C_1 = 'rgba(116,198,157,.35)'
 const C_2 = 'rgba(116,198,157,.2)'
@@ -177,6 +178,11 @@ export default function SettingsModal({
               </button>
             ))}
           </div>
+        </Section>
+
+        {/* [เพิ่มตามที่ระบุ] เลือกวิดีโอพื้นหลังหน้า Home (5 แบบ) — ดูตัวอย่างหน้า Home จำลองได้ก่อนตั้ง */}
+        <Section label="พื้นหลังหน้า Home" index={1} accent={theme.accent}>
+          <HomeBackgroundPicker />
         </Section>
 
         {/* [เพิ่มตามที่ระบุ] เลือกภาษา ไทย / English — ใช้ LanguageContext ตัวเดียวกับหน้า Welcome

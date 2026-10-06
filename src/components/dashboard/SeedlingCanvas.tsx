@@ -19,15 +19,17 @@ interface SeedlingCanvasProps {
   /** ขนาดกรอบวาด (CSS px) */
   width: number
   height: number
+  /** id ผู้ใช้ — ต้นของคนนี้ (ตรงกับต้นบนหน้า Home) */
+  userSeed?: string | null
 }
 
-export default function SeedlingCanvas({ mbtiType, trunkBranchLevel, leafFlowerLevel = 0, compact = false, width, height }: SeedlingCanvasProps) {
+export default function SeedlingCanvas({ mbtiType, trunkBranchLevel, leafFlowerLevel = 0, compact = false, width, height, userSeed = null }: SeedlingCanvasProps) {
   const branchRef = useRef<HTMLCanvasElement>(null)
   const foliageRef = useRef<HTMLCanvasElement>(null)
   // [แก้ตามที่ระบุ] ต้นเดียวกับบนหน้า Home ทุกอย่าง (โมเดลเดียวกัน) → ตอนสลับเป็นต้นจริงไม่เห็นรอยต่อ
   const model = useMemo(
-    () => seedlingModel(mbtiType, trunkBranchLevel, leafFlowerLevel, compact),
-    [mbtiType, trunkBranchLevel, leafFlowerLevel, compact],
+    () => seedlingModel(mbtiType, trunkBranchLevel, leafFlowerLevel, compact, userSeed),
+    [mbtiType, trunkBranchLevel, leafFlowerLevel, compact, userSeed],
   )
 
   useLayoutEffect(() => {

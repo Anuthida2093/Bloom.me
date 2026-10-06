@@ -29,6 +29,8 @@ export interface AppSettings {
   dailyQuestReminderTime: string
   /** [เพิ่มรอบนี้ — ข้อ 5] แจ้งเตือนเมื่อมีเควสใหม่ปลดล็อก/ถูกล็อก (เช่นจากผลคัดกรองสุขภาพจิต) */
   questUnlockNotifyEnabled: boolean
+  /** วิดีโอพื้นหลังหน้า Home ที่เลือก (1-5 — config/homeBackgrounds.ts) ไม่มี = ค่าเริ่มต้น */
+  homeBackground?: number
 }
 
 const SETTINGS_INITIAL: AppSettings = {

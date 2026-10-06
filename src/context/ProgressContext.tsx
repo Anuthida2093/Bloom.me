@@ -14,6 +14,8 @@ import { queryKeys } from '../services/queryKeys'
 import * as questApi from '../services/api/quest.api'
 import * as moodApi from '../services/api/mood.api'
 import { legacyMoodToColor } from '../config/moodPotion'
+import { API_MODE } from '../services/http'
+import { MOOD_CHECKIN_QUEST_CODE, getMoodCheckinStatus, type MoodCheckinStatus } from '../config/moodCheckinSlots'
 import { useUser } from './UserContext'
 
 /*============================================================================*\
@@ -36,23 +38,17 @@ interface ProgressContextValue {
   journalEntries: JournalEntryRecord[]
   postIts: PostItData[]
   completedQuestCount: number
+  /** เช็คอินอารมณ์เช้า/เย็น — รอบปัจจุบันตามเวลาไทย + ทำแล้วหรือยัง (ดู config/moodCheckinSlots.ts) */
+  moodCheckinStatus: MoodCheckinStatus
+  /** การ์ดแลกซื้อที่เพิ่งสุ่มตกจากเควสประจำวัน (เซิร์ฟเวอร์ตัดสิน) — Dashboard โชว์ป็อปอัพ */
+  cardDrop: { itemCode: string; key: number } | null
+  dismissCardDrop: () => void
   /** [แก้รอบนี้ — เพิ่ม questCode] เดิมมีแค่ category+key (พอสำหรับต้นไม้เติบโตทั่วไป) — เพิ่ม
    *  questCode (optional) ให้ผู้ฟัง (Dashboard.tsx) แยกได้ว่า pulse นี้มาจากเควสไหนเจาะจง เช่น
    *  เควส "สารอาหารแห่งผืนดิน" ต้องเล่นแอนิเมชันบัวรดน้ำเพิ่มเติมจากปุ่มเติบโตทั่วไป */
   treeGrowthPulse: { category: QuestCategory; key: number; questCode?: string } | null
   hasSoot: boolean
   isLoadingProgress: boolean
-  /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 6] "แรงสั่นบัวรดน้ำ" ทั่วไป — key เปลี่ยนทุกครั้งที่
-   *  triggerWateringEffect() ถูกเรียก (ดูด้านล่าง) Dashboard.tsx (ที่มองเห็นอยู่เสมอ ไม่ว่า
-   *  จุดที่เรียกจะเป็นหน้าเควสไหนก็ตาม เพราะ Dashboard คือ parent ที่ไม่เคย unmount) ฟังค่านี้
-   *  ผ่าน WateringCanFx เพื่อเล่นเอฟเฟกต์บัวรดน้ำที่โคนต้นจริงบนหน้า Home */
-  waterPulseKey: number
-  /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 6] เรียกจาก "ทุกจุดที่ให้รางวัลหยดน้ำ" ในระบบ (ตอนนี้คือ
-   *  OracleCardsPage.tsx เท่านั้น — จุดเดียวที่ตรวจแล้วว่ามีการเพิ่ม waterDrops จริง ไม่ใช่แค่
-   *  โชว์ badge) — ไม่ต้อง navigate เองเพราะ Dashboard.tsx (หน้า Home) เป็น parent ที่ mount
-   *  ค้างอยู่เสมอ (เควสทุกหน้าเป็น modal ซ้อนทับ ไม่ใช่ route แยก) เอฟเฟกต์จึงเล่นที่ต้นไม้จริง
-   *  ได้ทันทีโดยไม่ต้องปิด modal ก่อน */
-  triggerWateringEffect: () => void
 
   handleToggleQuest: (questCode: string, payload?: Record<string, unknown>) => void
   markIncineratorFailed: () => void
@@ -98,9 +94,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const [postIts] = useState<PostItData[]>([])
   const [treeGrowthPulse, setTreeGrowthPulse] = useState<{ category: QuestCategory; key: number; questCode?: string } | null>(null)
   const [hasSoot, setHasSoot] = useState(false)
+  const [cardDrop, setCardDrop] = useState<{ itemCode: string; key: number } | null>(null)
   // [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 6] ดู triggerWateringEffect ใน context value ด้านล่าง
-  const [waterPulseKey, setWaterPulseKey] = useState(0)
-  const triggerWateringEffect = useCallback(() => setWaterPulseKey((k) => k + 1), [])
 
   const { data: questLogsData, isLoading: loadingQuests } = useQuery({
     queryKey: queryKeys.questLogs(),
@@ -173,8 +168,12 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       // คำขอล้มเหลว — ย้อน questLogs กลับไปก่อนหน้า optimistic update (เหมือน mbtiMutation)
       if (context?.previousLogs) queryClient.setQueryData(queryKeys.questLogs(), context.previousLogs)
     },
-    onSuccess: ({ user, log }, _vars, context) => {
+    onSuccess: ({ user, log, exchangeCard }, _vars, context) => {
       applyUserPatch(user)
+      if (exchangeCard) {
+        setCardDrop({ itemCode: exchangeCard, key: Date.now() })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.progression })
+      }
       queryClient.setQueryData<QuestLogEntry[]>(queryKeys.questLogs(), (logs) => {
         const list = logs ?? []
         // แทนที่ log ชั่วคราวจาก onMutate ด้วยของจริงจากเซิร์ฟเวอร์ (มี id จริงแล้ว)
@@ -224,18 +223,42 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   }, [completeQuestMutation, questLogs])
 
   const markIncineratorFailed = useCallback(() => setHasSoot(true), [])
+  const dismissCardDrop = useCallback(() => setCardDrop(null), [])
+
+  // คำนวณตอน render ได้ (ไม่ใช่ Date.now() ใน effect) — เปลี่ยนรอบเช้า→เย็นเห็นผลตอน re-render ถัดไป
+  const moodCheckinStatus = useMemo(() => getMoodCheckinStatus(questLogs), [questLogs])
 
   const handleMoodSubmit = useCallback(async (mood: 'good' | 'neutral' | 'bad', subMood: MoodTypeValue, text: string) => {
-    // [แก้รอบนี้] mutateAsync แทน mutate() เฉยๆ — ให้ผู้เรียก await จนกว่า onSuccess (setQueryData
-    // เข้า moodEntries cache) จะทำงานเสร็จจริงก่อน ไม่ใช่แค่ "ยิงแล้วไม่รอ" เหมือนเดิม
-    await createMoodMutation.mutateAsync({
+    const entry = {
       category: MOOD_CATEGORY[mood] ?? 'NEUTRAL',
       mood: subMood,
       note: text || null,
       // backend เก็บสีน้ำยาต่อ entry ได้แล้ว (mood_entries.colorCode) — ส่งสีตามปุ่มดี/เฉยๆ/ไม่ดี
       colorCode: legacyMoodToColor(mood),
-    })
-  }, [createMoodMutation])
+    } as const
+    // เช็คอินรอบเช้า/เย็นที่ยังไม่ได้ทำวันนี้ → นับเป็นเควส mood-checkin-morning/evening (ได้รางวัล)
+    // รอบที่ทำไปแล้ว → บันทึกอารมณ์เพิ่มได้ตามเดิมแต่ไม่ได้รางวัลซ้ำ
+    const status = getMoodCheckinStatus(questLogs)
+    const questCode = status.doneThisSlot ? null : MOOD_CHECKIN_QUEST_CODE[status.slot]
+
+    if (questCode && API_MODE === 'live') {
+      // backend สร้าง MoodEntry ให้เองในทรานแซกชันเดียวกับรางวัล — ไม่ POST /mood ซ้ำ แล้วรอ
+      // moodEntries โหลดใหม่ให้เสร็จก่อนคืนค่า (กัน MoodGateScreen เด้งซ้ำ ดูคอมเมนต์ด้านล่าง)
+      const { user, log } = await questApi.completeMoodCheckinQuest({ questCode, ...entry })
+      applyUserPatch(user)
+      queryClient.setQueryData<QuestLogEntry[]>(queryKeys.questLogs(), (logs) => [...(logs ?? []).filter((l) => l.id !== log.id), log])
+      await queryClient.refetchQueries({ queryKey: queryKeys.moodEntries() })
+      return
+    }
+
+    // [แก้รอบนี้] mutateAsync แทน mutate() เฉยๆ — ให้ผู้เรียก await จนกว่า onSuccess (setQueryData
+    // เข้า moodEntries cache) จะทำงานเสร็จจริงก่อน ไม่ใช่แค่ "ยิงแล้วไม่รอ" เหมือนเดิม
+    await createMoodMutation.mutateAsync(entry)
+    if (questCode) {
+      // โหมด mock: เควสเช็คอินไม่ต้องสร้าง MoodEntry ในตัว — บันทึกแยกด้านบนแล้ว
+      await completeQuestMutation.mutateAsync({ questCode }).catch(() => { /* ซ้ำในวันเดียวกัน — ข้าม */ })
+    }
+  }, [createMoodMutation, completeQuestMutation, questLogs, applyUserPatch, queryClient])
 
   const handleAddJournalEntry = useCallback(
     (entry: { questCode: string; originalText: string; aiReframedText: string }) => {
@@ -256,12 +279,12 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<ProgressContextValue>(() => ({
     questLogs, moodEntries, journalEntries, postIts,
-    completedQuestCount, treeGrowthPulse, hasSoot, waterPulseKey, triggerWateringEffect,
+    completedQuestCount, moodCheckinStatus, cardDrop, dismissCardDrop, treeGrowthPulse, hasSoot,
     isLoadingProgress: loadingQuests || loadingMood,
     handleToggleQuest, markIncineratorFailed, handleMoodSubmit, handleAddJournalEntry,
   }), [
     questLogs, moodEntries, journalEntries, postIts,
-    completedQuestCount, treeGrowthPulse, hasSoot, waterPulseKey, triggerWateringEffect, loadingQuests, loadingMood,
+    completedQuestCount, moodCheckinStatus, cardDrop, dismissCardDrop, treeGrowthPulse, hasSoot, loadingQuests, loadingMood,
     handleToggleQuest, markIncineratorFailed, handleMoodSubmit, handleAddJournalEntry,
   ])
 

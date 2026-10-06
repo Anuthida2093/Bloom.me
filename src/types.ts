@@ -205,7 +205,21 @@ export type BodyType = 'THIN' | 'AVERAGE' | 'OVERWEIGHT'
  *  "รูปร่างของคุณ" ให้ตรงเพศจริง (ดู src/config/bodyTypeAssets.ts) แก้ไขได้ปกติเหมือน
  *  ส่วนสูง/น้ำหนัก ไม่ได้ล็อกถาวรแบบ MBTI */
 export type Gender = 'MALE' | 'FEMALE'
-export type TreeSpecies = 'OAK' | 'CHERRY_BLOSSOM' | 'PINE' | 'WILLOW' | 'BALANCED'
+/** TreeProgress.treeType — 1 สายพันธุ์ต่อ 1 MBTI ตรงกับ backend src/utils/treeType.ts
+ *  (ชื่อตรงกับ nameEn ใน components/tree/procedural/species.ts) + 'BALANCED' = ยังไม่เลือก MBTI */
+export type TreeSpecies =
+  | 'CYPRESS' | 'GINKGO' | 'OAK' | 'BANYAN'
+  | 'CHERRY_BLOSSOM' | 'WEEPING_WILLOW' | 'MAPLE' | 'JACARANDA'
+  | 'SPRUCE' | 'APPLE' | 'MAHOGANY' | 'MAGNOLIA'
+  | 'BAMBOO' | 'BIRCH' | 'PALM' | 'ORANGE'
+  | 'BALANCED'
+
+export const MBTI_TREE_TYPE: Record<MbtiType, TreeSpecies> = {
+  INTJ: 'CYPRESS', INTP: 'GINKGO', ENTJ: 'OAK', ENTP: 'BANYAN',
+  INFJ: 'CHERRY_BLOSSOM', INFP: 'WEEPING_WILLOW', ENFJ: 'MAPLE', ENFP: 'JACARANDA',
+  ISTJ: 'SPRUCE', ISFJ: 'APPLE', ESTJ: 'MAHOGANY', ESFJ: 'MAGNOLIA',
+  ISTP: 'BAMBOO', ISFP: 'BIRCH', ESTP: 'PALM', ESFP: 'ORANGE',
+}
 export type QuestCategory = 'KNOWLEDGE' | 'EMOTION' | 'HEALTH'
 export type QuestControlType =
   | 'GOAL_INPUT'

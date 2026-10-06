@@ -1,6 +1,6 @@
-import { memo, useCallback, useMemo, useRef, useState, useEffect, type PointerEvent as ReactPointerEvent } from 'react'
+import { memo, useCallback, useMemo, useRef, useState, useEffect, useLayoutEffect, type PointerEvent as ReactPointerEvent } from 'react'
 import { type PostItData, type MbtiType, type RiskLevel, type PlacedItem, type DecorationPositionMap, type QuestCategory } from '../../types'
-import { DECORATION_EMOJI, DECORATION_ZONE_POSITION } from '../../config/decorationItems'
+import { DECORATION_EMOJI, defaultDecorationLayout, maxDecorationScale } from '../../config/decorationItems'
 import { ITEM_ICONS } from '../../config/iconAssets'
 import { useIsSmallScreen, usePrefersReducedMotion } from '../../hooks/useMediaQuery'
 import { groundDryness } from '../../config/groundFertility'
@@ -80,7 +80,10 @@ const LEAF_HEALTH_FILTER: Record<HealthPhase, string> = {
 /** [แก้ตามที่ระบุ] ละอองดาวที่โปรยลงมาที่ต้นไม้ตอนทำเควสสำเร็จ — ตำแหน่ง/ขนาด/จังหวะคงที่ (ไม่สุ่มทุก render)
  *  x = % แนวนอนของแถบต้นไม้ (กระจุกรอบทรงพุ่มกลางจอ) · land = % ความสูงที่ละอองจางหาย (บนพุ่ม→โคนต้น) */
 const STARDUST = Array.from({ length: 64 }, (_, i) => ({
-  x: 32 + ((i * 37) % 37),
+  // [แก้บั๊ก] เดิม 32 + ((i * 37) % 37) — (i*37)%37 = 0 เสมอ ละอองทั้ง 64 เม็ดกองที่ x 32% (ซ้ายของต้น)
+  // ตอนนี้กระจายรอบแกนลำต้นจริง: 50% ของแถบต้นไม้ = baseX ของ fitTree (โคนต้นอยู่กึ่งกลางแถบเสมอ
+  // และแถบนี้เลื่อน/ย่อขยายไปพร้อมฉาก) ± 18%
+  x: 50 + (((i * 23) % 37) - 18),
   // [แก้ตามที่ระบุ] ผงเล็กมากๆ ผสมดาวกับจุดกลม — จุด 1.5-3px / ดาว 4-6px
   star: i % 3 === 0,
   size: i % 3 === 0 ? 4 + (i % 3) : 1.5 + (i % 4) * 0.5,
@@ -132,7 +135,7 @@ interface TreeOfLifeProps {
   riskLevel?: RiskLevel
   placedItems?: PlacedItem[]
   /** [ข้อกำหนดข้อ 3] พิกัดที่ผู้ใช้ลากปรับเองแล้ว (เก็บใน AppContext) — ถ้าไอเทมไหนยังไม่เคย
-   *  ลาก จะ fallback ไปตำแหน่งโซนเริ่มต้น (DECORATION_ZONE_POSITION) เหมือนเดิม */
+   *  ลาก จะใช้ตำแหน่งเริ่มต้น (defaultDecorationLayout — กระถางขวา, ของแขวน/ลายโพสอิทในพุ่มใบ) */
   decorationPositions?: DecorationPositionMap
   /** [ข้อกำหนดข้อ 3] เรียกทุกครั้งที่ลากไอเทมวางเสร็จ (pointer up) พร้อมพิกัด % ใหม่ */
   onDecorationMove?: (itemId: string, xPct: number, yPct: number) => void
@@ -165,6 +168,10 @@ interface TreeOfLifeProps {
   postIts?: PostItData[]
   onPostItClick?: (postIt: PostItData) => void
   className?: string
+  /** id ผู้ใช้ — ต้นของแต่ละคนแตกกิ่ง/พุ่ม/ดอก/หน้าตาไม่ซ้ำกัน (สีสายพันธุ์คงเดิม) */
+  userSeed?: string | null
+  /** ผู้ใช้ใหม่ (ยังไม่มีคะแนนสุขภาพกาย) — พื้นเขียวเรียบ ไม่มีหญ้า/ดอกไม้ */
+  bareGround?: boolean
 }
 
 function TreeOfLifeBase({
@@ -188,6 +195,8 @@ function TreeOfLifeBase({
   groundRocks = 0,
   onPostItClick,
   className,
+  userSeed = null,
+  bareGround = false,
 }: TreeOfLifeProps) {
   /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] ใบเหี่ยว/ร่วงตามจำนวนวันที่ไม่ได้ทำเควสหมวดจิตใจ */
   const leafHealthPhase = useMemo(() => toHealthPhase(daysSinceLastMentalQuest), [daysSinceLastMentalQuest])
@@ -205,8 +214,8 @@ function TreeOfLifeBase({
 
   /* ต้นไม้ procedural: รูปทรงตาม MBTI, โตตาม trunkBranchLevel, ดอกตาม leafFlowerLevel (ดู buildTreeModel) */
   const treeModel = useMemo(
-    () => buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, compact: isSmallScreen }),
-    [mbtiType, trunkBranchLevel, leafFlowerLevel, isSmallScreen],
+    () => buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, compact: isSmallScreen, userSeed }),
+    [mbtiType, trunkBranchLevel, leafFlowerLevel, isSmallScreen, userSeed],
   )
 
 
@@ -315,7 +324,8 @@ function TreeOfLifeBase({
           viewWidth={viewW}
           panRef={panRef}
           grassSoilLevel={grassSoilLevel}
-          dryness={groundDry}
+          dryness={bareGround ? 0 : groundDry}
+          bareGround={bareGround}
           animateWind={!reducedMotion}
           foliageStyle={{
             filter: LEAF_HEALTH_FILTER[leafHealthPhase],
@@ -471,7 +481,8 @@ interface DecorationLayerProps {
 
 /** [ใหม่ — ตามที่ระบุ] ขอบเขต scale ที่อนุญาต กันย่อ/ขยายจนดูแปลก */
 const MIN_DECORATION_SCALE = 0.5
-const MAX_DECORATION_SCALE = 2.5
+/** ปุ่มลอย/แผงของหน้า Home ที่อยู่เหนือชั้นต้นไม้ — ไอเทมตกแต่งต้องไม่ไปอยู่ใต้สิ่งเหล่านี้ */
+const DECORATION_OBSTACLES = '.dashboard__right-cluster, .dashboard__corner-actions, .dashboard__panel--left, .game-top-hud'
 
 /** ขนาดฐาน (px) ของกล่องไอเทมตกแต่งที่ scale:1 — ต้องคำนวณด้วยสูตรเดียวกับ
  * clamp(20px, 6vw, 34px) ใน TreeOfLife.css (.tree-of-life__decoration-item) เพราะตอน
@@ -508,14 +519,67 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
    *  handlePointerMove */
   const resizeStartRef = useRef<{ centerX: number; centerY: number; startDistance: number; baseScale: number } | null>(null)
 
-  const getEffectivePosition = (item: PlacedItem): { left: string; top: string } => {
-    if (draggingId === item.itemId && previewPos) {
-      return { left: `${previewPos.xPct}%`, top: `${previewPos.yPct}%` }
+  /* ห้ามไอเทมใดๆ อยู่ใต้แถบเมนูล่าง (ActionMenuBar): วัดขอบบนของแถบจริงเทียบกับกล่องต้นไม้
+     แล้วจำกัด y สูงสุด — ใช้ทั้งตำแหน่งเริ่มต้น ตำแหน่งที่เคยลากเซฟไว้ และระหว่างลาก */
+  const [maxYPct, setMaxYPct] = useState(96)
+  /* [แก้บั๊กไอเทมหาย] ปุ่ม/แผงลอยของหน้า Home (คลัสเตอร์ปุ่มขวา ปุ่มมุมล่าง กระดานจัดอันดับ แถบ HUD) อยู่เหนือ
+     ชั้นต้นไม้ — กระถาง/รูปปั้นที่ตำแหน่งเริ่มต้นตกไปอยู่ใต้ปุ่มพวกนี้จึง "มองไม่เห็น" ตอนนี้วัดกรอบปุ่มจริง
+     (% ของแถบต้นไม้) แล้วเลื่อนไอเทมหลบให้พ้นทุกครั้งที่แสดงผล */
+  const [obstacles, setObstacles] = useState<{ x0: number; y0: number; x1: number; y1: number }[]>([])
+  const [bandSize, setBandSize] = useState<{ w: number; h: number } | null>(null)
+  useLayoutEffect(() => {
+    const measure = () => {
+      const box = containerRef.current?.getBoundingClientRect()
+      if (!box || box.height <= 0 || box.width <= 0) return
+      const nav = document.querySelector('.action-menu-container')?.getBoundingClientRect()
+      // เว้นครึ่งกล่องไอเทม + วงกลมปุ่มที่เลือกที่ยื่นขึ้นจากแถบ (~ครึ่งความสูงแถบ)
+      const reserve = getBaseDecorationSizePx() / 2 + (nav ? nav.height / 2 : 0) + 8
+      const limit = nav && nav.height > 0 ? ((nav.top - reserve - box.top) / box.height) * 100 : 96
+      setMaxYPct(Math.max(30, Math.min(96, limit)))
+      const rects: { x0: number; y0: number; x1: number; y1: number }[] = []
+      document.querySelectorAll(DECORATION_OBSTACLES).forEach((el) => {
+        const r = el.getBoundingClientRect()
+        if (r.width <= 0 || r.height <= 0) return
+        rects.push({
+          x0: ((r.left - box.left) / box.width) * 100, x1: ((r.right - box.left) / box.width) * 100,
+          y0: ((r.top - box.top) / box.height) * 100, y1: ((r.bottom - box.top) / box.height) * 100,
+        })
+      })
+      setObstacles(rects)
+      setBandSize({ w: box.width, h: box.height })
     }
-    const custom = decorationPositions[item.itemId]
-    if (custom) return { left: `${custom.xPct}%`, top: `${custom.yPct}%` }
-    const zonePos = DECORATION_ZONE_POSITION[item.zone]
-    return zonePos
+    measure()
+    // ปุ่ม/แผงเลื่อนขึ้นมาทีหลัง (แอนิเมชันเข้า) และกระดานจัดอันดับย่อ/ขยายได้ — วัดซ้ำ
+    const late = window.setTimeout(measure, 900)
+    const ro = new ResizeObserver(measure)
+    document.querySelectorAll(DECORATION_OBSTACLES).forEach((el) => ro.observe(el))
+    window.addEventListener('resize', measure)
+    return () => { window.clearTimeout(late); ro.disconnect(); window.removeEventListener('resize', measure) }
+  }, [containerRef])
+
+  /** เลื่อนไอเทมให้พ้นปุ่มบนจอ: ขยับเข้าหาลำต้น (x 50%) ก่อน ถ้ายังทับค่อยขยับขึ้น */
+  const avoidObstacles = (pos: { xPct: number; yPct: number }, item: PlacedItem) => {
+    if (!bandSize || obstacles.length === 0) return pos
+    const half = (getBaseDecorationSizePx() * getEffectiveScale(item)) / 2
+    const hx = (half / bandSize.w) * 100, hy = (half / bandSize.h) * 100
+    let { xPct: x, yPct: y } = pos
+    const hits = () => obstacles.some((o) => x + hx > o.x0 && x - hx < o.x1 && y + hy > o.y0 && y - hy < o.y1)
+    for (let i = 0; i < 40 && hits(); i++) {
+      if (Math.abs(x - 50) > 3) x += x > 50 ? -3 : 3
+      else y = Math.max(8, y - 3)
+    }
+    return { xPct: x, yPct: y }
+  }
+
+  const layout = defaultDecorationLayout(placedItems.map((i) => i.itemId))
+  const basePosition = (item: PlacedItem): { xPct: number; yPct: number } =>
+    decorationPositions[item.itemId] ?? layout[item.itemId] ?? { xPct: 50, yPct: 30 }
+
+  const getEffectivePosition = (item: PlacedItem): { left: string; top: string } => {
+    if (draggingId === item.itemId && previewPos) return { left: `${previewPos.xPct}%`, top: `${previewPos.yPct}%` }
+    const base = basePosition(item)
+    const pos = avoidObstacles({ xPct: base.xPct, yPct: Math.min(base.yPct, maxYPct) }, item)
+    return { left: `${pos.xPct}%`, top: `${pos.yPct}%` }
   }
 
   const getEffectiveScale = (item: PlacedItem): number => {
@@ -524,7 +588,28 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
   }
 
   const clampPct = (v: number) => Math.min(96, Math.max(4, v))
-  const clampScale = (v: number) => Math.min(MAX_DECORATION_SCALE, Math.max(MIN_DECORATION_SCALE, v))
+  const clampY = (v: number) => Math.min(maxYPct, Math.max(4, v))
+  const clampScale = (v: number, itemId: string) => Math.min(maxDecorationScale(itemId), Math.max(MIN_DECORATION_SCALE, v))
+
+  /** ย่อ/ขยายทีละขั้น (ปุ่ม −/+ หรือหมุนล้อเมาส์บนไอเทม) แล้วบันทึกทันที */
+  const stepScale = (item: PlacedItem, factor: number) => {
+    if (!onDecorationMove) return
+    const pos = basePosition(item)
+    const next = clampScale((decorationPositions[item.itemId]?.scale ?? 1) * factor, item.itemId)
+    onDecorationMove(item.itemId, pos.xPct, Math.min(pos.yPct, maxYPct), Math.round(next * 100) / 100)
+  }
+
+  // แตะที่อื่น (นอกไอเทมที่เลือก/แถบปรับขนาด) → ยกเลิกการเลือก
+  useEffect(() => {
+    if (!selectedId) return
+    const onDown = (e: PointerEvent) => {
+      const el = e.target as Element | null
+      if (el?.closest?.('.tree-of-life__decoration-item, .tree-of-life__decoration-toolbar')) return
+      setSelectedId(null)
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [selectedId])
 
   const handlePointerDown = (e: ReactPointerEvent<HTMLSpanElement>, itemId: string) => {
     if (!onDecorationMove) return // ไม่รองรับการลากถ้าผู้เรียกใช้ไม่ได้ผูก handler ไว้
@@ -537,7 +622,7 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
     if (!draggingId || !containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
     const xPct = clampPct(((e.clientX - rect.left) / rect.width) * 100)
-    const yPct = clampPct(((e.clientY - rect.top) / rect.height) * 100)
+    const yPct = clampY(((e.clientY - rect.top) / rect.height) * 100)
     setPreviewPos({ xPct, yPct })
   }
 
@@ -578,13 +663,13 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
     if (!resizingId || !start) return
     const currentDistance = Math.hypot(e.clientX - start.centerX, e.clientY - start.centerY) || 1
     const ratio = currentDistance / start.startDistance
-    setPreviewScale(clampScale(start.baseScale * ratio))
+    setPreviewScale(clampScale(start.baseScale * ratio, resizingId))
   }
 
   const handleResizePointerUp = (item: PlacedItem) => {
     if (resizingId === item.itemId && previewScale !== null && onDecorationMove) {
-      const pos = decorationPositions[item.itemId] ?? zonePositionAsPct(item)
-      onDecorationMove(item.itemId, pos.xPct, pos.yPct, previewScale)
+      const pos = basePosition(item)
+      onDecorationMove(item.itemId, pos.xPct, Math.min(pos.yPct, maxYPct), previewScale)
     }
     setResizingId(null)
     setPreviewScale(null)
@@ -594,7 +679,7 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
   return (
     <>
       <div className={`tree-of-life__drop-zone-hint ${draggingId ? 'tree-of-life__drop-zone-hint--visible' : ''}`} />
-      <div className="tree-of-life__decorations" aria-hidden="true">
+      <div className="tree-of-life__decorations">
         {placedItems.map((item) => {
           const pos = getEffectivePosition(item)
           const scale = getEffectiveScale(item)
@@ -613,6 +698,7 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
               onClick={(e) => handleItemClick(e, item.itemId)}
+              onWheel={isDraggable ? (e) => stepScale(item, e.deltaY < 0 ? 1.1 : 1 / 1.1) : undefined}
             >
               <DecorationVisual itemId={item.itemId} />
               {isDraggable && isSelected && (
@@ -627,21 +713,24 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
                   ⤡
                 </span>
               )}
+              {isDraggable && isSelected && (
+                // แถบปรับขนาดชัดๆ: ย่อ / ขนาด% / ขยาย (นอกเหนือจากลากมุม ⤡ และหมุนล้อเมาส์)
+                <span
+                  className="tree-of-life__decoration-toolbar"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button type="button" aria-label="ย่อไอเทม" onClick={() => stepScale(item, 1 / 1.15)} disabled={scale <= MIN_DECORATION_SCALE}>−</button>
+                  <span className="tree-of-life__decoration-scale">{Math.round(scale * 100)}%</span>
+                  <button type="button" aria-label="ขยายไอเทม" onClick={() => stepScale(item, 1.15)} disabled={scale >= maxDecorationScale(item.itemId)}>+</button>
+                </span>
+              )}
             </span>
           )
         })}
       </div>
     </>
   )
-}
-
-/** [ใหม่] แปลงตำแหน่งเริ่มต้นของไอเทม (โซนตายตัว % string เช่น '50%') ให้เป็นตัวเลข % ล้วนๆ
- *  ไว้ใช้ตอนบันทึก scale ของไอเทมที่ยังไม่เคยถูกลากย้ายตำแหน่งมาก่อนเลย (ไม่มี custom
- *  position ใน decorationPositions ยังใช้ตำแหน่งโซนเริ่มต้นอยู่) — ไม่งั้น onDecorationMove
- *  จะได้ x/y เป็น undefined ตอนบันทึก scale ครั้งแรกก่อนเคยลากย้ายที่เลยสักครั้ง */
-function zonePositionAsPct(item: PlacedItem): { xPct: number; yPct: number } {
-  const zonePos = DECORATION_ZONE_POSITION[item.zone]
-  return { xPct: parseFloat(zonePos.left), yPct: parseFloat(zonePos.top) }
 }
 
 /*============================================================================*\

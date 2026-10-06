@@ -25,6 +25,11 @@ import JournalHistoryModal from '../quest/mental/shared/JournalHistoryModal'
 import VoiceMemoHistoryModal from './VoiceMemoHistoryModal'
 import PostItHistoryModal from './PostItHistoryModal'
 import { useMental } from '../../context/MentalContext'
+import { useProgression, useStepHistory } from '../../hooks/useProgression'
+import type { StepDayRecord } from '../../services/api/progression.api'
+import CompletedJourneyMap from '../quest/games/physical/CompletedJourneyMap'
+import ExchangeCards from './ExchangeCards'
+import HealthSummary from './HealthSummary'
 
 /*============================================================================*\
   ProfilePage — [ไฟล์ใหม่] หน้าโปรไฟล์เต็มจอ เปิดจากปุ่ม "โปรไฟล์" ใน ActionMenuBar
@@ -43,7 +48,7 @@ const CATEGORY_LABELS: Record<DecorationCategory, string> = {
   statues: '🗿 รูปปั้นกระถาง',
   hangings: '🎐 ของแขวนกิ่งไม้',
   postits: '🗒️ ลายโพสอิทสะสม',
-  special: '🎁 รางวัลพิเศษ',
+  special: '🎴 การ์ดแลกซื้อไอเทม',
 }
 const CATEGORY_ORDER: DecorationCategory[] = ['statues', 'hangings', 'postits', 'special']
 
@@ -102,6 +107,8 @@ interface ProfilePageProps {
   earnedBadges?: string[]
   onPlace?: (itemId: string, zone: PlacedItem['zone']) => void
   onClose?: () => void
+  /** กดการ์ดแลกซื้อในคลัง → ไปหน้าร้านค้าที่ไอเทมนั้น (เปิดป็อปอัพแลกซื้อทันที) */
+  onOpenShopItem?: (itemId: string) => void
 }
 
 export default function ProfilePage({
@@ -113,12 +120,16 @@ export default function ProfilePage({
   earnedBadges = [],
   onPlace = () => {},
   onClose = () => {},
+  onOpenShopItem,
 }: ProfilePageProps) {
   useLockBodyScroll()
   useEscapeKey(onClose)
 
   const [sparkleId, setSparkleId] = useState<string | null>(null)
   const { t, tv } = useLanguage()
+  /** การ์ดแลกซื้อไอเทม — itemCode → จำนวนใบ */
+  const { exchangeCards } = useProgression()
+  const cardEntries = Object.entries(exchangeCards).filter(([, n]) => n > 0)
   const { postIts } = useMental()
   /** [ย้ายตามที่ระบุ — ข้อ 12] เปิด JournalHistoryModal ของเควสไหน — null = ปิดอยู่ */
   const [openHistoryFor, setOpenHistoryFor] = useState<'ment-reframer-journal' | 'ment-gratitude-shield' | 'know-brain-dump' | 'postits' | null>(null)
@@ -158,7 +169,11 @@ export default function ProfilePage({
     .map((l) => ({ log: l, def: l.quest?.code ? findQuestByCode(l.quest.code) : undefined }))
     .filter((entry) => !!entry.def)
 
-  const hasAnyActivity = completedLogsOfDay.length > 0 || !!moodOfDay || !!journalOfDay || !!gratitudeOfDay
+  /** วันที่เดินถึงเป้าก้าว → สถานะสำเร็จ + ก้าวรวม กดเปิดแผนที่ทริปของวันนั้น */
+  const stepHistory = useStepHistory()
+  const stepDayOfDay = stepHistory.find((d) => d.date === selectedDate && d.goalMet) ?? null
+  const [viewStepDay, setViewStepDay] = useState<StepDayRecord | null>(null)
+  const hasAnyActivity = completedLogsOfDay.length > 0 || !!moodOfDay || !!journalOfDay || !!gratitudeOfDay || !!stepDayOfDay
 
   // ── ปฏิทิน ──
   const daysInMonth = getDaysInMonth(calYear, calMonth)
@@ -205,6 +220,7 @@ export default function ProfilePage({
         <img src={BADGE_ICONS.close} className="icon-img" alt="" />
       </button>
 
+      {viewStepDay && <CompletedJourneyMap day={viewStepDay} onClose={() => setViewStepDay(null)} />}
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '72px 20px 48px' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-3xl)', color: 'var(--heading-accent)' }}>{userData.username || 'ผู้ใช้'}</div>
@@ -221,14 +237,14 @@ export default function ProfilePage({
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>{t('profile.inventory')}</div>
             <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>กดไอเทมเพื่อวางบนต้นไม้ กดซ้ำเพื่อถอด</p>
 
-            {groupedInventory.length === 0 ? (
+            {groupedInventory.length === 0 && cardEntries.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 'var(--fs-sm)' }}>
                 <div style={{ fontSize: 'calc(var(--fs-3xl) * 1.3)', marginBottom: 8 }}>📦</div>
                 ยังไม่มีไอเทมในคลัง — ไปซื้อจากร้านค้าได้เลย!
               </div>
             ) : (
               <>
-                {/* [เพิ่มตามที่ระบุ — ข้อ 15] แท็บกรองหมวดหมู่ — เฉพาะหมวดที่มีไอเทมจริงเท่านั้น */}
+                {/* [แก้ตามที่ระบุ] แท็บหมวดครบทุกหมวดเสมอ: ทั้งหมด · รูปปั้นกระถาง · ของแขวน · ลายโพสอิท · การ์ดแลกซื้อ */}
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
                   <button
                     onClick={() => setInventoryFilter('all')}
@@ -241,21 +257,30 @@ export default function ProfilePage({
                   >
                     ทั้งหมด
                   </button>
-                  {groupedInventory.map((group) => (
+                  {CATEGORY_ORDER.map((category) => (
                     <button
-                      key={group.category}
-                      onClick={() => setInventoryFilter(group.category)}
+                      key={category}
+                      onClick={() => setInventoryFilter(category)}
                       className="tag"
                       style={{
                         cursor: 'pointer', border: 'none',
-                        background: inventoryFilter === group.category ? 'var(--g600)' : 'var(--n100)',
-                        color: inventoryFilter === group.category ? 'var(--fixed-white)' : 'var(--text-muted)',
+                        background: inventoryFilter === category ? 'var(--g600)' : 'var(--n100)',
+                        color: inventoryFilter === category ? 'var(--fixed-white)' : 'var(--text-muted)',
                       }}
                     >
-                      {CATEGORY_LABELS[group.category]}
+                      {CATEGORY_LABELS[category]}
                     </button>
                   ))}
                 </div>
+                {/* การ์ดแลกซื้อ: แท็บ "ทั้งหมด" และ "การ์ดแลกซื้อไอเทม" — ยังไม่มีการ์ด = ไม่แสดง */}
+                {(inventoryFilter === 'all' || inventoryFilter === 'special') && (
+                  <ExchangeCards cards={cardEntries} onOpenShopItem={onOpenShopItem} />
+                )}
+                {inventoryFilter !== 'all' && inventoryFilter !== 'special' && visibleInventoryGroups.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: 'var(--fs-sm)' }}>
+                    ยังไม่มีไอเทมในหมวดนี้
+                  </div>
+                )}
                 {visibleInventoryGroups.map((group) => (
                 <div key={group.category} style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--text-sub)', marginBottom: 8 }}>
@@ -339,7 +364,8 @@ export default function ProfilePage({
                 boxShadow: `0 2px 8px ${avatar.color}88`,
               }} />
             </div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>ส่วนสูง <b>{height} ซม.</b> · น้ำหนัก <b>{weight} กก.</b></div>
+            {/* ข้อมูลสุขภาพครบถ้วน: ร่างกาย/น้ำหนักที่เหมาะสม/BMR/แคลอรี่/ก้าว/น้ำ/ความเสี่ยง */}
+            <HealthSummary userData={userData} questLogs={questLogs} />
           </div>
 
           {/* ═══ โซนขวา: กิจกรรม + ปฏิทิน ═══ */}
@@ -354,6 +380,22 @@ export default function ProfilePage({
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
+                {stepDayOfDay && (
+                  <button
+                    type="button"
+                    onClick={() => setViewStepDay(stepDayOfDay)}
+                    title="ดูแผนที่ทริปที่เดินสำเร็จวันนั้น"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', cursor: 'pointer',
+                      background: '#d8f3dc', color: '#1b4332', border: 'none', borderRadius: 12, padding: '10px 12px',
+                      fontFamily: 'inherit', fontSize: 'var(--fs-sm)', boxShadow: 'inset 0 0 0 1.5px #74c69d',
+                    }}
+                  >
+                    <span aria-hidden="true">✅</span>
+                    <span style={{ flex: 1 }}><b>{stepDayOfDay.steps.toLocaleString()} ก้าว</b> · เดินถึงเป้าสำเร็จ</span>
+                    <span aria-hidden="true">🗺️</span>
+                  </button>
+                )}
                 {moodOfDay && (
                   <div style={{ background: 'var(--n50)', borderRadius: 12, padding: '10px 12px', fontSize: 'var(--fs-sm)' }}>
                     <b>{MOOD_EMOJI[moodOfDay.mood]} อารมณ์วันนั้น</b>

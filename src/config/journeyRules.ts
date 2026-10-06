@@ -1,28 +1,35 @@
 import type { JourneyRecord, JourneyStatus } from '../types.journey'
+import { getDailyStepGoal } from './stepGoalByBmi'
+import { endOfBangkokDay } from '../utils/progression'
 
-const BASE_DAILY_STEP_TARGET = 8000
-const HIGH_BMI_THRESHOLD = 23
-const HIGH_BMI_EXTRA_STEPS = 1500
+/** ทริปรายวัน: 1 วัน = 1 ทริป = 1 แผนที่ — เป้าหมาย = ก้าวรายวันตาม BMI หมดเขตตอนเที่ยงคืนของวันนั้น
+ *  (เดิม 3 วัน / 3 แผนที่ / เป้า ×3) วันที่เดินครบเป้าสะสมไปหา 21 วัน (config/exchangeItems.ts) */
+export const DEFAULT_JOURNEY_DEADLINE_DAYS = 1
 
-export const DEFAULT_JOURNEY_DEADLINE_DAYS = 3 // ให้เวลา 3 วันต่อ 1 ทริป (3 แผนที่)
-
-export function calcDailyStepTarget(bmi: number): number {
-  if (!Number.isFinite(bmi) || bmi < HIGH_BMI_THRESHOLD) return BASE_DAILY_STEP_TARGET
-  return BASE_DAILY_STEP_TARGET + HIGH_BMI_EXTRA_STEPS
+/** เส้นตายของทริปรายวัน = เที่ยงคืนตามเวลาไทย (Asia/Bangkok) ของวันที่เริ่มทริป
+ *  [แก้ตามที่ระบุ] เดิมใช้เที่ยงคืนตามเวลาเครื่อง — เครื่องที่ตั้งโซนอื่นตัดรอบคนละเวลากับ backend (logDate วันไทย) */
+export function endOfTripDay(from: Date = new Date()): Date {
+  return endOfBangkokDay(from)
 }
 
-// คำนวณก้าวเป้าหมายรวมของทริป (เป้าหมายรายวัน x 3 วัน)
+/** เป้าหมายก้าวรายวันตาม BMI เกณฑ์เอเชีย 4 ระดับ (ค่าต่ำของช่วง — ดู config/stepGoalByBmi.ts)
+ *  เดิมเป็น 8,000 ก้าว (+1,500 เมื่อ BMI ≥ 23) — ตารางใหม่ลดเป้าให้ BMI สูง แทนการเพิ่ม */
+export function calcDailyStepTarget(bmi: number): number {
+  return getDailyStepGoal(bmi).min
+}
+
+/** ก้าวเป้าหมายของทริป = เป้าหมายรายวัน (ทริปรายวัน 1 แผนที่) */
 export function calcMapTotalStepsTarget(bmi: number): number {
   return calcDailyStepTarget(bmi) * DEFAULT_JOURNEY_DEADLINE_DAYS
 }
 
-// คำนวณรางวัลตามสัดส่วน (เต็มคือ หยดน้ำ 20, คอยน์ 10)
+// คำนวณหยดน้ำตามสัดส่วน (เต็ม 20) — EXP/เหรียญของทริปคิดจากก้าวจริงตอนจบเควสแทน
+// (calculateStepReward ใน config/stepGoalByBmi.ts / backend utils/stepReward.ts)
 export function calcProportionalRewards(steps: number, target: number) {
   const pct = Math.min(100, (steps / target) * 100)
   return {
     pct: pct,
     waterDrops: Math.round((pct / 100) * 20),
-    coins: Math.round((pct / 100) * 10)
   }
 }
 
@@ -41,7 +48,7 @@ export function resolveJourneyStatus(journey: JourneyRecord, progressPct: number
     return 'COMPLETED_LATE'
   }
 
-  // ถ้าหมดเวลา 3 วัน ไม่ถือว่า Failed แล้ว แต่ให้จบเควสเป็น TIME_UP เพื่อแจกรางวัลตาม %
+  // หมดวันแล้วยังไม่ถึงเป้า — ไม่ถือว่า Failed แต่จบเป็น TIME_UP เพื่อแจกรางวัลตาม %
   if (now.getTime() > deadline) return 'TIME_UP'
   return 'IN_PROGRESS'
 }

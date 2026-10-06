@@ -13,11 +13,11 @@ export type JourneyStatus = 'IN_PROGRESS' | 'COMPLETED_EARLY' | 'COMPLETED_ON_TI
 export interface JourneyRecord {
   id: string
   userId: string
-  destinationMapId: string // เป้าหมายที่ผู้เล่นเลือก (แผนที่ใบที่ 3)
-  routeMapIds: string[]    // เก็บเส้นทาง 3 แผนที่ [ด่าน1, ด่าน2, ด่าน3]
+  destinationMapId: string // แผนที่ที่ผู้เล่นเลือกสำหรับวันนี้
+  routeMapIds: string[]    // ทริปรายวัน = [destinationMapId] (ทริปเก่าก่อนเปลี่ยนเป็นรายวันอาจมี 3 แผนที่)
   progressOnCurrentMapSteps: number // ก้าวรวมทั้งหมดในทริปนี้
   startedAt: string
-  deadlineAt: string // เวลาหมดเขต 3 วัน
+  deadlineAt: string // สิ้นวันที่เริ่มทริป
   status: JourneyStatus
 }
 

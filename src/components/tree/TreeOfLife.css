@@ -793,3 +793,39 @@
   .tree-of-life__stack--celebrate .tree-of-life__canvas, .tree-of-life__stack--celebrate::before { animation: none; }
   .tree-of-life__stardust { display: none; }
 }
+
+/* แถบปรับขนาดไอเทมตกแต่ง (โผล่เมื่อแตะเลือก) — ปุ่มนูนนุ่มกดง่ายบนมือถือ */
+.tree-of-life__decoration-toolbar {
+  position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px; padding: 4px 6px; z-index: 60;
+  border-radius: 99px; pointer-events: auto; white-space: nowrap;
+  background: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+}
+.tree-of-life__decoration-toolbar button {
+  width: 34px; height: 34px; border: none; border-radius: 50%; cursor: pointer;
+  font-family: var(--font-display); font-size: 20px; line-height: 1; color: #1b4332;
+  background: linear-gradient(180deg, #ffffff, #c8ecd3);
+  box-shadow: 0 3px 0 #74c69d, inset 0 2px 0 #fff;
+}
+.tree-of-life__decoration-toolbar button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #74c69d; }
+.tree-of-life__decoration-toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
+.tree-of-life__decoration-scale { min-width: 42px; text-align: center; font-family: var(--font-display); font-size: 13px; color: #1b4332; }
+.tree-of-life__decoration-resize-handle { width: 26px; height: 26px; right: -12px; bottom: -12px; font-size: 13px; }
+
+/* ประกายวิบวับบนดอกไม้/ประกายดาวของต้นไม้ (ProceduralTreeCanvas → .tree-glints) */
+.tree-glints { position: absolute; top: 0; bottom: 0; pointer-events: none; z-index: 3; }
+.tree-glint {
+  position: absolute; transform: translate(-50%, -50%) scale(0); opacity: 0;
+  background: radial-gradient(circle, #ffffff 0 18%, rgba(255, 250, 215, 0.9) 30%, rgba(255, 240, 180, 0) 70%);
+  clip-path: polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%);
+  filter: drop-shadow(0 0 4px rgba(255, 245, 200, 0.95));
+  animation: treeGlint 3s ease-in-out infinite;
+}
+@keyframes treeGlint {
+  0%, 62%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0) rotate(0deg); }
+  74% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(25deg); }
+  86% { opacity: 0.7; transform: translate(-50%, -50%) scale(0.6) rotate(45deg); }
+}
+@media (prefers-reduced-motion: reduce) { .tree-glints { display: none; } }

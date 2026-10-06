@@ -9,6 +9,9 @@ import type { TreeParams } from './generateTree'
   ผู้ดูแล (SJ) สมมาตร ให้ผลผลิต   : ISTJ สนสปรูซ · ISFJ แอปเปิล · ESTJ มะฮอกกานี · ESFJ แมกโนเลีย
   นักสำรวจ (SP) ยืดหยุ่น สีจัดจ้าน  : ISTP ไผ่ · ISFP เบิร์ช · ESTP ปาล์ม · ESFP ส้ม
 
+  จุดเด่นประจำกลุ่ม (option C ที่ผู้ใช้เลือก): NT = ประกายดาวในพุ่ม (sparkles) · NF = ดอกบาน (flowers)
+  SJ = ผลกลม (fruit) · SP = ใบมันวาว (glossy)
+
   form = โครงสร้างต้น: broadleaf (แตกกิ่งปกติ generateTree) / weeping (หลิว: เส้นใบห้อยจากปลายกิ่ง)
          column (ไซเปรส: ทรงเสาเรียว) / cone (สปรูซ: กรวยเป็นชั้น) / palm (ลำต้นเดี่ยว+ทางใบ) / bamboo (หลายลำ มีข้อ)
   ทุกสายพันธุ์โตตามขั้นภาพ 1-8 เหมือนกัน (buildTreeModel.ts / speciesForms.ts)
@@ -50,6 +53,10 @@ export interface Species {
   roundCrown?: boolean
   /** ตัวคูณจำนวนใบในพุ่ม (<1 = โปร่งขึ้น เห็นกิ่ง/ดอกชัด ดูเป็นธรรมชาติ) */
   leafDensity?: number
+  /** จุดเด่นกลุ่ม NT: ประกายดาวสี่แฉกในพุ่ม (ขั้นภาพ 3+) — amount คูณจำนวน */
+  sparkles?: { amount: number; color?: string }
+  /** จุดเด่นกลุ่ม SP: ใบมันวาว (แสงสะท้อนบนใบแต่ละใบ) */
+  glossy?: boolean
 }
 
 const TRUNK_SOFT = '#a8835f'
@@ -62,6 +69,8 @@ export const SPECIES: Record<MbtiType, Species> = {
     form: 'weeping', leafShape: 'lance', leafSize: 0.85,
     params: { branchAngle: 50, upwardBias: 0.1, gnarl: 0.22 },
     leafColors: ['#8dbf6a', '#a6d17f', '#76ad5a'], trunkColor: '#9c7b5b',
+    // NF = ดอกบาน: ดอกเล็กสีขาวอมชมพูแซมพุ่มหลิว
+    flowers: { colors: ['#fff7fb', '#fde4ef', '#f9d2e4'], amount: 0.7, size: 0.7, center: '#e8a0bf' },
   },
   INFJ: {
     // ซากุระบาน: พุ่มเป็นกลุ่มดอกสีชมพูฟูๆ ที่ปลายกิ่ง เห็นกิ่งสีเข้มลอดระหว่างกลุ่ม ดอกห้ากลีบใจกลางชมพูเข้ม
@@ -79,6 +88,8 @@ export const SPECIES: Record<MbtiType, Species> = {
     form: 'broadleaf', leafShape: 'maple',
     params: { branchAngle: 54, upwardBias: 0.08 },
     leafColors: ['#d9482b', '#f08a24', '#f4b73f', '#c0392b'], trunkColor: TRUNK_SOFT,
+    // NF = ดอกบาน: ดอกครีมใจกลางแดงอิฐ ตัดกับใบส้มแดง
+    flowers: { colors: ['#fff6e3', '#ffe9c7', '#fffaf0'], amount: 0.7, size: 0.8, center: '#c0392b' },
   },
   ENFP: {
     // [แก้ตามที่ระบุ] พุ่มทรงกลมโค้งมนด้านบน ใบไม่แน่นจนตัน (โปร่ง เป็นธรรมชาติ) มีใบเขียวแซม
@@ -99,6 +110,8 @@ export const SPECIES: Record<MbtiType, Species> = {
     // [แก้ตามที่ระบุ — ภาพอ้างอิง] เขียวป่าเข้มอมฟ้าเทาแบบไซเปรส ปลายกิ่งเขียวอ่อนลงเล็กน้อย
     // ลำต้นน้ำตาลเข้มเรียว (คงสีนี้ ไม่ใช้น้ำตาลอ่อนกลางของต้นอื่น — ดู assembleModel)
     leafColors: ['#1d4032', '#264d3f', '#2f5a4b', '#3a6657'], tipColors: ['#4b7c64', '#5a8b72', '#6b9a80'], trunkColor: '#4e3527',
+    // NT = ประกายความคิด
+    sparkles: { amount: 0.9, color: '#fff6c8' },
   },
   INTP: {
     name: 'ต้นแปะก๊วย', nameEn: 'Ginkgo',
@@ -106,6 +119,8 @@ export const SPECIES: Record<MbtiType, Species> = {
     form: 'broadleaf', leafShape: 'fan',
     params: { branchAngle: 36, upwardBias: 0.22 },
     leafColors: ['#9cc53b', '#b8d65a', '#e3c542', '#d4b62e'], trunkColor: '#9a8067',
+    // NT = ประกายความคิด: ดาวสีทองอ่อนในพุ่ม
+    sparkles: { amount: 1, color: '#fff6c8' },
   },
   ENTJ: {
     name: 'ต้นโอ๊ก', nameEn: 'Oak',
@@ -113,6 +128,8 @@ export const SPECIES: Record<MbtiType, Species> = {
     form: 'broadleaf', leafShape: 'oak',
     params: { trunkRadius: 0.58, trunkHeight: 3.4, branchAngle: 56, upwardBias: 0.1, lengthDecay: 0.83, lateralBranches: [2, 3] },
     leafColors: ['#3d6b35', '#4f7f3f', '#5f9148'], trunkColor: '#8d6b4c',
+    // NT = ประกายความคิด
+    sparkles: { amount: 1, color: '#fff6c8' },
   },
   ENTP: {
     name: 'ต้นไทร', nameEn: 'Banyan',
@@ -120,6 +137,8 @@ export const SPECIES: Record<MbtiType, Species> = {
     form: 'broadleaf', leafShape: 'oval', leafSize: 0.9,
     params: { trunkRadius: 0.5, trunkHeight: 3.8, branchAngle: 60, upwardBias: 0.1, lengthDecay: 0.83, lateralBranches: [2, 3] },
     leafColors: ['#2f6b3c', '#3f8a4b', '#58a25e'], trunkColor: '#9a8570', aerialRoots: true,
+    // NT = ประกายความคิด
+    sparkles: { amount: 1, color: '#fff6c8' },
   },
   // ── ผู้ดูแล (SJ) ──
   ISTJ: {
@@ -127,6 +146,8 @@ export const SPECIES: Record<MbtiType, Species> = {
     meaning: 'รูปทรงกรวยเป๊ะ สมมาตร สื่อถึงความมีระเบียบวินัย ตรงไปตรงมา และเคารพกฎเกณฑ์',
     form: 'cone', leafShape: 'needle',
     leafColors: ['#1e4a3c', '#2a5e4a', '#37715a'], trunkColor: '#7d5a3e',
+    // SJ = ผลผลิต: ลูกสนกลมสีน้ำตาลทอง
+    fruit: { color: '#a8743a', amount: 0.6, size: 0.95 },
   },
   ISFJ: {
     name: 'ต้นแอปเปิล', nameEn: 'Apple Tree',
@@ -143,6 +164,8 @@ export const SPECIES: Record<MbtiType, Species> = {
     // เน้นความสูง: ลำต้นยาวตรง กิ่งชี้ขึ้น พุ่มเป็นกลุ่มหนาอยู่ช่วงบน
     params: { trunkHeight: 4.8, trunkRadius: 0.5, upwardBias: 0.26, branchAngle: 44, lengthDecay: 0.8 },
     leafColors: ['#2f5d34', '#3e7442', '#4f8a50'], trunkColor: '#8a4b2e',
+    // SJ = ผลผลิต: ผลกลมสีน้ำตาลอำพัน (ฝักมะฮอกกานี)
+    fruit: { color: '#b8682c', amount: 0.8, size: 1.05 },
   },
   ESFJ: {
     name: 'ต้นแมกโนเลีย', nameEn: 'Magnolia',
@@ -150,6 +173,8 @@ export const SPECIES: Record<MbtiType, Species> = {
     form: 'broadleaf', leafShape: 'oval', leafSize: 1.15,
     leafColors: ['#3f7d4a', '#579a5a', '#6aa866'], trunkColor: '#8f7a68',
     flowers: { colors: ['#fdf1f5', '#f3b6c9', '#e892b0'], amount: 0.8, size: 2.3, kind: 'magnolia' },
+    // SJ = ผลผลิต: ผลกลมสีแดงแบบฝักเมล็ดแมกโนเลีย
+    fruit: { color: '#c8463c', amount: 0.5, size: 0.8 },
   },
   // ── นักสำรวจ (SP) ──
   ISTP: {
@@ -157,6 +182,7 @@ export const SPECIES: Record<MbtiType, Species> = {
     meaning: 'เติบโตเร็ว ยืดหยุ่นลู่ลมได้ดีแต่ไม่หักง่าย สื่อถึงการแก้ปัญหาเฉพาะหน้าและดัดแปลงได้หลากหลาย',
     form: 'bamboo', leafShape: 'blade',
     leafColors: ['#7fb04a', '#9cc85e', '#6a9a3d'], trunkColor: '#8fb85a', bark: 'bamboo',
+    glossy: true, // SP = ใบมันวาว
   },
   ISFP: {
     name: 'ต้นเบิร์ช', nameEn: 'Birch',
@@ -164,6 +190,7 @@ export const SPECIES: Record<MbtiType, Species> = {
     form: 'broadleaf', leafShape: 'oval', leafSize: 0.8,
     params: { trunkRadius: 0.3, upwardBias: 0.22, branchAngle: 40 },
     leafColors: ['#9cc95a', '#b6d86e', '#e6c74a'], trunkColor: '#efebe2', bark: 'birch',
+    glossy: true, // SP = ใบมันวาว
   },
   ESTP: {
     name: 'ต้นปาล์ม', nameEn: 'Palm Tree',
@@ -171,6 +198,7 @@ export const SPECIES: Record<MbtiType, Species> = {
     form: 'palm', leafShape: 'blade',
     leafColors: ['#3e8e41', '#5aa845', '#2f7a37'], trunkColor: '#b08a5e', bark: 'palm',
     fruit: { color: '#7a5230', amount: 0.4, size: 1.3 },
+    glossy: true, // SP = ใบมันวาว
   },
   ESFP: {
     name: 'ต้นส้ม', nameEn: 'Orange Tree',
@@ -179,6 +207,7 @@ export const SPECIES: Record<MbtiType, Species> = {
     leafColors: ['#2f7a3a', '#3f9148', '#58a655'], trunkColor: TRUNK_SOFT,
     flowers: { colors: ['#ffffff'], amount: 0.3 },
     fruit: { color: '#f28c1b', amount: 1.3 },
+    glossy: true, // SP = ใบมันวาว
   },
 }
 

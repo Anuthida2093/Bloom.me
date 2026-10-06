@@ -1,3 +1,5 @@
+// ต้องเป็นบรรทัดแรก: ล้างข้อมูลทดลองเก่าในเครื่องครั้งเดียว ก่อนโมดูลอื่นอ่าน localStorage (utils/resetLocalData.ts)
+import './utils/resetLocalData'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'

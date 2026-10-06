@@ -120,3 +120,45 @@ describe('buildTreeModel', () => {
     }
   })
 })
+
+describe('buildTreeModel — ต้นเฉพาะของผู้ใช้ (userSeed)', () => {
+  const grown = { ...base, trunkBranchLevel: 60 }
+
+  it('ผู้ใช้ต่างกัน สายพันธุ์เดียวกัน → โครงกิ่งไม่ซ้ำกัน แต่คนเดิมได้ต้นเดิมทุกครั้ง', () => {
+    const a = buildTreeModel({ ...grown, userSeed: 'user-a' })
+    const b = buildTreeModel({ ...grown, userSeed: 'user-b' })
+    expect(a.branches).not.toEqual(b.branches)
+    expect(buildTreeModel({ ...grown, userSeed: 'user-a' })).toEqual(a)
+  })
+
+  it('ไม่เปลี่ยนสีเปลือก/ชื่อสายพันธุ์/รูปใบ (สุ่มแค่ทรงกิ่ง พุ่ม ดอก และหน้าตา)', () => {
+    const plain = buildTreeModel(grown)
+    const mine = buildTreeModel({ ...grown, userSeed: 'user-a' })
+    expect(mine.trunkColor).toBe(plain.trunkColor)
+    expect(mine.speciesName).toBe(plain.speciesName)
+    expect(mine.leafShape).toBe(plain.leafShape)
+  })
+
+  it('ใบผูกกับเลเวลจิตใจ: เลเวลจิตใจสูงพุ่มแน่นกว่า', () => {
+    const low = buildTreeModel({ ...grown, leafFlowerLevel: 1 })
+    const high = buildTreeModel({ ...grown, leafFlowerLevel: 20 })
+    expect(high.leaves.length).toBeGreaterThan(low.leaves.length)
+  })
+})
+
+describe('buildTreeModel — หน้าตาต้นสน/ไผ่', () => {
+  it('สน (ISTJ กรวย / INTJ ไซเปรส): หน้าอยู่กลางพุ่มเข็มด้านหน้า วาดทับใบ', () => {
+    for (const mbtiType of ['ISTJ', 'INTJ'] as const) {
+      const m = buildTreeModel({ mbtiType, trunkBranchLevel: 60, leafFlowerLevel: 20, userSeed: 'u1' })
+      expect(m.face.anchor?.overFoliage).toBe(true)
+      expect(m.face.anchor?.radius).toBeGreaterThan(0.15)
+      expect(m.face.anchor?.position[1]).toBeGreaterThan(0)
+    }
+  })
+
+  it('ไผ่ (ISTP): หน้าอยู่บนลำกลาง ใต้ใบ (ชั้นกิ่ง)', () => {
+    const m = buildTreeModel({ mbtiType: 'ISTP', trunkBranchLevel: 60, leafFlowerLevel: 20, userSeed: 'u1' })
+    expect(m.face.anchor?.overFoliage).toBe(false)
+    expect(m.face.anchor?.radius).toBeGreaterThan(0.1)
+  })
+})

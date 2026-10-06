@@ -82,4 +82,10 @@ export const uiSounds = {
 
   /** เสียงยกเลิก/ปิด — โทนต่ำลง สั้น ให้ความรู้สึก "ถอยออก" */
   cancel: (): void => playTone({ frequency: 400, frequencyEnd: 220, duration: 0.16, type: 'sawtooth', volume: 0.08 }),
+
+  /** เสียงแจ้งเตือนน่ารัก "ปริ๊ง-ปริ๊ง" สองโน้ตไล่ขึ้น — ใช้ตอน toast ข่าวเพื่อนเด้งเข้ามา */
+  chime: (): void => {
+    playTone({ frequency: 988, frequencyEnd: 1319, duration: 0.12, type: 'triangle', volume: 0.09 })
+    window.setTimeout(() => playTone({ frequency: 1319, frequencyEnd: 1760, duration: 0.18, type: 'sine', volume: 0.08 }), 110)
+  },
 }

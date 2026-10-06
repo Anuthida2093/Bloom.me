@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
+import { useVideoStallGuard } from '../../hooks/useVideoStallGuard'
 
 const SHADOW_1 = 'rgba(255, 244, 214, .8)'
 const C_2 = '#FFF3C4'
@@ -60,9 +61,10 @@ interface CinematicBackgroundProps {
 }
 
 export default function CinematicBackground({
-  videoSrc = '/assets/videos/intro/hero-waterfall.mp4',
+  videoSrc = '/assets/videos/intro/hero-waterfall1.mp4',
   videoSrcWebm = '',
-  musicSrc = '/assets/ambient-waterfall.mp3',
+  // ไฟล์ /assets/ambient-waterfall.mp3 ไม่มีอยู่จริง (โหลดไม่ได้ทุกครั้ง) — ไม่ระบุ = ไม่มีเสียงแวดล้อม (ผลเหมือนเดิม ไม่ยิง 404)
+  musicSrc = '',
   musicVolume = 60,
   soundEnabled = true,
   dustParticles = true,
@@ -76,6 +78,10 @@ export default function CinematicBackground({
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
   const [videoFailed, setVideoFailed] = useState(false)
+  // [แก้ตามที่ระบุ] เน็ตไม่ดี: ยังโหลดไม่พร้อม/กระตุกรอโหลด → ใช้ฉาก canvas สำรองแทน วิดีโอไม่ค้างค้างบนจอ
+  const guard = useVideoStallGuard(videoRef, videoSrc)
+  const videoUnusable = videoFailed || guard.failed
+  const showFallback = videoUnusable || !guard.ready
   const [audioEnabled, setAudioEnabled] = useState(false)
 
   // videoSrc เปลี่ยนได้ระหว่างใช้งาน (WelcomeModal สลับไฟล์ตามการหมุนจอ) — ให้ไฟล์ใหม่ได้ลองโหลด
@@ -135,7 +141,7 @@ export default function CinematicBackground({
 
   /* ── Fallback scene: ท้องฟ้า + พระอาทิตย์ + ภูเขา + น้ำตกไหล (canvas 2D) ── */
   useEffect(() => {
-    if (!videoFailed) return
+    if (!showFallback) return
     const canvas = fallbackCanvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -209,7 +215,7 @@ export default function CinematicBackground({
     }
     loop()
     return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(fallbackRafRef.current) }
-  }, [videoFailed])
+  }, [showFallback])
 
   /* ── เสียงแวดล้อม: เล่นได้ก็ต่อเมื่อ user โต้ตอบหน้าเว็บครั้งแรก (นโยบายเบราว์เซอร์) ──
      ปลดล็อกเสียงได้ก็ต่อเมื่อ soundEnabled=true เท่านั้น (ถ้าผู้ใช้ปิดเสียงไว้ตั้งแต่แรก
@@ -274,27 +280,31 @@ export default function CinematicBackground({
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', background: `linear-gradient(160deg,${BG_9},${BG_10})` }}>
-      {!videoFailed && (
+      {showFallback && (
+        <canvas
+          ref={fallbackCanvasRef}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', animation: 'cinematicPan 40s ease-in-out infinite alternate' }}
+        />
+      )}
+
+      {!videoUnusable && (
         <video
           // key ผูกกับ videoSrc — เปลี่ยน <source> อย่างเดียวเบราว์เซอร์ไม่โหลดไฟล์ใหม่ ต้อง remount <video>
           key={videoSrc}
           ref={videoRef}
           autoPlay muted loop playsInline
           onError={() => setVideoFailed(true)}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', animation: 'cinematicPan 40s ease-in-out infinite alternate' }}
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', animation: 'cinematicPan 40s ease-in-out infinite alternate',
+            // ยังไม่พร้อม/กระตุก → จางออก เห็นฉากสำรองด้านล่างแทนภาพค้าง
+            opacity: guard.ready ? 1 : 0, transition: 'opacity .6s ease',
+          }}
         >
           {/* error ของไฟล์ที่หาไม่เจอยิงที่ <source> ไม่ใช่ <video> (onError ของ <video> ด้านบนจับแค่ error
               ตอนถอดรหัส) — ต้องดักที่ <source> ตัวสุดท้าย ไม่งั้นฉาก canvas สำรองไม่เคยได้แสดงเลย */}
           <source src={videoSrc} type="video/mp4" onError={videoSrcWebm ? undefined : () => setVideoFailed(true)} />
           {videoSrcWebm && <source src={videoSrcWebm} type="video/webm" onError={() => setVideoFailed(true)} />}
         </video>
-      )}
-
-      {videoFailed && (
-        <canvas
-          ref={fallbackCanvasRef}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', animation: 'cinematicPan 40s ease-in-out infinite alternate' }}
-        />
       )}
 
       <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, var(--glass-b-8) 0%, ${BG_11} 50%, var(--glass-b-35) 100%)` }} />
@@ -304,7 +314,7 @@ export default function CinematicBackground({
       )}
 
       {/* เสียงแวดล้อมเบาๆ — เล่นลูป ระดับเสียงผูกกับ musicVolume + soundEnabled จาก SettingsModal */}
-      <audio ref={audioRef} src={musicSrc} loop />
+      {musicSrc && <audio ref={audioRef} src={musicSrc} loop />}
 
       <style>{`
         @keyframes cinematicPan {

@@ -5,7 +5,6 @@ import OwlAvatar from '../OwlAvatar'
 import { useAppContext } from '../../../context/AppContext'
 import { playSfx } from '../../../utils/audioPlayer'
 import { usePrefersReducedMotion } from '../../../hooks/useMediaQuery'
-import { BADGE_ICONS } from '../../../config/iconAssets'
 
 const C_13 = '#4B5563'
 const C_14 = '#374151'
@@ -893,55 +892,47 @@ export default function LearningQuestMap({
         </div>
       </div>
 
-      {/* [ใหม่] ทางเข้าเควสเสริม (side quests) — แพทเทิร์นเดียวกับ FAB ของ QuestGateView (หมวดกาย/
-          ใจ) เพื่อให้กดเข้าถึงได้จริง ไม่ใช่แค่มีอยู่ใน catalog เฉยๆ — อยู่นอกเลเยอร์ pan/zoom
-          โดยตั้งใจ (ปุ่มลอยติดจอ ไม่ใช่ส่วนหนึ่งของแผนที่ที่ควรเลื่อน/ซูมตามไปด้วย) */}
+      {/* แถบข้างเควสเสริม (side quests) บนแผนที่ — เห็นรายการเต็มตลอด (เดิมซ่อนในปุ่มลอยมุมจอ)
+          อยู่นอกเลเยอร์ pan/zoom (ติดจอ ไม่เลื่อน/ซูมตามแผนที่) · จอแคบย่อเป็นแถบเปิด/ปิดได้
+          เควสที่ยังล็อกกดได้ — QuestSection แจ้งเหตุผลที่ยังเล่นไม่ได้ (เดิม disabled กดแล้วเงียบ) */}
       {sideQuests.length > 0 && (
-        <div className={`learning-quest-map__fab${isSideMenuOpen ? ' open' : ''}`}>
-          <div className="learning-quest-map__fab-menu">
+        <aside className={`learning-quest-map__sidebar${isSideMenuOpen ? ' is-open' : ''}`} aria-label="เควสเสริม">
+          <button
+            type="button"
+            className="learning-quest-map__sidebar-head"
+            onClick={() => setIsSideMenuOpen((v) => !v)}
+            aria-expanded={isSideMenuOpen}
+          >
+            <span aria-hidden="true">📋</span>
+            <span>เควสเสริม</span>
+            <span className="learning-quest-map__sidebar-caret" aria-hidden="true">▾</span>
+          </button>
+          <div className="learning-quest-map__sidebar-list">
             {sideQuests.map((q) => {
               const locked = isLocked(q)
               const done = isQuestFullyDoneToday(q, isCompleted, getTodayCompletionCount)
               return (
                 <button
                   key={q.code}
-                  className="learning-quest-map__fab-item"
-                  style={{ opacity: locked ? .45 : 1 }}
-                  title={q.titleTh}
-                  disabled={locked}
+                  type="button"
+                  className={`learning-quest-map__side-item${locked ? ' is-locked' : ''}${done ? ' is-done' : ''}`}
+                  title={q.desc}
                   onClick={() => handlePickSideQuest(q)}
                 >
-                  {/* [แก้ตามที่ระบุ — ตัวเลือก B ให้ตรงกับ QuestGateView.tsx] ไอคอนเควสเปล่าๆ
-                      ไม่มีขอบ/พื้นหลังเพิ่ม ปุ่มวงกลมเดิม (.learning-quest-map__fab-item) ยังคง
-                      พื้นหลัง/ขอบไว้เป็นปุ่มกดจริง (ไม่ใช่แค่กรอบตกแต่งไอคอนเฉยๆ แบบ
-                      QuestGateView) แต่ตัวไอคอนข้างในไม่ครอบด้วยวงกลม/เงาซ้อนอีกชั้น */}
-                  <span className="learning-quest-map__fab-item-icon">
+                  <span className="learning-quest-map__side-icon">
                     {QUEST_ICONS[q.code]
-                      ? <img src={QUEST_ICONS[q.code]} className="learning-quest-map__fab-item-img" alt={q.titleTh} />
-                      : q.icon}
+                      ? <img src={QUEST_ICONS[q.code]} alt="" />
+                      : <span aria-hidden="true">{q.icon}</span>}
                   </span>
-                  {done && <span className="learning-quest-map__fab-badge learning-quest-map__fab-badge--done">✓</span>}
-                  {locked && <span className="learning-quest-map__fab-badge learning-quest-map__fab-badge--lock">🔒</span>}
-                  {q.isRepeatable && (
-                    <span
-                      className="learning-quest-map__fab-badge learning-quest-map__fab-badge--repeat"
-                      title={q.maxPerDay ? `เล่นซ้ำได้วันนี้ ${getTodayCompletionCount(q.code)}/${q.maxPerDay} ครั้ง` : 'เล่นซ้ำได้หลายครั้งต่อวัน'}
-                    >
-                      🔁
-                    </span>
-                  )}
+                  <span className="learning-quest-map__side-name">{q.titleTh}</span>
+                  <span className="learning-quest-map__side-status">
+                    {done ? '✓' : locked ? '🔒' : q.isRepeatable ? '🔁' : '▶'}
+                  </span>
                 </button>
               )
             })}
           </div>
-          <button
-            className="learning-quest-map__fab-main"
-            onClick={() => setIsSideMenuOpen((v) => !v)}
-            title="เควสเสริม"
-          >
-            {isSideMenuOpen ? <img src={BADGE_ICONS.close} className="icon-img" alt="" /> : '📋'}
-          </button>
-        </div>
+        </aside>
       )}
 
       <style>{`
@@ -1108,55 +1099,58 @@ export default function LearningQuestMap({
           transition: left 1.4s cubic-bezier(.45,.05,.55,.95), top 1.4s cubic-bezier(.45,.05,.55,.95), transform 1.4s cubic-bezier(.45,.05,.55,.95);
         }
 
-        /* [ใหม่] FAB เควสเสริม — สไตล์เดียวกับ quest-gate-view__fab ใน QuestGateView.tsx
-           [แก้] ใช้ --gpf-safe-bottom (ประกาศที่ .gameplay-frame) กันไม่ให้ ActionMenuBar
-           บัง แทนการลดขนาดกล่องแม่ทั้งกล่อง (ดู comment ใน GameplayFrame.css) */
-        .learning-quest-map__fab { position: absolute; bottom: calc(var(--gpf-safe-bottom, 0px) + 24px); left: 24px; z-index: 20; }
-        /* [แก้ตามที่ระบุ] ปุ่มเควสเสริมเป็นตัวอีโมจิ/รูปเปล่าๆ ไม่มีวงกลมพื้นหลัง/ขอบ —
-           เงา drop-shadow รอบตัวรูปแทน ให้ยังเห็นชัดบนพื้นแผนที่ */
-        .learning-quest-map__fab-main {
-          width: 52px; height: 52px; padding: 0;
-          background: none; border: none; color: var(--fixed-white); font-size: 36px;
-          display: flex; align-items: center; justify-content: center;
-          filter: drop-shadow(0 4px 10px var(--glass-b-60)); cursor: pointer; position: relative; z-index: 2;
-          transition: transform .3s var(--ease-spring);
+        /* แถบข้างเควสเสริม — กระจกฝ้าชิดขวา ไม่บังเส้นทางด่านหลัก (โหนดอยู่ช่วงกลาง-ซ้ายของภาพ)
+           เว้นล่างด้วย --gpf-safe-bottom ไม่ให้ ActionMenuBar บัง */
+        .learning-quest-map__sidebar {
+          position: absolute; top: 72px; right: 12px; z-index: 20;
+          width: 236px; max-height: calc(100% - 72px - var(--gpf-safe-bottom, 0px) - 16px);
+          display: flex; flex-direction: column; overflow: hidden;
+          border-radius: 20px;
+          background: rgba(12, 32, 22, 0.55);
+          -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2);
+          border: 1.5px solid rgba(255, 255, 255, 0.22);
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+          font-family: var(--font-display); color: var(--fixed-white);
         }
-        .learning-quest-map__fab-main .icon-img { width: 36px; height: 36px; }
-        .learning-quest-map__fab-main:hover { transform: scale(1.08); }
-        .learning-quest-map__fab-menu {
-          position: absolute; bottom: 60px; left: -8px;
-          display: flex; flex-direction: column-reverse; gap: 12px; pointer-events: none;
+        .learning-quest-map__sidebar-head {
+          display: flex; align-items: center; gap: 8px; width: 100%;
+          padding: 12px 14px; border: none; background: none; color: inherit;
+          font: inherit; font-size: 16px; text-align: left; cursor: default;
         }
-        .learning-quest-map__fab.open .learning-quest-map__fab-menu { pointer-events: auto; }
-        /* [แก้ตามที่ระบุ] ขยายปุ่มให้พอดีกับไอคอน 2.5cm ใหม่ (เดิม 48px เล็กกว่า 2.5cm/~94.5px
-           มาก) — ปุ่มนี้ยังเป็นปุ่มกดจริง (ไม่ใช่แค่กรอบตกแต่งไอคอนแบบ QuestGateView) จึงคง
-           พื้นหลัง/ขอบวงกลมไว้เป็นพื้นที่กดที่มองเห็นได้ */
-        .learning-quest-map__fab-item {
-          /* [แก้ตามที่ระบุ] เล็กลง — เดิมไอคอน 2.5cm (~94px) ต่อปุ่ม */
-          position: relative; width: 68px; height: 68px; padding: 0;
-          background: none; border: none; color: var(--fixed-white); font-size: 40px;
-          display: flex; align-items: center; justify-content: center;
-          filter: drop-shadow(0 4px 10px var(--glass-b-50)); cursor: pointer;
-          transform: scale(0) translateY(24px); opacity: 0;
-          transition: transform .3s var(--ease-spring), opacity .3s var(--ease-spring), background .18s ease;
+        .learning-quest-map__sidebar-caret { margin-left: auto; display: none; transition: transform .2s ease; }
+        .learning-quest-map__sidebar-list { display: flex; flex-direction: column; gap: 8px; padding: 0 10px 12px; overflow-y: auto; }
+        .learning-quest-map__side-item {
+          display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px;
+          padding: 6px 10px 6px 6px; border: none; border-radius: 14px; cursor: pointer;
+          font: inherit; font-size: 14px; color: #1f2a22; text-align: left;
+          background: linear-gradient(180deg, #ffffff 0%, #e6f4ea 100%);
+          box-shadow: 0 4px 0 #9cc5a8, 0 6px 12px rgba(0, 0, 0, 0.18), inset 0 2px 0 #fff;
+          transition: transform .12s ease, box-shadow .12s ease;
         }
-        .learning-quest-map__fab-item:disabled { cursor: not-allowed; }
-        .learning-quest-map__fab-item:hover:not(:disabled) { filter: drop-shadow(0 4px 14px var(--glass-b-60)) brightness(1.08); }
-        .learning-quest-map__fab.open .learning-quest-map__fab-item { transform: scale(1) translateY(0); opacity: 1; }
-        /* [แก้ตามที่ระบุ — ตัวเลือก B] ตัวไอคอนเองไม่มีวงกลม/พื้นหลังซ้อนอีกชั้นข้างในปุ่ม */
-        .learning-quest-map__fab-item-icon {
-          display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;
+        .learning-quest-map__side-item:active { transform: translateY(3px); box-shadow: 0 1px 0 #9cc5a8, inset 0 2px 0 #fff; }
+        .learning-quest-map__side-item.is-locked { filter: saturate(0.4); opacity: 0.8; }
+        .learning-quest-map__side-item.is-done { background: linear-gradient(180deg, #e9f9ee 0%, #c8ecd3 100%); }
+        .learning-quest-map__side-icon { flex-shrink: 0; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+        .learning-quest-map__side-icon img { width: 40px; height: 40px; object-fit: contain; }
+        .learning-quest-map__side-name { flex: 1; min-width: 0; line-height: 1.3; }
+        .learning-quest-map__side-status {
+          flex-shrink: 0; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 99px;
+          display: flex; align-items: center; justify-content: center; font-size: 12px;
+          background: rgba(0, 0, 0, 0.08);
         }
-        .learning-quest-map__fab-item-img { width: 60px; height: 60px; object-fit: contain; }
-        .learning-quest-map__fab-badge {
-          position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; border-radius: 50%;
-          font-size: 9px; display: flex; align-items: center; justify-content: center;
+        .learning-quest-map__side-item.is-done .learning-quest-map__side-status { background: var(--g500); color: #fff; }
+        /* จอแคบ: ย่อเป็นแถบหัว กดเพื่อเปิดรายการ */
+        @media (max-width: 720px) {
+          .learning-quest-map__sidebar { top: 64px; right: 8px; width: min(230px, calc(100% - 16px)); }
+          .learning-quest-map__sidebar-head { cursor: pointer; padding: 10px 12px; font-size: 14px; }
+          .learning-quest-map__sidebar-caret { display: inline; }
+          .learning-quest-map__sidebar.is-open .learning-quest-map__sidebar-caret { transform: rotate(180deg); }
+          .learning-quest-map__sidebar:not(.is-open) .learning-quest-map__sidebar-list { display: none; }
         }
-        .learning-quest-map__fab-badge--done { background: var(--g500); color: var(--fixed-white); }
-        .learning-quest-map__fab-badge--lock { background: var(--glass-b-60); }
-        /* [ใหม่] ป้ายเล่นซ้ำได้ — ย้ายไปมุมล่างซ้ายแทน กันซ้อนทับกับป้าย done/lock ที่มุมขวาบน
-           (เควสเล่นซ้ำได้ยัง "สำเร็จแล้ว" ของรอบล่าสุดพร้อมกับเล่นซ้ำได้อีกในวันเดียวกันได้) */
-        .learning-quest-map__fab-badge--repeat { top: auto; right: auto; bottom: -4px; left: -4px; background: var(--g500); }
+        @media (max-width: 300px) {
+          .learning-quest-map__side-item { min-height: 40px; font-size: 12px; gap: 6px; }
+          .learning-quest-map__side-icon, .learning-quest-map__side-icon img { width: 28px; height: 28px; }
+        }
 
         @media (prefers-reduced-motion: reduce) {
           .learning-quest-map__node-badge, .learning-quest-map__node-wrap, .learning-quest-map__owl { animation: none; transition: none; }

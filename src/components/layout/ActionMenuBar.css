@@ -224,3 +224,16 @@
   width: var(--nav-icon-size); height: var(--nav-icon-size);
   font-size: calc(var(--nav-icon-size) * .55); line-height: 1;
 }
+
+/* สมาร์ทวอทช์/จอเล็กมาก (≤ 300px): 5 ปุ่ม × 58px = 290px ล้นจอนาฬิกา (~240–280px) — ย่อให้พอดี
+   ช่องกดยังเหลือ ~46×46px ใกล้ขั้นต่ำ 44px */
+@media (max-width: 300px) {
+  :root { --nav-icon-size: 38px; --nav-height: 46px; --btn-width: 46px; }
+  .action-menu-container { bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .liquid-nav-bar { border-radius: var(--r-md); }
+  .nav-indicator { border-width: 4px; }
+  .nav-indicator::before, .nav-indicator::after { display: none; }
+  .liquid-nav-bar ul li.active a .nav-text { display: none; }
+  .quest-floating-menu { padding: 8px; }
+  .quest-floating-menu .icon-img { width: 28px; height: 28px; }
+}

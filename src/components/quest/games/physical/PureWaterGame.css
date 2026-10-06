@@ -179,5 +179,5 @@
 .pure-water-ring-fill { stroke: var(--g600); }
 .pure-water-progress-current { color: var(--n900); font-size: 30px; }
 .pure-water-progress-max { color: var(--n900); }
-.pure-water-submit-btn { min-width: 220px; }
+.pure-water-submit-btn { min-width: min(220px, 100%); }
 .pure-water-cancel-btn { color: color-mix(in srgb, var(--n900) 60%, transparent); }

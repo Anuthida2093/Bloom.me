@@ -7,6 +7,7 @@ import { AudioProvider } from './context/AudioContext'
 import { LanguageProvider } from './context/LanguageContext'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import RouteFallback from './components/common/RouteFallback'
+import RequireSession from './components/common/RequireSession'
 import { ApiError } from './services/http'
 
 /*============================================================================*\
@@ -75,7 +76,9 @@ export default function App() {
                       path="/dashboard"
                       element={
                         <ErrorBoundary scope="หน้าหลัก">
-                          <Dashboard />
+                          <RequireSession>
+                            <Dashboard />
+                          </RequireSession>
                         </ErrorBoundary>
                       }
                     />

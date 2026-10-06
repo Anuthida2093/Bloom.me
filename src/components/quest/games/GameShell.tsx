@@ -6,6 +6,7 @@ import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
 import { useAppContext } from '../../../context/AppContext'
 import { playSfx } from '../../../utils/audioPlayer'
 import { BADGE_ICONS } from '../../../config/iconAssets'
+import { useProgression } from '../../../hooks/useProgression'
 import './GameShell.css'
 import '../../leaderboard/leaderboardRow.css'
 
@@ -68,6 +69,9 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
   /** [เพิ่มรอบนี้ — โหมดเคร่งครัด] จำไว้ว่ารอบนี้จบแบบ "ข้ามตัวจับเวลา" หรือจบเต็มรูปแบบ
    *  เพื่อให้หน้ารับรางวัลแสดงตัวเลขที่ตรงกับที่ quest.api.ts จ่ายจริง (ดูที่นั่นสำหรับสูตรครึ่งรางวัล) */
   const [awardedSkipped, setAwardedSkipped] = useState(false)
+  const { doubleRewardToday } = useProgression()
+  /** ข้าม = ครึ่งเดียว · บัฟคูณสองวันนี้ = ×2 (ตอนนี้ไม่มีแหล่งที่มา — กล่องระหว่างทางถูกเลิกใช้ ดู docs/PROGRESSION_API.md) */
+  const rewardMult = (awardedSkipped ? 0.5 : 1) * (doubleRewardToday ? 2 : 1)
 
   // [แก้] รีเซ็ต stage/confirmExit ระหว่าง render ทันทีที่ quest.code เปลี่ยน แทนการ setState
   // ใน effect (react-hooks/set-state-in-effect) — แพทเทิร์น "ปรับ state เมื่อ prop เปลี่ยน"
@@ -182,8 +186,8 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
           </p>
           <div className="game-shell__reward-cards">
             {/* [แก้ตามที่ระบุรอบนี้ — ข้อ 7] ตัวเลขไว้หน้ารูป + รูปใหญ่ชัดเจนขึ้น */}
-            <div><strong>+{awardedSkipped ? Math.round(quest.coinReward / 2) : quest.coinReward}</strong><img src={BADGE_ICONS.coins} className="icon-img--reward" alt="" />เหรียญละอองดาว</div>
-            <div><strong>+{awardedSkipped ? Math.round(quest.expReward / 2) : quest.expReward}</strong><img src={BADGE_ICONS.exp} className="icon-img--reward" alt="" />EXP</div>
+            <div><strong>+{Math.round(quest.coinReward * rewardMult)}</strong><img src={BADGE_ICONS.coins} className="icon-img--reward" alt="" />เหรียญละอองดาว</div>
+            <div><strong>+{Math.round(quest.expReward * rewardMult)}</strong><img src={BADGE_ICONS.exp} className="icon-img--reward" alt="" />EXP</div>
           </div>
           <button className="lb-btn lb-btn--wide" onClick={claim}>รับรางวัล</button>
           </div>
