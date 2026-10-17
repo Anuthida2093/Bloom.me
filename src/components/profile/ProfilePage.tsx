@@ -311,7 +311,7 @@ export default function ProfilePage({
                           )}
                           <div style={{ fontSize: 'var(--fs-3xl)', marginBottom: 4 }}>
                             {ITEM_ICONS[item.shopItemId]
-                              ? <img src={ITEM_ICONS[item.shopItemId]} alt={meta?.nameTh ?? ''} style={{ width: 36, height: 36, objectFit: 'contain', margin: '0 auto' }} />
+                              ? <img src={ITEM_ICONS[item.shopItemId]} alt={meta?.nameTh ?? ''} loading="lazy" decoding="async" style={{ width: 36, height: 36, objectFit: 'contain', margin: '0 auto' }} />
                               : meta?.emoji}
                           </div>
                           <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xs)', color: 'var(--text)' }}>{meta?.nameTh}</div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLanguage } from '../../context/LanguageContext'
 import GameplayFrame from './GameplayFrame'
 import type { QuestLogEntry, UserData, TreeStats, PlacedItem, DecorationPositionMap, MoodEntryData, QuestCategory } from '../../types'
@@ -12,7 +12,7 @@ import { QUEST_ICONS, QUEST_TAB_ICONS } from '../../config/iconAssets'
 import { useAppContext, DAILY_FOCUS_QUOTA_MINUTES } from '../../context/AppContext'
 import QuestRewardCelebration, { type QuestCelebrationData } from './QuestRewardCelebration'
 import QuestFeedbackPrompt, { type QuestFeedbackPromptData } from './QuestFeedbackPrompt'
-import { playSfx } from '../../utils/audioPlayer'
+import { playSfx, stopSfx } from '../../utils/audioPlayer'
 import GameAlert from '../ui/GameAlert'
 import { isQuestDoneNow } from '../../utils/questCompletion'
 import { BADGE_ICONS } from '../../config/iconAssets'
@@ -166,6 +166,12 @@ export default function QuestSection({
   }
 
   const anyGameplayOpen = !!playingQuest || !!specialQuest
+  // [แก้ตามที่ระบุ — 1.4] ปิดหน้าเล่นเควส (กลับแผนที่เควส) → ตัดเสียงพิมพ์ที่ยังเล่นค้างทันที
+  // (เควสเป็นเลเยอร์ในหน้าเดียวกัน ไม่ได้เปลี่ยน route — RouteEffects จึงไม่ทำงานตรงนี้)
+  // ตัดเฉพาะ KEYPRESS — เสียงฉลองรับรางวัลที่เล่นตอนปิดหน้าเกมต้องดังต่อ
+  useEffect(() => {
+    if (!anyGameplayOpen) stopSfx('KEYPRESS')
+  }, [anyGameplayOpen])
   useEscapeKey(onClose, !anyGameplayOpen)
 
   const tab = QUEST_TABS.find((t) => t.id === activeTab) ?? QUEST_TABS[0]

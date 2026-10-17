@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLanguage } from '../../context/LanguageContext'
 import { QUEST_TABS, type QuestTabId } from '../../config/questCatalog'
 import { BADGE_ICONS, QUEST_TAB_ICONS } from '../../config/iconAssets'
+import { prefetchAsset, LEARNING_MAP_VIDEO } from '../../utils/prefetchAsset'
 import './ActionMenuBar.css'
 
 /** [แก้ตามที่ระบุ] เอา 'inventory' (ย้ายไปอยู่ในหน้าโปรไฟล์) และ 'settings' (ย้ายไปเป็นปุ่ม
@@ -56,6 +57,8 @@ export default function ActionMenuBar({
      หรือปุ่มอื่นๆ — ให้ปิดเองอัตโนมัติ (แตะในเมนู/แถบเมนูนี้เองไม่นับ ปุ่มเควสสลับเปิด-ปิดตามเดิม) */
   useEffect(() => {
     if (!showQuestMenu) return
+    // [1.5] เปิดเมนูเควส = กำลังจะเลือกหมวด → ดึงวิดีโอแผนที่เควสการเรียนรู้ (ไฟล์ใหญ่สุด) มารอในแคช
+    prefetchAsset(LEARNING_MAP_VIDEO)
     const onPointerDown = (e: PointerEvent) => {
       if ((e.target as Element | null)?.closest('.action-menu-container')) return
       setShowQuestMenu(false)

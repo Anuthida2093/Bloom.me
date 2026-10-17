@@ -26,7 +26,7 @@ export const en: Record<TranslationKey, string> = {
   'footer.knowledge': 'Knowledge',
   'footer.physical': 'Physical health',
   'footer.mental': 'Mental health',
-  'footer.supports': 'Works on 📱 Phone · 💻 Computer · 📟 Tablet · ⌚ Smartwatch',
+  'footer.supports': 'Works on 📱 Phone · 💻 Computer · 📟 Tablet',
 
   // ── Main app (menu bar, Home, Settings, check-in, tree info, leaderboard, profile, shop) ──
   'common.close': 'Close',

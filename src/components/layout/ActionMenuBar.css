@@ -16,7 +16,8 @@
 
 .action-menu-container {
   position: fixed;
-  bottom: 25px;
+  /* [1.1] อ่านจากโทเคนกลาง (index.css) + safe-area ของ iPhone — ทุกหน้าเว้นที่ด้วยค่าชุดเดียวกัน */
+  bottom: calc(var(--action-bar-offset, 25px) + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -176,7 +177,6 @@
 }
 @media (max-width: 360px) {
   :root { --nav-icon-size: 48px; --btn-width: 58px; }
-  .action-menu-container { bottom: 12px; }
   .liquid-nav-bar ul li.active a .nav-text { transform: translateY(12px); }
 }
 
@@ -229,7 +229,6 @@
    ช่องกดยังเหลือ ~46×46px ใกล้ขั้นต่ำ 44px */
 @media (max-width: 300px) {
   :root { --nav-icon-size: 38px; --nav-height: 46px; --btn-width: 46px; }
-  .action-menu-container { bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
   .liquid-nav-bar { border-radius: var(--r-md); }
   .nav-indicator { border-width: 4px; }
   .nav-indicator::before, .nav-indicator::after { display: none; }

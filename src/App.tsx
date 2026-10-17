@@ -8,6 +8,7 @@ import { LanguageProvider } from './context/LanguageContext'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import RouteFallback from './components/common/RouteFallback'
 import RequireSession from './components/common/RequireSession'
+import RouteEffects from './components/common/RouteEffects'
 import { ApiError } from './services/http'
 
 /*============================================================================*\
@@ -64,6 +65,7 @@ export default function App() {
           <AudioProvider>
             <LazyMotion features={domAnimation}>
               <ErrorBoundary scope="แอปพลิเคชัน">
+                <RouteEffects />
                 <Suspense fallback={<RouteFallback />}>
                   <Routes>
                     <Route path="/" element={<WelcomeModal />} />

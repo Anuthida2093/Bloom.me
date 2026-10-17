@@ -186,7 +186,8 @@
   max-width: 600px;
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
+  /* [แก้ตามที่ระบุ] ห้ามตัดขึ้นแถวใหม่ — แคปซูลทุกตัวอยู่แถวเดียวเสมอ แล้วย่อขนาดตามความกว้างจอแทน (ดู @media ≤520px) */
+  flex-wrap: nowrap;
   gap: 10px;
   pointer-events: none;
 }
@@ -273,6 +274,20 @@
   @keyframes hudDeltaFade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 }
 
+/* [แก้ตามที่ระบุ] มือถือ: แคปซูลทั้ง 4 อยู่แถวเดียว ย่อตัวอักษร/ไอคอน/ระยะห่างตามความกว้างจอ (vw)
+   แทนการตัดขึ้นแถวใหม่ — ทุกตัวหดได้ (min-width:0) และข้อความไม่ตัดบรรทัด */
+@media (max-width: 520px) {
+  .game-top-hud { width: calc(100% - 12px); gap: clamp(3px, 1.2vw, 6px); }
+  .hud-pill {
+    flex: 0 1 auto; min-width: 0; white-space: nowrap;
+    padding: 3px clamp(5px, 2vw, 10px); gap: clamp(2px, 1vw, 5px);
+    font-size: clamp(11px, 3.5vw, 16px); border-width: 1.5px;
+  }
+  .hud-pill > span { overflow: hidden; text-overflow: ellipsis; }
+  .hud-icon { width: clamp(18px, 6vw, 26px); height: clamp(18px, 6vw, 26px); margin: -2px 0; }
+  .hud-bar-bg { width: clamp(28px, 11vw, 52px); height: 8px; }
+}
+
 /* มือถือเล็ก: 4 แคปซูลเรียงแถวเดียวไม่พอ — ย่อ padding/ไอคอน และซ่อนตัวเลข EXP (แถบยังบอกความคืบหน้า) */
 @media (max-width: 400px) {
   .game-top-hud { gap: 4px; width: calc(100% - 16px); }
@@ -303,6 +318,8 @@
   align-items: flex-start;
   gap: 12px;
 }
+/* แผงข้อมูลต้นไม้/แจ้งเตือนเปิดอยู่ → ทับ HUD (z 90) แต่ยังต่ำกว่าชั้นโมดัล (500) และแถบเมนูล่าง (1000) */
+.dashboard__right-cluster--panel-open { z-index: 95; }
 .dashboard__right-cluster .dashboard__panel--right {
   position: static;
   top: auto; right: auto;
@@ -401,6 +418,9 @@
   transition: transform var(--dur-fast) var(--ease-out-soft);
 }
 .dashboard__back-btn:hover { transform: translateX(-3px); }
+/* [แก้ตามที่ระบุ] ไอคอนอย่างเดียว — ปุ่มวงกลม 44px (ขั้นต่ำช่องกดมือถือ) */
+.dashboard__back-btn { width: 48px; height: 48px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.dashboard__back-btn .icon-img { width: 34px; height: 34px; object-fit: contain; }
 
 .dashboard__viewing-name-pill {
   position: fixed;
@@ -421,7 +441,7 @@
 }
 
 @media (max-width: 768px) {
-  .dashboard__back-btn { top: 8px; left: 8px; padding: 8px 14px; font-size: var(--fs-xs); }
+  .dashboard__back-btn { top: 8px; left: 8px; width: 44px; height: 44px; padding: 0; }
   .dashboard__viewing-name-pill { top: 8px; padding: 8px 18px; font-size: var(--fs-sm); }
 }
 
@@ -568,14 +588,11 @@
 
 /* ปุ่มมุมล่างซ้าย/ขวา (โพสต์/แชร์/เพื่อน) ชนกับแถบเมนูล่างบนจอแคบ (แถบกว้าง 5×64 = 320px
    กินเกือบเต็มจอ 360–414px) → ยกขึ้นไปอยู่เหนือแถบเมนู (รวมวงกลมปุ่มที่เลือกที่ยื่นขึ้นครึ่งวง) */
-@media (max-width: 520px) {
+/* [แก้ตามที่ระบุ — 1.1/2.2] มือถือ + iPad (≤1024px): ยกปุ่มเพื่อน/แชร์ขึ้นเหนือแถบเมนูล่างเสมอ
+   (เดิมยกเฉพาะ ≤520px — iPad ปุ่มยังชนแถบ) ระยะ = ขอบบนของแถบ + วงกลมปุ่มที่เลือกที่ยื่นขึ้นครึ่งวง + ช่องว่าง */
+@media (max-width: 1024px) {
   .dashboard__corner-actions {
-    bottom: calc(25px + var(--nav-height, 56px) + var(--nav-height, 56px) / 2 + 8px + env(safe-area-inset-bottom, 0px));
-  }
-}
-@media (max-width: 360px) {
-  .dashboard__corner-actions {
-    bottom: calc(12px + var(--nav-height, 56px) + var(--nav-height, 56px) / 2 + 6px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--action-bar-height) + var(--nav-height, 56px) / 2 + 12px);
   }
 }
 

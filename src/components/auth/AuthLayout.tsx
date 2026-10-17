@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import SceneBackground from '../layout/SceneBackground'
-import SoundToggleButton from '../layout/SoundToggleButton'
 import ImageWithFallback from '../ui/ImageWithFallback'
 
 const LOGO_SRC = '/assets/images/logo/Logo.png'
@@ -22,7 +21,7 @@ interface AuthLayoutProps {
 /**
  * AuthLayout — โครงหน้าร่วมของ Login / Register / ForgotPassword / ResetPassword
  * ────────────────────────────────────────────────────────────────────────────
- * พื้นหลังวิดีโอ + overlay ชุดเดียวกับหน้า Welcome (SceneBackground), ปุ่มลำโพงลอยมุมขวาบน,
+ * พื้นหลังวิดีโอ + overlay ชุดเดียวกับหน้า Welcome (SceneBackground),
  * โลโก้ Logo.png + หัวข้อ + คำอธิบาย แล้วตามด้วยฟอร์ม (children) กึ่งกลางจอ และ footer ชิดล่าง
  */
 export default function AuthLayout({ title, subtitle, logoFallback, maxWidth = 420, videoSrc, footer, children }: AuthLayoutProps) {
@@ -35,13 +34,12 @@ export default function AuthLayout({ title, subtitle, logoFallback, maxWidth = 4
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        // เว้นด้านบนให้พ้นปุ่มลำโพงที่ลอยอยู่ (top 16 + สูง 44)
+        // เว้นด้านบน (เดิมกันปุ่มลำโพงลอย — เอาออกแล้วตามที่ระบุ ปิดเสียงได้ที่หน้าตั้งค่า/หน้า Welcome)
         padding: 'clamp(4.5rem, 9vh, 5rem) clamp(1rem, 4vw, 1.5rem) clamp(1.25rem, 4vh, 2rem)',
         fontFamily: 'var(--font-body)',
       }}
     >
       <SceneBackground videoSrc={videoSrc} />
-      <SoundToggleButton floating />
 
       <div
         style={{

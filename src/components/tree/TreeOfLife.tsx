@@ -100,7 +100,7 @@ const GROUND_ROCKS = [
   { left: 37, top: 88, size: 1 }, { left: 62, top: 89, size: 0.85 }, { left: 44, top: 91.5, size: 0.7 },
   { left: 56, top: 92, size: 1.1 }, { left: 30, top: 91, size: 0.8 }, { left: 69, top: 92.5, size: 0.95 },
 ]
-const ROCK_IMAGE = '/assets/images/icons/Item/stone.png'
+const ROCK_IMAGE = '/assets/images/icons/Item/stone.webp'
 
 /** กอหญ้าหน้าก้อนหิน: 4-8 ใบหญ้า (จำนวน/ความสูง/ทิศเอนต่างกันต่อก้อน) — SVG ล้วน */
 function GrassTuft({ seed }: { seed: number }) {

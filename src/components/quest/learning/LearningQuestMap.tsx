@@ -5,6 +5,7 @@ import OwlAvatar from '../OwlAvatar'
 import { useAppContext } from '../../../context/AppContext'
 import { playSfx } from '../../../utils/audioPlayer'
 import { usePrefersReducedMotion } from '../../../hooks/useMediaQuery'
+import { LEARNING_MAP_VIDEO } from '../../../utils/prefetchAsset'
 
 const C_13 = '#4B5563'
 const C_14 = '#374151'
@@ -824,7 +825,7 @@ export default function LearningQuestMap({
           onCanPlay={() => setVideoReady(true)}
           onPlaying={() => setVideoReady(true)}
         >
-          <source src="/assets/videos/quest-learning/QuestPathMap.mp4" type="video/mp4" />
+          <source src={LEARNING_MAP_VIDEO} type="video/mp4" />
         </video>
 
         <div className="learning-quest-map__scrim" />
@@ -961,6 +962,24 @@ export default function LearningQuestMap({
           opacity: 0; transition: opacity .45s cubic-bezier(.22,1,.36,1);
         }
         .learning-quest-map__video--ready { opacity: 1; }
+        /* [แก้ตามที่ระบุ — 1.5] ระหว่างรอวิดีโอ: พื้นป่าไล่เฉด + แสงวิ่งเบาๆ บอกว่ากำลังโหลด
+           แทนพื้นเขียวเรียบเปล่าๆ (โหนดด่าน/นกฮูกแสดงทันทีอยู่แล้ว ไม่ต้องรอวิดีโอ) */
+        .learning-quest-map__canvas::before {
+          content: ''; position: absolute; inset: 0; pointer-events: none;
+          background:
+            linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .28) 50%, transparent 70%),
+            radial-gradient(ellipse 60% 45% at 30% 70%, rgba(120, 190, 120, .45), transparent 70%),
+            radial-gradient(ellipse 55% 40% at 72% 30%, rgba(90, 160, 110, .4), transparent 70%),
+            linear-gradient(180deg, #cfe8c8 0%, #9fcf9a 55%, #7fb983 100%);
+          background-size: 250% 100%, 100% 100%, 100% 100%, 100% 100%;
+          animation: learningMapShimmer 1.6s ease-in-out infinite;
+        }
+        /* วิดีโอพร้อมแล้ว (ทับพื้นนี้ทั้งหมด) → หยุดแอนิเมชัน ไม่เปลืองแบต */
+        .learning-quest-map__canvas:has(.learning-quest-map__video--ready)::before { animation: none; }
+        @keyframes learningMapShimmer {
+          from { background-position: 120% 0, 0 0, 0 0, 0 0; }
+          to   { background-position: -120% 0, 0 0, 0 0, 0 0; }
+        }
         .learning-quest-map__scrim {
           position: absolute; inset: 0; pointer-events: none;
           background: linear-gradient(180deg, var(--glass-b-25) 0%, transparent 20%, transparent 70%, var(--glass-b-35) 100%);

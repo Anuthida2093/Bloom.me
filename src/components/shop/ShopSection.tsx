@@ -196,7 +196,7 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
                     ITEM_ICONS) ไม่มีก็ fallback เป็น emoji เดิม — ดู src/config/iconAssets.ts */}
                 <div style={{ fontSize: 72, marginBottom: 8, filter: 'drop-shadow(0 5px 10px var(--glass-b-18)) drop-shadow(0 2px 4px var(--glass-b-12))', lineHeight: 1.1 }}>
                   {ITEM_ICONS[item.id]
-                    ? <img src={ITEM_ICONS[item.id]} alt={item.nameTh} style={{ width: 92, height: 92, objectFit: 'contain', margin: '0 auto' }} />
+                    ? <img src={ITEM_ICONS[item.id]} alt={item.nameTh} loading="lazy" decoding="async" style={{ width: 92, height: 92, objectFit: 'contain', margin: '0 auto' }} />
                     : item.emoji}
                 </div>
 

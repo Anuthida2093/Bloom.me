@@ -9,7 +9,7 @@ function defineMap(order: number, id: string, name: string): MapDef {
   const path = MAP_PATH_POINTS[id]
   return {
     id, order, name,
-    artAsset: `${ASSET_DIR}/map-0${order}.jpg`,
+    artAsset: `${ASSET_DIR}/map-0${order}.webp`,
     entryPct: path.start,
     waypoints: path.points,
     exitPct: path.end,

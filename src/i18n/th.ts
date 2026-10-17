@@ -26,7 +26,7 @@ export const th = {
   'footer.knowledge': 'ความรู้',
   'footer.physical': 'สุขภาพกาย',
   'footer.mental': 'สุขภาพจิต',
-  'footer.supports': 'รองรับ 📱 มือถือ · 💻 คอมพิวเตอร์ · 📟 แท็บเล็ต · ⌚ Smartwatch',
+  'footer.supports': 'รองรับ 📱 มือถือ · 💻 คอมพิวเตอร์ · 📟 แท็บเล็ต',
 
   // ── แอปหลัก (แถบเมนู หน้า Home ตั้งค่า เช็คอิน ข้อมูลต้นไม้ จัดอันดับ โปรไฟล์ ร้านค้า) ──
   'common.close': 'ปิด',

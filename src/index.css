@@ -77,7 +77,15 @@
      54px + 15px ≈ 80px) ย้ายมาเป็นโทเคนกลางที่ :root เพื่อให้ "ทุกหน้าจอที่ scroll ได้
      เต็มจอ" (ไม่ใช่แค่หน้าเควส) อ้างอิงร่วมกันได้ เช่น SettingsModal ที่ปุ่มออกจากระบบ
      อยู่ล่างสุดของเนื้อหาที่ scroll ได้ */
-  --gpf-safe-bottom: 90px;   /* [Part E] แถบเมนูล่าง 60px + bottom 25px ≈ 85 → 90 */
+  /* [แก้ตามที่ระบุ — 1.1] โทเคนกลางของแถบเมนูล่าง คำนวณจากขนาดจริงของแถบ (ActionMenuBar.css)
+     แทนเลขตายตัวรายหน้า — เดิม 90px/72px(มือถือ) แต่บนมือถือแถบสูงจริง 25 + 56 = 81px > 72px
+     ปุ่มล่างสุดของหลายหน้าจึงโดนแถบบัง (+ ไม่ได้รวม safe-area ของ iPhone เลย)
+       --action-bar-offset  ระยะแถบจากขอบล่างจอ (ไม่รวม safe-area)
+       --action-bar-height  ขอบบนของแถบวัดจากขอบล่างจอ (offset + ความสูงแถบ + safe-area)
+       --gpf-safe-bottom    ระยะกันชนที่เนื้อหา/ปุ่มลอยต้องเว้น = ขอบบนของแถบ + ช่องว่าง 10px */
+  --action-bar-offset: 25px;
+  --action-bar-height: calc(var(--action-bar-offset) + var(--nav-height, 60px) + env(safe-area-inset-bottom, 0px));
+  --gpf-safe-bottom: calc(var(--action-bar-height) + 10px);
 
   /* เงาอมเขียวอ้างอิงโทเคนเขียวแทนค่า rgba ดิบ (เดิมเป็นเขียวอมฟ้าชุดเก่าฝังตายตัว) */
   --sh-card:  0 2px 12px color-mix(in srgb, var(--g800) 9%, transparent), 0 1px 3px color-mix(in srgb, var(--g800) 5%, transparent);
@@ -211,9 +219,9 @@
   --dur-fast: .18s; --dur-mid: .32s; --dur-slow: .6s;
 }
 
-@media (max-width: 768px) {
-  :root { --gpf-safe-bottom: 72px; }  /* มือถือ: 56 + 12 ≈ 68 → 72 */
-}
+/* ≤360px แถบเลื่อนลงชิดขอบล่างกว่าเดิม (ActionMenuBar.css) — โทเคนตามเอง ไม่ต้องแก้รายหน้า */
+@media (max-width: 360px) { :root { --action-bar-offset: 12px; } }
+@media (max-width: 300px) { :root { --action-bar-offset: 6px; } }
 
 /* ─── Dark Mode tokens ─── */
 [data-theme="dark"] {

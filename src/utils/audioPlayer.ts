@@ -151,6 +151,37 @@ export function stopSfx(key: SfxKey): void {
 }
 
 /** startLoopingSfx — เริ่มเล่นเสียงวนซ้ำ (เช่น เพลง BGM, เสียงไฟลุก) */
+/** [แก้ตามที่ระบุ — 1.4] หยุดเสียงสั้นทุกตัวที่ยังเล่นค้าง (เช่นเสียงพิมพ์ keypress.mp3 ที่ไฟล์ยาวกว่า
+ *  จังหวะพิมพ์) — เรียกตอนเปลี่ยน route / ซ่อนแท็บ (ดู RouteEffects.tsx) ไม่ให้เสียงไหลข้ามไปหน้าถัดไป */
+export function stopAllSfx(): void {
+  activeSfxInstances.forEach((instanceSet) => {
+    instanceSet.forEach((audio) => {
+      audio.pause()
+      audio.currentTime = 0
+    })
+    instanceSet.clear()
+  })
+}
+
+/** เสียงวนที่ถูกพักไว้ตอนซ่อนแท็บ — เล่นต่อเมื่อกลับมา (หน้าที่เปิดเสียงวนยังเปิดอยู่) */
+const pausedLoops = new Set<HTMLAudioElement>()
+
+/** [1.4] ซ่อนแท็บ/สลับแอป → พักเสียงวนทุกตัวที่กำลังเล่น (ไม่ล้างตำแหน่ง ไว้เล่นต่อ) */
+export function pauseLoopingSfx(): void {
+  loopingAudio.forEach((audio) => {
+    if (!audio.paused) {
+      audio.pause()
+      pausedLoops.add(audio)
+    }
+  })
+}
+
+/** [1.4] กลับมาที่แท็บ → เล่นเสียงวนที่พักไว้ต่อ (ถ้าระหว่างนั้นหน้าเกมปิดไปแล้ว stopLoopingSfx ลบออกให้แล้ว) */
+export function resumeLoopingSfx(): void {
+  pausedLoops.forEach((audio) => { audio.play().catch(() => {}) })
+  pausedLoops.clear()
+}
+
 export function startLoopingSfx(key: SfxKey, options: PlaySfxOptions = {}): void {
   if (options.enabled === false || isSfxSuppressed()) return
   const fileName = SFX_FILES[key]
@@ -178,6 +209,7 @@ export function stopLoopingSfx(key: SfxKey): void {
   if (audio) {
     audio.pause()
     audio.currentTime = 0
+    pausedLoops.delete(audio)
   }
 }
 

@@ -343,8 +343,11 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
               )}
             </div>
 
+            {/* [แก้ตามที่ระบุ — 3.4] ตัวเลือกคำพูดติดหัวย้ายขึ้นบนสุด ใต้หัวข้อ "เตาเผาขยะความคิด"
+                (มือถือ) — กล่องพิมพ์ยังอยู่ตำแหน่งเดิมชิดล่าง · จอใหญ่ CSS วางกลุ่มนี้ไว้เหนือกล่องพิมพ์เหมือนเดิม */}
             {stage === 'write' && (
-              <motion.div className="incinerator-frame__input-container" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <motion.div className="incinerator-frame__top" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
+                <div className="lb-banner incinerator-frame__top-title">เตาเผาขยะความคิด</div>
                 <div className="incinerator-chips-group">
                   <span className="incinerator-chips-label">💡 คำพูดติดในหัวของคุณบ่อยๆ:</span>
                   <div className="incinerator-chips-list">
@@ -355,7 +358,11 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
                     ))}
                   </div>
                 </div>
+              </motion.div>
+            )}
 
+            {stage === 'write' && (
+              <motion.div className="incinerator-frame__input-container" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <div className="incinerator-frame__input-bar">
                   <input
                     value={text}
@@ -365,7 +372,8 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
                     onKeyDown={(e) => { if (e.key === 'Enter') handleCrumple() }}
                   />
                   <button className="incinerator-action-btn incinerator-action-btn--input" onClick={() => handleCrumple()} disabled={!text.trim()}>
-                    🪨 เปลี่ยนเป็นหิน
+                    {/* [แก้ตามที่ระบุ — 3.4] ปุ่มส่งเปลี่ยนชื่อเป็น "เผา" (เดิม "🪨 เปลี่ยนเป็นหิน") */}
+                    🔥 เผา
                   </button>
                 </div>
               </motion.div>

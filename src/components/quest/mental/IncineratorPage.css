@@ -500,3 +500,43 @@
 .incinerator-frame .incinerator-frame__affirmation-banner { border-radius: 20px; }
 .incinerator-frame .incinerator-frame__affirmation-title { color: #2B1D10; font-family: var(--font-display); }
 .incinerator-frame .incinerator-frame__affirmation-sub { color: rgba(43, 29, 16, .8); }
+
+/* ═══ [แก้ตามที่ระบุ — 3.4] เลย์เอาต์หน้าเขียนความคิด ═══
+   - ตัวเลือกคำพูดติดหัว (.incinerator-frame__top) — มือถือ: บนสุดใต้หัวข้อ "เตาเผาขยะความคิด"
+     จอใหญ่: วางเหนือกล่องพิมพ์ตำแหน่งเดิม (ไม่แสดงหัวข้อซ้ำ)
+   - มือถือ: ปุ่ม "เผา" อยู่ "ในกล่องเขียน" (กล่องเป็นการ์ดมุมมน ช่องพิมพ์บน ปุ่มชิดขวาล่างภายในกรอบ)
+   - ผลหลังเผา (ป้าย "สลายความคิดลบสำเร็จ" + การ์ดภารกิจสำเร็จ) อยู่กลางจอค่อนบน ไม่บังกองไฟ (ไฟอยู่ล่างวิดีโอ) */
+.incinerator-frame__top {
+  position: absolute;
+  left: 0; right: 0;
+  margin: 0 auto;
+  z-index: 25;
+  width: 90%;
+  max-width: 680px;
+  /* จอใหญ่: เหนือกล่องพิมพ์ (กล่องสูง ~56px + ช่องว่าง 12px) — ตำแหน่งเดียวกับที่กลุ่มนี้เคยอยู่ */
+  bottom: calc(var(--gpf-safe-bottom, 0px) + 28px + 56px + 12px);
+}
+.incinerator-frame__top-title { display: none; }
+
+@media (max-width: 768px) {
+  .incinerator-frame__top {
+    bottom: auto;
+    top: 70px;            /* พ้นปุ่มปิดมุมขวาบน (top 14 + 44) */
+    width: calc(100% - 32px);
+    display: flex; flex-direction: column; align-items: center; gap: 22px;
+  }
+  .incinerator-frame__top-title { display: block; font-size: 16px; white-space: nowrap; }
+  .incinerator-frame__top .incinerator-chips-group { width: 100%; box-sizing: border-box; }
+
+  .incinerator-frame__input-container { width: calc(100% - 32px); }
+  .incinerator-frame .incinerator-frame__input-bar {
+    flex-direction: column; align-items: stretch; gap: 8px;
+    padding: 12px 12px 10px 16px; border-radius: 18px;
+  }
+  .incinerator-frame__input { min-height: 36px; }
+  .incinerator-action-btn--input { align-self: flex-end; height: 40px; padding: 0 22px; }
+
+  /* ใช้ top แทน transform — framer-motion เขียน transform ของสองกล่องนี้เองแบบ inline */
+  .incinerator-frame__affirmation-banner { bottom: auto; top: 20%; }
+  .incinerator-frame .incinerator-popup.quest-done-card { top: -14vh; }
+}

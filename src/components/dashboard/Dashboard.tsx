@@ -93,7 +93,7 @@ export default function Dashboard() {
   } = useProgress()
 
   const { handleMoodSubmit, earnedBadges, postIts, movePostIt, archivePostIt } = useMental()
-  const { isMuted, toggleMute } = useAudio()
+  const { isMuted } = useAudio()
   const { t } = useLanguage()
 
   const {
@@ -580,9 +580,9 @@ export default function Dashboard() {
       <div className="dashboard__tree-layer">
         {viewingPlayer && viewingTreeStats ? (
           <>
-            {/* [แก้ตามที่ระบุ] ปุ่มกลับบ้านใช้รูป Return + ป้ายชื่อแบบป้ายกระดานจัดอันดับ */}
-            <button className="dashboard__back-btn lb-banner" onClick={() => setViewingPlayer(null)}>
-              <img src={BADGE_ICONS.back} className="icon-img" alt="" /> กลับบ้าน
+            {/* [แก้ตามที่ระบุ] ปุ่มกลับบ้านเหลือแค่ไอคอน Return — ข้อความ "กลับบ้าน" ชนป้ายชื่อต้นไม้เพื่อนบนจอเล็ก */}
+            <button className="dashboard__back-btn lb-banner" onClick={() => setViewingPlayer(null)} aria-label="กลับบ้าน" title="กลับบ้าน">
+              <img src={BADGE_ICONS.back} className="icon-img" alt="" />
             </button>
             <div className="dashboard__viewing-name-pill lb-banner">ต้นไม้ของ {viewingPlayer.username}</div>
             <ErrorBoundary scope="ต้นไม้">
@@ -664,7 +664,9 @@ export default function Dashboard() {
       )}
 
       {/* ═══ ปุ่มลอยขวา: Tree Stats / Mood / Sound (แบบ V1) — หรือการ์ดข้อมูลต้นไม้เพื่อนตอนดูคนอื่น ═══ */}
-      <div className="dashboard__right-cluster">
+      {/* [แก้ตามที่ระบุ] เปิดแผงข้อมูลต้นไม้/แจ้งเตือน → ยกทั้งคลัสเตอร์ขึ้นเหนือ HUD ให้แผงทับแถบคะแนนด้านบน
+          (แบบเดียวกับแผงข้อมูล MBTI) — แผงเป็น position:fixed ในคลัสเตอร์ z-index 60 จึงเคยอยู่ใต้ HUD (90) */}
+      <div className={`dashboard__right-cluster${!viewingPlayer && (showTreeStats || showNotifications) ? ' dashboard__right-cluster--panel-open' : ''}`}>
         {viewingPlayer ? (
           <>
             {hiddenFriendCardId !== viewingPlayer.id && (
@@ -747,9 +749,7 @@ export default function Dashboard() {
                 <img src={BADGE_ICONS.notification} className="icon-img" alt="" />
                 {unreadNotifCount > 0 && <span className="nav-badge">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
               </button>
-              <button className="game-icon-btn sound-btn" onClick={toggleMute} title={isMuted ? 'เปิดเสียง' : 'ปิดเสียง'}>
-                {isMuted ? '🔇' : '🔊'}
-              </button>
+              {/* [แก้ตามที่ระบุ] เอาปุ่มเปิด/ปิดเสียงออกจากหน้า Home (รวมหน้าต้นไม้เพื่อน) — ปิดเสียงได้ที่หน้าตั้งค่า */}
               {/* [ใหม่ — ตามที่ระบุ] กล่องพยาบาลลอย — โผล่เองเฉพาะตอนตรวจพบอารมณ์กลุ่มลบติดต่อกัน
                   ≥3 วัน (ดู MedicalBoxAlert.tsx) คืน null เงียบๆ ถ้ายังไม่เข้าเงื่อนไข */}
               <MedicalBoxAlert moodEntries={moodEntries} onOpenMentalQuests={() => handleOpenQuestCategory('mental')} />
