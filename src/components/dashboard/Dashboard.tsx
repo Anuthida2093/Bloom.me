@@ -578,7 +578,7 @@ export default function Dashboard() {
       {!viewingPlayer && (isLoggedIn || isGuest) && (
         <div className="game-top-hud" ref={hudRef}>
           <div className="hud-pill hud-pill--level">
-            <img src={BADGE_ICONS.seed} className="icon-img hud-icon" alt="" />
+            <img src={BADGE_ICONS.exp} className="icon-img hud-icon" alt="" />
             <span>{userData.mbtiType} Lv.{userData.level}</span>
             <HudDelta value={userData.level} ready={!isLoadingUser} format={() => 'Level up!'} />
           </div>
