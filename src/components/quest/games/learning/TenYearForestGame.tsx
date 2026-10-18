@@ -9,6 +9,7 @@ import { loadTimeCapsules, type TimeCapsule } from '../../../../utils/timeCapsul
 import { useEscapeKey } from '../../../../hooks/useEscapeKey'
 import { BADGE_ICONS } from '../../../../config/iconAssets'
 import { domainLabel } from '../../../../config/learningDomains'
+import { isQuestDoneNow } from '../../../../utils/questCompletion'
 import '../games.css'
 import './TenYearForest.css'
 
@@ -19,7 +20,11 @@ import './TenYearForest.css'
       🎯 เป้าหมาย (เพ่งสมาธิ) · 🧠 บันทึกความรู้ (หัวข้อ/หมวดหมู่/เนื้อหา + จำได้จริงกี่หัวข้อ)
       🔀 สลับวิชา · 📅 ทบทวน (ทบทวนจริงไหม) · 🪞 กระจกแห่งความจริง (ความรู้สึกจริงหลังเรียน)
       วันในอนาคต → นัดทบทวนที่วางแผนไว้
+    [แก้ตามที่ระบุ] รางวัล: streak ต่อเนื่องครบ 21 วันขึ้นไป → กดรับรางวัลได้วันละครั้ง (เควสรายวัน)
     ทฤษฎี: The 10-Year Rule (Ericsson et al., 1993)                                                   */
+
+/** streak ขั้นต่ำที่เริ่มรับรางวัลรายวันได้ */
+const TEN_YEAR_FOREST_STREAK_DAYS = 21
 
 const REACTION_EMOJI = { good: '👍', neutral: '😐', bad: '👎' } as const
 const WEEKDAYS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
@@ -44,7 +49,7 @@ function completedOn(logs: QuestLogEntry[], code: string, key: string) {
   return logs.filter((l) => l.quest?.code === code && l.status === 'COMPLETED' && l.completedAt && dayKey(l.completedAt) === key)
 }
 
-export default function TenYearForestGame({ exit }: QuestGameProps) {
+export default function TenYearForestGame({ exit, finish }: QuestGameProps) {
   const { userData, questLogs, questFeedbackLogs } = useAppContext()
   const [dumps, setDumps] = useState<BrainDumpRecord[]>([])
   const capsules = useMemo(() => loadTimeCapsules(userData.id), [userData.id])
@@ -148,8 +153,35 @@ export default function TenYearForestGame({ exit }: QuestGameProps) {
   const closePanel = () => { setPanel(null); setOpenGoal(null) }
   const dueReviews = capsules.filter((c) => c.doneAt || new Date(c.at).getTime() <= now).length
 
+  const claimedToday = isQuestDoneNow(questLogs, 'know-ten-year-forest')
+  const streakReady = userData.streak >= TEN_YEAR_FOREST_STREAK_DAYS
+
   return (
     <div className="qg">
+      {/* [แก้ตามที่ระบุ] รางวัลรายวันของป่าแห่งสิบปี — streak ครบ 21 วันขึ้นไป กดรับได้วันละครั้ง */}
+      <div className={`qg-card tyf-reward${streakReady && !claimedToday ? ' tyf-reward--ready' : ''}`}>
+        <div className="tyf-reward__text">
+          <b>{claimedToday ? '🌳 รับรางวัลวันนี้แล้ว' : streakReady ? '🌳 รางวัลป่าแห่งสิบปีพร้อมแล้ว!' : '🌱 เข้าแอปต่อเนื่องให้ครบ 21 วัน'}</b>
+          <small>
+            {claimedToday
+              ? 'กลับมารับใหม่พรุ่งนี้ — อย่าให้ streak ขาดนะ'
+              : streakReady
+                ? `ต่อเนื่องมาแล้ว ${userData.streak} วัน รับรางวัลได้วันละครั้ง`
+                : `ตอนนี้ ${userData.streak}/${TEN_YEAR_FOREST_STREAK_DAYS} วัน — ครบแล้วรับรางวัลได้ทุกวัน`}
+          </small>
+          {!streakReady && (
+            <div className="tyf-reward__track" aria-hidden="true">
+              <div className="tyf-reward__fill" style={{ width: `${Math.min(100, (userData.streak / TEN_YEAR_FOREST_STREAK_DAYS) * 100)}%` }} />
+            </div>
+          )}
+        </div>
+        {streakReady && !claimedToday && (
+          <button type="button" className="qg-btn tyf-reward__btn" onClick={() => finish({ streakDays: userData.streak })}>
+            รับรางวัล
+          </button>
+        )}
+      </div>
+
       <div className="qg-stat-grid">
         <div className="qg-stat"><strong>{userData.streak}</strong><span>วันต่อเนื่อง</span></div>
         <div className="qg-stat"><strong>{[...marks.values()].filter((s) => s.has('learn')).length}</strong><span>วันที่เรียนรู้</span></div>

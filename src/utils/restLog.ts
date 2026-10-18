@@ -42,6 +42,13 @@ export function activeRest(list: RestSession[], nowMs: number): RestSession | nu
 }
 
 /** เวลาพักที่ทำได้ (นาที) — นับเฉพาะรอบที่พักครบแล้ว · วันนี้ / ทั้งหมด */
+/** [แก้ตามที่ระบุ — ผู้พิทักษ์การพักผ่อน] วันนี้มีรอบพักที่ "จบครบ 15 นาทีเต็ม" แล้วหรือยัง */
+export const FULL_REST_MINUTES = 15
+export function completedFullRestToday(list: RestSession[], nowMs: number): boolean {
+  const today = new Date(nowMs).toDateString()
+  return list.some((s) => s.minutes >= FULL_REST_MINUTES && endOf(s) <= nowMs && new Date(endOf(s)).toDateString() === today)
+}
+
 export function restTotals(list: RestSession[], nowMs: number): { todayMinutes: number; totalMinutes: number; sessionsToday: number } {
   const today = new Date(nowMs).toDateString()
   let todayMinutes = 0, totalMinutes = 0, sessionsToday = 0

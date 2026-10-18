@@ -9,6 +9,7 @@ import { toInventoryItem } from './adapters'
 import { getMe } from './user.api'
 import { rollStepChest, type StepChestReward } from '../../config/stepChest'
 import { bangkokDateString, calculateLevel } from '../../utils/progression'
+import { rollLearningGift, type LearningGift } from '../../config/learningGift'
 
 /*============================================================================*\
   progression.api.ts — ความก้าวหน้าระยะยาวที่ต้องอยู่กับ "บัญชี" ไม่ใช่เครื่อง
@@ -29,6 +30,8 @@ export interface ProgressionSummary {
   doubleRewardToday: boolean
   /** วันเดินครบเป้าติดกันล่าสุด — ใช้คิดโบนัสสตรีคของ BMI < 18.5 เท่านั้น */
   goalStreakDays: number
+  /** [ใหม่] ผงพิเศษในคลัง (ได้จากหีบสมบัติ) */
+  specialDust: number
 }
 
 export interface StepDayRecord {
@@ -83,6 +86,7 @@ function summarize(p: MockProgression): ProgressionSummary {
     exchangeCards: { ...p.exchangeCards },
     doubleRewardToday: p.doubleRewardDate === localDateKey(),
     goalStreakDays: goalStreak(p),
+    specialDust: p.specialDust ?? 0,
   }
 }
 
@@ -152,6 +156,27 @@ export function mockRollDailyCard(d: MockDb): string | null {
   return code
 }
 
+/** [mock — ฝั่งเซิร์ฟเวอร์] ของขวัญสุ่มเมื่อทำเควสการเรียนรู้ครบ 5 ด่าน (เรียกจาก quest.api completeQuest)
+ *  rollKey = id ของ log ที่ปิดรอบ — กันสุ่มซ้ำ · หยดน้ำบวกเข้า user ตรงนี้ (โหมด mock เท่านั้น — backend
+ *  ยังไม่มีหยดน้ำ ดู docs/PROGRESSION_API.md) */
+export function mockRollLearningGift(d: MockDb, rollKey: string): LearningGift {
+  const p = ensure(d)
+  const prev = p.learningGifts?.[rollKey]
+  if (prev) return prev
+  const rolled = rollLearningGift(!!p.cardsUnlockedAt)
+  const gift: LearningGift = { ...rolled, cardItemCode: null }
+  if (gift.kind === 'EXCHANGE_CARD') {
+    gift.cardItemCode = pickRandomExchangeItem()
+    addCard(p, gift.cardItemCode)
+  } else if (gift.kind === 'BONUS_COINS') {
+    d.user = { ...d.user, coins: d.user.coins + gift.amount }
+  } else {
+    d.user = { ...d.user, waterDrops: (d.user.waterDrops ?? 0) + gift.amount }
+  }
+  p.learningGifts = { ...(p.learningGifts ?? {}), [rollKey]: gift }
+  return gift
+}
+
 /** POST /api/quests/know-deep-root/bonus — จดจ่อครบ 3 รอบไม่กดข้าม: การ์ด (หลังปลดล็อก) หรือเหรียญโบนัส
  *  rollKey กันสุ่มซ้ำ (วันที่ + รอบการเรียนรู้) */
 export async function claimDeepRootBonus(rollKey: string): Promise<BonusRollResult> {
@@ -199,6 +224,8 @@ export async function openStepChest(date: string): Promise<OpenStepChestResult> 
         addCard(p, reward.cardItemCode)
       } else if (reward.kind === 'BONUS_COINS') {
         d.user = { ...d.user, coins: d.user.coins + reward.amount }
+      } else if (reward.kind === 'SPECIAL_DUST') {
+        p.specialDust = (p.specialDust ?? 0) + reward.amount
       } else if (reward.kind === 'BONUS_EXP') {
         const exp = d.user.exp + reward.amount
         d.user = { ...d.user, exp, level: calculateLevel(exp) }
@@ -209,6 +236,36 @@ export async function openStepChest(date: string): Promise<OpenStepChestResult> 
     return result
   }
   return http.post<OpenStepChestResult>(`/steps/days/${date}/chest`)
+}
+
+export interface UseSpecialDustResult {
+  /** EXP ที่ต้นไม้ได้ (เซิร์ฟเวอร์สุ่ม 1-2) */
+  expGained: number
+  /** ผงพิเศษที่เหลือ */
+  remaining: number
+  user: UserData
+}
+
+/** POST /api/progression/special-dust/use — [ใหม่] ใช้ผงพิเศษ 1 ถุง → ต้นไม้ +1-2 EXP (เซิร์ฟเวอร์สุ่ม)
+ *  error: 400 NO_SPECIAL_DUST (ไม่มีผงเหลือ) */
+export async function consumeSpecialDust(): Promise<UseSpecialDustResult> {
+  if (API_MODE === 'mock') {
+    await mockDelay()
+    if ((getDb().progression?.specialDust ?? 0) < 1) {
+      throw new ApiError(400, 'ไม่มีผงพิเศษเหลือแล้ว', { error: { code: 'NO_SPECIAL_DUST' } })
+    }
+    let result!: UseSpecialDustResult
+    updateDb((d) => {
+      const p = ensure(d)
+      p.specialDust = Math.max(0, (p.specialDust ?? 0) - 1)
+      const expGained = 1 + Math.floor(Math.random() * 2)
+      const exp = d.user.exp + expGained
+      d.user = { ...d.user, exp, level: calculateLevel(exp) }
+      result = { expGained, remaining: p.specialDust, user: d.user }
+    })
+    return result
+  }
+  return http.post<UseSpecialDustResult>('/progression/special-dust/use')
 }
 
 /** true = วันนี้มีบัฟคูณสอง (ใช้คิดรางวัลเควสในโหมด mock) */

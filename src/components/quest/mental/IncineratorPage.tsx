@@ -7,6 +7,7 @@ import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import './IncineratorPage.css'
 import '../../leaderboard/leaderboardRow.css'
 import { BADGE_ICONS } from '../../../config/iconAssets'
+import { posterOf } from '../../../utils/videoPoster'
 
 type Stage = 'ask' | 'write' | 'reading' | 'crumpling' | 'drag' | 'burning' | 'done'
 
@@ -252,7 +253,7 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
         {(['write', 'reading', 'crumpling', 'drag', 'burning'].includes(stage)) && (
           <motion.div key="game" className="incinerator-frame__game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div ref={videoContainerRef} className="incinerator-video-container">
-              <video key={activeConfig.src} className="incinerator-video-container__video" autoPlay loop muted playsInline>
+              <video key={activeConfig.src} className="incinerator-video-container__video" poster={posterOf(activeConfig.src)} autoPlay loop muted playsInline>
                 <source src={activeConfig.src} type="video/mp4" />
               </video>
 

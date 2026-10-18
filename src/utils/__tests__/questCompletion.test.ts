@@ -23,7 +23,7 @@ describe('isQuestDoneNow', () => {
 
   it('เควสไม่รายวัน (ทำครั้งเดียว) → เคยทำก็นับ', () => {
     const lastMonth = new Date(NOW.getTime() - 30 * 24 * 3600_000)
-    expect(isQuestDoneNow([log('know-ten-year-forest', lastMonth)], 'know-ten-year-forest', NOW)).toBe(true)
+    expect(isQuestDoneNow([log('phys-soil-restoration', lastMonth)], 'phys-soil-restoration', NOW)).toBe(true)
   })
 
   it('หมวดการเรียนรู้ทำครบทุกด่านในวันเดียว → เริ่มรอบใหม่จากด่านแรก', () => {

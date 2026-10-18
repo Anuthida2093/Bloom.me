@@ -492,6 +492,9 @@ export interface PostData {
    *  เหมือนเดิม (เท่ากับ likedBy.length / likedBy.some(userId===ฉัน)) เพื่อไม่ต้องแก้ทุกจุดที่
    *  เคยอ่าน field 2 ตัวนี้อยู่แล้ว */
   likedBy: PostLikerInfo[]
+  /** [ใหม่ตามที่ระบุ — เลย์เอาต์แบบ IG] true = บัญชีผู้โพสต์ยืนยันแล้ว (โชว์เครื่องหมาย Verified ข้างชื่อ)
+   *  backend ยังไม่มีฟิลด์นี้ — ไม่ส่งมา = ไม่แสดง */
+  authorVerified?: boolean
   likeCount: number
   /** true = ผู้ใช้ปัจจุบัน (ที่ล็อกอินอยู่) กดไลค์โพสต์นี้ไปแล้ว */
   likedByMe: boolean

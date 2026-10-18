@@ -74,6 +74,10 @@ export interface MockProgression {
   doubleRewardDate: string | null
   /** โบนัสที่สุ่มไปแล้ว (key เช่น deep-root:2026-10-06:1) — idempotent */
   bonusRolls: Record<string, { cardItemCode: string | null; coins: number }>
+  /** [ใหม่] ผงพิเศษในคลัง (จากหีบสมบัติ) */
+  specialDust?: number
+  /** ของขวัญสุ่มเมื่อจบรอบเส้นทางการเรียนรู้ (key = id ของ log ที่ปิดรอบ) — idempotent */
+  learningGifts?: Record<string, import('../../config/learningGift').LearningGift>
 }
 
 export function emptyProgression(firstLoginDate: string): MockProgression {

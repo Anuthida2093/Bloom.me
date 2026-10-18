@@ -1,20 +1,22 @@
-import { useState, type MouseEvent } from 'react'
+import { useMemo, useState, type MouseEvent } from 'react'
 import type { MapDef } from '../../../../types.journey'
-import { buildJourneyPathD, MAP_NATIVE_SIZE, withLivePath } from './journeyPathMath'
+import { buildJourneyPathD, MAP_NATIVE_SIZE, waypointPathPcts, withLivePath } from './journeyPathMath'
 import './MapPathRenderer.css'
 
 /** โหมดช่วยแก้จุดเส้นทาง: เติม ?editPath ท้าย URL → แตะแผนที่แล้วขึ้นพิกัด x,y (%) ของจุดที่แตะ
  *  เอาไปใส่ใน MAP_PATH_POINTS (journeyPathMath.ts) ได้ตรงๆ — ปกติปิดอยู่ ผู้เล่นไม่เห็น */
 const EDIT_PATH_MODE = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('editPath')
 
-/** ตัวอักษรบนจุด (Start / เลขจุด / End) — เล็กและบาง ขอบดำบางๆ ให้อ่านออกบนภาพทุกสี
- *  (หน่วย viewBox 0-100 → 1.3 ≈ 13px บนภาพ 1024px) ปรับขนาด/ความหนาได้ที่นี่ที่เดียว */
+/** ตัวอักษรบนจุด (Start / เลขจุด) — [แก้ตามที่ระบุ] บางลงและสวยขึ้น: ฟอนต์บาง (300) ขอบเงาน้ำเงินเข้มบางมาก
+ *  แทนขอบดำหนา (หน่วย viewBox 0-100 → 1.25 ≈ 13px บนภาพ 1024px) ปรับได้ที่นี่ที่เดียว */
 const LABEL_PROPS = {
-  fontSize: 1.3,
-  fontWeight: 500,
+  fontSize: 1.25,
+  fontWeight: 300,
+  fontFamily: 'var(--font-display)',
+  letterSpacing: 0.04,
   fill: '#ffffff',
-  stroke: '#000000',
-  strokeWidth: 0.18,
+  stroke: 'rgba(10, 40, 80, 0.75)',
+  strokeWidth: 0.12,
   paintOrder: 'stroke',
   textAnchor: 'middle',
 } as const
@@ -31,6 +33,11 @@ export default function MapPathRenderer({ mapDef: mapDefProp, progressPct }: Map
   const clampedProgress = Math.min(100, Math.max(0, progressPct))
   const pathD = buildJourneyPathD(mapDef)
   const [picked, setPicked] = useState<{ x: number; y: number } | null>(null)
+  // ระยะตามเส้นทางของแต่ละจุด → นกฮูกผ่านจุดไหนแล้ว (เรืองแสง) / จุดล่าสุดที่เพิ่งถึง (กะพริบเรือง)
+  const pathKey = JSON.stringify([mapDef.entryPct, mapDef.waypoints, mapDef.exitPct])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const wpPcts = useMemo(() => waypointPathPcts(mapDef), [pathKey])
+  const lastReached = wpPcts.reduce((last, pct, i) => (pct <= clampedProgress + 0.3 ? i : last), -1)
 
   const handlePick = (e: MouseEvent<HTMLDivElement>) => {
     if (!EDIT_PATH_MODE) return
@@ -68,21 +75,35 @@ export default function MapPathRenderer({ mapDef: mapDefProp, progressPct }: Map
           style={{ strokeDasharray: 100, strokeDashoffset: 100 - clampedProgress }}
         />
 
+        <defs>
+          <radialGradient id="mpr-dot-fill" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stopColor="#E6F6FF" />
+            <stop offset="55%" stopColor="#5BC0FF" />
+            <stop offset="100%" stopColor="#1E78D8" />
+          </radialGradient>
+          <radialGradient id="mpr-dot-glow">
+            <stop offset="0%" stopColor="#8FDBFF" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#8FDBFF" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+
         {/* จุดเริ่มต้น (Start) */}
-        <circle cx={mapDef.entryPct.x} cy={mapDef.entryPct.y} r="1.1" fill="#4ADE80" stroke="#000" strokeWidth="0.25" />
-        <text x={mapDef.entryPct.x} y={mapDef.entryPct.y - 1.6} {...LABEL_PROPS}>Start</text>
+        <circle cx={mapDef.entryPct.x} cy={mapDef.entryPct.y} r="1.1" className="mpr-dot mpr-dot--start" />
+        <text x={mapDef.entryPct.x} y={mapDef.entryPct.y - 1.7} {...LABEL_PROPS}>Start</text>
 
-        {/* จุดระหว่างทาง (ทึบ ขอบดำหนา) */}
-        {mapDef.waypoints.map((wp, i) => (
-          <g key={i}>
-            <circle cx={wp.x} cy={wp.y} r="0.7" fill="#F59E0B" stroke="#000" strokeWidth="0.2" />
-            <text x={wp.x} y={wp.y - 1.2} {...LABEL_PROPS}>{i + 1}</text>
-          </g>
-        ))}
-
-        {/* จุดสิ้นสุด (End) */}
-        <circle cx={mapDef.exitPct.x} cy={mapDef.exitPct.y} r="1.1" fill="#EF4444" stroke="#000" strokeWidth="0.25" />
-        <text x={mapDef.exitPct.x} y={mapDef.exitPct.y - 1.6} {...LABEL_PROPS}>End</text>
+        {/* [แก้ตามที่ระบุ] จุดระหว่างทาง: สีฟ้า (เดิมส้มขอบดำ) — ยังไม่ถึง = ฟ้าใสขอบขาว · ผ่านแล้ว = ฟ้าเข้มมีแสงเรือง
+            · จุดที่นกฮูกเพิ่งไปถึง = วงแสงกะพริบขยายออก (จุดสิ้นสุดเป็นหีบสมบัติ — StepChestMarker) */}
+        {mapDef.waypoints.map((wp, i) => {
+          const reached = i <= lastReached
+          return (
+            <g key={i} className={`mpr-wp${reached ? ' mpr-wp--reached' : ''}${i === lastReached ? ' mpr-wp--arrived' : ''}`}>
+              {reached && <circle cx={wp.x} cy={wp.y} r="2.2" fill="url(#mpr-dot-glow)" className="mpr-wp__glow" />}
+              {i === lastReached && <circle cx={wp.x} cy={wp.y} r="0.9" className="mpr-wp__ring" />}
+              <circle cx={wp.x} cy={wp.y} r={reached ? 0.85 : 0.7} fill={reached ? 'url(#mpr-dot-fill)' : 'rgba(150, 215, 255, 0.55)'} className="mpr-wp__dot" />
+              <text x={wp.x} y={wp.y - 1.3} {...LABEL_PROPS}>{i + 1}</text>
+            </g>
+          )
+        })}
 
         {EDIT_PATH_MODE && picked && (
           <g>

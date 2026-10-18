@@ -13,7 +13,8 @@
   overflow: hidden;
   font-family: 'Nunito', 'Mali', sans-serif; /* ใช้ฟอนต์ Nunito + Mali */
   background: radial-gradient(circle at 50% 20%, var(--ae-mental-glow) 0%, var(--ae-mental-mid) 60%, var(--ae-mental-deep) 100%);
-  border: 2px solid var(--g500);
+  /* [แก้ตามที่ระบุ — 2.5] ไม่มีขอบสีเขียวทุกขนาดจอ */
+  border: none;
   --lc-shadow-22: rgba(16, 18, 17, 0.878);
   box-shadow: inset 0 0 25px var(--lc-shadow-22), 0 8px 32px var(--glass-b-40);
   display: flex;

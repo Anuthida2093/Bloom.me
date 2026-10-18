@@ -9,8 +9,9 @@ import { bangkokDateString, bangkokTimeOn, calculateLevel, calculateNextStreak, 
 import { MOOD_CHECKIN_QUESTS } from '../../config/moodCheckinSlots'
 import type { MoodColorCode } from '../../types.mental'
 import { calculateStepReward } from '../../config/stepGoalByBmi'
-import { mockHasDoubleReward, mockRollDailyCard } from './progression.api'
-import { isQuestDoneNow } from '../../utils/questCompletion'
+import { mockHasDoubleReward, mockRollDailyCard, mockRollLearningGift } from './progression.api'
+import type { LearningGift } from '../../config/learningGift'
+import { isQuestDoneNow, learningRoundState, LEARNING_DAILY_CODES } from '../../utils/questCompletion'
 
 /** เควสที่รางวัลคิดจากก้าวจริงตอนจบ (ตรงกับ Quest.config.stepReward ของ backend vitality-steps) */
 const STEP_REWARD_QUEST_CODE = 'phys-vitality-steps'
@@ -38,6 +39,8 @@ export interface CompleteQuestResult {
   user: UserData
   /** การ์ดแลกซื้อที่สุ่มตกจากเควสประจำวันนี้ (itemCode) — null/ไม่มี = ไม่ได้ */
   exchangeCard?: string | null
+  /** [ใหม่] ของขวัญสุ่มเมื่อ log นี้ปิดรอบเส้นทางการเรียนรู้ (ครบ 5 ด่าน) — null/ไม่มี = ไม่ได้ปิดรอบ */
+  learningGift?: LearningGift | null
 }
 
 function guessCategory(code: string): QuestCategory {
@@ -145,6 +148,11 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
       const done = [...db.questLogs].reverse().find((l) => l.quest?.code === questCode && l.status === 'COMPLETED') as QuestLogEntry
       return { log: done, user: db.user }
     }
+    // ตรงกับ backend: เควสที่มี maxPerDay ทำครบโควตาวันนี้แล้ว → 409 DAILY_LIMIT_REACHED (เช่นโหมดจดจ่อรอบที่ 4)
+    const maxPerDay = findQuestByCode(questCode)?.maxPerDay
+    if (maxPerDay && getDb().questLogs.filter((l) => l.quest?.code === questCode && l.status === 'COMPLETED' && l.logDate === today).length >= maxPerDay) {
+      throw new ApiError(409, 'ทำครบโควตาของวันนี้แล้ว', { error: { code: 'DAILY_LIMIT_REACHED' } })
+    }
     const isRepeatable = isMoodCheckin || isDailyQuest || !!findQuestByCode(questCode)?.maxPerDay
     // ปิดรอบเควสก้าวของ "เมื่อวาน" ย้อนหลัง (utils/stepSettlement.ts) — log ลงวันนั้น ไม่กินโควตาวันนี้
     // [backend ยังไม่รองรับ] ฝั่งจริงใช้ logDate = วันนี้เสมอ — ข้อเสนอใน docs/PROGRESSION_API.md
@@ -154,6 +162,7 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
     const logCompletedAt = settleDate ? endOfBangkokDay(bangkokTimeOn(settleDate, 12)).toISOString() : now
     let resultLog!: QuestLogEntry
     let exchangeCard: string | null = null
+    let learningGift: LearningGift | null = null
     // การ์ดแลกซื้อสุ่มตกจาก "เควสประจำวัน" (รายวัน หรือทริปก้าวรายวัน) ที่ทำครบ ไม่กดข้าม — เซิร์ฟเวอร์
     // ตัดสินเองว่าปลดล็อกระบบการ์ดแล้วหรือยัง (เดินถึงเป้าครบ 21 วัน) หน้าเว็บไม่รู้ตัวนับ
     const cardEligible = !skipped && (isDailyQuest || questCode === STEP_REWARD_QUEST_CODE)
@@ -178,10 +187,15 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
           ...(payload ? { payload } : {}),
           stackAwarded: awarded,
         } as QuestLogEntry
+        // [ใหม่] ปิดรอบเส้นทางการเรียนรู้ (ครบ 5 ด่าน) ด้วย log นี้หรือไม่ — เทียบจำนวนรอบก่อน/หลังเพิ่ม log
+        const roundsBefore = LEARNING_DAILY_CODES.includes(questCode) ? learningRoundState(d.questLogs).roundsDone : 0
         d.questLogs.push(newLog)
         resultLog = newLog
         d.user = applyQuestReward(d.user, category, { exp: expGain, coins: coinGain, stack: awarded }, 1)
         if (cardEligible) exchangeCard = mockRollDailyCard(d)
+        if (LEARNING_DAILY_CODES.includes(questCode) && learningRoundState(d.questLogs).roundsDone > roundsBefore) {
+          learningGift = mockRollLearningGift(d, newLog.id)
+        }
         return
       }
 
@@ -216,13 +230,13 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
       if (willComplete && cardEligible) exchangeCard = mockRollDailyCard(d)
     })
 
-    return { log: resultLog, user: db.user, exchangeCard }
+    return { log: resultLog, user: db.user, exchangeCard, learningGift }
   }
 
   // backend: POST /api/quest-logs/complete → { log, user } (user เป็น select ย่อย) — เติม field
   // ที่ขาดจากโปรไฟล์เต็ม ให้หน้าจอได้ stack/เลเวลล่าสุดครบ
-  const res = await http.post<{ log: Record<string, unknown>; user: Record<string, unknown>; exchangeCard?: string | null }>('/quest-logs/complete', input)
-  return { log: toQuestLogEntry(res.log), user: toUserData(res.user, await getMe()), exchangeCard: res.exchangeCard ?? null }
+  const res = await http.post<{ log: Record<string, unknown>; user: Record<string, unknown>; exchangeCard?: string | null; learningGift?: LearningGift | null }>('/quest-logs/complete', input)
+  return { log: toQuestLogEntry(res.log), user: toUserData(res.user, await getMe()), exchangeCard: res.exchangeCard ?? null, learningGift: res.learningGift ?? null }
 }
 
 export interface MoodCheckinQuestInput {

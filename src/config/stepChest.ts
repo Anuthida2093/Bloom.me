@@ -11,7 +11,14 @@ import { exchangeCardLabel } from './exchangeItems'
  *  ปิดหน้าเควส เปิดร้านที่ไอเทมนั้น (หน้าเกมอยู่ลึก ไม่มี callback ส่งต่อถึง Dashboard) */
 export const OPEN_SHOP_ITEM_EVENT = 'bloom:open-shop-item'
 
-export type StepChestKind = 'EXCHANGE_CARD' | 'BONUS_COINS' | 'WATER_DROPS' | 'BONUS_EXP'
+/** ปุ่ม "ใช้" ผงพิเศษในคลังไอเทม → Dashboard ปิดหน้าที่เปิดอยู่ กลับหน้า Home แล้วโชว์ถุงสีม่วง */
+export const USE_SPECIAL_DUST_EVENT = 'bloom:use-special-dust'
+
+/** ไอคอนถุงผงพิเศษ (ชั่วคราว — SVG วาดเอง แทนด้วยงานอาร์ตจริงที่ path เดียวกันได้) */
+export const SPECIAL_DUST_ICON = '/assets/images/icons/special-dust.svg'
+
+/** BONUS_EXP = ของเก่า (ผลหีบในประวัติ) — [แก้ตามที่ระบุ] หีบใหม่สุ่ม SPECIAL_DUST แทน EXP */
+export type StepChestKind = 'EXCHANGE_CARD' | 'BONUS_COINS' | 'WATER_DROPS' | 'BONUS_EXP' | 'SPECIAL_DUST'
 
 export interface StepChestLoot {
   kind: StepChestKind
@@ -27,7 +34,8 @@ export const STEP_CHEST_LOOT: StepChestLoot[] = [
   { kind: 'EXCHANGE_CARD', weight: 15 },
   { kind: 'BONUS_COINS', weight: 35, min: 20, max: 60 },
   { kind: 'WATER_DROPS', weight: 25, min: 2, max: 5 },
-  { kind: 'BONUS_EXP', weight: 25, min: 15, max: 40 },
+  // [แก้ตามที่ระบุ] ผงพิเศษแทน EXP โบนัส — เก็บในคลังไอเทม กด "ใช้" แล้วเทใส่ต้นไม้ที่หน้า Home (+1-2 EXP)
+  { kind: 'SPECIAL_DUST', weight: 25, min: 1, max: 1 },
 ]
 
 export interface StepChestReward {
@@ -43,6 +51,7 @@ export function describeStepChest(c: StepChestReward): string {
   if (c.kind === 'EXCHANGE_CARD') return `หีบสมบัติ: ${c.cardItemCode ? exchangeCardLabel(c.cardItemCode) : 'การ์ดแลกซื้อไอเทม'}`
   if (c.kind === 'BONUS_COINS') return `หีบสมบัติ: เหรียญโบนัส +${c.amount}`
   if (c.kind === 'WATER_DROPS') return `หีบสมบัติ: หยดน้ำ +${c.amount}`
+  if (c.kind === 'SPECIAL_DUST') return `หีบสมบัติ: ผงพิเศษ +${c.amount}`
   return `หีบสมบัติ: EXP โบนัส +${c.amount}`
 }
 

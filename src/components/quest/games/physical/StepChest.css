@@ -2,9 +2,39 @@
    StepChest.css — หีบสมบัติที่เส้นชัย + ป็อปอัปผลรางวัล (StepChest.tsx)
    ═══════════════════════════════════════════════════════════════ */
 
-/* หีบบนแผนที่ — ลอยเหนือตัวละครที่ปลายทาง (ตัวละคร 140px) เรืองแสงชวนแตะ */
+/* [แก้ตามที่ระบุ] กล่องหีบที่เส้นชัย + แสงเรืองด้านหลัง (วงแสงนุ่ม + รัศมีแฉกหมุนช้าๆ) */
+.step-chest-goal {
+  position: absolute; z-index: 5;
+  width: 0; height: 0;
+  pointer-events: none;
+}
+.step-chest-goal > * { pointer-events: auto; }
+.step-chest-goal__glow, .step-chest-goal__rays {
+  /* กึ่งกลางหีบ: กล่อง 84px ที่เลื่อนขึ้น -230% → ศูนย์กลางอยู่ที่ -151px จากจุดสิ้นสุด */
+  position: absolute; left: 0; top: -151px; pointer-events: none;
+  border-radius: 50%; transform: translate(-50%, -50%);
+}
+.step-chest-goal__glow {
+  width: 190px; height: 190px;
+  background: radial-gradient(circle, rgba(255, 236, 160, .95) 0%, rgba(255, 200, 80, .55) 35%, rgba(255, 190, 60, 0) 70%);
+  opacity: .55;
+  animation: stepChestGlow 2.6s ease-in-out infinite;
+}
+.step-chest-goal__rays {
+  width: 260px; height: 260px;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 231, 150, .55) 0deg 8deg, rgba(255, 231, 150, 0) 8deg 30deg);
+  -webkit-mask: radial-gradient(circle, #000 20%, transparent 68%); mask: radial-gradient(circle, #000 20%, transparent 68%);
+  opacity: .25;
+  animation: stepChestRays 14s linear infinite;
+}
+.step-chest-goal--ready .step-chest-goal__glow { opacity: 1; width: 230px; height: 230px; }
+.step-chest-goal--ready .step-chest-goal__rays { opacity: .8; animation-duration: 8s; }
+@keyframes stepChestGlow { 0%, 100% { transform: translate(-50%, -50%) scale(.92); } 50% { transform: translate(-50%, -50%) scale(1.06); } }
+@keyframes stepChestRays { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+/* หีบบนแผนที่ — ลอยเหนือจุดสิ้นสุด เรืองแสงชวนแตะเมื่อถึงเป้า */
 .step-chest-marker {
-  position: absolute; z-index: 6;
+  position: absolute; z-index: 1; left: 0; top: 0;
   transform: translate(-50%, -230%);
   display: flex; align-items: center; justify-content: center;
   width: 84px; height: 84px; padding: 0; cursor: pointer;
@@ -15,6 +45,8 @@
   animation: stepChestPulse 1.2s ease-in-out infinite;
 }
 .step-chest-marker:disabled { cursor: default; }
+/* ยังไม่ถึงเป้า: หีบนิ่ง ไม่เด้ง (แสงด้านหลังยังเรืองนุ่มๆ ให้เห็นเป็นเป้าหมาย) */
+.step-chest-goal:not(.step-chest-goal--ready) .step-chest-marker { animation: none; filter: saturate(.85); }
 @keyframes stepChestPulse {
   0%, 100% { transform: translate(-50%, -230%) scale(1); box-shadow: 0 4px 0 #c98a00, 0 0 0 0 rgba(255, 209, 102, 0.9); }
   50% { transform: translate(-50%, -240%) scale(1.08); box-shadow: 0 4px 0 #c98a00, 0 0 0 22px rgba(255, 209, 102, 0); }
@@ -110,6 +142,7 @@
 .chest-scroll__btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #c98a00, inset 0 2px 0 rgba(255, 255, 255, 0.75); }
 
 @media (prefers-reduced-motion: reduce) {
+  .step-chest-goal__glow, .step-chest-goal__rays,
   .step-chest-marker, .step-chest-loading, .step-chest-burst, .step-chest-card, .chest-scroll, .step-chest-overlay { animation: none; }
   .chest-scroll__paper { animation: none; grid-template-rows: 1fr; }
 }

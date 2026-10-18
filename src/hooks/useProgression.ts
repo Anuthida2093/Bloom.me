@@ -3,7 +3,7 @@ import { getProgression, getStepHistory, type ProgressionSummary, type StepDayRe
 import { queryKeys } from '../services/queryKeys'
 import { useUser } from '../context/UserContext'
 
-const EMPTY: ProgressionSummary = { exchangeCards: {}, doubleRewardToday: false, goalStreakDays: 0 }
+const EMPTY: ProgressionSummary = { exchangeCards: {}, doubleRewardToday: false, goalStreakDays: 0, specialDust: 0 }
 
 /** การ์ดแลกซื้อ / บัฟคูณสอง / สตรีคเดินครบเป้า — ร้านค้า คลังไอเทม และเควสใช้ข้อมูลชุดเดียวกัน
  *  เปลี่ยนค่าแล้วเรียก invalidateQueries({ queryKey: queryKeys.progression }) ให้ทุกจุดอัปเดต */

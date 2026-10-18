@@ -74,7 +74,8 @@ function isInCurfew(curfew: { bedtime: string; curfewHours: number } | null): bo
 /** เควสที่ทำสำเร็จแล้วยังกดเข้าไปใช้งานต่อได้ (ไม่ได้รางวัลซ้ำ) */
 // [แก้ตามที่ระบุ] คำขอบคุณ/ไดอะรี่ของฉัน ทำสำเร็จแล้วกดอีก → เปิดการ์ด "ทำแล้ววันนี้" ของเควส (เขียนเพิ่ม/
 // ดูประวัติ/ปิด) แทนป็อปอัพเตือน — เขียนเพิ่มเก็บลงประวัติได้ทุกเมื่อ แต่ไม่ได้รางวัลซ้ำ
-const REOPENABLE_WHEN_DONE = ['phys-balanced-nutrients', 'ment-gratitude-shield', 'ment-reframer-journal']
+// ป่าแห่งสิบปี/ผู้พิทักษ์การพักผ่อน: รับรางวัลวันนี้แล้วยังเปิดดูปฏิทิน/เวลาพักได้ (ในหน้าซ่อนปุ่มรับซ้ำ)
+const REOPENABLE_WHEN_DONE = ['phys-balanced-nutrients', 'ment-gratitude-shield', 'ment-reframer-journal', 'know-ten-year-forest', 'know-guardian-of-rest']
 
 export default function QuestSection({
   questLogs = [], userData = DEFAULT_USER_DATA, treeStats = DEFAULT_TREE_STATS,
@@ -205,7 +206,13 @@ export default function QuestSection({
    *  KNOWLEDGE_DAILY 4 ตัวหลังใส่ requiresQuestIds ไล่ตามลำดับเดิมไว้ครบแล้ว (ดู questCatalog.ts) */
   const isRequiredQuestsIncomplete = (q: QuestDef): boolean => {
     if (!q.requiresQuestIds || q.requiresQuestIds.length === 0) return false
-    return q.requiresQuestIds.some((code) => !isCompleted(code))
+    return q.requiresQuestIds.some((code) => !isCompleted(code) && !isDailyLimitReached(code))
+  }
+  /** [Focus Mode] โหมดจดจ่อครบ 3 รอบของวันแล้ว (maxPerDay) — เส้นทางการเรียนรู้รอบถัดไปของวันเดียวกัน
+   *  เล่นโหมดจดจ่อซ้ำไม่ได้ จึงถือว่าผ่านด่านนี้แล้ว ไม่ล็อกด่านที่ตามหลัง */
+  const isDailyLimitReached = (code: string): boolean => {
+    const def = findQuestByCode(code)
+    return !!def?.maxPerDay && getTodayCompletionCount(code) >= def.maxPerDay
   }
 
   /** เหตุผลที่เควสนี้ยังกดไม่ได้ (null = กดได้) — ใช้ทั้งล็อกจริงและอธิบายให้ผู้ใช้ฟัง */
@@ -290,10 +297,6 @@ ${lockReason}` }); return }
     // เช็คก่อนเรียก onToggle เสมอ — หลังเรียกแล้ว questLogs (async) อาจยังไม่อัปเดตทัน
     const alreadyDone = isCompleted(questCode)
     onToggle(questCode, payload)
-    // หยั่งรากลึกครบ 3 รอบโดยไม่กดข้าม → ผู้พิทักษ์การพักผ่อนสำเร็จอัตโนมัติ (วันละครั้ง)
-    if (questCode === 'know-deep-root' && payload?.strictComplete === true && payload?.skipped !== true && !isCompleted('know-guardian-of-rest')) {
-      onToggle('know-guardian-of-rest', { auto: true, source: 'know-deep-root' })
-    }
     setPlayingQuest(null)
     if (!alreadyDone || questDef?.maxPerDay) triggerCelebration(questCode, payload?.skipped === true)
   }

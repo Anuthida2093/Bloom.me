@@ -89,11 +89,13 @@
   top: 16px;
   right: 60px;
   z-index: 21;
-  width: 36px;
-  height: 36px;
-  padding: 0 0 3px;
+  /* [แก้ตามที่ระบุ] ปุ่มรูป OwlAvatar วงกลม 52px (เดิมลูกศร 36px) */
+  width: 52px;
+  height: 52px;
+  padding: 0;
   display: flex; align-items: center; justify-content: center;
   border-radius: 99px;
+  overflow: hidden;
   border: 2px solid var(--lb-gold-edge, rgba(255, 255, 255, 0.4));
   background: var(--lb-card-bg, rgba(10, 22, 16, 0.6));
   color: var(--lb-card-text, #fff);
@@ -103,6 +105,9 @@
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
 }
 .step-journey-game__panel-toggle:hover { filter: brightness(1.05); }
+.step-journey-game__panel-toggle-img { width: 46px; height: 46px; object-fit: contain; pointer-events: none; }
+.step-journey-game__panel-toggle[aria-expanded="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--coin) 60%, transparent); }
+.step-journey-game__reset-btn:disabled { opacity: .6; cursor: default; }
 /* ปุ่มซ่อนแถบ — อยู่มุมซ้ายบนภายในแถบข้าง (ติดอยู่ด้านบนเวลาเลื่อนแถบ) */
 .sjg-panel-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: flex-start; pointer-events: none; }
 .step-journey-game__panel-toggle--in-panel { position: static; flex-shrink: 0; pointer-events: auto; }
@@ -256,7 +261,8 @@
    แล้วเลื่อนดูในแถบแทน */
 @media (max-width: 520px) {
   .step-journey-game__side-panel { max-height: 48vh; max-height: 48dvh; }
-  .step-journey-game__panel-toggle { top: 12px; right: 56px; height: 34px; padding: 0 10px; font-size: 12px; }
+  .step-journey-game__panel-toggle { top: 8px; right: 60px; width: 48px; height: 48px; }
+  .step-journey-game__panel-toggle-img { width: 42px; height: 42px; }
   .step-journey-game__close-btn { top: 12px; right: 12px; }
 }
 
@@ -265,8 +271,8 @@
 /* สมาร์ทวอทช์ (≤ 300px): ปุ่มแสดง/ซ่อนแถบเหลือแค่ไอคอน, แถบสถิติเต็มจอแบบเลื่อนได้ */
 @media (max-width: 300px) {
   .step-journey-game--center { padding: 10px; }
-  .step-journey-game__panel-toggle { font-size: 0; width: 34px; padding: 0; right: 50px; }
-  .step-journey-game__panel-toggle::before { content: '📊'; font-size: 16px; }
+  .step-journey-game__panel-toggle { width: 40px; height: 40px; right: 50px; }
+  .step-journey-game__panel-toggle-img { width: 34px; height: 34px; }
   .step-journey-game__side-panel { padding: 0 6px; max-height: 60dvh; gap: 6px; bottom: 6px; }
   .step-journey-game__controls { padding: 6px; }
 }

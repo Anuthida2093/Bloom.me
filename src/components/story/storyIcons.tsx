@@ -52,3 +52,22 @@ export function ChatIcon() {
     </svg>
   )
 }
+
+/** [ใหม่ตามที่ระบุ] บันทึกโพสต์ (บุ๊กมาร์ก) — ทึบเมื่อบันทึกแล้ว */
+export function BookmarkIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg className={`story-icon story-icon--bookmark${filled ? ' is-filled' : ''}`} viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+      <path className="story-icon__stroke story-icon__bookmark" d="M6 3.5h12v17l-6-4.6-6 4.6z" />
+    </svg>
+  )
+}
+
+/** [ใหม่ตามที่ระบุ] เครื่องหมายยืนยันบัญชี (Verified) ข้างชื่อผู้โพสต์ */
+export function VerifiedBadge() {
+  return (
+    <svg className="story-verified" viewBox="0 0 24 24" width="15" height="15" role="img" aria-label="บัญชีที่ยืนยันแล้ว">
+      <path fill="#3897F0" d="M12 1.6l2.5 1.9 3.1-.2 1 3 2.6 1.7-.9 3 .9 3-2.6 1.7-1 3-3.1-.2L12 22.4l-2.5-1.9-3.1.2-1-3-2.6-1.7.9-3-.9-3 2.6-1.7 1-3 3.1.2z" />
+      <path fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" d="M7.8 12.3l2.8 2.8 5.6-5.8" />
+    </svg>
+  )
+}

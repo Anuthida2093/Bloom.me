@@ -9,6 +9,7 @@ import TreeOfLife from '../tree/TreeOfLife'
 import { computeCalorieTarget, getVisibleRocks } from '../../utils/nutrition'
 import type { MbtiType } from '../../types'
 import './HomeBackgroundPicker.css'
+import { posterOf } from '../../utils/videoPoster'
 
 /*============================================================================*\
   HomeBackgroundPicker — [เพิ่มตามที่ระบุ] ตั้งค่า → "ตั้งรูปพื้นหลัง" ของหน้า Home
@@ -83,6 +84,7 @@ function Thumb({ bg, active, missing, onPick, onMissing }: {
         <video
           className="home-bg-thumb__video"
           src={`${bg.src}#t=1`}
+          poster={posterOf(bg.src)}
           muted playsInline preload="metadata"
           onError={onMissing}
           onMouseEnter={(e) => { void e.currentTarget.play().catch(() => {}) }}

@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import { useVideoStallGuard } from '../../hooks/useVideoStallGuard'
+import { posterOf } from '../../utils/videoPoster'
 
 const SHADOW_1 = 'rgba(255, 244, 214, .8)'
 const C_2 = '#FFF3C4'
@@ -284,6 +285,17 @@ export default function CinematicBackground({
         <canvas
           ref={fallbackCanvasRef}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', animation: 'cinematicPan 40s ease-in-out infinite alternate' }}
+        />
+      )}
+
+      {/* [1.5] ระหว่างรอวิดีโอ: เฟรมแรก (โปสเตอร์) ทับฉาก canvas สำรอง — ไม่มีไฟล์โปสเตอร์ก็ซ่อนตัวเอง */}
+      {!videoUnusable && !guard.ready && (
+        <img
+          src={posterOf(videoSrc)}
+          alt=""
+          aria-hidden="true"
+          onError={(e) => { e.currentTarget.style.display = 'none' }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', animation: 'cinematicPan 40s ease-in-out infinite alternate' }}
         />
       )}
 

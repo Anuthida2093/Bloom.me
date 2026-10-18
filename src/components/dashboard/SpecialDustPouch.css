@@ -1,0 +1,65 @@
+/* ═══ [แก้ตามที่ระบุ] ถุงผงพิเศษสีม่วงบนหน้า Home — เทผงวิบวับลงกึ่งกลางทรงพุ่ม ═══ */
+.dust-pouch {
+  position: fixed; left: 50%; top: 18vh; z-index: 120;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  pointer-events: none;
+}
+.dust-pouch > * { pointer-events: auto; }
+.dust-pouch__bag {
+  width: 112px; height: 112px; padding: 0; border: none; background: none; cursor: pointer;
+  filter: drop-shadow(0 10px 18px rgba(90, 46, 158, .45));
+  animation: dustPouchFloat 2.2s ease-in-out infinite;
+  transform-origin: 50% 30%;
+}
+.dust-pouch__bag img { width: 100%; height: 100%; }
+.dust-pouch__bag:disabled { cursor: default; }
+.dust-pouch--pouring .dust-pouch__bag { animation: dustPouchPour 2.6s ease-in-out both; }
+.dust-pouch--done .dust-pouch__bag { animation: dustPouchAway .9s ease-in both; }
+.dust-pouch__hint {
+  margin: 0; padding: 6px 14px; border-radius: 99px;
+  background: rgba(59, 31, 107, .78); color: #fff; font-family: var(--font-display); font-size: 14px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, .25);
+}
+.dust-pouch__close {
+  position: absolute; top: -6px; right: -34px; width: 32px; height: 32px; border-radius: 99px; cursor: pointer;
+  border: 2px solid #A06BE8; background: #fff; color: #6A3BB8; font-size: 14px;
+}
+/* ปากถุงอยู่ขวาบนเมื่อเอียง → ผงเริ่มไหลจากตรงนั้น แล้วกระจายลงกึ่งกลางทรงพุ่ม */
+.dust-pouch__stream { position: absolute; left: 50%; top: 40px; width: 0; height: 0; pointer-events: none; }
+.dust-pouch__grain {
+  position: absolute; left: 22px; top: 0; border-radius: 50%;
+  background: #ffffff; box-shadow: 0 0 6px 2px rgba(255, 255, 255, .9);
+  opacity: 0;
+  animation-name: dustGrainFall, dustGrainTwinkle;
+  animation-timing-function: cubic-bezier(.3, .1, .5, 1), ease-in-out;
+  animation-iteration-count: 1, infinite;
+  animation-fill-mode: both, none;
+}
+.dust-pouch__grain--yellow { background: #FFE27A; box-shadow: 0 0 7px 2px rgba(255, 214, 90, .9); }
+.dust-pouch__grain--star { border-radius: 0; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+.dust-pouch__exp {
+  margin-top: 22vh; padding: 8px 18px; border-radius: 99px;
+  background: linear-gradient(180deg, #FFF6CF, #FFE08A); color: #6B4A00; font-family: var(--font-display); font-size: 18px;
+  border: 2px solid #F2B640; box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
+  animation: dustExpPop .5s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+@keyframes dustPouchFloat { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-10px) rotate(3deg); } }
+@keyframes dustPouchPour {
+  0% { transform: rotate(0); }
+  18%, 82% { transform: rotate(118deg) translateY(-6px); }
+  90% { transform: rotate(124deg) translateY(-2px); }
+  100% { transform: rotate(118deg); }
+}
+@keyframes dustPouchAway { from { transform: rotate(118deg); opacity: 1; } to { transform: rotate(0) translateY(-40px) scale(.6); opacity: 0; } }
+@keyframes dustGrainFall {
+  0% { opacity: 0; transform: translate(0, 0); }
+  10% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--drift), var(--fall)); }
+}
+@keyframes dustGrainTwinkle { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.6); } }
+@keyframes dustExpPop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .dust-pouch__bag, .dust-pouch__grain { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+}

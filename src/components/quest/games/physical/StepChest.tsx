@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { MapDef } from '../../../../types.journey'
-import { OPEN_SHOP_ITEM_EVENT, type StepChestReward } from '../../../../config/stepChest'
+import { OPEN_SHOP_ITEM_EVENT, type StepChestReward, SPECIAL_DUST_ICON } from '../../../../config/stepChest'
 import { BADGE_ICONS, ITEM_ICONS } from '../../../../config/iconAssets'
 import { DECORATION_ITEM_META } from '../../../../config/decorationItems'
 import { exchangeItemName } from '../../../../config/exchangeItems'
@@ -20,20 +20,25 @@ import './StepChest.css'
     - รางวัลอื่น: กระดาษม้วนค่อยๆ คลี่ลงมา
 \*============================================================================*/
 
-export function StepChestMarker({ mapDef, onOpen, disabled }: { mapDef: MapDef; onOpen: () => void; disabled?: boolean }) {
+/** หีบสมบัติที่จุดสิ้นสุดของเส้นทาง — [แก้ตามที่ระบุ] แสดงตลอดทาง (เป็นเป้าหมายให้เห็น) มีแสงเรืองด้านหลัง
+ *  ยังไม่ถึงเป้า: แสงนุ่มๆ กดไม่ได้ · ถึงเป้าแล้ว (ready): แสงเรืองแรงขึ้น + รัศมีหมุน + เด้งชวนแตะเปิด */
+export function StepChestMarker({ mapDef, onOpen, disabled, ready = true }: { mapDef: MapDef; onOpen: () => void; disabled?: boolean; ready?: boolean }) {
   const { x, y } = withLivePath(mapDef).exitPct
   return (
-    <button
-      type="button"
-      className="step-chest-marker"
-      style={{ left: `${x}%`, top: `${y}%` }}
-      onClick={onOpen}
-      onPointerDown={(e) => e.stopPropagation()}
-      disabled={disabled}
-      aria-label="เปิดหีบสมบัติ"
-    >
-      <span aria-hidden="true">🎁</span>
-    </button>
+    <div className={`step-chest-goal${ready ? ' step-chest-goal--ready' : ''}`} style={{ left: `${x}%`, top: `${y}%` }}>
+      <span className="step-chest-goal__rays" aria-hidden="true" />
+      <span className="step-chest-goal__glow" aria-hidden="true" />
+      <button
+        type="button"
+        className="step-chest-marker"
+        onClick={ready ? onOpen : undefined}
+        onPointerDown={(e) => { if (ready) e.stopPropagation() }}
+        disabled={disabled || !ready}
+        aria-label={ready ? 'เปิดหีบสมบัติ' : 'หีบสมบัติที่เส้นชัย — เดินให้ถึงเป้าเพื่อเปิด'}
+      >
+        <span aria-hidden="true">🎁</span>
+      </button>
+    </div>
   )
 }
 
@@ -41,6 +46,7 @@ const SCROLL_VIEW: Record<Exclude<StepChestReward['kind'], 'EXCHANGE_CARD'>, { i
   BONUS_COINS: { icon: BADGE_ICONS.coins, title: (n) => `เหรียญโบนัส +${n}`, text: 'เข้ากระเป๋าเรียบร้อยแล้ว' },
   WATER_DROPS: { icon: BADGE_ICONS.water, title: (n) => `หยดน้ำ +${n}`, text: 'เอาไปรดน้ำต้นไม้ที่หน้าแรกได้เลย' },
   BONUS_EXP: { icon: BADGE_ICONS.exp, title: (n) => `EXP โบนัส +${n}`, text: 'ต้นไม้ของคุณเติบโตขึ้นอีกนิดแล้ว' },
+  SPECIAL_DUST: { icon: SPECIAL_DUST_ICON, title: (n) => `ผงพิเศษ +${n}`, text: 'เก็บไว้ในคลังไอเทมแล้ว — กด "ใช้" เพื่อโปรยผงวิบวับใส่ต้นไม้ที่หน้าแรก' },
 }
 
 interface StepChestPopupProps {

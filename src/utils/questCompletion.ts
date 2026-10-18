@@ -12,7 +12,7 @@ import { KNOWLEDGE_DAILY, findQuestByCode } from '../config/questCatalog'
       ด่านแรกใหม่ได้ (ด่านทั้งหมดเปิดเป็นรอบใหม่ นกฮูกกลับจุดเริ่ม)
 \*============================================================================*/
 
-const LEARNING_DAILY_CODES = KNOWLEDGE_DAILY.map((q) => q.code)
+export const LEARNING_DAILY_CODES = KNOWLEDGE_DAILY.map((q) => q.code)
 
 function isToday(iso: string | null | undefined, now: Date): boolean {
   return !!iso && new Date(iso).toDateString() === now.toDateString()

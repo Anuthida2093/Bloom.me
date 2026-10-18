@@ -40,6 +40,10 @@ const Dashboard = lazy(() => import('./components/dashboard/Dashboard'))
 const ProceduralTreePage = import.meta.env.DEV
   ? lazy(() => import('./experiments/procedural-tree/ProceduralTreePage'))
   : null
+// [ใหม่] เครื่องมือปักจุดเส้นทางเควสก้าว — เฉพาะตอน dev (ไม่ถูก bundle ใน build จริง)
+const WaypointEditorPage = import.meta.env.DEV
+  ? lazy(() => import('./experiments/waypoints/WaypointEditorPage'))
+  : null
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +89,7 @@ export default function App() {
                       }
                     />
                     {ProceduralTreePage && <Route path="/dev/procedural-tree" element={<ProceduralTreePage />} />}
+                    {WaypointEditorPage && <Route path="/dev/waypoints" element={<WaypointEditorPage />} />}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Suspense>

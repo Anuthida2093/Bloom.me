@@ -106,10 +106,12 @@ export const KNOWLEDGE_DAILY: QuestDef[] = [
   },
   {
     code: 'know-deep-root', icon: '🌿', title: 'The Deep Root', titleTh: 'หยั่งรากลึก / โหมดจดจ่อ',
-    desc: 'อ่านหนังสือ/จดจ่อ 90 นาที พัก 15 นาที × 3 รอบ — ครบ 3 รอบไม่กดข้าม ลุ้นไอเทมแลกซื้อ',
-    howTo: 'อ่านหนังสือหรือทำงานแบบ Deep Work 90 นาที ห้ามวอกแวก แล้วพักสมองจริงๆ 15 นาที (หลับตา เดินเล่น ห้ามเล่นมือถือ) ทำให้ครบ 3 รอบ — ครบโดยไม่กดข้าม มีโอกาสได้ไอเทมแลกซื้อ 1 ชิ้น (หรือเหรียญโบนัส) และปลดล็อกเควสเสริม "ผู้พิทักษ์การพักผ่อน" · โหมดปกติกดข้ามได้หลังจดจ่อครบ 45 นาที แต่ได้รางวัลครึ่งเดียว',
+    desc: 'จดจ่อ 90 นาที + พัก 15 นาที = 1 รอบ (วันละไม่เกิน 3 รอบ) — จบรอบแรกปลดล็อกเทกระเป๋าความจำ ครบ 3 รอบรับรางวัลพิเศษ',
+    howTo: 'อ่านหนังสือหรือทำงานแบบ Deep Work 90 นาที ห้ามวอกแวก แล้วพักสมองจริงๆ 15 นาที (หลับตา เดินเล่น ห้ามเล่นมือถือ) นับเป็น 1 รอบ — จบรอบแรก "เทกระเป๋าความจำผ่านเสียง" เล่นได้ทันที และกลับมาเล่นโหมดจดจ่อต่อได้อีกจนครบ 3 รอบของวัน (ครบ 3 รอบไม่กดข้าม ได้รางวัลพิเศษ: การ์ดแลกซื้อหรือเหรียญโบนัส) · โหมดปกติกดข้ามได้หลังจดจ่อครบ 45 นาที แต่ได้รางวัลครึ่งเดียว',
     theory: '90/20 Rule · Ultradian Rhythms (Psomas, 2021)',
-    category: 'KNOWLEDGE', controlType: 'TIMER', coinReward: 50, expReward: 40, isDaily: true,
+    // [แก้ตามที่ระบุ — Focus Mode] 1 รอบ (90+15) = ทำสำเร็จ 1 ครั้ง วันละไม่เกิน 3 ครั้ง — backend รองรับ
+    // Quest.maxPerDay + QuestLog.sequenceInDay อยู่แล้ว (seed ต้องตั้ง maxPerDay: 3 ให้ deep-root — ดู docs/PROGRESSION_API.md)
+    category: 'KNOWLEDGE', controlType: 'TIMER', coinReward: 50, expReward: 40, isDaily: true, maxPerDay: 3,
     gameKey: 'deep-root', energyLevel: 'HIGH', requiresQuestIds: ['know-active-focus'],
   },
   {
@@ -162,20 +164,21 @@ export const KNOWLEDGE_SIDE: QuestDef[] = [
   },
   {
     code: 'know-guardian-of-rest', icon: '🛡️', title: 'Guardian of Rest', titleTh: 'ผู้พิทักษ์การพักผ่อน',
-    desc: 'ระบบตรวจจับอัตโนมัติ: ฝึกหนักเกิน 4-5 ชม./วัน ต้นไม้จะเริ่มไหม้เกรียม',
+    desc: 'พักผ่อนให้ครบ 15 นาทีหลังจดจ่อแต่ละรอบ แล้วกดรับรางวัลได้วันละครั้ง — ฝึกหนักเกิน 4-5 ชม./วัน ต้นไม้จะเริ่มไหม้เกรียม',
     howTo: 'บังคับหยุดฝึกเมื่อครบโควตา 4-5 ชั่วโมงของการฝึกหนักต่อวัน หากฝืนทำต่อ ต้นไม้จะเฉา (Burnout) — ทำงานอัตโนมัติจากเวลาสะสม',
     theory: 'Deliberate Practice — ขีดจำกัดการฝึกฝน 4-5 ชม./วัน',
-    // ปลดล็อกเมื่อทำ "หยั่งรากลึก" สำเร็จวันนี้ (requiresQuestIds — ล็อก/ปลดล็อกแบบเดียวกับด่านหลัก)
-    // isDaily: สำเร็จอัตโนมัติวันละครั้งเมื่อหยั่งรากลึกครบไม่กดข้าม (QuestSection.handleCompletePlaying)
+    // ปลดล็อกเมื่อจบโหมดจดจ่อรอบแรกของวันนี้ (requiresQuestIds)
+    // [แก้ตามที่ระบุ] จ่ายรางวัลเมื่อพักครบ 15 นาทีเต็ม (utils/restLog.ts) — กดรับในหน้าเควส วันละครั้ง
     category: 'KNOWLEDGE', coinReward: 30, expReward: 20, isDaily: true, isPassive: true,
     gameKey: 'guardian-of-rest', energyLevel: 'LOW', requiresQuestIds: ['know-deep-root'],
   },
   {
     code: 'know-ten-year-forest', icon: '🏕️', title: 'Ten-Year Forest', titleTh: 'ป่าแห่งสิบปี',
-    desc: 'ปฏิทิน Streak วันต่อวัน — เข้าแอปต่อเนื่องทุกวัน ลำต้นเพิ่มวงปีใหม่',
+    desc: 'ปฏิทิน Streak วันต่อวัน — เข้าแอปต่อเนื่องครบ 21 วัน กดรับรางวัลได้วันละครั้ง',
     howTo: 'รักษาความต่อเนื่อง (login streak) ของการฝึกฝน ไม่จำเป็นต้องเยอะ แต่ต้องไม่ขาด',
     theory: 'The 10-Year Rule (Ericsson et al., 1993)',
-    category: 'KNOWLEDGE', coinReward: 20, expReward: 15, isDaily: false, isPassive: true,
+    // [แก้ตามที่ระบุ] รับรางวัลได้วันละครั้ง (isDaily) เมื่อ streak ต่อเนื่อง ≥ 21 วัน — เดิมไม่มีทางรับรางวัลเลย
+    category: 'KNOWLEDGE', coinReward: 20, expReward: 15, isDaily: true, isPassive: true,
     gameKey: 'ten-year-forest', energyLevel: 'LOW',
   },
 ]

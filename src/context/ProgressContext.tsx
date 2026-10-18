@@ -17,6 +17,7 @@ import { legacyMoodToColor } from '../config/moodPotion'
 import { API_MODE } from '../services/http'
 import { MOOD_CHECKIN_QUEST_CODE, getMoodCheckinStatus, type MoodCheckinStatus } from '../config/moodCheckinSlots'
 import { useUser } from './UserContext'
+import type { LearningGift } from '../config/learningGift'
 
 /*============================================================================*\
   ProgressContext — [ไฟล์ใหม่ แยกออกจาก AppContext เดิม]
@@ -43,6 +44,9 @@ interface ProgressContextValue {
   /** การ์ดแลกซื้อที่เพิ่งสุ่มตกจากเควสประจำวัน (เซิร์ฟเวอร์ตัดสิน) — Dashboard โชว์ป็อปอัพ */
   cardDrop: { itemCode: string; key: number } | null
   dismissCardDrop: () => void
+  /** [ใหม่] ของขวัญสุ่มเมื่อจบรอบเส้นทางการเรียนรู้ (ครบ 5 ด่าน) — Dashboard โชว์ LearningGiftPopup */
+  learningGift: (LearningGift & { key: number }) | null
+  dismissLearningGift: () => void
   /** [แก้รอบนี้ — เพิ่ม questCode] เดิมมีแค่ category+key (พอสำหรับต้นไม้เติบโตทั่วไป) — เพิ่ม
    *  questCode (optional) ให้ผู้ฟัง (Dashboard.tsx) แยกได้ว่า pulse นี้มาจากเควสไหนเจาะจง เช่น
    *  เควส "สารอาหารแห่งผืนดิน" ต้องเล่นแอนิเมชันบัวรดน้ำเพิ่มเติมจากปุ่มเติบโตทั่วไป */
@@ -95,6 +99,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const [treeGrowthPulse, setTreeGrowthPulse] = useState<{ category: QuestCategory; key: number; questCode?: string } | null>(null)
   const [hasSoot, setHasSoot] = useState(false)
   const [cardDrop, setCardDrop] = useState<{ itemCode: string; key: number } | null>(null)
+  /** [ใหม่] ของขวัญสุ่มจากการจบรอบเส้นทางการเรียนรู้ (ครบ 5 ด่าน) — แสดงด้วย LearningGiftPopup */
+  const [learningGift, setLearningGift] = useState<(LearningGift & { key: number }) | null>(null)
   // [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 6] ดู triggerWateringEffect ใน context value ด้านล่าง
 
   const { data: questLogsData, isLoading: loadingQuests } = useQuery({
@@ -168,8 +174,12 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       // คำขอล้มเหลว — ย้อน questLogs กลับไปก่อนหน้า optimistic update (เหมือน mbtiMutation)
       if (context?.previousLogs) queryClient.setQueryData(queryKeys.questLogs(), context.previousLogs)
     },
-    onSuccess: ({ user, log, exchangeCard }, _vars, context) => {
+    onSuccess: ({ user, log, exchangeCard, learningGift: gift }, _vars, context) => {
       applyUserPatch(user)
+      if (gift) {
+        setLearningGift({ ...gift, key: Date.now() })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.progression })
+      }
       if (exchangeCard) {
         setCardDrop({ itemCode: exchangeCard, key: Date.now() })
         void queryClient.invalidateQueries({ queryKey: queryKeys.progression })
@@ -224,6 +234,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   const markIncineratorFailed = useCallback(() => setHasSoot(true), [])
   const dismissCardDrop = useCallback(() => setCardDrop(null), [])
+  const dismissLearningGift = useCallback(() => setLearningGift(null), [])
 
   // คำนวณตอน render ได้ (ไม่ใช่ Date.now() ใน effect) — เปลี่ยนรอบเช้า→เย็นเห็นผลตอน re-render ถัดไป
   const moodCheckinStatus = useMemo(() => getMoodCheckinStatus(questLogs), [questLogs])
@@ -279,12 +290,12 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<ProgressContextValue>(() => ({
     questLogs, moodEntries, journalEntries, postIts,
-    completedQuestCount, moodCheckinStatus, cardDrop, dismissCardDrop, treeGrowthPulse, hasSoot,
+    completedQuestCount, moodCheckinStatus, cardDrop, dismissCardDrop, learningGift, dismissLearningGift, treeGrowthPulse, hasSoot,
     isLoadingProgress: loadingQuests || loadingMood,
     handleToggleQuest, markIncineratorFailed, handleMoodSubmit, handleAddJournalEntry,
   }), [
     questLogs, moodEntries, journalEntries, postIts,
-    completedQuestCount, moodCheckinStatus, cardDrop, dismissCardDrop, treeGrowthPulse, hasSoot, loadingQuests, loadingMood,
+    completedQuestCount, moodCheckinStatus, cardDrop, dismissCardDrop, learningGift, dismissLearningGift, treeGrowthPulse, hasSoot, loadingQuests, loadingMood,
     handleToggleQuest, markIncineratorFailed, handleMoodSubmit, handleAddJournalEntry,
   ])
 

@@ -35,7 +35,7 @@ import CompletedJourneyMap from './CompletedJourneyMap'
 import CompletedTripView from './CompletedTripView'
 import { useStepChest } from '../../../../hooks/useStepChest'
 import { holdStepSettlement, waitForStepSettlement } from '../../../../services/stepSettlement'
-import { BADGE_ICONS } from '../../../../config/iconAssets'
+import { BADGE_ICONS, OWL_AVATAR_ICON } from '../../../../config/iconAssets'
 import { getJourneyDaySteps, getTodayJourneySteps, recordJourneySteps, resetStepJourneyDays } from '../../../../utils/stepJourneyDays'
 import { calculateStepReward, getDailyStepGoal, STEP_BONUS_LABEL, classifyStepBmiTier } from '../../../../config/stepGoalByBmi'
 import { formatDistance, stepsToDistanceMeters } from '../../../../utils/strideDistance'
@@ -76,9 +76,10 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
   const [isFogging, setIsFogging] = useState(false)
   /** ผลซิงค์ล่าสุด — โชว์สถานะใต้ปุ่มซิงค์ */
   const [lastSync, setLastSync] = useState<{ at: Date; added: number } | null>(null)
-  /** แถบด้านขวา (สถิติ + ปุ่มซิงค์ก้าว) เปิด/ปิดได้ — จำค่าไว้ในเครื่อง เปิดเควสครั้งหน้าคงสถานะเดิม */
+  /** แถบด้านขวา (สถิติ + ปุ่มซิงค์ก้าว) เปิด/ปิดได้ — จำค่าไว้ในเครื่อง เปิดเควสครั้งหน้าคงสถานะเดิม
+   *  [แก้ตามที่ระบุ] ค่าเริ่มต้น = ปิด (เห็นแค่ปุ่มรูป OwlAvatar) แบบเดียวกับแผงข้อมูลต้นไม้ ทุกขนาดจอ */
   const [panelOpen, setPanelOpen] = useState(() => {
-    try { return localStorage.getItem(PANEL_OPEN_KEY) !== '0' } catch { return true }
+    try { return localStorage.getItem(PANEL_OPEN_KEY) === '1' } catch { return false }
   })
   const togglePanel = () => setPanelOpen((open) => {
     try { localStorage.setItem(PANEL_OPEN_KEY, open ? '0' : '1') } catch { /* storage ปิดอยู่ */ }
@@ -419,7 +420,10 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
           <div className="sjg-map-layer">
             <MapPathRenderer mapDef={visualMapDef} progressPct={localProgressPct} />
             <CatCompanion mapDef={visualMapDef} progressPct={localProgressPct} />
-            {chest.ready && <StepChestMarker mapDef={visualMapDef} onOpen={() => { void chest.open() }} disabled={chest.popupOpen} />}
+            {/* [แก้ตามที่ระบุ] หีบที่เส้นชัยเห็นตลอดทาง (มีแสงเรืองด้านหลัง) — กดเปิดได้เมื่อถึงเป้า · เปิดแล้วหายไป */}
+            {chest.loaded && !chest.opened && (
+              <StepChestMarker mapDef={visualMapDef} ready={chest.ready} onOpen={() => { void chest.open() }} disabled={chest.popupOpen} />
+            )}
             <WeatherEffectLayer weather={weather} />
           </div>
         )}
@@ -459,7 +463,8 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
         document.body,
       )}
 
-      {/* [แก้ตามที่ระบุ] แถบปิดอยู่ → ปุ่มเปิด "‹" อยู่ข้างปุ่มกากบาท · แถบเปิดอยู่ → ปุ่มปิด "›" อยู่มุมซ้ายบนของแถบ */}
+      {/* [แก้ตามที่ระบุ] ปุ่มเปิด/ปิดแถบข้อมูลเป็นรูป OwlAvatar (แบบปุ่มแผงข้อมูลต้นไม้) — ปิดอยู่เห็นแค่ปุ่มนกฮูก
+          กดแล้วข้อมูลทั้งหมด + ปุ่มรีเฟรชก้าว/เปลี่ยนแผนที่ ค่อยแสดง · แถบเปิดอยู่ → ปุ่มนกฮูกมุมซ้ายบนของแถบไว้ปิด */}
       {!showSummary && !reachedGoal && !panelOpen && (
         <button
           type="button"
@@ -467,10 +472,10 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
           onClick={togglePanel}
           aria-expanded={false}
           aria-controls="step-journey-side-panel"
-          aria-label="แสดงแถบข้าง"
-          title="แสดงแถบข้าง"
+          aria-label="แสดงข้อมูลการเดินทาง"
+          title="แสดงข้อมูลการเดินทาง"
         >
-          <span aria-hidden="true">‹</span>
+          <img src={OWL_AVATAR_ICON} alt="" className="step-journey-game__panel-toggle-img" />
         </button>
       )}
 
@@ -483,10 +488,10 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
               onClick={togglePanel}
               aria-expanded={true}
               aria-controls="step-journey-side-panel"
-              aria-label="ซ่อนแถบข้าง"
-              title="ซ่อนแถบข้าง"
+              aria-label="ซ่อนข้อมูลการเดินทาง"
+              title="ซ่อนข้อมูลการเดินทาง"
             >
-              <span aria-hidden="true">›</span>
+              <img src={OWL_AVATAR_ICON} alt="" className="step-journey-game__panel-toggle-img" />
             </button>
           </div>
           <StatsOverlay
@@ -534,11 +539,13 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
             {syncError && <p className="qg-tag qg-tag--danger step-journey-game__sync-error">⚠️ {syncError}</p>}
           </div>
 
-          <button 
-            className="step-journey-game__reset-btn" 
+          {/* [แก้ตามที่ระบุ] เปลี่ยนแผนที่ของวันได้เฉพาะก่อนนับก้าวแรกเข้าทริป */}
+          <button
+            className="step-journey-game__reset-btn"
             onClick={() => setConfirmReset(true)}
+            disabled={tripActualSteps > 0}
           >
-            เปลี่ยนแผนที่วันนี้ (เริ่มใหม่)
+            {tripActualSteps > 0 ? 'เปลี่ยนแผนที่ได้เฉพาะก่อนเริ่มนับก้าว' : 'เปลี่ยนแผนที่วันนี้'}
           </button>
         </div>
       )}

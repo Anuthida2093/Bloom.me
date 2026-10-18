@@ -101,3 +101,30 @@ model ExchangeCard {
 - ก้อนหินจากการทานเกินที่ลบแล้ว — `src/utils/nutrition.ts` (มื้ออาหารเองก็เก็บในเครื่อง)
 - หยดน้ำ (`waterDrops`) — `localExtras` ใน `user.api.ts` → หายเมื่อลงแอปใหม่/เปลี่ยนเครื่อง
 - ผลสรุปการปิดรอบเควสก้าว (แจ้งเตือนตอนเช้า) — `bloom:step-settlements:<userId>`
+- เวลาพักของผู้พิทักษ์การพักผ่อน — `src/utils/restLog.ts` (`bloom:rest-log:<userId>`)
+
+## 5. Focus Mode + เส้นทางการเรียนรู้ + เควสเสริม (เพิ่ม 2026-10-18)
+
+### 5.1 โหมดจดจ่อ (`deep-root`) — 1 รอบ = ทำสำเร็จ 1 ครั้ง
+- 1 รอบ = จดจ่อ 90 นาที + พัก 15 นาที → `POST /api/quest-logs/complete` 1 ครั้ง (`payload.round` = 1–3)
+- **seed ต้องตั้ง `maxPerDay: 3`** ให้ `deep-root` — schema รองรับอยู่แล้ว (`Quest.maxPerDay` + `QuestLog.sequenceInDay`) ครั้งที่ 4 ของวัน → `409 DAILY_LIMIT_REACHED`
+- `brain-dump-voice` (`requiresQuestIds: [deep-root]`) ปลดล็อกทันทีหลังรอบแรก — กติกา requiresQuestIds เดิม "สำเร็จวันนี้" ใช้ได้เลย
+- รางวัลพิเศษครบ 3 รอบ (ไม่มีรอบไหน `payload.skipped`) — `POST /api/quests/know-deep-root/bonus` `{ rollKey: "deep-root:<YYYY-MM-DD>:3-rounds" }` (เดิม) เซิร์ฟเวอร์ควรตรวจเองว่าวันนั้นมี deep-root ครบ 3 log และไม่มี skipped
+
+### 5.2 ของขวัญสุ่มเมื่อทำเควสการเรียนรู้ครบ 5 ด่าน
+- เมื่อ log ที่เพิ่งสร้าง "ปิดรอบ" เส้นทาง (ครบทั้ง 5 code ของหมวด KNOWLEDGE รายวัน นับตั้งแต่รอบล่าสุดของวันนั้น)
+  เซิร์ฟเวอร์สุ่ม 1 อย่างจาก `src/config/learningGift.ts` แล้วตอบใน response เดิม:
+  `POST /api/quest-logs/complete` → `{ log, user, exchangeCard?, learningGift?: { kind: 'EXCHANGE_CARD'|'BONUS_COINS'|'WATER_DROPS', amount, cardItemCode? } }`
+- idempotent ด้วย id ของ log ที่ปิดรอบ · การ์ดออกเฉพาะเมื่อปลดล็อกระบบการ์ดแล้ว
+- หลังปิดรอบ เส้นทางรีเซ็ต (เล่นด่านแรกใหม่ได้) — **ขัดกับกติกา "เควสรายวันทำได้วันละครั้ง" ของ backend ตอนนี้**
+  (active-focus/brain-dump/cross-pollination/daily-learning-checkin ไม่มี maxPerDay) ต้องเลือก:
+  (ก) ตั้ง `maxPerDay` ให้เควสการเรียนรู้ทุกตัว (เช่น 3) หรือ (ข) เพิ่มแนวคิด "รอบ" ใน QuestLog
+- `WATER_DROPS`: backend ยังไม่มีหยดน้ำ — โหมด mock บวกเข้า user เอง (ดูหัวข้อ 4)
+
+### 5.3 เควสเสริม
+| code (frontend) | backend ตอนนี้ | ที่ต้องเพิ่ม |
+|---|---|---|
+| `know-ten-year-forest` | มีแค่ badge `ten-year-forest-*` | Quest row รายวัน (`isDaily`) — complete ได้เมื่อ `user.streak >= 21` มิฉะนั้น `400 STREAK_TOO_SHORT` |
+| `know-guardian-of-rest` | มีแค่ badge `guardian-of-rest` | Quest row รายวัน + `requiresQuestIds: [deep-root]` — complete ได้เมื่อพักครบ 15 นาที — log ของ deep-root สร้างหลังช่วงพักจบแล้ว เซิร์ฟเวอร์จึงตรวจได้ว่า "วันนี้มี deep-root ที่ไม่ใช่ skipped อย่างน้อย 1 log" (เวลาพักจริงตอนนี้อยู่ในเครื่อง) |
+
+หน้าเว็บตรวจเงื่อนไขทั้งสองข้อก่อนโชว์ปุ่มรับรางวัล แต่ยังไม่มีเซิร์ฟเวอร์ตรวจซ้ำ

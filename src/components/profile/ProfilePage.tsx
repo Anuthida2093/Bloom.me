@@ -29,6 +29,7 @@ import { useProgression, useStepHistory } from '../../hooks/useProgression'
 import type { StepDayRecord } from '../../services/api/progression.api'
 import CompletedJourneyMap from '../quest/games/physical/CompletedJourneyMap'
 import ExchangeCards from './ExchangeCards'
+import SpecialDustTile from './SpecialDustTile'
 import HealthSummary from './HealthSummary'
 
 /*============================================================================*\
@@ -128,7 +129,7 @@ export default function ProfilePage({
   const [sparkleId, setSparkleId] = useState<string | null>(null)
   const { t, tv } = useLanguage()
   /** การ์ดแลกซื้อไอเทม — itemCode → จำนวนใบ */
-  const { exchangeCards } = useProgression()
+  const { exchangeCards, specialDust } = useProgression()
   const cardEntries = Object.entries(exchangeCards).filter(([, n]) => n > 0)
   const { postIts } = useMental()
   /** [ย้ายตามที่ระบุ — ข้อ 12] เปิด JournalHistoryModal ของเควสไหน — null = ปิดอยู่ */
@@ -237,7 +238,7 @@ export default function ProfilePage({
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>{t('profile.inventory')}</div>
             <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>กดไอเทมเพื่อวางบนต้นไม้ กดซ้ำเพื่อถอด</p>
 
-            {groupedInventory.length === 0 && cardEntries.length === 0 ? (
+            {groupedInventory.length === 0 && cardEntries.length === 0 && specialDust <= 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 'var(--fs-sm)' }}>
                 <div style={{ fontSize: 'calc(var(--fs-3xl) * 1.3)', marginBottom: 8 }}>📦</div>
                 ยังไม่มีไอเทมในคลัง — ไปซื้อจากร้านค้าได้เลย!
@@ -274,7 +275,11 @@ export default function ProfilePage({
                 </div>
                 {/* การ์ดแลกซื้อ: แท็บ "ทั้งหมด" และ "การ์ดแลกซื้อไอเทม" — ยังไม่มีการ์ด = ไม่แสดง */}
                 {(inventoryFilter === 'all' || inventoryFilter === 'special') && (
-                  <ExchangeCards cards={cardEntries} onOpenShopItem={onOpenShopItem} />
+                  <>
+                    {/* [แก้ตามที่ระบุ] ผงพิเศษจากหีบสมบัติ — กด "ใช้" ไปเทใส่ต้นไม้ที่หน้า Home */}
+                    <SpecialDustTile count={specialDust} />
+                    <ExchangeCards cards={cardEntries} onOpenShopItem={onOpenShopItem} />
+                  </>
                 )}
                 {inventoryFilter !== 'all' && inventoryFilter !== 'special' && visibleInventoryGroups.length === 0 && (
                   <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: 'var(--fs-sm)' }}>

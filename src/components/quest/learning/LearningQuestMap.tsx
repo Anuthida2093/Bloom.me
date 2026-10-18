@@ -6,6 +6,7 @@ import { useAppContext } from '../../../context/AppContext'
 import { playSfx } from '../../../utils/audioPlayer'
 import { usePrefersReducedMotion } from '../../../hooks/useMediaQuery'
 import { LEARNING_MAP_VIDEO } from '../../../utils/prefetchAsset'
+import { posterOf } from '../../../utils/videoPoster'
 
 const C_13 = '#4B5563'
 const C_14 = '#374151'
@@ -367,7 +368,6 @@ export default function LearningQuestMap({
   }, [])
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
-  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false)
 
   /*==========================================================================*\
     [ใหม่ — pan/zoom] zoom/pan เป็น "state สำหรับ render" — แหล่งความจริงจริงๆ ระหว่างลาก/ซูม
@@ -451,7 +451,6 @@ export default function LearningQuestMap({
   }
 
   const handlePickSideQuest = (q: QuestDef) => {
-    setIsSideMenuOpen(false)
     onSelectQuest(q)
   }
 
@@ -809,7 +808,9 @@ export default function LearningQuestMap({
           width: VIDEO_NATIVE_WIDTH,
           height: VIDEO_NATIVE_HEIGHT,
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-        }}
+          // [1.5] เฟรมแรกของวิดีโอแผนที่ — โชว์ทันทีระหว่างรอวิดีโอ (ดู ::before ด้านล่าง)
+          ['--map-poster' as string]: `url("${posterOf(LEARNING_MAP_VIDEO)}")`,
+        } as React.CSSProperties}
       >
         {/* วิดีโอพื้นหลังเส้นทางป่าเวทมนตร์ วนลูป — โหมด low-power ใช้พื้นหลังสีทึบเดิมของ
             .learning-quest-map (--lc-bg-12) แทน ไม่เล่นวิดีโอ (แพทเทิร์นเดียวกับ
@@ -897,17 +898,11 @@ export default function LearningQuestMap({
           อยู่นอกเลเยอร์ pan/zoom (ติดจอ ไม่เลื่อน/ซูมตามแผนที่) · จอแคบย่อเป็นแถบเปิด/ปิดได้
           เควสที่ยังล็อกกดได้ — QuestSection แจ้งเหตุผลที่ยังเล่นไม่ได้ (เดิม disabled กดแล้วเงียบ) */}
       {sideQuests.length > 0 && (
-        <aside className={`learning-quest-map__sidebar${isSideMenuOpen ? ' is-open' : ''}`} aria-label="เควสเสริม">
-          <button
-            type="button"
-            className="learning-quest-map__sidebar-head"
-            onClick={() => setIsSideMenuOpen((v) => !v)}
-            aria-expanded={isSideMenuOpen}
-          >
+        <aside className="learning-quest-map__sidebar" aria-label="เควสเสริม">
+          <div className="learning-quest-map__sidebar-head">
             <span aria-hidden="true">📋</span>
             <span>เควสเสริม</span>
-            <span className="learning-quest-map__sidebar-caret" aria-hidden="true">▾</span>
-          </button>
+          </div>
           <div className="learning-quest-map__sidebar-list">
             {sideQuests.map((q) => {
               const locked = isLocked(q)
@@ -968,17 +963,18 @@ export default function LearningQuestMap({
           content: ''; position: absolute; inset: 0; pointer-events: none;
           background:
             linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .28) 50%, transparent 70%),
+            var(--map-poster, none) center / cover no-repeat,
             radial-gradient(ellipse 60% 45% at 30% 70%, rgba(120, 190, 120, .45), transparent 70%),
             radial-gradient(ellipse 55% 40% at 72% 30%, rgba(90, 160, 110, .4), transparent 70%),
             linear-gradient(180deg, #cfe8c8 0%, #9fcf9a 55%, #7fb983 100%);
-          background-size: 250% 100%, 100% 100%, 100% 100%, 100% 100%;
+          background-size: 250% 100%, cover, 100% 100%, 100% 100%, 100% 100%;
           animation: learningMapShimmer 1.6s ease-in-out infinite;
         }
         /* วิดีโอพร้อมแล้ว (ทับพื้นนี้ทั้งหมด) → หยุดแอนิเมชัน ไม่เปลืองแบต */
         .learning-quest-map__canvas:has(.learning-quest-map__video--ready)::before { animation: none; }
         @keyframes learningMapShimmer {
-          from { background-position: 120% 0, 0 0, 0 0, 0 0; }
-          to   { background-position: -120% 0, 0 0, 0 0, 0 0; }
+          from { background-position: 120% 0, center, 0 0, 0 0, 0 0; }
+          to   { background-position: -120% 0, center, 0 0, 0 0, 0 0; }
         }
         .learning-quest-map__scrim {
           position: absolute; inset: 0; pointer-events: none;
@@ -1136,7 +1132,6 @@ export default function LearningQuestMap({
           padding: 12px 14px; border: none; background: none; color: inherit;
           font: inherit; font-size: 16px; text-align: left; cursor: default;
         }
-        .learning-quest-map__sidebar-caret { margin-left: auto; display: none; transition: transform .2s ease; }
         .learning-quest-map__sidebar-list { display: flex; flex-direction: column; gap: 8px; padding: 0 10px 12px; overflow-y: auto; }
         .learning-quest-map__side-item {
           display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px;
@@ -1158,13 +1153,14 @@ export default function LearningQuestMap({
           background: rgba(0, 0, 0, 0.08);
         }
         .learning-quest-map__side-item.is-done .learning-quest-map__side-status { background: var(--g500); color: #fff; }
-        /* จอแคบ: ย่อเป็นแถบหัว กดเพื่อเปิดรายการ */
+        /* [แก้ตามที่ระบุ] จอแคบ: แสดงรายการเควสเสริมเต็มแบบเดียวกับโน้ตบุ๊ก (เดิมย่อเป็นแถบหัวกดเปิด)
+           แค่ย่อขนาดแถบ/การ์ดลงให้พอดีจอ — กดหัวแถบไม่มีผลเหมือนบนโน้ตบุ๊ก */
         @media (max-width: 720px) {
-          .learning-quest-map__sidebar { top: 64px; right: 8px; width: min(230px, calc(100% - 16px)); }
-          .learning-quest-map__sidebar-head { cursor: pointer; padding: 10px 12px; font-size: 14px; }
-          .learning-quest-map__sidebar-caret { display: inline; }
-          .learning-quest-map__sidebar.is-open .learning-quest-map__sidebar-caret { transform: rotate(180deg); }
-          .learning-quest-map__sidebar:not(.is-open) .learning-quest-map__sidebar-list { display: none; }
+          .learning-quest-map__sidebar { top: 64px; right: 8px; width: min(190px, calc(100% - 16px)); border-radius: 16px; }
+          .learning-quest-map__sidebar-head { padding: 9px 12px; font-size: 14px; }
+          .learning-quest-map__sidebar-list { gap: 6px; padding: 0 8px 10px; }
+          .learning-quest-map__side-item { min-height: 44px; font-size: 12.5px; gap: 6px; padding: 4px 8px 4px 4px; }
+          .learning-quest-map__side-icon, .learning-quest-map__side-icon img { width: 32px; height: 32px; }
         }
         @media (max-width: 300px) {
           .learning-quest-map__side-item { min-height: 40px; font-size: 12px; gap: 6px; }

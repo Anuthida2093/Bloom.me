@@ -1,3 +1,12 @@
+/* [แก้ตามที่ระบุ] การ์ดรางวัลรายวัน (streak ≥ 21 วัน) */
+.tyf-reward { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tyf-reward--ready { box-shadow: 0 0 0 2px var(--coin), 0 0 18px color-mix(in srgb, var(--coin) 45%, transparent); }
+.tyf-reward__text { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 4px; }
+.tyf-reward__text small { opacity: .8; }
+.tyf-reward__track { height: 8px; border-radius: 99px; background: color-mix(in srgb, currentColor 15%, transparent); overflow: hidden; }
+.tyf-reward__fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--g500), var(--coin)); }
+.tyf-reward__btn { flex-shrink: 0; }
+
 /* ป่าแห่งสิบปี — ปฏิทินการเรียนรู้ */
 .tyf-day__date { font-family: var(--font-display); font-size: 14px; margin-bottom: 6px; opacity: 0.9; }
 .tyf-day__body {

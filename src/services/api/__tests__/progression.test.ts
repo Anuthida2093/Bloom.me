@@ -32,7 +32,37 @@ describe('progression — โหมด mock', () => {
   it('หน้าเว็บไม่ได้รับตัวนับวันสะสม/สถานะปลดล็อก', async () => {
     const { api } = await setup(25)
     const summary = await api.getProgression()
-    expect(Object.keys(summary).sort()).toEqual(['doubleRewardToday', 'exchangeCards', 'goalStreakDays'])
+    expect(Object.keys(summary).sort()).toEqual(['doubleRewardToday', 'exchangeCards', 'goalStreakDays', 'specialDust'])
+  })
+
+  it('ทำเควสการเรียนรู้ครบ 5 ด่าน → log สุดท้ายได้ของขวัญสุ่ม 1 ครั้ง · ด่านก่อนหน้าไม่ได้', async () => {
+    const { quest } = await setup(0)
+    const { KNOWLEDGE_DAILY } = await import('../../../config/questCatalog')
+    const results = []
+    for (const q of KNOWLEDGE_DAILY) results.push(await quest.completeQuest({ questCode: q.code }))
+    expect(results.slice(0, -1).every((r) => !r.learningGift)).toBe(true)
+    const gift = results[results.length - 1].learningGift
+    expect(gift).toBeTruthy()
+    expect(['BONUS_COINS', 'WATER_DROPS']).toContain(gift!.kind) // ยังไม่ปลดล็อกการ์ด → ไม่มีการ์ด
+  })
+
+  it('โหมดจดจ่อ: วันละไม่เกิน 3 รอบ — รอบที่ 4 → 409 DAILY_LIMIT_REACHED', async () => {
+    const { quest } = await setup(0)
+    for (let i = 0; i < 3; i++) await quest.completeQuest({ questCode: 'know-deep-root', payload: { round: i + 1 } })
+    await expect(quest.completeQuest({ questCode: 'know-deep-root' })).rejects.toMatchObject({ code: 'DAILY_LIMIT_REACHED' })
+  })
+
+  it('ใช้ผงพิเศษ: หัก 1 ถุง ต้นไม้ได้ +1-2 EXP · ไม่มีผง → 400 NO_SPECIAL_DUST', async () => {
+    const { db, api } = await setup(0)
+    await expect(api.consumeSpecialDust()).rejects.toMatchObject({ code: 'NO_SPECIAL_DUST' })
+    db.updateDb((d) => { d.progression!.specialDust = 2 })
+    const before = db.getDb().user.exp
+    const res = await api.consumeSpecialDust()
+    expect(res.remaining).toBe(1)
+    expect(res.expGained).toBeGreaterThanOrEqual(1)
+    expect(res.expGained).toBeLessThanOrEqual(2)
+    expect(db.getDb().user.exp).toBe(before + res.expGained)
+    expect((await api.getProgression()).specialDust).toBe(1)
   })
 
   it('บันทึกก้าวรายวันพร้อมแผนที่ — ประวัติเปิดดูแผนที่ของวันนั้นได้ และเก็บก้าวค่ามากสุด', async () => {

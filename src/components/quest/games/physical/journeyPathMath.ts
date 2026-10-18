@@ -328,3 +328,27 @@ export function pointAtPathPct(mapDef: Pick<MapDef, 'entryPct' | 'waypoints' | '
   const hit = samples.find((s) => s.len >= target) ?? samples[samples.length - 1]
   return { x: Math.round(hit.pt.x * 10) / 10, y: Math.round(hit.pt.y * 10) / 10 }
 }
+
+/** [แก้ตามที่ระบุ — นกฮูกเลี้ยวตามเส้นทาง] ตำแหน่ง + ทิศทาง (เวกเตอร์สัมผัสเส้น) ณ pathPct บนเส้นโค้ง
+ *  ใช้ samples ที่คำนวณไว้แล้ว (samplePath) — เรียกได้ทุกเฟรมของแอนิเมชันโดยไม่ต้องสร้าง SVG ใหม่ */
+export function poseAtPathPct(samples: { pt: Pt; len: number }[], pathPct: number): { x: number; y: number; dx: number; dy: number } {
+  const total = samples[samples.length - 1]?.len ?? 0
+  if (samples.length === 0) return { x: 0, y: 0, dx: 1, dy: 0 }
+  const target = (Math.min(100, Math.max(0, pathPct)) / 100) * total
+  let i = samples.findIndex((s) => s.len >= target)
+  if (i <= 0) i = 1
+  if (i === -1 || i >= samples.length) i = samples.length - 1
+  const a = samples[i - 1], b = samples[i]
+  const t = b.len > a.len ? (target - a.len) / (b.len - a.len) : 0
+  return {
+    x: a.pt.x + (b.pt.x - a.pt.x) * t,
+    y: a.pt.y + (b.pt.y - a.pt.y) * t,
+    dx: b.pt.x - a.pt.x,
+    dy: b.pt.y - a.pt.y,
+  }
+}
+
+/** % ตามความยาวเส้นทาง (0-100) ของจุดระหว่างทางแต่ละจุด — ใช้บอกว่านกฮูกผ่านจุดไหนแล้ว */
+export function waypointPathPcts(mapDef: Pick<MapDef, 'entryPct' | 'waypoints' | 'exitPct'>): number[] {
+  return mapDef.waypoints.map((wp) => nearestPathPct(mapDef, wp))
+}

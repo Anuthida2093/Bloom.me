@@ -29,6 +29,7 @@ import ProgressFeedToasts from './ProgressFeedToasts'
 import HudDelta from './HudDelta'
 import TimeCapsuleReminder from './TimeCapsuleReminder'
 import CardDropPopup from './CardDropPopup'
+import LearningGiftPopup from './LearningGiftPopup'
 import RewardBurst from '../common/RewardBurst'
 import { useCalorieGoalReward } from '../../hooks/useCalorieGoalReward'
 import { takeNewWaterDrop } from '../../utils/waterPrompt'
@@ -59,11 +60,13 @@ import PostItLayer from './PostItLayer'
 import HomeAmbience from './HomeAmbience'
 import OverCalorieNotice from './OverCalorieNotice'
 import PlantIntro from './PlantIntro'
-import { OPEN_SHOP_ITEM_EVENT } from '../../config/stepChest'
+import { OPEN_SHOP_ITEM_EVENT, USE_SPECIAL_DUST_EVENT } from '../../config/stepChest'
+import SpecialDustPouch from './SpecialDustPouch'
 import { useStepSettlement } from '../../hooks/useStepSettlement'
 import { useVideoStallGuard } from '../../hooks/useVideoStallGuard'
 import { homeBackgroundSrc } from '../../config/homeBackgrounds'
 import { computeCalorieTarget, getOverCalorieStreak, getVisibleRocks, MEALS_CHANGED_EVENT, OVER_CALORIE_STREAK_DAYS } from '../../utils/nutrition'
+import { posterOf } from '../../utils/videoPoster'
 const TreeSummaryModal = lazy(() => import('../tree/TreeSummaryModal'))
 // [ใหม่ — ฟีเจอร์สตอรี่] เดิมปุ่มนี้ชื่อ "โพสต์" (📝) เป็น placeholder ล้วนๆ (setInfoAlert
 // เฉยๆ) ตอนนี้เปลี่ยนเป็น "สตอรี่" เปิดหน้า Feed/Search/Activity/Profile ภายในตัวเองจริง
@@ -479,6 +482,17 @@ export default function Dashboard() {
     window.addEventListener(OPEN_SHOP_ITEM_EVENT, onOpenShopItem)
     return () => window.removeEventListener(OPEN_SHOP_ITEM_EVENT, onOpenShopItem)
   }, [closeModal, openModal])
+  // [แก้ตามที่ระบุ] ปุ่ม "ใช้" ผงพิเศษในคลังไอเทม → ปิดทุกหน้าที่เปิดอยู่ กลับหน้า Home แล้วโชว์ถุงสีม่วง
+  const [showDustPouch, setShowDustPouch] = useState(false)
+  useEffect(() => {
+    const onUseDust = () => {
+      ALL_MODAL_KEYS.forEach((key) => closeModal(key))
+      setViewingPlayer(null)
+      setShowDustPouch(true)
+    }
+    window.addEventListener(USE_SPECIAL_DUST_EVENT, onUseDust)
+    return () => window.removeEventListener(USE_SPECIAL_DUST_EVENT, onUseDust)
+  }, [closeModal, setViewingPlayer])
   /** ผู้ใช้ใหม่ที่ยังไม่เคยได้คะแนนสุขภาพกาย — พื้นเขียวเรียบ ไม่มีหญ้า/ดอก (ทำเควสสุขภาพแล้วค่อยงอก) */
   const isNewGround = userData.healthStack <= 0
 
@@ -501,6 +515,8 @@ export default function Dashboard() {
     <div className={`dashboard${introPhase === 'play' ? ' dashboard--intro' : introPhase === 'reveal' ? ' dashboard--intro-reveal' : ''}`}>
       {/* นัดทบทวน "แคปซูลเวลา" ที่ถึงเวลาแล้ว — เด้งทันทีหลังล็อกอิน (เฉพาะบัญชีจริง ไม่ใช่ guest) */}
       <CardDropPopup />
+      <LearningGiftPopup />
+      {showDustPouch && <SpecialDustPouch onClose={() => setShowDustPouch(false)} />}
       {calorieReward.rewarded && (
         <RewardBurst
           key={calorieReward.rewarded.key}
@@ -527,7 +543,8 @@ export default function Dashboard() {
           (useIsLowPowerMode) แล้วไม่แสดงวิดีโอพื้นหลังเลย เหลือแค่พื้นไล่สี (.dashboard__bg-still) และไฟล์
           poster/webm ที่อ้างไว้ก็ไม่มีอยู่จริง — ตอนนี้แสดงวิดีโอทุกขนาดจอ (พื้นไล่สีอยู่ใต้ไว้ระหว่างโหลด)
           ผู้ใช้ที่ขอลดการเคลื่อนไหว: วิดีโอหยุดนิ่งที่เฟรมแรก (#t=0.1) ยังเห็นภาพพื้นหลังเหมือนเดิม */}
-      <div className="dashboard__bg-still" aria-hidden="true" />
+      {/* [1.5] พื้นนิ่ง = เฟรมแรกของวิดีโอพื้นหลังที่เลือก (โปสเตอร์) — เห็นฉากทันทีก่อนวิดีโอพร้อม */}
+      <div className="dashboard__bg-still" aria-hidden="true" style={{ ['--bg-poster' as string]: `url("${posterOf(bgSrc)}")` } as React.CSSProperties} />
       {/* [แก้ตามที่ระบุ] เน็ตไม่ดี: วิดีโอจางเข้าเฉพาะตอนเล่นได้จริง กระตุกรอโหลด/โหลดไม่ได้ → เห็นพื้นนิ่งแทน ไม่ค้าง */}
       {!bgVideo.failed && (
         <video
