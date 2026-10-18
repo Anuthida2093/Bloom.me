@@ -532,15 +532,16 @@
 .game-icon-btn .icon-img[src*="/tree."]         { width: 64px; height: 64px; }
 .game-icon-btn .icon-img[src*="/Check-in."]     { width: 134px; height: 134px; }
 .game-icon-btn .icon-img[src*="/Notification."] { width: 60px; height: 60px; }
-.game-icon-btn .icon-img[src*="/Share."]        { width: 72px; height: 72px; }
-.game-icon-btn .icon-img[src*="/Friends."]      { width: 100px; height: 100px; }
+/* [แก้ตามที่ระบุ] ปุ่มแชร์/เพื่อนเล็กลง ~20% (เดิม 72/100px · มือถือ 60/83px) */
+.game-icon-btn .icon-img[src*="/Share."]        { width: 58px; height: 58px; }
+.game-icon-btn .icon-img[src*="/Friends."]      { width: 80px; height: 80px; }
 .dashboard__corner-actions--left .game-icon-btn { font-size: 50px; }
 @media (max-width: 768px) {
   .game-icon-btn .icon-img[src*="/tree."]         { width: 53px; height: 53px; }
   .game-icon-btn .icon-img[src*="/Check-in."]     { width: 111px; height: 111px; }
   .game-icon-btn .icon-img[src*="/Notification."] { width: 50px; height: 50px; }
-  .game-icon-btn .icon-img[src*="/Share."]        { width: 60px; height: 60px; }
-  .game-icon-btn .icon-img[src*="/Friends."]      { width: 83px; height: 83px; }
+  .game-icon-btn .icon-img[src*="/Share."]        { width: 48px; height: 48px; }
+  .game-icon-btn .icon-img[src*="/Friends."]      { width: 66px; height: 66px; }
   .dashboard__corner-actions--left .game-icon-btn { font-size: 42px; }
 }
 
