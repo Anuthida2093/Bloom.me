@@ -53,7 +53,7 @@
 }
 
 .photosynthesis-frame-icon {
-  font-size: 48px; /* ไอคอนพระอาทิตย์ใหญ่ๆ */
+  width: 96px; height: 96px; object-fit: contain; /* [แก้ตามที่ระบุ] รูปเควสแทนอีโมจิพระอาทิตย์ */
 }
 
 .photosynthesis-frame-label {

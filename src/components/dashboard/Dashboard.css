@@ -381,8 +381,9 @@
    ═══════════════════════════════════════════ */
 .dashboard__corner-actions {
   position: fixed;
-  /* [แก้ตามที่ระบุ] โน้ตบุ๊ก: ยกปุ่มเพื่อน/แชร์ขึ้นจากขอบล่าง (เดิม 25px) — จอ ≤1024px ใช้กฎด้านล่างที่อิงแถบเมนู */
-  bottom: 64px;
+  /* [แก้ตามที่ระบุ] ทุกขนาดจอ: ปุ่มเพื่อน/แชร์อยู่สูงกว่าแถบเมนูล่าง (ActionMenuBar) เสมอ —
+     ขอบบนของแถบ + วงกลมปุ่มที่เลือกที่ยื่นขึ้นครึ่งวง + ช่องว่าง (เดิมโน้ตบุ๊ก 64px ยังต่ำกว่าขอบบนแถบ) */
+  bottom: calc(var(--action-bar-height) + var(--nav-height, 60px) / 2 + 20px);
   z-index: 90;
   display: flex;
   flex-direction: column;/* [แก้ตามที่ระบุ] เดิมใช้ 8px แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่ ทำให้ปุ่มล้นจอออกไปนิดหน่อย
@@ -393,7 +394,7 @@
 .dashboard__corner-actions--right { right: 16px; }
 
 @media (max-width: 768px) {
-  .dashboard__corner-actions { bottom: 15px; gap: 8px; }
+  .dashboard__corner-actions { gap: 8px; }
   .dashboard__corner-actions--left { left: 6px; }
   .dashboard__corner-actions--right { right: 6px; }
   /* ขนาดปุ่ม .game-icon-btn ย่อเหลือ 1.5cm บนจอเล็กแล้วที่ media query ของ .game-icon-btn เอง */
@@ -596,7 +597,7 @@
    (เดิมยกเฉพาะ ≤520px — iPad ปุ่มยังชนแถบ) ระยะ = ขอบบนของแถบ + วงกลมปุ่มที่เลือกที่ยื่นขึ้นครึ่งวง + ช่องว่าง */
 @media (max-width: 1024px) {
   .dashboard__corner-actions {
-    bottom: calc(var(--action-bar-height) + var(--nav-height, 56px) / 2 + 12px);
+    bottom: calc(var(--action-bar-height) + var(--nav-height, 56px) / 2 + 16px);
   }
 }
 

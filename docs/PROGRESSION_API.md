@@ -93,7 +93,7 @@ model ExchangeCard {
 
 // ShopItem: เพิ่ม exchangeTokens Int? (null = ซื้อด้วยเหรียญอย่างเดียว)
 // JourneyLandmarkClaim: เลิกใช้แล้ว (หน้าเว็บไม่เรียก /journeys/:id/landmarks/* อีก)
-// ProgressEventType: เพิ่ม ITEM_UNLOCKED (ข่าวเพื่อนปลดล็อกไอเทมให้)
+// ProgressEventType: เพิ่ม ITEM_UNLOCKED (ข่าวเพื่อนปลดล็อกไอเทมให้), LEARNING_PATH_COMPLETED, RANK_UP (ดูหัวข้อ 7)
 ```
 
 ## 4. ข้อมูลที่ยังอยู่ในเครื่อง (ไม่ได้ส่ง backend)
@@ -145,3 +145,14 @@ POST /api/progression/double-card/use
 - `POST /api/quest-logs/complete` คูณรางวัลเองเมื่อ `now < user.doubleRewardUntil` (ข้าม = ครึ่งเดียว แล้วค่อย ×2)
 - Prisma (ร่าง): `User.doubleCards Int @default(0)`, `User.doubleRewardUntil DateTime?`
 - หน้าเว็บใช้ `doubleRewardUntil` นับถอยหลังบนจอเท่านั้น — การคูณจริงตัดสินฝั่งเซิร์ฟเวอร์
+
+## 7. ข่าวเพื่อนแบบใหม่ (เพิ่ม 2026-10-18)
+
+`GET /api/activity/recent` — เพิ่ม 2 ประเภท (หน้าเว็บแสดงเป็นรูป ไม่มีอีโมจิ):
+
+| type | payload | สร้างเมื่อ |
+|---|---|---|
+| `LEARNING_PATH_COMPLETED` | `{}` | ทำเควสการเรียนรู้ครบ 5 ด่าน (จังหวะเดียวกับ learningGift ในหัวข้อ 5.2) |
+| `RANK_UP` | `{ rank: number, rankCategory: 'level'\|'knowledgeStack'\|'healthStack'\|'emotionStack' }` | อันดับในกระดานดีขึ้น (แนะนำแจ้งเฉพาะเข้า 10 อันดับแรก กันสแปม) |
+
+`QUEST_COMPLETED` ควรส่ง `questCode` แบบ frontend (เช่น `phys-sunlit-root`) เพื่อให้แสดงรูปเควสได้ · `ITEM_UNLOCKED` ส่ง `itemCode`

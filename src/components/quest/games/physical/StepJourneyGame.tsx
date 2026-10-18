@@ -465,35 +465,29 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
 
       {/* [แก้ตามที่ระบุ] ปุ่มเปิด/ปิดแถบข้อมูลเป็นรูป OwlAvatar (แบบปุ่มแผงข้อมูลต้นไม้) — ปิดอยู่เห็นแค่ปุ่มนกฮูก
           กดแล้วข้อมูลทั้งหมด + ปุ่มรีเฟรชก้าว/เปลี่ยนแผนที่ ค่อยแสดง · แถบเปิดอยู่ → ปุ่มนกฮูกมุมซ้ายบนของแถบไว้ปิด */}
-      {!showSummary && !reachedGoal && !panelOpen && (
+      {/* [แก้ตามที่ระบุ] ปุ่มนกฮูกอยู่ "ใต้" ปุ่มกากบาทเสมอ (ตำแหน่งเดียวทั้งตอนเปิด/ปิด) และแถบข้อมูลเลื่อนเข้า-ออก
+          แบบกระดานจัดอันดับหน้า Home — ไม่มีปุ่มนกฮูกตัวที่สองในแถบอีกแล้ว */}
+      {!showSummary && !reachedGoal && (
         <button
           type="button"
           className="step-journey-game__panel-toggle"
           onClick={togglePanel}
-          aria-expanded={false}
+          aria-expanded={panelOpen}
           aria-controls="step-journey-side-panel"
-          aria-label="แสดงข้อมูลการเดินทาง"
-          title="แสดงข้อมูลการเดินทาง"
+          aria-label={panelOpen ? 'ซ่อนข้อมูลการเดินทาง' : 'แสดงข้อมูลการเดินทาง'}
+          title={panelOpen ? 'ซ่อนข้อมูลการเดินทาง' : 'แสดงข้อมูลการเดินทาง'}
         >
           <img src={OWL_AVATAR_ICON} alt="" className="step-journey-game__panel-toggle-img" />
         </button>
       )}
 
-      {!showSummary && !reachedGoal && panelOpen && (
-        <div className="step-journey-game__side-panel" id="step-journey-side-panel">
-          <div className="sjg-panel-head">
-            <button
-              type="button"
-              className="step-journey-game__panel-toggle step-journey-game__panel-toggle--in-panel"
-              onClick={togglePanel}
-              aria-expanded={true}
-              aria-controls="step-journey-side-panel"
-              aria-label="ซ่อนข้อมูลการเดินทาง"
-              title="ซ่อนข้อมูลการเดินทาง"
-            >
-              <img src={OWL_AVATAR_ICON} alt="" className="step-journey-game__panel-toggle-img" />
-            </button>
-          </div>
+      {!showSummary && !reachedGoal && (
+        <div
+          className={`step-journey-game__side-panel${panelOpen ? ' step-journey-game__side-panel--open' : ''}`}
+          id="step-journey-side-panel"
+          aria-hidden={!panelOpen}
+          inert={!panelOpen}
+        >
           <StatsOverlay
             todaySteps={todaySteps}
             dailyStepTarget={dailyStepTarget}

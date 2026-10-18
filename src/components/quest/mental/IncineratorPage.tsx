@@ -6,7 +6,7 @@ import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import './IncineratorPage.css'
 import '../../leaderboard/leaderboardRow.css'
-import { BADGE_ICONS } from '../../../config/iconAssets'
+import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
 import { posterOf } from '../../../utils/videoPoster'
 
 type Stage = 'ask' | 'write' | 'reading' | 'crumpling' | 'drag' | 'burning' | 'done'
@@ -236,7 +236,8 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
             transition={{ type: 'spring', stiffness: 260, damping: 22 }}
           >
             <div className="lb-banner incinerator-popup__banner">เตาเผาขยะความคิด</div>
-            <div className="incinerator-frame__icon-lg">🔥</div>
+            {/* [แก้ตามที่ระบุ] รูปของเควสแทนอีโมจิ 🔥 */}
+            <img src={QUEST_ICONS['ment-cognitive-incinerator']} alt="" className="incinerator-frame__icon-lg" />
             <h2 className="incinerator-frame__title">วันนี้มีเรื่องอะไรหนักใจไหม?</h2>
             <p className="incinerator-frame__desc">หยิบมันออกมาจากหัว แล้วสลักลงบนแผ่นหินเพื่อนำไปเผาทำลายทิ้งกัน</p>
             <div className="incinerator-frame__btn-row">
@@ -288,7 +289,7 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
 
               {stage === 'burning' && (
                 <motion.div className="incinerator-frame__affirmation-banner" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
-                  <p className="incinerator-frame__affirmation-title">🔥 สลายความคิดลบสำเร็จ</p>
+                  <p className="incinerator-frame__affirmation-title">สลายความคิดลบสำเร็จ</p>
                   <p className="incinerator-frame__affirmation-sub">{selectedAffirmation}</p>
                 </motion.div>
               )}
@@ -374,7 +375,7 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
                   />
                   <button className="incinerator-action-btn incinerator-action-btn--input" onClick={() => handleCrumple()} disabled={!text.trim()}>
                     {/* [แก้ตามที่ระบุ — 3.4] ปุ่มส่งเปลี่ยนชื่อเป็น "เผา" (เดิม "🪨 เปลี่ยนเป็นหิน") */}
-                    🔥 เผา
+                    <img src={QUEST_ICONS['ment-cognitive-incinerator']} alt="" className="incinerator-action-btn__icon" /> เผา
                   </button>
                 </div>
               </motion.div>

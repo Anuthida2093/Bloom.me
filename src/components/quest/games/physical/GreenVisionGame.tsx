@@ -6,6 +6,7 @@ import { playSfx } from '../../../../utils/audioPlayer'
 import '../games.css'
 import '../../../leaderboard/leaderboardRow.css'
 import './GreenVisionGame.css'
+import { QUEST_ICONS } from '../../../../config/iconAssets'
 
 /*  เควส Green Vision (พักสายตา / ถนอมใบไม้)
     ทฤษฎี: กฎ 20-20-20 (American Optometric Association)
@@ -97,7 +98,8 @@ export default function GreenVisionGame({ finish, strictMode, skip }: QuestGameP
       <div className="green-vision__content">
         {!started && (
           <>
-            <div style={{ fontSize: 48 }}>👀</div>
+            {/* [แก้ตามที่ระบุ] รูปของเควสแทนอีโมจิ 👀 */}
+            <img src={QUEST_ICONS['phys-green-vision']} alt="" style={{ width: 96, height: 96, objectFit: 'contain' }} />
             <div className="qg-title">มองหาอะไรที่อยู่ไกลราว 6 เมตร</div>
             <p className="qg-hint">นอกหน้าต่าง ปลายทางเดิน หรือต้นไม้ไกลๆ ก็ได้ — พอกดเริ่ม จอจะหรี่ลงเองเพื่อไม่ให้คุณเผลอจ้องต่อ</p>
             <button className="qg-btn" onClick={() => setChooseMode(true)}>เริ่มพักสายตา 20 วินาที</button>

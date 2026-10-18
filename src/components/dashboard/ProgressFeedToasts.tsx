@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import type { ProgressEvent } from '../../services/api/activity.api'
 import { useLanguage } from '../../context/LanguageContext'
 import { Z_INDEX } from '../../config/zIndex'
-import { describeProgressEvent, PROGRESS_EVENT_EMOJI } from '../../utils/progressEventText'
+import { describeProgressEventView } from '../../utils/progressEventText'
 import { uiSounds } from '../../utils/uiSounds'
 
 /*============================================================================*\
@@ -12,7 +12,7 @@ import { uiSounds } from '../../utils/uiSounds'
   - ตัวอักษรวิ่งช้าๆ จากขวาไปซ้าย (marquee) ให้อ่านทัน — ความเร็วคงที่ ข้อความยาววิ่งนานขึ้นตามความยาว
     วิ่งพ้นขอบซ้ายแล้ว → แถบจางหาย → ข่าวถัดไปขึ้นต่อ
   - เสียง "ปริ๊ง-ปริ๊ง" ตอนเด้งขึ้น (uiSounds.chime — ปิดตามการตั้งค่าเสียงอัตโนมัติ)
-  - ไม่ใช่ modal: ไม่บล็อกการกด กดที่แถบ = ปิดก่อนเวลา · ไม่บันทึกลงแผงแจ้งเตือน 🔔
+  - ไม่ใช่ modal: ไม่บล็อกการกด กดที่แถบ = ปิดก่อนเวลา · ไม่บันทึกลงแผงแจ้งเตือน
 \*============================================================================*/
 
 /** ความเร็ววิ่งของตัวอักษร (ms ต่อ 1 ตัวอักษร) — ช้าพอให้อ่านทัน */
@@ -23,7 +23,7 @@ const FADE_MS = 500
 
 function ToastItem({ event, onDismiss, soundEnabled }: { event: ProgressEvent; onDismiss: (id: string) => void; soundEnabled: boolean }) {
   const { tv, language } = useLanguage()
-  const text = describeProgressEvent(event, tv, language)
+  const { lead, parts, text } = describeProgressEventView(event, tv, language)
   const runMs = Math.min(MAX_RUN_MS, Math.max(MIN_RUN_MS, text.length * MS_PER_CHAR))
 
   useEffect(() => {
@@ -44,8 +44,11 @@ function ToastItem({ event, onDismiss, soundEnabled }: { event: ProgressEvent; o
     >
       <span className="progress-feed-toast__track" aria-hidden="true">
         <span className="progress-feed-toast__run">
-          <span className="progress-feed-toast__icon">{PROGRESS_EVENT_EMOJI[event.type]}</span>
-          {text}
+          {/* [แก้ตามที่ระบุ] รูปนำหน้า + รูปของเควส/ไอเทมในข้อความ — ไม่ใช้อีโมจิ */}
+          <img src={lead} alt="" className="progress-feed-toast__icon" />
+          {parts.map((p, i) => (typeof p === 'string'
+            ? <span key={i}>{p}</span>
+            : <img key={i} src={p.img} alt="" className="progress-feed-toast__inline-img" />))}
         </span>
       </span>
     </button>
@@ -90,7 +93,8 @@ export default function ProgressFeedToasts({ current, onDismiss, soundEnabled }:
           display: inline-block; padding-left: 100%;
           animation: progressFeedMarquee var(--run-ms) linear forwards;
         }
-        .progress-feed-toast__icon { margin-right: 8px; font-size: 18px; }
+        .progress-feed-toast__icon { width: 34px; height: 34px; object-fit: contain; margin: -8px 8px -8px 0; vertical-align: middle; }
+        .progress-feed-toast__inline-img { width: 28px; height: 28px; object-fit: contain; margin: -6px 2px; vertical-align: middle; }
         @keyframes progressFeedMarquee { from { transform: translateX(0); } to { transform: translateX(-100%); } }
         @keyframes progressFeedIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes progressFeedOut { to { opacity: 0; } }

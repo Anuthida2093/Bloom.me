@@ -17,7 +17,9 @@ import { EXCHANGE_REQUIREMENTS } from '../../config/exchangeItems'
   ก่อนจึงจะมีเหตุการณ์จริงในโหมด live) — payload: { itemCode, itemName, recipientId }
 \*============================================================================*/
 
-export type ProgressEventType = 'LEVEL_UP' | 'QUEST_COMPLETED' | 'ITEM_UNLOCKED'
+/** [ใหม่] LEARNING_PATH_COMPLETED = ทำเควสการเรียนรู้ครบทั้ง 5 ด่าน · RANK_UP = เลื่อนอันดับในกระดานจัดอันดับ
+ *  (backend ยังไม่มีทั้งสองแบบ — ดู docs/PROGRESSION_API.md หัวข้อ 7) */
+export type ProgressEventType = 'LEVEL_UP' | 'QUEST_COMPLETED' | 'ITEM_UNLOCKED' | 'LEARNING_PATH_COMPLETED' | 'RANK_UP'
 
 export interface ProgressEvent {
   id: string
@@ -31,6 +33,10 @@ export interface ProgressEvent {
     itemName?: string
     /** ผู้รับไอเทม — ITEM_UNLOCKED แจ้งเฉพาะเมื่อเป็นเรา */
     recipientId?: string
+    /** RANK_UP: อันดับใหม่ (1 = บนสุด) */
+    rank?: number
+    /** RANK_UP: หมวดของกระดาน — 'level' | 'knowledgeStack' | 'healthStack' | 'emotionStack' */
+    rankCategory?: string
   }
   createdAt: string
   user: { id: string; username: string; avatarUrl: string | null }
@@ -58,6 +64,11 @@ function mockRecentEvents(): ProgressEvent[] {
   const user = { id: friend.id, username: friend.username, avatarUrl: null }
   const base = { id: `mock-ev-${Date.now()}`, createdAt: new Date().toISOString(), user }
   const roll = Math.random()
+  if (roll < 0.1) return [{ ...base, type: 'LEARNING_PATH_COMPLETED', payload: {} }]
+  if (roll < 0.2) {
+    const cat = pick(['level', 'knowledgeStack', 'healthStack', 'emotionStack'])
+    return [{ ...base, type: 'RANK_UP', payload: { rank: 1 + Math.floor(Math.random() * 5), rankCategory: cat } }]
+  }
   if (roll < 0.5) {
     const quest = pick(ALL_QUESTS)
     return [{ ...base, type: 'QUEST_COMPLETED', payload: { questCode: quest.code, questTitle: quest.titleTh } }]

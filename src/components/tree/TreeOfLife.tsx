@@ -502,8 +502,9 @@ function dropZoneStyle(rule: ReturnType<typeof placementRuleOf>, geo: PlacementG
   return { inset: 'auto', left: '2%', right: '2%', top: '4%', height: `${Math.max(10, groundTop - 6)}%` }
 }
 
-/** [ใหม่ — ตามที่ระบุ] ขอบเขต scale ที่อนุญาต กันย่อ/ขยายจนดูแปลก */
-const MIN_DECORATION_SCALE = 0.5
+/** [ใหม่ — ตามที่ระบุ] ขอบเขต scale ที่อนุญาต กันย่อ/ขยายจนดูแปลก
+ *  [แก้ตามที่ระบุ] เล็กสุด 100% (เดิม 50% เล็กจนมองไม่เห็น) — ค่าที่เคยเซฟไว้ต่ำกว่านี้แสดงเป็น 100% */
+const MIN_DECORATION_SCALE = 1
 /** ปุ่มลอย/แผงของหน้า Home ที่อยู่เหนือชั้นต้นไม้ — ไอเทมตกแต่งต้องไม่ไปอยู่ใต้สิ่งเหล่านี้ */
 const DECORATION_OBSTACLES = '.dashboard__right-cluster, .dashboard__corner-actions, .dashboard__panel--left, .game-top-hud'
 
@@ -616,7 +617,7 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
 
   const getEffectiveScale = (item: PlacedItem): number => {
     if (resizingId === item.itemId && previewScale !== null) return previewScale
-    return decorationPositions[item.itemId]?.scale ?? 1
+    return Math.max(MIN_DECORATION_SCALE, decorationPositions[item.itemId]?.scale ?? 1)
   }
 
   const clampPct = (v: number) => Math.min(96, Math.max(4, v))

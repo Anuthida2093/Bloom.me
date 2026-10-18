@@ -83,11 +83,11 @@
 }
 .step-journey-game__close-btn:hover { background: rgba(10, 22, 16, 0.9); }
 
-/* ปุ่มเปิด/ปิดแถบด้านขวา — อยู่ซ้ายของปุ่มปิด (✕) แถวเดียวกัน */
+/* ปุ่มเปิด/ปิดแถบด้านขวา — [แก้ตามที่ระบุ] อยู่ใต้ปุ่มปิด (✕) ตำแหน่งเดียวทั้งตอนเปิดและปิด */
 .step-journey-game__panel-toggle {
   position: absolute;
-  top: 16px;
-  right: 60px;
+  top: 62px;
+  right: 8px;
   z-index: 21;
   /* [แก้ตามที่ระบุ] ปุ่มรูป OwlAvatar วงกลม 52px (เดิมลูกศร 36px) */
   width: 52px;
@@ -108,13 +108,11 @@
 .step-journey-game__panel-toggle-img { width: 46px; height: 46px; object-fit: contain; pointer-events: none; }
 .step-journey-game__panel-toggle[aria-expanded="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--coin) 60%, transparent); }
 .step-journey-game__reset-btn:disabled { opacity: .6; cursor: default; }
-/* ปุ่มซ่อนแถบ — อยู่มุมซ้ายบนภายในแถบข้าง (ติดอยู่ด้านบนเวลาเลื่อนแถบ) */
-.sjg-panel-head { position: sticky; top: 0; z-index: 2; display: flex; justify-content: flex-start; pointer-events: none; }
-.step-journey-game__panel-toggle--in-panel { position: static; flex-shrink: 0; pointer-events: auto; }
 
+/* [แก้ตามที่ระบุ] แถบข้อมูลเลื่อนเข้า-ออกจากขอบขวาแบบกระดานจัดอันดับ (อยู่ใต้ปุ่มนกฮูก) */
 .step-journey-game__side-panel {
   position: absolute;
-  top: 72px;
+  top: 124px;
   right: 12px;
   bottom: calc(var(--gpf-safe-bottom, 20px) + 110px);
   z-index: 20;
@@ -125,6 +123,19 @@
   overflow-y: auto;
   scrollbar-width: none;
   pointer-events: auto;
+  transform: translateX(calc(100% + 24px));
+  opacity: 0;
+  visibility: hidden;
+  transition: transform .32s cubic-bezier(.2, .8, .2, 1), opacity .22s ease, visibility 0s linear .32s;
+}
+.step-journey-game__side-panel--open {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition: transform .32s cubic-bezier(.2, .8, .2, 1), opacity .22s ease, visibility 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .step-journey-game__side-panel, .step-journey-game__side-panel--open { transition: none; }
 }
 .step-journey-game__side-panel::-webkit-scrollbar { display: none; }
 
@@ -169,6 +180,8 @@
     padding: 0 16px;
     box-sizing: border-box;
   }
+  /* มือถือ: แถบอยู่ด้านล่างเต็มความกว้าง → เลื่อนขึ้น-ลงแทนซ้าย-ขวา */
+  .step-journey-game__side-panel:not(.step-journey-game__side-panel--open) { transform: translateY(calc(100% + 24px)); }
 }
 
 
@@ -261,7 +274,7 @@
    แล้วเลื่อนดูในแถบแทน */
 @media (max-width: 520px) {
   .step-journey-game__side-panel { max-height: 48vh; max-height: 48dvh; }
-  .step-journey-game__panel-toggle { top: 8px; right: 60px; width: 48px; height: 48px; }
+  .step-journey-game__panel-toggle { top: 56px; right: 6px; width: 48px; height: 48px; }
   .step-journey-game__panel-toggle-img { width: 42px; height: 42px; }
   .step-journey-game__close-btn { top: 12px; right: 12px; }
 }
@@ -271,7 +284,7 @@
 /* สมาร์ทวอทช์ (≤ 300px): ปุ่มแสดง/ซ่อนแถบเหลือแค่ไอคอน, แถบสถิติเต็มจอแบบเลื่อนได้ */
 @media (max-width: 300px) {
   .step-journey-game--center { padding: 10px; }
-  .step-journey-game__panel-toggle { width: 40px; height: 40px; right: 50px; }
+  .step-journey-game__panel-toggle { width: 40px; height: 40px; top: 52px; right: 8px; }
   .step-journey-game__panel-toggle-img { width: 34px; height: 34px; }
   .step-journey-game__side-panel { padding: 0 6px; max-height: 60dvh; gap: 6px; bottom: 6px; }
   .step-journey-game__controls { padding: 6px; }

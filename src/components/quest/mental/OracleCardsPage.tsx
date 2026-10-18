@@ -12,7 +12,7 @@ import { MOOD_TYPE_INFO } from '../../../config/moodTypes'
 import './OracleCardsPage.css'
 import '../../leaderboard/leaderboardRow.css'
 
-import { BADGE_ICONS } from '../../../config/iconAssets'
+import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
 
 /** กระดาษข้อความไพ่คลี่จนสุด (ms) — ต้องตรงกับแอนิเมชัน oracleUnroll ใน OracleCardsPage.css */
 const ORACLE_UNROLL_MS = 1100
@@ -155,7 +155,10 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
                     onClick={() => handleSelectCard(card)}
                   >
                     <div className="oracle-card__inner">
-                      <div className="oracle-card__face--back">🔮</div>
+                      <div className="oracle-card__face--back">
+                        {/* [แก้ตามที่ระบุ] หลังไพ่ใช้รูปเควสไพ่ทิพย์แทนอีโมจิ 🔮 */}
+                        <img src={QUEST_ICONS['ment-oracle-activation']} alt="" className="oracle-card__back-img" draggable={false} />
+                      </div>
                     </div>
                   </button>
                 )

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import CameraCapture from '../../shared/CameraCapture'
 import type { QuestGameProps } from '../../../../types.mental'
 import './PhotosynthesisGame.css'
+import { QUEST_ICONS } from '../../../../config/iconAssets'
 
 export default function PhotosynthesisGame({ finish, exit }: QuestGameProps) {
   // สเตทสำหรับสลับหน้าจอระหว่าง 'intro' (หน้าหลัก) และ 'camera' (หน้ากล้อง)
@@ -51,7 +52,8 @@ export default function PhotosynthesisGame({ finish, exit }: QuestGameProps) {
           <img src={photo} alt="แสงแดดยามเช้า" className="photosynthesis-photo" />
         ) : (
           <div className="photosynthesis-frame-empty">
-            <span className="photosynthesis-frame-icon">☀️</span>
+            {/* [แก้ตามที่ระบุ] รูปของเควสแทนอีโมจิ ☀️ */}
+            <img src={QUEST_ICONS['phys-sunlit-root']} alt="" className="photosynthesis-frame-icon" />
             <span className="photosynthesis-frame-label">แตะเพื่อถ่ายรูปยามเช้า</span>
           </div>
         )}
