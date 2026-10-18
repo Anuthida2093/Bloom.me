@@ -31,6 +31,7 @@ import CompletedJourneyMap from '../quest/games/physical/CompletedJourneyMap'
 import ExchangeCards from './ExchangeCards'
 import SpecialDustTile from './SpecialDustTile'
 import DoubleCardTile from './DoubleCardTile'
+import CategoryFilter from '../shop/CategoryFilter'
 import HealthSummary from './HealthSummary'
 
 /*============================================================================*\
@@ -46,11 +47,12 @@ import HealthSummary from './HealthSummary'
   ไม่มีสีใหม่/โทเคนใหม่ (ตามที่ระบุห้ามแตะธีมสีรอบนี้)
 \*============================================================================*/
 
+// [แก้ตามที่ระบุ] ไม่ใช้อีโมจิในชื่อหมวด
 const CATEGORY_LABELS: Record<DecorationCategory, string> = {
-  statues: '🗿 รูปปั้นกระถาง',
-  hangings: '🎐 ของแขวนกิ่งไม้',
-  postits: '🗒️ ลายโพสอิทสะสม',
-  special: '🎴 การ์ดแลกซื้อไอเทม',
+  statues: 'รูปปั้นกระถาง',
+  hangings: 'ของแขวนกิ่งไม้',
+  postits: 'ลายโพสอิทสะสม',
+  special: 'การ์ดแลกซื้อไอเทม',
 }
 const CATEGORY_ORDER: DecorationCategory[] = ['statues', 'hangings', 'postits', 'special']
 
@@ -195,6 +197,13 @@ export default function ProfilePage({
   })).filter((g) => g.items.length > 0)
   /** [เพิ่มตามที่ระบุ — ข้อ 15] 'all' โชว์ทุกหมวด (พฤติกรรมเดิม) เลือกหมวดใดหมวดหนึ่ง = กรอง
    *  เหลือเฉพาะหมวดนั้น เหมือนแท็บหมวดหมู่ของ ShopSection.tsx */
+  /** จำนวนชิ้นในแต่ละหมวด (หมวดพิเศษ = การ์ดแลกซื้อ + ผงพิเศษ + การ์ด ×2) — แสดงในตัวกรอง */
+  const specialCount = cardEntries.reduce((sum, [, n]) => sum + n, 0) + Math.max(0, specialDust) + Math.max(0, doubleCards)
+  const categoryCounts: Partial<Record<DecorationCategory, number>> = {
+    ...Object.fromEntries(groupedInventory.map((g) => [g.category, g.items.length])),
+    special: (groupedInventory.find((g) => g.category === 'special')?.items.length ?? 0) + specialCount,
+  }
+  const totalInventoryCount = CATEGORY_ORDER.reduce((sum, c) => sum + (categoryCounts[c] ?? 0), 0) + (doubleRewardUntil ? 1 : 0)
   const visibleInventoryGroups = inventoryFilter === 'all'
     ? groupedInventory
     : groupedInventory.filter((g) => g.category === inventoryFilter)
@@ -239,41 +248,24 @@ export default function ProfilePage({
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>{t('profile.inventory')}</div>
             <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>กดไอเทมเพื่อวางบนต้นไม้ กดซ้ำเพื่อถอด</p>
 
-            {groupedInventory.length === 0 && cardEntries.length === 0 && specialDust <= 0 && doubleCards <= 0 && !doubleRewardUntil ? (
+            {/* [แก้ตามที่ระบุ] ตัวกรองแบบเดียวกับร้านค้า (จำนวนชิ้น + ปุ่มเลือกหมวด) และอยู่ตลอด แม้ยังไม่มีไอเทม */}
+            <CategoryFilter
+              count={inventoryFilter === 'all' ? totalInventoryCount : (categoryCounts[inventoryFilter] ?? 0)}
+              options={[
+                { id: 'all' as const, label: 'ทั้งหมด', count: totalInventoryCount },
+                ...CATEGORY_ORDER.map((category) => ({ id: category, label: CATEGORY_LABELS[category], count: categoryCounts[category] ?? 0 })),
+              ]}
+              value={inventoryFilter}
+              onChange={setInventoryFilter}
+              ariaLabel="เลือกหมวดไอเทม"
+            />
+            {totalInventoryCount === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 'var(--fs-sm)' }}>
-                <div style={{ fontSize: 'calc(var(--fs-3xl) * 1.3)', marginBottom: 8 }}>📦</div>
+                <img src={BADGE_ICONS.item} alt="" style={{ width: 72, height: 72, objectFit: 'contain', display: 'block', margin: '0 auto 8px', opacity: 0.85 }} />
                 ยังไม่มีไอเทมในคลัง — ไปซื้อจากร้านค้าได้เลย!
               </div>
             ) : (
               <>
-                {/* [แก้ตามที่ระบุ] แท็บหมวดครบทุกหมวดเสมอ: ทั้งหมด · รูปปั้นกระถาง · ของแขวน · ลายโพสอิท · การ์ดแลกซื้อ */}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-                  <button
-                    onClick={() => setInventoryFilter('all')}
-                    className="tag"
-                    style={{
-                      cursor: 'pointer', border: 'none',
-                      background: inventoryFilter === 'all' ? 'var(--g600)' : 'var(--n100)',
-                      color: inventoryFilter === 'all' ? 'var(--fixed-white)' : 'var(--text-muted)',
-                    }}
-                  >
-                    ทั้งหมด
-                  </button>
-                  {CATEGORY_ORDER.map((category) => (
-                    <button
-                      key={category}
-                      onClick={() => setInventoryFilter(category)}
-                      className="tag"
-                      style={{
-                        cursor: 'pointer', border: 'none',
-                        background: inventoryFilter === category ? 'var(--g600)' : 'var(--n100)',
-                        color: inventoryFilter === category ? 'var(--fixed-white)' : 'var(--text-muted)',
-                      }}
-                    >
-                      {CATEGORY_LABELS[category]}
-                    </button>
-                  ))}
-                </div>
                 {/* การ์ดแลกซื้อ: แท็บ "ทั้งหมด" และ "การ์ดแลกซื้อไอเทม" — ยังไม่มีการ์ด = ไม่แสดง */}
                 {(inventoryFilter === 'all' || inventoryFilter === 'special') && (
                   <>
@@ -283,7 +275,7 @@ export default function ProfilePage({
                     <ExchangeCards cards={cardEntries} onOpenShopItem={onOpenShopItem} />
                   </>
                 )}
-                {inventoryFilter !== 'all' && inventoryFilter !== 'special' && visibleInventoryGroups.length === 0 && (
+                {inventoryFilter !== 'all' && (categoryCounts[inventoryFilter] ?? 0) === 0 && !(inventoryFilter === 'special' && doubleRewardUntil) && (
                   <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: 'var(--fs-sm)' }}>
                     ยังไม่มีไอเทมในหมวดนี้
                   </div>

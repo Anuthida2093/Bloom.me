@@ -140,6 +140,8 @@ interface TreeOfLifeProps {
   decorationPositions?: DecorationPositionMap
   /** [ข้อกำหนดข้อ 3] เรียกทุกครั้งที่ลากไอเทมวางเสร็จ (pointer up) พร้อมพิกัด % ใหม่ */
   onDecorationMove?: (itemId: string, xPct: number, yPct: number) => void
+  /** [แก้ตามที่ระบุ] แตะไอเทมแล้วกด "เก็บ" → เก็บกลับเข้าคลัง */
+  onDecorationStore?: (itemId: string) => void
   /** [ข้อกำหนดข้อ 2] คลิกที่ตัวต้นไม้ (นอกเหนือ hotspot โคนต้น) → เปิดบทความสรุปจาก AI */
   onTreeClick?: () => void
   /** [ใหม่] "แรงสั่นสะเทือนแห่งการเติบโต" — ยิงมาจาก AppContext ทุกครั้งที่ทำเควสสำเร็จจริง
@@ -184,6 +186,7 @@ function TreeOfLifeBase({
   placedItems = [],
   decorationPositions = {},
   onDecorationMove,
+  onDecorationStore,
   onTreeClick,
   growthPulse,
   hasSoot = false,
@@ -469,6 +472,7 @@ function TreeOfLifeBase({
         placedItems={placedItems}
         decorationPositions={decorationPositions}
         onDecorationMove={onDecorationMove}
+        onDecorationStore={onDecorationStore}
         containerRef={bandRef}
         placementGeometry={placementGeometry}
       />
@@ -483,6 +487,8 @@ interface DecorationLayerProps {
   placedItems: PlacedItem[]
   decorationPositions: DecorationPositionMap
   onDecorationMove?: (itemId: string, xPct: number, yPct: number, scale?: number) => void
+  /** [แก้ตามที่ระบุ] ปุ่ม "เก็บ" — เก็บไอเทมกลับเข้าคลัง (ถอดออกจากต้นไม้) */
+  onDecorationStore?: (itemId: string) => void
   containerRef: React.RefObject<HTMLDivElement | null>
   /** [2.4] โซนวางของจอนี้ — null = ยังวัดขนาดไม่เสร็จ (ไม่บังคับกฎชั่วคราว) */
   placementGeometry: PlacementGeometry | null
@@ -501,6 +507,10 @@ function dropZoneStyle(rule: ReturnType<typeof placementRuleOf>, geo: PlacementG
   }
   return { inset: 'auto', left: '2%', right: '2%', top: '4%', height: `${Math.max(10, groundTop - 6)}%` }
 }
+
+/** กดค้างนานเท่านี้ (ms) โดยไม่ขยับ → เข้าโหมดย่อ/ขยาย · ขยับเกินระยะนี้ (px) ก่อนครบเวลา → ย้ายตำแหน่ง */
+const LONG_PRESS_MS = 450
+const MOVE_SLOP_PX = 6
 
 /** [ใหม่ — ตามที่ระบุ] ขอบเขต scale ที่อนุญาต กันย่อ/ขยายจนดูแปลก
  *  [แก้ตามที่ระบุ] เล็กสุด 100% (เดิม 50% เล็กจนมองไม่เห็น) — ค่าที่เคยเซฟไว้ต่ำกว่านี้แสดงเป็น 100% */
@@ -531,7 +541,7 @@ function getBaseDecorationSizePx(): number {
  * ศูนย์กลางไอเทม" เทียบกับตอนเริ่มลาก — pattern เดียวกับระบบลากย้ายตำแหน่งเดิมด้านบน
  * (onPointerDown/Move/Up + setPointerCapture) ไม่ได้คิดกลไกใหม่
  */
-function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, containerRef, placementGeometry }: DecorationLayerProps) {
+function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, onDecorationStore, containerRef, placementGeometry }: DecorationLayerProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [previewPos, setPreviewPos] = useState<{ xPct: number; yPct: number } | null>(null)
 
@@ -644,70 +654,88 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
     return () => document.removeEventListener('pointerdown', onDown)
   }, [selectedId])
 
-  const handlePointerDown = (e: ReactPointerEvent<HTMLSpanElement>, itemId: string) => {
+  /* [แก้ตามที่ระบุ] วิธีจับไอเทมบนหน้า Home:
+       - กดแล้วลากทันที = ย้ายตำแหน่ง
+       - กดค้าง (~0.45 วิ) แล้วลาก = ย่อ/ขยาย (ลากออกจากกลางไอเทม = ใหญ่ขึ้น, ลากเข้า = เล็กลง) ไม่โชว์ตัวเลข %
+       - แตะเฉยๆ = โชว์ปุ่ม "เก็บ" (เก็บไอเทมกลับเข้าคลัง)
+     สถานะระหว่างกดเก็บใน ref (อ่าน/เขียนเฉพาะใน handler — ไม่อ่านตอน render) */
+  const pressRef = useRef<{ itemId: string; x: number; y: number; timer: number; mode: 'pending' | 'move' | 'resize' } | null>(null)
+  /** เพิ่งลาก/ย่อขยายเสร็จ → กลืน click ที่เบราว์เซอร์ยิงตามมา ไม่ให้เปิดปุ่ม "เก็บ" */
+  const suppressClickRef = useRef(false)
+
+  const handlePointerDown = (e: ReactPointerEvent<HTMLSpanElement>, item: PlacedItem) => {
     if (!onDecorationMove) return // ไม่รองรับการลากถ้าผู้เรียกใช้ไม่ได้ผูก handler ไว้
     e.stopPropagation()
-    e.currentTarget.setPointerCapture(e.pointerId)
-    setDraggingId(itemId)
+    const el = e.currentTarget
+    el.setPointerCapture(e.pointerId)
+    if (pressRef.current) window.clearTimeout(pressRef.current.timer)
+    const timer = window.setTimeout(() => {
+      const press = pressRef.current
+      if (!press || press.mode !== 'pending') return
+      const rect = el.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height / 2
+      const startDistance = Math.max(14, Math.hypot(press.x - centerX, press.y - centerY))
+      const baseScale = Math.max(MIN_DECORATION_SCALE, decorationPositions[item.itemId]?.scale ?? 1)
+      resizeStartRef.current = { centerX, centerY, startDistance, baseScale }
+      press.mode = 'resize'
+      setSelectedId(null)
+      setResizingId(item.itemId)
+      setPreviewScale(baseScale)
+      try { navigator.vibrate?.(15) } catch { /* ไม่รองรับการสั่น */ }
+    }, LONG_PRESS_MS)
+    pressRef.current = { itemId: item.itemId, x: e.clientX, y: e.clientY, timer, mode: 'pending' }
   }
 
   const handlePointerMove = (e: ReactPointerEvent<HTMLSpanElement>) => {
-    if (!draggingId || !containerRef.current) return
-    const rect = containerRef.current.getBoundingClientRect()
-    const xPct = clampPct(((e.clientX - rect.left) / rect.width) * 100)
-    const yPct = clampY(((e.clientY - rect.top) / rect.height) * 100)
-    // ลากออกนอกโซนไม่ได้ — ไอเทมติดขอบโซนที่ใกล้นิ้วที่สุดแทน
-    setPreviewPos(constrain(draggingId, { xPct, yPct }))
+    const press = pressRef.current
+    if (!press || !containerRef.current) return
+    if (press.mode === 'pending') {
+      if (Math.hypot(e.clientX - press.x, e.clientY - press.y) < MOVE_SLOP_PX) return
+      window.clearTimeout(press.timer)
+      press.mode = 'move'
+      setSelectedId(null)
+      setDraggingId(press.itemId)
+    }
+    if (press.mode === 'move') {
+      const rect = containerRef.current.getBoundingClientRect()
+      const xPct = clampPct(((e.clientX - rect.left) / rect.width) * 100)
+      const yPct = clampY(((e.clientY - rect.top) / rect.height) * 100)
+      // ลากออกนอกโซนไม่ได้ — ไอเทมติดขอบโซนที่ใกล้นิ้วที่สุดแทน
+      setPreviewPos(constrain(press.itemId, { xPct, yPct }))
+      return
+    }
+    const start = resizeStartRef.current
+    if (!start) return
+    const ratio = (Math.hypot(e.clientX - start.centerX, e.clientY - start.centerY) || 1) / start.startDistance
+    setPreviewScale(clampScale(start.baseScale * ratio, press.itemId))
   }
 
-  const handlePointerUp = () => {
-    if (draggingId && previewPos && onDecorationMove) {
-      onDecorationMove(draggingId, previewPos.xPct, previewPos.yPct)
+  const handlePointerUp = (item: PlacedItem) => {
+    const press = pressRef.current
+    if (!press) return
+    window.clearTimeout(press.timer)
+    if (press.mode === 'move' && previewPos && onDecorationMove) {
+      onDecorationMove(press.itemId, previewPos.xPct, previewPos.yPct)
+    } else if (press.mode === 'resize' && previewScale !== null && onDecorationMove) {
+      const pos = resolvedPosition(item)
+      onDecorationMove(item.itemId, pos.xPct, pos.yPct, Math.round(previewScale * 100) / 100)
     }
+    suppressClickRef.current = press.mode !== 'pending'
+    pressRef.current = null
+    resizeStartRef.current = null
     setDraggingId(null)
     setPreviewPos(null)
+    setResizingId(null)
+    setPreviewScale(null)
   }
 
-  /** [ใหม่] คลิก/แตะที่ตัวไอเทม (ไม่ใช่ handle) — สลับเลือก/ยกเลิกเลือก ไม่ยุ่งกับระบบลาก
-   *  ย้ายตำแหน่งเดิมเลย (onClick ของเบราว์เซอร์จะไม่ยิงเองถ้าเพิ่งลากไปจริงๆ อยู่แล้ว) */
+  /** แตะที่ตัวไอเทม (ไม่ได้ลาก/ไม่ได้กดค้าง) — สลับโชว์/ซ่อนปุ่ม "เก็บ" */
   const handleItemClick = (e: React.MouseEvent<HTMLSpanElement>, itemId: string) => {
     if (!onDecorationMove) return
     e.stopPropagation()
+    if (suppressClickRef.current) { suppressClickRef.current = false; return }
     setSelectedId((prev) => (prev === itemId ? null : itemId))
-  }
-
-  /** [ใหม่] เริ่มลาก resize handle — วัดจุดศูนย์กลางกล่องไอเทม (จาก parentElement ของ handle
-   *  เอง) แล้วจำระยะห่างเริ่มต้น + scale เดิมไว้ใน ref เพื่อคำนวณอัตราส่วนตอน pointermove */
-  const handleResizePointerDown = (e: ReactPointerEvent<HTMLSpanElement>, item: PlacedItem) => {
-    e.stopPropagation()
-    e.currentTarget.setPointerCapture(e.pointerId)
-    const itemEl = e.currentTarget.parentElement
-    if (!itemEl) return
-    const rect = itemEl.getBoundingClientRect()
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-    const startDistance = Math.hypot(e.clientX - centerX, e.clientY - centerY) || 1
-    resizeStartRef.current = { centerX, centerY, startDistance, baseScale: decorationPositions[item.itemId]?.scale ?? 1 }
-    setResizingId(item.itemId)
-    setPreviewScale(resizeStartRef.current.baseScale)
-  }
-
-  const handleResizePointerMove = (e: ReactPointerEvent<HTMLSpanElement>) => {
-    const start = resizeStartRef.current
-    if (!resizingId || !start) return
-    const currentDistance = Math.hypot(e.clientX - start.centerX, e.clientY - start.centerY) || 1
-    const ratio = currentDistance / start.startDistance
-    setPreviewScale(clampScale(start.baseScale * ratio, resizingId))
-  }
-
-  const handleResizePointerUp = (item: PlacedItem) => {
-    if (resizingId === item.itemId && previewScale !== null && onDecorationMove) {
-      const pos = resolvedPosition(item)
-      onDecorationMove(item.itemId, pos.xPct, pos.yPct, previewScale)
-    }
-    setResizingId(null)
-    setPreviewScale(null)
-    resizeStartRef.current = null
   }
 
   return (
@@ -725,42 +753,36 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
           const isDraggable = !!onDecorationMove
           const isDragging = draggingId === item.itemId
           const isSelected = selectedId === item.itemId
+          const isResizing = resizingId === item.itemId
           return (
             <span
               key={item.itemId}
-              className={`tree-of-life__decoration-item ${isDraggable ? 'tree-of-life__decoration-item--draggable' : ''} ${isDragging ? 'tree-of-life__decoration-item--dragging' : ''}`}
+              className={`tree-of-life__decoration-item ${isDraggable ? 'tree-of-life__decoration-item--draggable' : ''} ${isDragging ? 'tree-of-life__decoration-item--dragging' : ''}${isResizing ? ' tree-of-life__decoration-item--resizing' : ''}`}
               style={{ left: pos.left, top: pos.top, width: boxSize, height: boxSize }}
-              title={isDraggable ? `${item.itemId} — ลากเพื่อจัดวางใหม่ กดเพื่อปรับขนาด` : item.itemId}
-              onPointerDown={(e) => handlePointerDown(e, item.itemId)}
+              title={isDraggable ? 'ลากเพื่อย้าย · กดค้างแล้วลากเพื่อย่อ/ขยาย · แตะเพื่อเก็บ' : undefined}
+              onPointerDown={(e) => handlePointerDown(e, item)}
               onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
+              onPointerUp={() => handlePointerUp(item)}
+              onPointerCancel={() => handlePointerUp(item)}
               onClick={(e) => handleItemClick(e, item.itemId)}
+              onContextMenu={isDraggable ? (e) => e.preventDefault() : undefined}
               onWheel={isDraggable ? (e) => stepScale(item, e.deltaY < 0 ? 1.1 : 1 / 1.1) : undefined}
             >
               <DecorationVisual itemId={item.itemId} />
-              {isDraggable && isSelected && (
-                <span
-                  className="tree-of-life__decoration-resize-handle"
-                  title="ลากเพื่อปรับขนาด"
-                  onPointerDown={(e) => handleResizePointerDown(e, item)}
-                  onPointerMove={handleResizePointerMove}
-                  onPointerUp={() => handleResizePointerUp(item)}
-                  onPointerCancel={() => handleResizePointerUp(item)}
-                >
-                  ⤡
-                </span>
-              )}
-              {isDraggable && isSelected && (
-                // แถบปรับขนาดชัดๆ: ย่อ / ขนาด% / ขยาย (นอกเหนือจากลากมุม ⤡ และหมุนล้อเมาส์)
+              {isDraggable && isSelected && onDecorationStore && (
+                // [แก้ตามที่ระบุ] แตะไอเทม → ปุ่ม "เก็บ" อย่างเดียว (ไม่มีปุ่ม −/+ และตัวเลข % แล้ว)
                 <span
                   className="tree-of-life__decoration-toolbar"
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <button type="button" aria-label="ย่อไอเทม" onClick={() => stepScale(item, 1 / 1.15)} disabled={scale <= MIN_DECORATION_SCALE}>−</button>
-                  <span className="tree-of-life__decoration-scale">{Math.round(scale * 100)}%</span>
-                  <button type="button" aria-label="ขยายไอเทม" onClick={() => stepScale(item, 1.15)} disabled={scale >= maxDecorationScale(item.itemId)}>+</button>
+                  <button
+                    type="button"
+                    className="tree-of-life__decoration-store"
+                    onClick={() => { setSelectedId(null); onDecorationStore(item.itemId) }}
+                  >
+                    เก็บ
+                  </button>
                 </span>
               )}
             </span>

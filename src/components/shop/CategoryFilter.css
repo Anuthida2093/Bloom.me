@@ -1,0 +1,37 @@
+/* แถบจำนวนไอเทม + ตัวกรองหมวด — ใช้ร่วมกันร้านค้า (ShopSection) และคลังไอเทม (ProfilePage) */
+.shop-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 0 auto 20px; max-width: 1100px;
+}
+.shop-toolbar__count { font-size: 15px; color: var(--text); }
+.shop-filter { position: relative; }
+.shop-filter__btn {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 16px;
+  border: 2px solid color-mix(in srgb, var(--coin) 70%, var(--g600)); border-radius: var(--r-pill);
+  background: var(--fixed-white); color: var(--b700); font-size: 15px; cursor: pointer;
+  box-shadow: var(--sh-card); white-space: nowrap;
+}
+.shop-filter__caret { font-size: 12px; transition: transform .2s ease; }
+.shop-filter__btn[aria-expanded="true"] .shop-filter__caret { transform: rotate(180deg); }
+.shop-filter__backdrop { position: fixed; inset: 0; z-index: 9; }
+.shop-filter__menu {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 10;
+  min-width: 240px; margin: 0; padding: 6px; list-style: none;
+  background: var(--fixed-white); border-radius: var(--r-md);
+  border: 2px solid color-mix(in srgb, var(--coin) 70%, var(--g600)); box-shadow: var(--sh-modal);
+}
+.shop-filter__option {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 8px 12px;
+  border: none; border-radius: var(--r-sm); background: transparent; color: var(--b700);
+  font-size: 15px; text-align: left; cursor: pointer;
+}
+.shop-filter__option:hover { background: var(--leaf-soft); }
+.shop-filter__option.is-active { background: var(--b500); color: var(--fixed-white); }
+.shop-filter__option-label { flex: 1; }
+.shop-filter__option-count {
+  min-width: 26px; padding: 0 8px; border-radius: 99px; text-align: center; font-size: 13px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+@media (max-width: 360px) {
+  .shop-filter__menu { min-width: min(240px, calc(100vw - 40px)); }
+}

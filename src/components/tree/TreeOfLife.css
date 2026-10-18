@@ -811,8 +811,11 @@
 }
 .tree-of-life__decoration-toolbar button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #74c69d; }
 .tree-of-life__decoration-toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
-.tree-of-life__decoration-scale { min-width: 42px; text-align: center; font-family: var(--font-display); font-size: 13px; color: #1b4332; }
-.tree-of-life__decoration-resize-handle { width: 26px; height: 26px; right: -12px; bottom: -12px; font-size: 13px; }
+/* [แก้ตามที่ระบุ] ปุ่ม "เก็บ" (แตะไอเทม) — ไม่มีปุ่ม −/+ และตัวเลข % แล้ว */
+.tree-of-life__decoration-toolbar .tree-of-life__decoration-store { width: auto; min-width: 64px; height: 36px; padding: 0 16px; border-radius: 99px; font-size: 16px; }
+/* กดค้างแล้ว = กำลังย่อ/ขยาย — เส้นประ + แสงรอบไอเทมบอกว่าเข้าโหมดนี้แล้ว (ไม่โชว์ตัวเลข) */
+.tree-of-life__decoration-item--resizing { outline: 2px dashed rgba(255, 255, 255, .85); outline-offset: 4px; border-radius: 12px; filter: drop-shadow(0 0 10px rgba(255, 236, 160, .9)); }
+.tree-of-life__decoration-item--draggable { touch-action: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 
 /* ประกายวิบวับบนดอกไม้/ประกายดาวของต้นไม้ (ProceduralTreeCanvas → .tree-glints) */
 .tree-glints { position: absolute; top: 0; bottom: 0; pointer-events: none; z-index: 3; }

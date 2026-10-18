@@ -121,7 +121,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
 
         {stage === 'intro' && (
           <div className="oracle-page__intro">
-            <h1 className="oracle-page__title">🔮 ไพ่ทิพย์กระตุ้นพลัง</h1>
+            <h1 className="oracle-page__title">ไพ่ทิพย์กระตุ้นพลัง</h1>
             <p className="oracle-page__subtitle">เปิดไพ่รับพลังบวก และทำภารกิจ 2 นาทีเพื่อกระตุ้นจิตใจ</p>
             <button
               className="oracle-page__deck"
@@ -132,7 +132,8 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
               title="แตะเพื่อกางไพ่"
             >
               <span className="oracle-page__deck-glow" />
-              🔮
+              {/* [แก้ตามที่ระบุ] กองไพ่ใช้รูปเควสไพ่ทิพย์แทนอีโมจิ 🔮 (เหมือนหลังไพ่ตอนกางแล้ว) */}
+              <img src={QUEST_ICONS['ment-oracle-activation']} alt="" className="oracle-page__deck-img" draggable={false} />
             </button>
             <p className="oracle-page__tap-hint">แตะที่กองไพ่เพื่อกางไพ่ออก</p>
           </div>

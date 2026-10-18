@@ -53,7 +53,7 @@ export function describeProgressEventView(event: ProgressEvent, tv: Tv, language
 
   switch (event.type) {
     case 'LEVEL_UP':
-      lead = BADGE_ICONS.exp
+      lead = BADGE_ICONS.seed
       key = 'feed.levelUp'
       vars = { name, level: payload.level ?? '' }
       break

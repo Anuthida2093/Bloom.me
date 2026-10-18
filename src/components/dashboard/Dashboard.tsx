@@ -578,7 +578,8 @@ export default function Dashboard() {
       {!viewingPlayer && (isLoggedIn || isGuest) && (
         <div className="game-top-hud" ref={hudRef}>
           <div className="hud-pill hud-pill--level">
-            <img src={BADGE_ICONS.exp} className="icon-img hud-icon" alt="" />
+            {/* รูปเลเวล = Seed.png (EXP.png ใช้กับแถบ EXP ข้างๆ) */}
+            <img src={BADGE_ICONS.seed} className="icon-img hud-icon" alt="" />
             <span>{userData.mbtiType} Lv.{userData.level}</span>
             <HudDelta value={userData.level} ready={!isLoadingUser} format={() => 'Level up!'} />
           </div>
@@ -652,6 +653,7 @@ export default function Dashboard() {
                 placedItems={placedItems}
                 decorationPositions={decorationPositions}
                 onDecorationMove={updateDecorationPosition}
+                onDecorationStore={handleEquip}
                 onTreeClick={() => { setShowTreeStats(false); setShowNotifications(false); setShowTreeSummary(true) }}
                 groundRocks={visibleRocks}
                 growthPulse={anyModalOpen ? null : treeGrowthPulse}
