@@ -16,7 +16,8 @@
 
 .action-menu-container {
   position: fixed;
-  bottom: 25px;
+  /* [1.1] อ่านจากโทเคนกลาง (index.css) + safe-area ของ iPhone — ทุกหน้าเว้นที่ด้วยค่าชุดเดียวกัน */
+  bottom: calc(var(--action-bar-offset, 25px) + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -176,7 +177,6 @@
 }
 @media (max-width: 360px) {
   :root { --nav-icon-size: 48px; --btn-width: 58px; }
-  .action-menu-container { bottom: 12px; }
   .liquid-nav-bar ul li.active a .nav-text { transform: translateY(12px); }
 }
 
@@ -223,4 +223,22 @@
   display: inline-flex; align-items: center; justify-content: center;
   width: var(--nav-icon-size); height: var(--nav-icon-size);
   font-size: calc(var(--nav-icon-size) * .55); line-height: 1;
+}
+
+/* สมาร์ทวอทช์/จอเล็กมาก (≤ 300px): 5 ปุ่ม × 58px = 290px ล้นจอนาฬิกา (~240–280px) — ย่อให้พอดี
+   ช่องกดยังเหลือ ~46×46px ใกล้ขั้นต่ำ 44px */
+@media (max-width: 300px) {
+  :root { --nav-icon-size: 38px; --nav-height: 46px; --btn-width: 46px; }
+  .liquid-nav-bar { border-radius: var(--r-md); }
+  .nav-indicator { border-width: 4px; }
+  .nav-indicator::before, .nav-indicator::after { display: none; }
+  .liquid-nav-bar ul li.active a .nav-text { display: none; }
+  .quest-floating-menu { padding: 8px; }
+  .quest-floating-menu .icon-img { width: 28px; height: 28px; }
+}
+
+/* [แก้ตามที่ระบุ] ไอคอนเควส (Quest Icon) เป็นรูปทรงสูงเกือบเต็มกรอบ จึงดูใหญ่กว่าปุ่มอื่น — ย่อให้เล็กลง */
+.liquid-nav-bar ul li a .nav-icon--quests .icon-img {
+  width: calc(var(--nav-icon-size) * .8);
+  height: calc(var(--nav-icon-size) * .8);
 }

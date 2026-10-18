@@ -183,15 +183,17 @@
 .lb-toggle {
   position: absolute;
   z-index: 100;
-  width: 24px;
-  height: 24px;
+  /* [แก้ตามที่ระบุ] ใหญ่ขึ้นทุกขนาดจอ — 24px → 44px (ขั้นต่ำช่องกดบนมือถือ) */
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: 1.5px solid color-mix(in srgb, var(--coin) 70%, var(--g600));   /* อยู่นอก .lb-frame จึงอ่าน --lb-gold ไม่ได้ */
+  border: 2px solid color-mix(in srgb, var(--coin) 70%, var(--g600));   /* อยู่นอก .lb-frame จึงอ่าน --lb-gold ไม่ได้ */
   background: var(--fixed-white);
   color: var(--on-leaf-soft);
-  font-size: 18px;
+  font-size: 28px;
   font-weight: 700;
   line-height: 1;
+  padding-bottom: 3px;
   display: flex;
   align-items: center;
   justify-content: center;

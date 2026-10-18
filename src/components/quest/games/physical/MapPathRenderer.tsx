@@ -1,22 +1,59 @@
-import { useState } from 'react'
+import { useMemo, useState, type MouseEvent } from 'react'
 import type { MapDef } from '../../../../types.journey'
-import { buildJourneyPathD, MAP_NATIVE_SIZE } from './journeyPathMath'
+import { buildJourneyPathD, MAP_NATIVE_SIZE, waypointPathPcts, withLivePath } from './journeyPathMath'
 import './MapPathRenderer.css'
+
+/** โหมดช่วยแก้จุดเส้นทาง: เติม ?editPath ท้าย URL → แตะแผนที่แล้วขึ้นพิกัด x,y (%) ของจุดที่แตะ
+ *  เอาไปใส่ใน MAP_PATH_POINTS (journeyPathMath.ts) ได้ตรงๆ — ปกติปิดอยู่ ผู้เล่นไม่เห็น */
+const EDIT_PATH_MODE = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('editPath')
+
+/** ตัวอักษรบนจุด (Start / เลขจุด) — [แก้ตามที่ระบุ] บางลงและสวยขึ้น: ฟอนต์บาง (300) ขอบเงาน้ำเงินเข้มบางมาก
+ *  แทนขอบดำหนา (หน่วย viewBox 0-100 → 1.25 ≈ 13px บนภาพ 1024px) ปรับได้ที่นี่ที่เดียว */
+const LABEL_PROPS = {
+  fontSize: 1.25,
+  fontWeight: 300,
+  fontFamily: 'var(--font-display)',
+  letterSpacing: 0.04,
+  fill: '#ffffff',
+  stroke: 'rgba(10, 40, 80, 0.75)',
+  strokeWidth: 0.12,
+  paintOrder: 'stroke',
+  textAnchor: 'middle',
+} as const
 
 interface MapPathRendererProps {
   mapDef: MapDef
   progressPct: number
 }
 
-export default function MapPathRenderer({ mapDef, progressPct }: MapPathRendererProps) {
+export default function MapPathRenderer({ mapDef: mapDefProp, progressPct }: MapPathRendererProps) {
+  // อ่านจุดจาก MAP_PATH_POINTS ทุกครั้งที่ render — แก้ตัวเลขแล้วจุด/เส้นย้ายตามทันที
+  const mapDef = withLivePath(mapDefProp)
   const [artFailed, setArtFailed] = useState(false)
   const clampedProgress = Math.min(100, Math.max(0, progressPct))
   const pathD = buildJourneyPathD(mapDef)
+  const [picked, setPicked] = useState<{ x: number; y: number } | null>(null)
+  // ระยะตามเส้นทางของแต่ละจุด → นกฮูกผ่านจุดไหนแล้ว (เรืองแสง) / จุดล่าสุดที่เพิ่งถึง (กะพริบเรือง)
+  const pathKey = JSON.stringify([mapDef.entryPct, mapDef.waypoints, mapDef.exitPct])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const wpPcts = useMemo(() => waypointPathPcts(mapDef), [pathKey])
+  const lastReached = wpPcts.reduce((last, pct, i) => (pct <= clampedProgress + 0.3 ? i : last), -1)
+
+  const handlePick = (e: MouseEvent<HTMLDivElement>) => {
+    if (!EDIT_PATH_MODE) return
+    // getBoundingClientRect รวม scale/pan ของแผนที่แล้ว — ได้ % ของภาพจริงไม่ว่าซูมอยู่แค่ไหน
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = Math.round(((e.clientX - rect.left) / rect.width) * 100)
+    const y = Math.round(((e.clientY - rect.top) / rect.height) * 100)
+    setPicked({ x, y })
+    console.info(`[editPath] ${mapDef.id}: { x: ${x}, y: ${y} }`)
+  }
 
   return (
     <div
       className="map-path-renderer"
       style={{ width: MAP_NATIVE_SIZE.width, height: MAP_NATIVE_SIZE.height }}
+      onClick={EDIT_PATH_MODE ? handlePick : undefined}
     >
       <div className="map-path-renderer__fallback-bg" aria-hidden="true" />
       {!artFailed && (
@@ -38,21 +75,44 @@ export default function MapPathRenderer({ mapDef, progressPct }: MapPathRenderer
           style={{ strokeDasharray: 100, strokeDashoffset: 100 - clampedProgress }}
         />
 
+        <defs>
+          <radialGradient id="mpr-dot-fill" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stopColor="#E6F6FF" />
+            <stop offset="55%" stopColor="#5BC0FF" />
+            <stop offset="100%" stopColor="#1E78D8" />
+          </radialGradient>
+          <radialGradient id="mpr-dot-glow">
+            <stop offset="0%" stopColor="#8FDBFF" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#8FDBFF" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+
         {/* จุดเริ่มต้น (Start) */}
-        <circle cx={mapDef.entryPct.x} cy={mapDef.entryPct.y} r="1.5" fill="#4ADE80" stroke="#000" strokeWidth="0.4" />
-        <text x={mapDef.entryPct.x} y={mapDef.entryPct.y - 2.2} fontSize="2.2" fill="#ffffff" fontWeight="900" textAnchor="middle" stroke="#000000" strokeWidth="0.6">Start</text>
+        <circle cx={mapDef.entryPct.x} cy={mapDef.entryPct.y} r="1.1" className="mpr-dot mpr-dot--start" />
+        <text x={mapDef.entryPct.x} y={mapDef.entryPct.y - 1.7} {...LABEL_PROPS}>Start</text>
 
-        {/* จุดระหว่างทาง (ทึบ ขอบดำหนา) */}
-        {mapDef.waypoints.map((wp, i) => (
-          <g key={i}>
-            <circle cx={wp.x} cy={wp.y} r="1" fill="#F59E0B" stroke="#000" strokeWidth="0.4" />
-            <text x={wp.x} y={wp.y - 1.8} fontSize="2" fill="#ffffff" fontWeight="900" textAnchor="middle" stroke="#000000" strokeWidth="0.6">{i + 1}</text>
+        {/* [แก้ตามที่ระบุ] จุดระหว่างทาง: สีฟ้า (เดิมส้มขอบดำ) — ยังไม่ถึง = ฟ้าใสขอบขาว · ผ่านแล้ว = ฟ้าเข้มมีแสงเรือง
+            · จุดที่นกฮูกเพิ่งไปถึง = วงแสงกะพริบขยายออก (จุดสิ้นสุดเป็นหีบสมบัติ — StepChestMarker) */}
+        {mapDef.waypoints.map((wp, i) => {
+          const reached = i <= lastReached
+          return (
+            <g key={i} className={`mpr-wp${reached ? ' mpr-wp--reached' : ''}${i === lastReached ? ' mpr-wp--arrived' : ''}`}>
+              {reached && <circle cx={wp.x} cy={wp.y} r="2.2" fill="url(#mpr-dot-glow)" className="mpr-wp__glow" />}
+              {i === lastReached && <circle cx={wp.x} cy={wp.y} r="0.9" className="mpr-wp__ring" />}
+              <circle cx={wp.x} cy={wp.y} r={reached ? 0.85 : 0.7} fill={reached ? 'url(#mpr-dot-fill)' : 'rgba(150, 215, 255, 0.55)'} className="mpr-wp__dot" />
+              <text x={wp.x} y={wp.y - 1.3} {...LABEL_PROPS}>{i + 1}</text>
+            </g>
+          )
+        })}
+
+        {EDIT_PATH_MODE && picked && (
+          <g>
+            <circle cx={picked.x} cy={picked.y} r="1.2" fill="#3B82F6" stroke="#fff" strokeWidth="0.4" />
+            <text x={picked.x + 1.6} y={picked.y + 0.5} {...LABEL_PROPS} fontSize="1.6" textAnchor="start">
+              {`{ x: ${picked.x}, y: ${picked.y} }`}
+            </text>
           </g>
-        ))}
-
-        {/* จุดสิ้นสุด (End) */}
-        <circle cx={mapDef.exitPct.x} cy={mapDef.exitPct.y} r="1.5" fill="#EF4444" stroke="#000" strokeWidth="0.4" />
-        <text x={mapDef.exitPct.x} y={mapDef.exitPct.y - 2.2} fontSize="2.2" fill="#ffffff" fontWeight="900" textAnchor="middle" stroke="#000000" strokeWidth="0.6">End</text>
+        )}
       </svg>
     </div>
   )

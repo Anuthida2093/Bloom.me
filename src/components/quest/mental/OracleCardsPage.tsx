@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { MoodEntryData } from '../../../types'
+import { requestHomeWatering } from '../../../utils/waterPrompt'
 import { ORACLE_CARDS, selectOracleCards, type OracleCard } from './oracleCardData'
 import { generateOracleMessage } from './oracleMessageGenerator'
 import { useTypewriter } from '../../../hooks/useTypewriter'
@@ -10,7 +11,11 @@ import CameraCapture from '../shared/CameraCapture'
 import { MOOD_TYPE_INFO } from '../../../config/moodTypes'
 import './OracleCardsPage.css'
 import '../../leaderboard/leaderboardRow.css'
-import { BADGE_ICONS } from '../../../config/iconAssets'
+
+import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
+
+/** กระดาษข้อความไพ่คลี่จนสุด (ms) — ต้องตรงกับแอนิเมชัน oracleUnroll ใน OracleCardsPage.css */
+const ORACLE_UNROLL_MS = 1100
 
 type Stage = 'intro' | 'spread' | 'reading' | 'camera'
 
@@ -23,7 +28,7 @@ interface OracleCardsPageProps {
 }
 
 export default function OracleCardsPage({ moodEntry, onComplete, onClose }: OracleCardsPageProps) {
-  const { settings, userData, updateProfile, triggerWateringEffect } = useAppContext()
+  const { settings, userData, updateProfile } = useAppContext()
   
   const sfxOpts = useMemo(
     () => ({ volume: settings.sfxVolume, enabled: settings.soundEnabled }),
@@ -38,7 +43,8 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
     ? generateOracleMessage(selectedCard, moodEntry.mood, `${moodEntry.id}-${selectedCard.id}`)
     : ''
 
-  const { displayedText, isDone: isTypewriterDone } = useTypewriter(affirmationText, 25, 200, undefined, () => stopSfx('KEYPRESS'))
+  // เริ่มพิมพ์หลังกระดาษคลี่เสร็จ (ORACLE_UNROLL_MS) แล้วพิมพ์ไล่ทีละบรรทัด
+  const { displayedText, isDone: isTypewriterDone } = useTypewriter(affirmationText, 25, ORACLE_UNROLL_MS, undefined, () => stopSfx('KEYPRESS'))
 
   useEscapeKey(() => {
     stopSfx('KEYPRESS')
@@ -76,7 +82,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
     // ปิดหน้าเควสให้เองอยู่แล้ว ไม่เรียก onClose ซ้ำ
     onComplete()
     updateProfile({ waterDrops: (userData.waterDrops ?? 0) + WATER_DROP_REWARD })
-    triggerWateringEffect()
+    requestHomeWatering() // [แก้ตามที่ระบุ] ได้หยดน้ำ → กลับหน้า Home แล้วรดน้ำต้นไม้
   }
 
   const handleSkip = () => {
@@ -115,7 +121,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
 
         {stage === 'intro' && (
           <div className="oracle-page__intro">
-            <h1 className="oracle-page__title">🔮 ไพ่ทิพย์กระตุ้นพลัง</h1>
+            <h1 className="oracle-page__title">ไพ่ทิพย์กระตุ้นพลัง</h1>
             <p className="oracle-page__subtitle">เปิดไพ่รับพลังบวก และทำภารกิจ 2 นาทีเพื่อกระตุ้นจิตใจ</p>
             <button
               className="oracle-page__deck"
@@ -126,7 +132,8 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
               title="แตะเพื่อกางไพ่"
             >
               <span className="oracle-page__deck-glow" />
-              🔮
+              {/* [แก้ตามที่ระบุ] กองไพ่ใช้รูปเควสไพ่ทิพย์แทนอีโมจิ 🔮 (เหมือนหลังไพ่ตอนกางแล้ว) */}
+              <img src={QUEST_ICONS['ment-oracle-activation']} alt="" className="oracle-page__deck-img" draggable={false} />
             </button>
             <p className="oracle-page__tap-hint">แตะที่กองไพ่เพื่อกางไพ่ออก</p>
           </div>
@@ -149,7 +156,10 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
                     onClick={() => handleSelectCard(card)}
                   >
                     <div className="oracle-card__inner">
-                      <div className="oracle-card__face--back">🔮</div>
+                      <div className="oracle-card__face--back">
+                        {/* [แก้ตามที่ระบุ] หลังไพ่ใช้รูปเควสไพ่ทิพย์แทนอีโมจิ 🔮 */}
+                        <img src={QUEST_ICONS['ment-oracle-activation']} alt="" className="oracle-card__back-img" draggable={false} />
+                      </div>
                     </div>
                   </button>
                 )
@@ -168,18 +178,25 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
                 <h2 className="oracle-card__large-title">{selectedCard.title}</h2>
               </div>
 
-              <div className="oracle-card__large-body">
-                <p className="oracle-card__typewriter-text oracle-card__affirmation-block">
-                  {displayedText}
-                  {!isTypewriterDone && <span className="oracle-page__caret">▍</span>}
-                </p>
-
-                {isTypewriterDone && (
-                  <div className="oracle-card__mission-block">
-                    <span className="oracle-card__mission-label">⚡ ภารกิจ 2 นาทีวันนี้</span>
-                    <p className="oracle-card__mission-text">{selectedCard.twoMinuteTask}</p>
+              {/* กระดาษม้วนคลี่ออก (แบบเดียวกับม้วนรางวัลก้าวเพื่อสุขภาพ) แต่เป็นกระดาษเรียบ ไม่มีเส้นขอบ/บรรทัด
+                  ข้อความพิมพ์ดีดไล่ทีละบรรทัดหลังกระดาษคลี่เสร็จ */}
+              <div className="oracle-scroll">
+                <div className="oracle-scroll__rod" aria-hidden="true" />
+                <div className="oracle-scroll__paper">
+                  <div className="oracle-scroll__inner">
+                    <p className="oracle-scroll__text">
+                      {displayedText}
+                      {!isTypewriterDone && <span className="oracle-page__caret">▍</span>}
+                    </p>
+                    {isTypewriterDone && (
+                      <div className="oracle-scroll__mission">
+                        <span className="oracle-scroll__mission-label">⚡ ภารกิจ 2 นาทีวันนี้</span>
+                        <p className="oracle-scroll__mission-text">{selectedCard.twoMinuteTask}</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+                <div className="oracle-scroll__rod oracle-scroll__rod--bottom" aria-hidden="true" />
               </div>
 
               {isTypewriterDone && (

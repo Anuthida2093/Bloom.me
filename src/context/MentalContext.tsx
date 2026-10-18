@@ -98,6 +98,14 @@ interface MentalContextValue {
 
 const MentalCtx = createContext<MentalContextValue | null>(null)
 
+function readFeedbackLogs(key: string | null): QuestFeedbackRecord[] {
+  if (!key) return []
+  try {
+    const raw = window.localStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as QuestFeedbackRecord[]) : []
+  } catch { return [] }
+}
+
 export function MentalProvider({ children }: { children: ReactNode }) {
   const { userData, applyUserPatch, isLoggedIn } = useUser()
   const { journalEntries, handleMoodSubmit: recordMoodEntry } = useProgress()
@@ -107,7 +115,18 @@ export function MentalProvider({ children }: { children: ReactNode }) {
   const [screeningResults, setScreeningResults] = useState<ScreeningResultRecord[]>([])
   const [pendingScreening, setPendingScreening] = useState<PendingScreening | null>(null)
   const [activityLogs, setActivityLogs] = useState<ActivityLogRecord[]>([])
-  const [questFeedbackLogs, setQuestFeedbackLogs] = useState<QuestFeedbackRecord[]>([])
+  /* "กระจกแห่งความจริง" (feedback หลังทำเควส) — เดิมอยู่ใน state เฉยๆ รีเฟรชแล้วหาย ตอนนี้เก็บในเครื่องแยกตามบัญชี
+     (ไทม์ไลน์การเรียนรู้ของป่าแห่งสิบปีใช้ข้อมูลนี้สะท้อนความจริงของการเรียน) — สลับบัญชีโหลดใหม่ระหว่าง render */
+  const feedbackKey = userData.id ? `bloom.questFeedback.${userData.id}` : null
+  const [feedbackState, setFeedbackState] = useState<{ key: string | null; logs: QuestFeedbackRecord[] }>(
+    () => ({ key: feedbackKey, logs: readFeedbackLogs(feedbackKey) }),
+  )
+  if (feedbackState.key !== feedbackKey) setFeedbackState({ key: feedbackKey, logs: readFeedbackLogs(feedbackKey) })
+  const questFeedbackLogs = feedbackState.logs
+  useEffect(() => {
+    if (!feedbackState.key) return
+    try { window.localStorage.setItem(feedbackState.key, JSON.stringify(feedbackState.logs.slice(-500))) } catch { /* storage เต็ม/ปิด */ }
+  }, [feedbackState])
   const [learningCheckins, setLearningCheckins] = useState<LearningCheckinRecord[]>([])
   const [postIts, setPostIts] = useState<PostItData[]>([])
   const [focusState, setFocusState] = useState<{ date: string; minutes: number }>(
@@ -300,10 +319,10 @@ export function MentalProvider({ children }: { children: ReactNode }) {
   /** [เพิ่มตามที่ระบุ — กลไกใหม่แทน 'know-mirror-of-truth'] เรียกจาก QuestFeedbackPrompt.tsx
    *  หลังผู้ใช้กดปฏิกิริยา (👍/😐/👎) ให้เควสที่เพิ่งทำสำเร็จ */
   const submitQuestFeedback = useCallback<MentalContextValue['submitQuestFeedback']>((questCode, completedAt, reaction) => {
-    setQuestFeedbackLogs((prev) => [
+    setFeedbackState((prev) => ({
       ...prev,
-      { id: `fb-${Date.now()}`, questCode, reaction, completedAt, submittedAt: new Date().toISOString() },
-    ])
+      logs: [...prev.logs, { id: `fb-${Date.now()}`, questCode, reaction, completedAt, submittedAt: new Date().toISOString() }],
+    }))
   }, [])
 
   const saveLearningCheckin = useCallback<MentalContextValue['saveLearningCheckin']>((record) => {

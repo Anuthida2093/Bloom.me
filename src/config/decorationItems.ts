@@ -57,6 +57,10 @@ export const DECORATION_ITEM_META: Record<string, DecorationItemMeta> = {
   'ocean-wave': { emoji: '🌊', nameTh: 'คลื่นสมุทร', zone: 'crown', category: 'postits' },
   'golden-crown': { emoji: '👑', nameTh: 'มงกุฎทอง', zone: 'crown', category: 'special' },
   'glowing-butterfly': { emoji: '🦋', nameTh: 'ผีเสื้อเรืองแสง', zone: 'crown', category: 'special' },
+  // เดิมเป็นรางวัล LEGENDARY จากจุดสำรวจ 'มังกรหินผู้หลับใหล' — จุดสำรวจเลิกใช้แล้ว (หีบ 1 ใบต่อวันแทน)
+  // ตอนนี้ไม่มีทางได้ใหม่ ผู้ที่ได้ไปแล้วยังอยู่ในคลัง · ไม่ขายในร้าน
+  // key ตรงกับ ShopItem.code ฝั่ง backend (prisma/seed.ts)
+  'stone-dragon-guardian': { emoji: '🐲', nameTh: 'มังกรหินผู้พิทักษ์', zone: 'pot', category: 'special' },
 
   /* [เพิ่มรอบนี้ — 13 ไอเทมใหม่จากตาราง 23 รายการในเอกสาร docx จริง ที่ไม่มีตัวเดิมในระบบ
      ตรงความหมายด้วยเลย] zone ตั้งตามธรรมเนียมเดิมของไฟล์นี้: statues→'pot',
@@ -81,18 +85,33 @@ export const DECORATION_EMOJI: Record<string, string> = Object.fromEntries(
   Object.entries(DECORATION_ITEM_META).map(([id, meta]) => [id, meta.emoji]),
 )
 
-/**
- * ตำแหน่งของแต่ละโซนบนต้นไม้ ในรูปเปอร์เซ็นต์ของ container (ใช้กับ tree/TreeOfLife.tsx
- * ที่ขนาดต้นไม้ยืดหยุ่นตามจอ ต่างจาก TreeCanvas.tsx ที่เป็น SVG viewBox ตายตัว 360x420
- * จึงมีตำแหน่งพิกัดพิกเซลของตัวเองแยกต่างหาก)
- *
- * ตำแหน่งเหล่านี้เป็นค่าประมาณอิงจากสัดส่วนจริงที่ TreeOfLife.tsx วาดพุ่ม/ลำต้น/พื้นดิน
- * ไม่ใช่พิกัดที่คำนวณจากโครงกิ่งจริงของภาพ asset (เพราะเป็นภาพ raster ไม่ใช่ vector ที่มี
- * พิกัดกิ่งให้ query ได้) — เพียงพอสำหรับ "ประดับให้ถูกโซน" ตามที่ขอ
- */
-export const DECORATION_ZONE_POSITION: Record<PlacedItem['zone'], { left: string; top: string }> = {
-  pot: { left: '50%', top: '85%' },
-  'branch-left': { left: '30%', top: '46%' },
-  'branch-right': { left: '70%', top: '46%' },
-  crown: { left: '50%', top: '24%' },
+/* ── ตำแหน่งเริ่มต้นของไอเทมตกแต่งบนหน้า Home (ก่อนผู้ใช้ลากย้ายเอง) — % ของแถบต้นไม้ ──
+   รูปปั้นกระถาง (statues): ด้านขวาของต้น ยกสูงจากพื้นเล็กน้อย (เดิมกลางล่าง 50/85 โดนแถบเมนูล่างบัง)
+   ของแขวน/ลายโพสอิท/รางวัลพิเศษ: กระจายในพุ่มใบ
+   แต่ละชิ้นได้ช่องของตัวเองตามลำดับ ไม่ซ้อนทับกันที่จุดเดียวแบบเดิม */
+// ขวาของลำต้นใกล้ๆ (ไม่ชิดขอบจอที่มีปุ่มลอย) ยกสูงจากพื้นเล็กน้อย — TreeOfLife ยังหลบปุ่มบนจอให้อีกชั้น
+const POT_SLOTS: [number, number][] = [[64, 68], [72, 63], [60, 60], [69, 56], [77, 70], [66, 52]]
+const LEAF_SLOTS: [number, number][] = [
+  [50, 24], [36, 31], [64, 31], [43, 40], [57, 40], [29, 42], [71, 42], [50, 34], [40, 22], [60, 22],
+]
+
+/** สเกลสูงสุดที่ปรับได้ — รูปปั้น/กระถางขยายได้ 2 เท่าของเพดานเดิม (2.5 → 5) ส่วนของแขวน/ลายโพสอิทคงเดิม */
+export function maxDecorationScale(itemId: string): number {
+  return DECORATION_ITEM_META[itemId]?.category === 'statues' ? 5 : 2.5
+}
+
+export function defaultDecorationLayout(itemIds: string[]): Record<string, { xPct: number; yPct: number }> {
+  let pot = 0
+  let leaf = 0
+  const out: Record<string, { xPct: number; yPct: number }> = {}
+  for (const id of itemIds) {
+    const isPot = DECORATION_ITEM_META[id]?.category === 'statues'
+    const slots = isPot ? POT_SLOTS : LEAF_SLOTS
+    const i = isPot ? pot++ : leaf++
+    const [x, y] = slots[i % slots.length]
+    // วนรอบที่สอง ขยับเล็กน้อยไม่ให้ทับชิ้นแรกของช่องเดิม
+    const lap = Math.floor(i / slots.length)
+    out[id] = { xPct: x + lap * 4, yPct: y - lap * 4 }
+  }
+  return out
 }

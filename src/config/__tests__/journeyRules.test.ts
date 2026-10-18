@@ -5,21 +5,26 @@
 import { describe, it, expect } from 'vitest'
 import { calcDailyStepTarget } from '../journeyRules'
 
-describe('calcDailyStepTarget', () => {
-  it('คืนเป้าหมายฐาน 8000 ก้าว เมื่อ BMI ต่ำกว่าเกณฑ์ (23)', () => {
+describe('calcDailyStepTarget (BMI เกณฑ์เอเชีย 4 ระดับ — ค่าต่ำของช่วง)', () => {
+  it('BMI < 18.5 → 5,000 ก้าว', () => {
+    expect(calcDailyStepTarget(18.4)).toBe(5000)
+  })
+
+  it('BMI 18.5–22.9 → 8,000 ก้าว', () => {
     expect(calcDailyStepTarget(18.5)).toBe(8000)
     expect(calcDailyStepTarget(22.9)).toBe(8000)
   })
 
-  it('เพิ่มเป้าหมายอีก 1500 ก้าว เมื่อ BMI ถึงเกณฑ์ (23) พอดี', () => {
-    expect(calcDailyStepTarget(23)).toBe(9500)
+  it('BMI 23.0–24.9 → 4,000 ก้าว', () => {
+    expect(calcDailyStepTarget(23)).toBe(4000)
+    expect(calcDailyStepTarget(24.9)).toBe(4000)
   })
 
-  it('เพิ่มเป้าหมายอีก 1500 ก้าว เมื่อ BMI สูงกว่าเกณฑ์', () => {
-    expect(calcDailyStepTarget(30)).toBe(9500)
+  it('BMI ≥ 25 → 2,500 ก้าว', () => {
+    expect(calcDailyStepTarget(30)).toBe(2500)
   })
 
-  it('ตกกลับไปเป้าหมายฐาน ถ้า BMI เป็นค่าผิดปกติ (NaN — ผู้เล่นยังไม่กรอกส่วนสูง/น้ำหนัก)', () => {
+  it('ตกกลับไประดับปกติ ถ้า BMI เป็นค่าผิดปกติ (NaN — ผู้เล่นยังไม่กรอกส่วนสูง/น้ำหนัก)', () => {
     expect(calcDailyStepTarget(NaN)).toBe(8000)
   })
 })

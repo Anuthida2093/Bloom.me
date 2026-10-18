@@ -5,7 +5,10 @@ import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
 import { useAppContext } from '../../../context/AppContext'
 import { playSfx } from '../../../utils/audioPlayer'
-import { BADGE_ICONS } from '../../../config/iconAssets'
+import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
+import { useProgression } from '../../../hooks/useProgression'
+import { useUser } from '../../../context/UserContext'
+import { hasNewWaterDrop, requestHomeWatering } from '../../../utils/waterPrompt'
 import './GameShell.css'
 import '../../leaderboard/leaderboardRow.css'
 
@@ -68,6 +71,10 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
   /** [เพิ่มรอบนี้ — โหมดเคร่งครัด] จำไว้ว่ารอบนี้จบแบบ "ข้ามตัวจับเวลา" หรือจบเต็มรูปแบบ
    *  เพื่อให้หน้ารับรางวัลแสดงตัวเลขที่ตรงกับที่ quest.api.ts จ่ายจริง (ดูที่นั่นสำหรับสูตรครึ่งรางวัล) */
   const [awardedSkipped, setAwardedSkipped] = useState(false)
+  const { doubleRewardActive } = useProgression()
+  const { userData } = useUser()
+  /** ข้าม = ครึ่งเดียว · การ์ด ×2 ที่ใช้อยู่ (12 ชม.) = ×2 — เซิร์ฟเวอร์คูณจริง ตรงนี้แค่แสดงให้ตรงกัน */
+  const rewardMult = (awardedSkipped ? 0.5 : 1) * (doubleRewardActive ? 2 : 1)
 
   // [แก้] รีเซ็ต stage/confirmExit ระหว่าง render ทันทีที่ quest.code เปลี่ยน แทนการ setState
   // ใน effect (react-hooks/set-state-in-effect) — แพทเทิร์น "ปรับ state เมื่อ prop เปลี่ยน"
@@ -119,6 +126,8 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
   const claim = () => {
     playSfx('REWARD_CLAIM', sfxOpts)
     onClose()
+    // [แก้ตามที่ระบุ] เควสนี้ให้หยดน้ำ (เช่น ก้าวเพื่อสุขภาพ) → กลับหน้า Home แล้วเล่นบัวรดน้ำต้นไม้
+    if (hasNewWaterDrop(userData.id)) requestHomeWatering()
   }
 
   return (
@@ -129,7 +138,10 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
           แทนแถบหัวเต็มความกว้างแบบเดิม — ปุ่มปิดลอยมุมขวาบน */}
       {/* [แก้ตามที่ระบุ] ฟื้นฟูหน้าดิน / คลิปกล่อมนอน → ป้ายโทนฟ้า ตัวหนังสือสีน้ำเงิน */}
       <div className={`game-shell__pill-header lb-banner top-center-pill${quest.code === 'phys-soil-restoration' ? ' lb-banner--sky' : ''}`}>
-        <span className="game-shell__pill-icon" aria-hidden="true">{quest.icon}</span>
+        {/* [แก้ตามที่ระบุ] ใช้รูปของเควสนั้นแทนอีโมจิ (ไม่มีรูป เช่น ป่าแห่งสิบปี → อีโมจิเดิม) */}
+        <span className="game-shell__pill-icon" aria-hidden="true">
+          {QUEST_ICONS[quest.code] ? <img src={QUEST_ICONS[quest.code]} alt="" className="game-shell__pill-icon-img" /> : quest.icon}
+        </span>
         <span className="game-shell__pill-title">{quest.titleTh}</span>
       </div>
       <button
@@ -182,8 +194,8 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
           </p>
           <div className="game-shell__reward-cards">
             {/* [แก้ตามที่ระบุรอบนี้ — ข้อ 7] ตัวเลขไว้หน้ารูป + รูปใหญ่ชัดเจนขึ้น */}
-            <div><strong>+{awardedSkipped ? Math.round(quest.coinReward / 2) : quest.coinReward}</strong><img src={BADGE_ICONS.coins} className="icon-img--reward" alt="" />เหรียญละอองดาว</div>
-            <div><strong>+{awardedSkipped ? Math.round(quest.expReward / 2) : quest.expReward}</strong><img src={BADGE_ICONS.exp} className="icon-img--reward" alt="" />EXP</div>
+            <div><strong>+{Math.round(quest.coinReward * rewardMult)}</strong><img src={BADGE_ICONS.coins} className="icon-img--reward" alt="" />เหรียญละอองดาว</div>
+            <div><strong>+{Math.round(quest.expReward * rewardMult)}</strong><img src={BADGE_ICONS.exp} className="icon-img--reward" alt="" />EXP</div>
           </div>
           <button className="lb-btn lb-btn--wide" onClick={claim}>รับรางวัล</button>
           </div>

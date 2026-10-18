@@ -59,3 +59,25 @@
   transform: translate(-50%, -50%);
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
 }
+
+/* เส้นทางที่เดินสำเร็จแล้ว (ถึงเป้า / ดูแผนที่ย้อนหลัง) — หนาขึ้น เรืองแสงทอง เห็นชัดบนแผนที่ */
+:is(.is-route-complete, .completed-journey) .map-path-renderer__path-progress {
+  stroke: #ffd166;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 1.2px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 2.5px rgba(255, 170, 0, 0.9));
+}
+:is(.is-route-complete, .completed-journey) .map-path-renderer__path-bg { stroke: rgba(255, 255, 255, 0.55); stroke-width: 3.6; }
+
+/* ═══ [แก้ตามที่ระบุ] จุดบนเส้นทาง — สีฟ้า + เรืองแสงเมื่อนกฮูกไปถึง ═══ */
+.mpr-dot--start { fill: #7CE3A4; stroke: #ffffff; stroke-width: 0.22; filter: drop-shadow(0 0 0.6px rgba(0, 0, 0, 0.35)); }
+.mpr-wp__dot { stroke: #ffffff; stroke-width: 0.18; transition: r .4s ease, fill .4s ease; }
+.mpr-wp--reached .mpr-wp__dot { filter: drop-shadow(0 0 0.8px #8FDBFF) drop-shadow(0 0 1.6px rgba(64, 170, 255, 0.85)); }
+.mpr-wp__glow { animation: mprGlowBreath 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.mpr-wp__ring { fill: none; stroke: #BFEBFF; stroke-width: 0.25; transform-box: fill-box; transform-origin: center; animation: mprArriveRing 1.6s ease-out infinite; }
+.mpr-wp--arrived .mpr-wp__dot { animation: mprArrivePop .6s cubic-bezier(.34, 1.56, .64, 1) both; transform-box: fill-box; transform-origin: center; }
+@keyframes mprGlowBreath { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
+@keyframes mprArriveRing { from { transform: scale(1); opacity: .95; } to { transform: scale(3.2); opacity: 0; } }
+@keyframes mprArrivePop { from { transform: scale(.4); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .mpr-wp__glow, .mpr-wp__ring, .mpr-wp--arrived .mpr-wp__dot { animation: none; }
+}

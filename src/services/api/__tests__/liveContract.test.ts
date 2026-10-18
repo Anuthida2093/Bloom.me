@@ -161,7 +161,7 @@ describe('โหมด live ตรงกับสัญญา backend', () => {
     ])
   })
 
-  it('ทริปเดินก้าว: POST /journeys ส่งเส้นทาง 3 ด่าน (ด่านสุดท้าย = ปลายทาง), เพิ่มก้าวผ่าน PATCH steps', async () => {
+  it('ทริปเดินก้าวรายวัน: POST /journeys ส่งแผนที่เดียว + เส้นตายสิ้นวัน, เพิ่มก้าวผ่าน PATCH steps', async () => {
     const active = { id: 'j1', userId: 'u1', destinationMapId: 'm3', routeMapIds: ['a', 'b', 'm3'], progressOnCurrentMapSteps: 0, startedAt: new Date().toISOString(), deadlineAt: new Date(Date.now() + 3 * 86400000).toISOString(), status: 'IN_PROGRESS' }
     responder = (c) => {
       if (c.url === '/api/users/me') return { ...USER, bmi: 22 }
@@ -172,10 +172,10 @@ describe('โหมด live ตรงกับสัญญา backend', () => {
     const journey = await import('../journey.api')
     await journey.startJourney('m3')
     const start = calls.find((c) => c.method === 'POST' && c.url === '/api/journeys')
-    const body = start?.body as { destinationMapId: string; routeMapIds: string[] }
+    const body = start?.body as { destinationMapId: string; routeMapIds: string[]; deadlineAt: string }
     expect(body.destinationMapId).toBe('m3')
-    expect(body.routeMapIds).toHaveLength(3)
-    expect(body.routeMapIds[2]).toBe('m3')
+    expect(body.routeMapIds).toEqual(['m3'])
+    expect(new Date(body.deadlineAt).getHours()).toBe(23)
     const stepped = await journey.addSteps('j1', 500)
     expect(calls.find((c) => c.method === 'PATCH')).toMatchObject({ url: '/api/journeys/j1/steps', body: { steps: 500 } })
     expect(stepped.progressOnCurrentMapSteps).toBe(500)

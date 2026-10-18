@@ -12,6 +12,7 @@ import { BADGE_ICONS } from '../../config/iconAssets'
 import { ApiError } from '../../services/http'
 import { validatePasswordStrength } from '../../utils/mockAuth'
 import { useLanguage } from '../../context/LanguageContext'
+import HomeBackgroundPicker from './HomeBackgroundPicker'
 
 const C_1 = 'rgba(116,198,157,.35)'
 const C_2 = 'rgba(116,198,157,.2)'
@@ -179,6 +180,11 @@ export default function SettingsModal({
           </div>
         </Section>
 
+        {/* [เพิ่มตามที่ระบุ] เลือกวิดีโอพื้นหลังหน้า Home (5 แบบ) — ดูตัวอย่างหน้า Home จำลองได้ก่อนตั้ง */}
+        <Section label="พื้นหลังหน้า Home" index={1} accent={theme.accent}>
+          <HomeBackgroundPicker />
+        </Section>
+
         {/* [เพิ่มตามที่ระบุ] เลือกภาษา ไทย / English — ใช้ LanguageContext ตัวเดียวกับหน้า Welcome
             (จำค่าในเครื่อง localStorage "bloom:language") ปุ่มหน้าตาเดียวกับเลือกธีม */}
         <Section label={t('common.language')} index={2} accent={theme.accent}>
@@ -241,7 +247,7 @@ export default function SettingsModal({
 
         <Section label={t('settings.account')} index={5} accent={theme.accent} full>
           <div className="settings-account-grid">
-            <SettingBtn icon="👤" label={t('settings.profile')} onClick={() => setActiveSubModal('profile')} accent={theme.accent} />
+            <SettingBtn icon={<img src={BADGE_ICONS.profile} className="icon-img icon-img--lg" alt="" />} label={t('settings.profile')} onClick={() => setActiveSubModal('profile')} accent={theme.accent} />
             <SettingBtn icon={<img src={BADGE_ICONS.notification} className="icon-img" alt="" />} label={t('settings.notifications')} onClick={() => setActiveSubModal('notifications')} accent={theme.accent} />
             <SettingBtn icon="🔒" label={t('settings.privacy')} onClick={() => setActiveSubModal('privacy')} accent={theme.accent} />
             <SettingBtn icon="📤" label={t('settings.export')} onClick={handleExportData} accent={theme.accent} />

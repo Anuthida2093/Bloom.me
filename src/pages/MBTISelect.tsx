@@ -4,8 +4,8 @@ import { MBTI_TREE_THEME, type MbtiType } from '../types'
 import { useAppContext } from '../context/AppContext'
 import MiniTree from '../components/tree/MiniTree'
 import SceneBackground from '../components/layout/SceneBackground'
-import SoundToggleButton from '../components/layout/SoundToggleButton'
 import { BADGE_ICONS } from '../config/iconAssets'
+import { speciesOf } from '../components/tree/procedural/species'
 
 const MBTI_ORDER: MbtiType[] = [
   'INTJ', 'INTP', 'ENTJ', 'ENTP',
@@ -38,10 +38,7 @@ export default function MBTISelect() {
     <div style={{ minHeight: '100vh', position: 'relative', padding: '48px 20px', overflow: 'hidden' }}>
       <SceneBackground />
 
-      {/* ปุ่มลำโพงลอยมุมขวาบน */}
-      <SoundToggleButton floating />
-
-      {/* [แก้ตามที่ระบุ] ปุ่มกลับ มุมซ้ายบน — ย้อนกลับหน้าก่อนหน้า (ไม่มีประวัติ = กลับหน้าหลัก) */}
+      {/* [แก้ตามที่ระบุ] ปุ่มกลับ มุมซ้ายบน — ย้อนกลับหน้าก่อนหน้า (ไม่มีประวัติ = กลับหน้าหลัก) · แสดงเฉพาะแล็ปท็อป */}
       <button
         type="button"
         className="mbti-select-back"
@@ -56,8 +53,19 @@ export default function MBTISelect() {
         <h1 className="mbti-select-fade-in" style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--fixed-white)', textShadow: '0 4px 16px var(--glass-b-50)', marginBottom: 8 }}>
           คุณเป็นคนแบบไหน?
         </h1>
-        <p className="mbti-select-fade-in" style={{ color: 'var(--fixed-white)', textShadow: '0 2px 8px var(--glass-b-50)', fontSize: 14, marginBottom: 32, animationDelay: '80ms' }}>
+        <p className="mbti-select-fade-in" style={{ color: 'var(--fixed-white)', textShadow: '0 2px 8px var(--glass-b-50)', fontSize: 14, marginBottom: 10, animationDelay: '80ms' }}>
           เลือกบุคลิกภาพ (MBTI) ของคุณ เพื่อกำหนดสายพันธุ์และสีสันของต้นไม้ประจำตัว
+        </p>
+        {/* ลิงก์ทำแบบทดสอบฟรีสำหรับคนที่ยังไม่รู้ MBTI ตัวเอง — เปิดแท็บใหม่ ไม่ทิ้งหน้าเลือก */}
+        <p className="mbti-select-fade-in" style={{ fontSize: 13, marginBottom: 28, animationDelay: '120ms' }}>
+          <a
+            href="https://www.16personalities.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--fixed-white)', textShadow: '0 2px 8px var(--glass-b-50)', textDecoration: 'underline', textUnderlineOffset: 3 }}
+          >
+            ยังไม่รู้ว่าตัวเองเป็น MBTI แบบไหน? ทำแบบทดสอบก่อนได้ที่นี่ →
+          </a>
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14 }}>
@@ -89,7 +97,9 @@ export default function MBTISelect() {
               >
                 <MiniTree theme={theme} size={64} />
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: theme.accent }}>{mbti}</div>
-                <div style={{ fontSize: 11, color: 'var(--n300)', fontWeight: 600, textAlign: 'center' }}>{theme.treeName}</div>
+                {/* [แก้ตามที่ระบุ] ชื่อต้นไม้จริงของ MBTI นี้ (species.ts — ต้นเดียวกับที่ปลูกในหน้า Home)
+                    เดิมใช้ MBTI_TREE_THEME.treeName ชุดเก่าที่ไม่ตรงสายพันธุ์ (เช่น INTP ขึ้น "ต้นไทร" แต่ต้นจริงคือแปะก๊วย) */}
+                <div style={{ fontSize: 12, color: 'var(--n300)', fontWeight: 600, textAlign: 'center' }}>{speciesOf(mbti).name}</div>
               </button>
             )
           })}
@@ -106,6 +116,8 @@ export default function MBTISelect() {
           color: var(--fixed-white); font-family: var(--font-display); font-size: 15px;
         }
         .mbti-select-back img { width: 30px; height: 30px; object-fit: contain; }
+        /* [แก้ตามที่ระบุ] มือถือ + iPad ไม่มีปุ่มกลับ (คงไว้เฉพาะแล็ปท็อป ≥1025px) */
+        @media (max-width: 1024px) { .mbti-select-back { display: none; } }
 
         /* โหมดสว่างใช้หน้าตาเดิม — โหมดมืดเท่านั้นที่เป็นการ์ดสีเขียว (ไม่มีขอบเหลือง) */
         [data-theme="dark"] .mbti-select-card {

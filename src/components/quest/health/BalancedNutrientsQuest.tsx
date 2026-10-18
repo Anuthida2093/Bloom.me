@@ -12,7 +12,7 @@ import FoodMenuPicker, { type PickedFood } from './FoodMenuPicker'
 import type { QuestPlayPayload } from '../../../types.mental'
 import '../../leaderboard/leaderboardRow.css'
 import './BalancedNutrientsQuest.css'
-import { BADGE_ICONS } from '../../../config/iconAssets'
+import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
 import { computeCalorieTarget, loadMeals, saveMeals, totalCalories, type MealLog } from '../../../utils/nutrition'
 
 const QUEST_CODE = 'phys-balanced-nutrients'
@@ -250,7 +250,10 @@ export default function BalancedNutrientsQuest({ onComplete, onClose }: Balanced
       {/* [แก้ตามที่ระบุ] ป้ายชื่อเควสลอยกึ่งกลางด้านบนแบบกระดานจัดอันดับ เหมือนเควสอื่น (GameShell) */}
       {!cameraOpen && !pendingPhoto && (
         <div className="balanced-nutrients__pill lb-banner top-center-pill">
-          <span aria-hidden="true">🥗</span>
+          {/* [แก้ตามที่ระบุ] รูปเควส Calories.png แทนอีโมจิ 🥗 */}
+          {QUEST_ICONS[QUEST_CODE]
+            ? <img src={QUEST_ICONS[QUEST_CODE]} className="icon-img" alt="" />
+            : <span aria-hidden="true">🥗</span>}
           <span>แคลอรี่ตาม BMI</span>
         </div>
       )}

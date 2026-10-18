@@ -33,6 +33,12 @@ export class ApiError extends Error {
     super(userMessage)
     this.name = 'ApiError'
   }
+
+  /** รหัส error ของ backend (body รูปแบบ { error: { code } } จาก error.middleware.ts) เช่น INSUFFICIENT_COINS */
+  get code(): string | undefined {
+    const code = (this.detail as { error?: { code?: unknown } } | undefined)?.error?.code
+    return typeof code === 'string' ? code : undefined
+  }
 }
 
 export function getAuthToken(): string | null {
@@ -108,6 +114,7 @@ export const http = {
   get:  <T>(path: string, o?: RequestOptions) => request<T>(path, { ...o, method: 'GET' }),
   post: <T>(path: string, body?: unknown, o?: RequestOptions) => request<T>(path, { ...o, method: 'POST', body }),
   patch:<T>(path: string, body?: unknown, o?: RequestOptions) => request<T>(path, { ...o, method: 'PATCH', body }),
+  put:  <T>(path: string, body?: unknown, o?: RequestOptions) => request<T>(path, { ...o, method: 'PUT', body }),
   del:  <T>(path: string, o?: RequestOptions) => request<T>(path, { ...o, method: 'DELETE' }),
 }
 

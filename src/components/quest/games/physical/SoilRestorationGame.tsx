@@ -6,6 +6,7 @@ import { useAudio } from '../../../../context/AudioContext'
 import '../games.css'
 import './SoilRestorationGame.css'
 import { setSfxSuppressed } from '../../../../utils/sfxGate'
+import { posterOf } from '../../../../utils/videoPoster'
 
 /*  ความสำเร็จ Soil Restoration (ฟื้นฟูหน้าดิน / คลิปกล่อมนอน)
     ทฤษฎี: Blue Light & Melatonin Suppression + Sleep-inducing Soundscapes
@@ -216,7 +217,7 @@ export default function SoilRestorationGame({ finishAndClose }: QuestGameProps) 
     const remaining = endAt - now
     return createPortal(
       <div className={`soil-sleep${showControls ? '' : ' is-idle'}`} onPointerDown={pokeControls} onPointerMove={pokeControls}>
-        <video className="soil-sleep__video" src={`${CLIP_BASE}${clip}.mp4`} autoPlay loop muted playsInline />
+        <video className="soil-sleep__video" src={`${CLIP_BASE}${clip}.mp4`} poster={posterOf(`${CLIP_BASE}${clip}.mp4`)} autoPlay loop muted playsInline />
         <div className="soil-sleep__dim" aria-hidden="true" />
 
         <div className="soil-sleep__hud">
@@ -252,7 +253,7 @@ export default function SoilRestorationGame({ finishAndClose }: QuestGameProps) 
         <div className="soil-setup__clips">
           {CLIPS.map((c) => (
             <button key={c.key} className={`soil-setup__clip${clip === c.key ? ' is-active' : ''}`} onClick={() => setClip(c.key)}>
-              <video src={`${CLIP_BASE}${c.key}.mp4#t=1`} muted playsInline preload="metadata" />
+              <video src={`${CLIP_BASE}${c.key}.mp4#t=1`} poster={posterOf(`${CLIP_BASE}${c.key}.mp4`)} muted playsInline preload="metadata" />
               <span>{c.label}</span>
             </button>
           ))}

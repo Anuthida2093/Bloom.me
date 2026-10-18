@@ -346,5 +346,6 @@ export function generateOracleMessage(card: OracleCard, mood: Mood, seedKey: str
   const prefix = pick(PREFIXES[mood], rng)
   const core = pick(CORE_LINES[mood], rng)
   const suffix = pick(SUFFIXES[mood], rng)
-  return `${prefix} "${card.title}" — ${core} ${suffix}`
+  // แยกเป็นบรรทัด — หน้าไพ่พิมพ์ทีละบรรทัดบนกระดาษที่คลี่ออก (OracleCardsPage)
+  return `${prefix} "${card.title}"\n${core}\n${suffix}`
 }

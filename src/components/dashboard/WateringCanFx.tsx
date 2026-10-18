@@ -1,57 +1,26 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { BADGE_ICONS } from '../../config/iconAssets'
 
 /*============================================================================*\
-  WateringCanFx — [ไฟล์ใหม่ — เควส "แคลอรี่ตาม BMI"] แอนิเมชันบัวรดน้ำบินเข้ามารดน้ำที่โคน
-  ต้นไม้หน้า Dashboard หลังปิดเควส Balanced Nutrients สำเร็จ
+  WateringCanFx — แอนิเมชันบัวรดน้ำบินเข้ามารดน้ำที่โคนต้นไม้หน้า Home
   ────────────────────────────────────────────────────────────────────────────
-  [ตามที่ระบุ] เอฟเฟกต์นี้ต้องเล่น "ตอนกลับมาที่ Dashboard หลังปิดเควส" ไม่ใช่ในหน้าเควสเอง —
-  ผูกกับ treeGrowthPulse.questCode (ProgressContext.tsx → handleToggleQuest ใส่ questCode
-  ให้ทุกครั้งที่เควสสำเร็จอยู่แล้ว) แทนการสร้าง event/state ใหม่คู่ขนาน — Dashboard.tsx เพียง
-  ส่ง pulse ตัวเดิมที่มีอยู่แล้วเข้ามา ให้ component นี้เช็คเองว่าเป็นเควสไหน
+  เล่น 1 ครั้งทุกครั้งที่ waterPulseKey เปลี่ยน (0 = ไม่เล่น) — Dashboard เป็นคนตัดสินว่าเมื่อไร:
+    - กลับมาหน้า Home หลังได้หยดน้ำใหม่จากเควส (ธง one-shot utils/waterPrompt.ts)
+    - กด "รดน้ำต้นไม้วันนี้!" ในเช็คอินอารมณ์ (รดน้ำจริงตาม backend: วันละครั้ง +15 EXP)
+  [แก้บั๊ก — ขึ้นทุกครั้งที่เข้าหน้า Home] เดิมผูกกับ pulse ใน ProgressContext ที่อยู่ข้ามการ mount
+  แต่ตัวกันเล่นซ้ำอยู่ใน ref ของคอมโพเนนต์นี้ — mount ใหม่ = เล่นซ้ำ ตอนนี้ key เป็น state ของหน้า Home
 \*============================================================================*/
 
-const BALANCED_NUTRIENTS_QUEST_CODE = 'phys-balanced-nutrients'
 /** ระยะเวลาที่แอนิเมชันเล่นทั้งหมดก่อนหายไปเอง (มิลลิวินาที) */
 const EFFECT_DURATION_MS = 2400
 
-interface WateringCanFxProps {
-  pulse: { category: string; key: number; questCode?: string } | null
-  /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 6] "แรงสั่นบัวรดน้ำ" ทั่วไป — ไม่ผูกกับเควสใดเควสหนึ่งเจาะจง
-   *  (ต่างจาก pulse ด้านบนที่ยังคงพฤติกรรมเดิมของ phys-balanced-nutrients ไว้) เปลี่ยนค่าทุก
-   *  ครั้งที่มีจุดไหนในระบบเรียก triggerWateringEffect() (ProgressContext.tsx) — ปัจจุบันคือ
-   *  ทุกครั้งที่ OracleCardsPage.tsx ให้รางวัลหยดน้ำจริงแล้วผู้ใช้กดกลับหน้า Home */
-  waterPulseKey?: number
-}
-
-export default function WateringCanFx({ pulse, waterPulseKey }: WateringCanFxProps) {
+export default function WateringCanFx({ waterPulseKey }: { waterPulseKey: number }) {
   const [visible, setVisible] = useState(false)
-  // [แก้ตามที่ระบุ] Dashboard ส่ง pulse = null ระหว่างหน้าเควสยังเปิดอยู่ แล้วส่งค่าเดิมกลับมาตอนปิด →
-  // เล่นตอนกลับมาหน้า Home จริงๆ ครั้งเดียวต่อการทำเควสสำเร็จ (จำ key ที่เล่นไปแล้ว กันเล่นซ้ำตอนเปิด/ปิดป็อปอัพอื่น)
-  const lastPlayedKey = useRef<number | null>(null)
 
-  useEffect(() => {
-    if (!pulse || pulse.questCode !== BALANCED_NUTRIENTS_QUEST_CODE) return
-    if (lastPlayedKey.current === pulse.key) return
-    lastPlayedKey.current = pulse.key
-    // [หมายเหตุ react-hooks/set-state-in-effect] ซิงค์กับสัญญาณจากภายนอกจริง (pulse prop ที่
-    // เปลี่ยนมาจาก ProgressContext ตอนเควสสำเร็จ) ไม่ใช่ state ที่ derive จาก props ได้เพียวๆ —
-    // ต้องตั้ง timer จริงเพื่อซ่อนเอฟเฟกต์เองหลังเล่นจบ (แพทเทิร์นเดียวกับ MindfulAnchorPage.tsx)
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setVisible(true)
-    const timer = window.setTimeout(() => setVisible(false), EFFECT_DURATION_MS)
-    return () => window.clearTimeout(timer)
-    // pulse.key เปลี่ยนทุกครั้งที่ทำเควสสำเร็จ (แม้ code เดิม) — ใช้เป็น dependency หลักเพื่อให้
-    // เล่นซ้ำได้ทุกครั้งที่ทำเควสนี้สำเร็จอีก ไม่ใช่แค่ครั้งแรก
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pulse?.key])
-
-  /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 6] ทริกเกอร์ทั่วไปแยกจากด้านบน — ใช้ waterPulseKey > 0 กันไม่ให้
-     เล่นเอฟเฟกต์ตอน mount ครั้งแรก (ค่าเริ่มต้นคือ 0 จาก ProgressContext) */
   useEffect(() => {
     if (!waterPulseKey) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- เริ่มแอนิเมชันตามสัญญาณจากหน้า Home แล้วซ่อนเองตามเวลา
     setVisible(true)
     const timer = window.setTimeout(() => setVisible(false), EFFECT_DURATION_MS)
     return () => window.clearTimeout(timer)

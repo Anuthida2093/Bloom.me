@@ -4,6 +4,7 @@ import type { QuestGameProps } from '../../../../types.mental'
 import { useProgress } from '../../../../context/ProgressContext'
 import { findQuestByCode } from '../../../../config/questCatalog'
 import './PureWaterGame.css'
+import { QUEST_ICONS } from '../../../../config/iconAssets'
 
 const QUEST_CODE = 'phys-hydration-drop'
 
@@ -107,7 +108,8 @@ export default function PureWaterGame({ finish, exit }: QuestGameProps) {
             <img src={photoBefore} alt="ก่อนดื่ม" className="pure-water-photo" />
           ) : (
             <div className="pure-water-frame-empty">
-              <span className="pure-water-frame-icon">💧</span>
+              {/* [แก้ตามที่ระบุ] รูปของเควสแทนอีโมจิ 💧 / 🫙 — กรอบหลังดื่มใช้รูปเดียวกันแบบจางลง */}
+              <img src={QUEST_ICONS['phys-hydration-drop']} alt="" className="pure-water-frame-icon" />
               <span className="pure-water-frame-label">ยังไม่ดื่ม (เต็มแก้ว)</span>
             </div>
           )}
@@ -119,7 +121,7 @@ export default function PureWaterGame({ finish, exit }: QuestGameProps) {
             <img src={photoAfter} alt="หลังดื่ม" className="pure-water-photo" />
           ) : (
             <div className="pure-water-frame-empty">
-              <span className="pure-water-frame-icon">🫙</span>
+              <img src={QUEST_ICONS['phys-hydration-drop']} alt="" className="pure-water-frame-icon pure-water-frame-icon--empty" />
               <span className="pure-water-frame-label">ดื่มแล้ว (หมดแก้ว)</span>
             </div>
           )}

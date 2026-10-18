@@ -21,10 +21,12 @@
   z-index: 0;
   pointer-events: none;
 }
-.dashboard__bg-video { object-fit: cover; }
+.dashboard__bg-video { object-fit: cover; opacity: 0; transition: opacity .6s ease; }
+.dashboard__bg-video.is-ready { opacity: 1; }
 .dashboard__bg-still {
   --lc-bg-7: rgba(98, 217, 192, .10);
-  background: radial-gradient(90% 60% at 50% 10%, var(--lc-bg-7), transparent 70%),
+  background: var(--bg-poster, none) center / cover no-repeat,
+    radial-gradient(90% 60% at 50% 10%, var(--lc-bg-7), transparent 70%),
     linear-gradient(180deg, var(--ae-deep) 0%, var(--ae-void) 100%);
 }
 
@@ -185,7 +187,8 @@
   max-width: 600px;
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
+  /* [แก้ตามที่ระบุ] ห้ามตัดขึ้นแถวใหม่ — แคปซูลทุกตัวอยู่แถวเดียวเสมอ แล้วย่อขนาดตามความกว้างจอแทน (ดู @media ≤520px) */
+  flex-wrap: nowrap;
   gap: 10px;
   pointer-events: none;
 }
@@ -245,6 +248,65 @@
   .hud-icon { font-size: 18px; width: 27px; height: 27px; margin: -3px 0; }
 }
 
+/* "+N" / "Level up!" ลอยขึ้นจากแคปซูลเมื่อค่าเพิ่ม (HudDelta.tsx) */
+.hud-delta {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(135deg, var(--exp), var(--coin));
+  color: #4A2C0A;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: hudDeltaFloat 1.6s ease-out forwards;
+}
+.game-top-hud .hud-delta { top: 100%; bottom: auto; } /* HUD ชิดขอบบน — ลอยลงแทนที่จะหลุดจอ */
+@keyframes hudDeltaFloat {
+  0% { opacity: 0; transform: translate(-50%, -4px) scale(.8); }
+  15% { opacity: 1; transform: translate(-50%, 4px) scale(1.05); }
+  80% { opacity: 1; transform: translate(-50%, 10px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, 16px) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-delta { animation: hudDeltaFade 1.6s linear forwards; }
+  @keyframes hudDeltaFade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+}
+
+/* [แก้ตามที่ระบุ] มือถือ: แคปซูลทั้ง 4 อยู่แถวเดียว ย่อตัวอักษร/ไอคอน/ระยะห่างตามความกว้างจอ (vw)
+   แทนการตัดขึ้นแถวใหม่ — ทุกตัวหดได้ (min-width:0) และข้อความไม่ตัดบรรทัด */
+@media (max-width: 520px) {
+  .game-top-hud { width: calc(100% - 12px); gap: clamp(3px, 1.2vw, 6px); }
+  .hud-pill {
+    flex: 0 1 auto; min-width: 0; white-space: nowrap;
+    padding: 3px clamp(5px, 2vw, 10px); gap: clamp(2px, 1vw, 5px);
+    font-size: clamp(11px, 3.5vw, 16px); border-width: 1.5px;
+  }
+  .hud-pill > span { overflow: hidden; text-overflow: ellipsis; }
+  .hud-icon { width: clamp(18px, 6vw, 26px); height: clamp(18px, 6vw, 26px); margin: -2px 0; }
+  .hud-bar-bg { width: clamp(28px, 11vw, 52px); height: 8px; }
+}
+
+/* มือถือเล็ก: 4 แคปซูลเรียงแถวเดียวไม่พอ — ย่อ padding/ไอคอน และซ่อนตัวเลข EXP (แถบยังบอกความคืบหน้า) */
+@media (max-width: 400px) {
+  .game-top-hud { gap: 4px; width: calc(100% - 16px); }
+  .hud-pill { padding: 3px 8px; gap: 4px; font-size: var(--fs-sm); border-width: 1.5px; }
+  .hud-icon { width: 22px; height: 22px; margin: -2px 0; }
+  .hud-bar-bg { width: 44px; height: 8px; }
+  .hud-bar-text { display: none; }
+}
+
+/* สมาร์ทวอทช์/จอเล็กมาก (≤ 300px): เหลือเฉพาะเลเวล + เหรียญ ซ่อน EXP และ streak (ดูต่อได้ในแผงข้อมูลต้นไม้) */
+@media (max-width: 300px) {
+  .game-top-hud { top: 4px; gap: 3px; }
+  .hud-pill { padding: 2px 6px; font-size: var(--fs-xs); box-shadow: 0 2px 0 color-mix(in srgb, var(--hud-edge) 80%, var(--g800)); }
+  .hud-icon { width: 18px; height: 18px; margin: -1px 0; }
+  .hud-pill--exp, .hud-pill--streak { display: none; }
+  .hud-delta { font-size: var(--fs-xs); padding: 0 6px; }
+}
+
 /* ═══════════════════════════════════════════
    [เพิ่มใหม่] คลัสเตอร์ปุ่มขวา: Tree Stats / Mood / Sound
    ═══════════════════════════════════════════ */
@@ -257,6 +319,8 @@
   align-items: flex-start;
   gap: 12px;
 }
+/* แผงข้อมูลต้นไม้/แจ้งเตือนเปิดอยู่ → ทับ HUD (z 90) แต่ยังต่ำกว่าชั้นโมดัล (500) และแถบเมนูล่าง (1000) */
+.dashboard__right-cluster--panel-open { z-index: 95; }
 .dashboard__right-cluster .dashboard__panel--right {
   position: static;
   top: auto; right: auto;
@@ -317,7 +381,9 @@
    ═══════════════════════════════════════════ */
 .dashboard__corner-actions {
   position: fixed;
-  bottom: 25px;
+  /* [แก้ตามที่ระบุ] ทุกขนาดจอ: ปุ่มเพื่อน/แชร์อยู่สูงกว่าแถบเมนูล่าง (ActionMenuBar) เสมอ —
+     ขอบบนของแถบ + วงกลมปุ่มที่เลือกที่ยื่นขึ้นครึ่งวง + ช่องว่าง (เดิมโน้ตบุ๊ก 64px ยังต่ำกว่าขอบบนแถบ) */
+  bottom: calc(var(--action-bar-height) + var(--nav-height, 60px) / 2 + 20px);
   z-index: 90;
   display: flex;
   flex-direction: column;/* [แก้ตามที่ระบุ] เดิมใช้ 8px แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่ ทำให้ปุ่มล้นจอออกไปนิดหน่อย
@@ -328,7 +394,7 @@
 .dashboard__corner-actions--right { right: 16px; }
 
 @media (max-width: 768px) {
-  .dashboard__corner-actions { bottom: 15px; gap: 8px; }
+  .dashboard__corner-actions { gap: 8px; }
   .dashboard__corner-actions--left { left: 6px; }
   .dashboard__corner-actions--right { right: 6px; }
   /* ขนาดปุ่ม .game-icon-btn ย่อเหลือ 1.5cm บนจอเล็กแล้วที่ media query ของ .game-icon-btn เอง */
@@ -355,6 +421,9 @@
   transition: transform var(--dur-fast) var(--ease-out-soft);
 }
 .dashboard__back-btn:hover { transform: translateX(-3px); }
+/* [แก้ตามที่ระบุ] ไอคอนอย่างเดียว — ปุ่มวงกลม 44px (ขั้นต่ำช่องกดมือถือ) */
+.dashboard__back-btn { width: 48px; height: 48px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.dashboard__back-btn .icon-img { width: 34px; height: 34px; object-fit: contain; }
 
 .dashboard__viewing-name-pill {
   position: fixed;
@@ -375,7 +444,7 @@
 }
 
 @media (max-width: 768px) {
-  .dashboard__back-btn { top: 8px; left: 8px; padding: 8px 14px; font-size: var(--fs-xs); }
+  .dashboard__back-btn { top: 8px; left: 8px; width: 44px; height: 44px; padding: 0; }
   .dashboard__viewing-name-pill { top: 8px; padding: 8px 18px; font-size: var(--fs-sm); }
 }
 
@@ -457,19 +526,22 @@
    (มือถือ ~43px) รูปล้นกล่องปุ่มได้แต่ไม่รับคลิก (pointer-events:none) ช่องกดยังเป็นขนาดปุ่มเดิม ═══ */
 .game-icon-btn { position: relative; }
 .game-icon-btn .icon-img { pointer-events: none; flex-shrink: 0; }
-.game-icon-btn .icon-img[src$="/tree.png"]         { width: 110px; height: 110px; }
-.game-icon-btn .icon-img[src$="/Check-in.png"]     { width: 134px; height: 134px; }
-.game-icon-btn .icon-img[src$="/Notification.png"] { width: 115px; height: 115px; }
-.game-icon-btn .icon-img[src$="/Share.png"]        { width: 116px; height: 116px; }
-.game-icon-btn .icon-img[src$="/Friends.png"]      { width: 104px; height: 104px; }
-/* สตอรี่ยังเป็นอีโมจิ 📖 — ขยายให้สูงใกล้เคียงรูปตั้งค่า */
+/* [อัปเดต 2026-10-18 — รูปชุดใหม่] tree/Notification/Share/Friends.png ใหม่เนื้อรูปเต็มไฟล์ ~86-95% แล้ว
+   (เดิม ~40-50%) จึงลดกล่องรูปลงให้สูงที่ตาเห็น ~50px เท่าปุ่มตั้งค่าเหมือนเดิม · Check-in.png ยังเป็นไฟล์เดิม
+   จับคู่ด้วย [src*="/ชื่อ."] ให้ใช้ได้ทั้ง .png และ .webp */
+.game-icon-btn .icon-img[src*="/tree."]         { width: 64px; height: 64px; }
+.game-icon-btn .icon-img[src*="/Check-in."]     { width: 134px; height: 134px; }
+.game-icon-btn .icon-img[src*="/Notification."] { width: 60px; height: 60px; }
+/* [แก้ตามที่ระบุ] ปุ่มแชร์/เพื่อนเล็กลง ~20% (เดิม 72/100px · มือถือ 60/83px) */
+.game-icon-btn .icon-img[src*="/Share."]        { width: 58px; height: 58px; }
+.game-icon-btn .icon-img[src*="/Friends."]      { width: 80px; height: 80px; }
 .dashboard__corner-actions--left .game-icon-btn { font-size: 50px; }
 @media (max-width: 768px) {
-  .game-icon-btn .icon-img[src$="/tree.png"]         { width: 91px; height: 91px; }
-  .game-icon-btn .icon-img[src$="/Check-in.png"]     { width: 111px; height: 111px; }
-  .game-icon-btn .icon-img[src$="/Notification.png"] { width: 95px; height: 95px; }
-  .game-icon-btn .icon-img[src$="/Share.png"]        { width: 96px; height: 96px; }
-  .game-icon-btn .icon-img[src$="/Friends.png"]      { width: 86px; height: 86px; }
+  .game-icon-btn .icon-img[src*="/tree."]         { width: 53px; height: 53px; }
+  .game-icon-btn .icon-img[src*="/Check-in."]     { width: 111px; height: 111px; }
+  .game-icon-btn .icon-img[src*="/Notification."] { width: 50px; height: 50px; }
+  .game-icon-btn .icon-img[src*="/Share."]        { width: 48px; height: 48px; }
+  .game-icon-btn .icon-img[src*="/Friends."]      { width: 66px; height: 66px; }
   .dashboard__corner-actions--left .game-icon-btn { font-size: 42px; }
 }
 
@@ -505,4 +577,54 @@
 [data-theme="dark"] :is(.dashboard__viewing-name-pill, .player-tree-card .lb-frame__banner)::before,
 [data-theme="dark"] :is(.dashboard__viewing-name-pill, .player-tree-card .lb-frame__banner)::after {
   background: var(--g600);
+}
+
+/* ═══════════════════════════════════════════
+   [Responsive — มือถือ/สมาร์ทวอทช์]
+   ═══════════════════════════════════════════ */
+/* 100vh บนมือถือรวมแถบ URL ที่ยุบ/ขยายได้ → แผงล้นจอ ใช้ dvh เมื่อเบราว์เซอร์รองรับ */
+@supports (height: 100dvh) {
+  @media (max-width: 768px) {
+    .dashboard__panel--right { max-height: calc(100dvh - var(--hud-h, 44px) - 200px); }
+  }
+  @media (max-width: 480px) {
+    .dashboard__panel--right { max-height: calc(100dvh - var(--hud-h, 44px) - 190px); }
+  }
+}
+
+/* ปุ่มมุมล่างซ้าย/ขวา (โพสต์/แชร์/เพื่อน) ชนกับแถบเมนูล่างบนจอแคบ (แถบกว้าง 5×64 = 320px
+   กินเกือบเต็มจอ 360–414px) → ยกขึ้นไปอยู่เหนือแถบเมนู (รวมวงกลมปุ่มที่เลือกที่ยื่นขึ้นครึ่งวง) */
+/* [แก้ตามที่ระบุ — 1.1/2.2] มือถือ + iPad (≤1024px): ยกปุ่มเพื่อน/แชร์ขึ้นเหนือแถบเมนูล่างเสมอ
+   (เดิมยกเฉพาะ ≤520px — iPad ปุ่มยังชนแถบ) ระยะ = ขอบบนของแถบ + วงกลมปุ่มที่เลือกที่ยื่นขึ้นครึ่งวง + ช่องว่าง */
+@media (max-width: 1024px) {
+  .dashboard__corner-actions {
+    bottom: calc(var(--action-bar-height) + var(--nav-height, 56px) / 2 + 16px);
+  }
+}
+
+/* สมาร์ทวอทช์/จอเล็กมาก */
+@media (max-width: 300px) {
+  .game-icon-btn { width: 36px; height: 36px; font-size: 26px; }
+  .game-icon-btn .icon-img { width: 42px; height: 42px; }
+  .right-action-buttons { gap: 4px; }
+  .dashboard__right-cluster { top: calc(4px + var(--hud-h, 32px) + 6px); }
+  .dashboard__corner-actions { gap: 2px; }
+  .dashboard__back-btn,
+  .dashboard__viewing-name-pill { padding: 4px 10px; font-size: var(--fs-xs); }
+  .dashboard__viewing-name-pill { max-width: calc(100vw - 110px); overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* ═══ [ใหม่ตามที่ระบุ] ป้ายการ์ด ×2 ใต้ HUD — ลอยแยกจากแถวแคปซูล ไม่ดันแถวให้ล้นบนมือถือ ═══ */
+.hud-double {
+  position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 3px 12px 3px 6px; border-radius: var(--r-pill);
+  background: linear-gradient(180deg, #FFE59A, #F7B544); color: #6B3A0B;
+  border: 2px solid #C77A1F; box-shadow: 0 2px 0 #9A5512, 0 0 14px rgba(255, 201, 60, .55);
+  font-family: var(--font-display); font-size: var(--fs-sm); pointer-events: auto;
+}
+.hud-double img { width: 24px; height: 24px; object-fit: contain; margin: -4px 0; }
+@media (max-width: 400px) {
+  .hud-double { font-size: var(--fs-xs); padding: 2px 10px 2px 4px; }
+  .hud-double img { width: 20px; height: 20px; }
 }

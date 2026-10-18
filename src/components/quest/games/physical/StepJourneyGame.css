@@ -83,9 +83,36 @@
 }
 .step-journey-game__close-btn:hover { background: rgba(10, 22, 16, 0.9); }
 
+/* ปุ่มเปิด/ปิดแถบด้านขวา — [แก้ตามที่ระบุ] อยู่ใต้ปุ่มปิด (✕) ตำแหน่งเดียวทั้งตอนเปิดและปิด */
+.step-journey-game__panel-toggle {
+  position: absolute;
+  top: 62px;
+  right: 8px;
+  z-index: 21;
+  /* [แก้ตามที่ระบุ] ปุ่มรูป OwlAvatar วงกลม 52px (เดิมลูกศร 36px) */
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 99px;
+  overflow: hidden;
+  border: 2px solid var(--lb-gold-edge, rgba(255, 255, 255, 0.4));
+  background: var(--lb-card-bg, rgba(10, 22, 16, 0.6));
+  color: var(--lb-card-text, #fff);
+  font-family: var(--font-display);
+  font-size: 24px; line-height: 1; font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+}
+.step-journey-game__panel-toggle:hover { filter: brightness(1.05); }
+.step-journey-game__panel-toggle-img { width: 46px; height: 46px; object-fit: contain; pointer-events: none; }
+.step-journey-game__panel-toggle[aria-expanded="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--coin) 60%, transparent); }
+.step-journey-game__reset-btn:disabled { opacity: .6; cursor: default; }
+
+/* [แก้ตามที่ระบุ] แถบข้อมูลเลื่อนเข้า-ออกจากขอบขวาแบบกระดานจัดอันดับ (อยู่ใต้ปุ่มนกฮูก) */
 .step-journey-game__side-panel {
   position: absolute;
-  top: 72px;
+  top: 124px;
   right: 12px;
   bottom: calc(var(--gpf-safe-bottom, 20px) + 110px);
   z-index: 20;
@@ -96,6 +123,19 @@
   overflow-y: auto;
   scrollbar-width: none;
   pointer-events: auto;
+  transform: translateX(calc(100% + 24px));
+  opacity: 0;
+  visibility: hidden;
+  transition: transform .32s cubic-bezier(.2, .8, .2, 1), opacity .22s ease, visibility 0s linear .32s;
+}
+.step-journey-game__side-panel--open {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition: transform .32s cubic-bezier(.2, .8, .2, 1), opacity .22s ease, visibility 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .step-journey-game__side-panel, .step-journey-game__side-panel--open { transition: none; }
 }
 .step-journey-game__side-panel::-webkit-scrollbar { display: none; }
 
@@ -111,23 +151,6 @@
 }
 
 .step-journey-game__sync-row { display: flex; gap: 8px; align-items: center; }
-.step-journey-game__sync-btn {
-  flex-shrink: 0;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  border: none;
-  background: linear-gradient(135deg, var(--g200, #B7E4C7), var(--g300, #95D5B2));
-  color: #1B4332;
-  font-size: 17px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.15s ease;
-}
-.step-journey-game__sync-btn:hover:not(:disabled) { transform: translateY(-2px); }
-.step-journey-game__sync-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
 .step-journey-game__step-input { flex: 1; min-width: 0; width: auto; }
 .step-journey-game__sync-error { margin: 0; }
@@ -157,135 +180,10 @@
     padding: 0 16px;
     box-sizing: border-box;
   }
+  /* มือถือ: แถบอยู่ด้านล่างเต็มความกว้าง → เลื่อนขึ้น-ลงแทนซ้าย-ขวา */
+  .step-journey-game__side-panel:not(.step-journey-game__side-panel--open) { transform: translateY(calc(100% + 24px)); }
 }
 
-/* ── Overlay หน้าสรุปผล ── */
-.sjg-summary-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 100;
-  background: rgba(10, 22, 16, 0.85);
-  backdrop-filter: blur(12px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  animation: sjgFadeIn 0.4s ease-out;
-}
-
-@keyframes sjgFadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.sjg-summary-card {
-  background: linear-gradient(160deg, var(--g700), var(--g800));
-  border: 2px solid var(--g400);
-  border-radius: 24px;
-  padding: 32px 24px;
-  width: 100%;
-  max-width: 360px;
-  text-align: center;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  color: var(--fixed-white);
-  font-family: 'Nunito', 'Mali', sans-serif;
-}
-
-.sjg-summary-title {
-  font-family: 'Fredoka One', 'Mali', sans-serif;
-  color: var(--fixed-white);
-  font-size: 22px;
-  margin: 0;
-}
-
-.sjg-summary-desc {
-  font-size: 14px;
-  color: var(--g200);
-  margin: 0;
-}
-
-.sjg-summary-progress {
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 16px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.sjg-progress-bar {
-  width: 100%;
-  height: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 99px;
-  overflow: hidden;
-}
-
-.sjg-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #74C69D, #52B788);
-  border-radius: 99px;
-  transition: width 1s ease-out;
-}
-
-.sjg-progress-text {
-  font-family: 'Fredoka One', 'Mali', sans-serif;
-  font-size: 18px;
-  color: #74C69D;
-}
-
-.sjg-reward-box {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: center;
-}
-
-.sjg-reward-items {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-}
-
-.sjg-reward-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'Fredoka One', 'Mali', sans-serif;
-  font-size: 20px;
-  color: var(--fixed-white);
-  background: rgba(0, 0, 0, 0.3);
-  padding: 8px 16px;
-  border-radius: 99px;
-  border: 1px solid rgba(255, 209, 102, 0.3);
-}
-
-.sjg-summary-btn {
-  background: linear-gradient(135deg, var(--g400), var(--g600));
-  color: var(--fixed-white);
-  border: none;
-  padding: 16px;
-  border-radius: 99px;
-  font-family: 'Nunito', 'Mali', sans-serif;
-  font-weight: 700;
-  font-size: 16px;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(64, 145, 108, 0.4);
-  transition: transform 0.15s ease;
-  margin-top: 8px;
-}
-
-.sjg-summary-btn:active {
-  transform: scale(0.96);
-}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    [แก้ตามที่ระบุ] เควสก้าวเพื่อสุขภาพ — ชุดสีเดียวกับหน้าเล่นเควสอื่น
@@ -294,8 +192,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 .step-journey-game { --sj-gold: color-mix(in srgb, var(--coin) 70%, var(--g600)); }
 .step-journey-game__pill-header,
-.step-journey-game__controls,
-.sjg-summary-card { border: 2px solid var(--sj-gold); }
+.step-journey-game__controls { border: 2px solid var(--sj-gold); }
 .step-journey-game__pill-header { font-family: var(--font-display); }
 
 :root:not([data-theme="dark"]) .step-journey-game { background-color: var(--leaf-soft); }
@@ -312,17 +209,7 @@
   color: var(--n900) !important;
 }
 :root:not([data-theme="dark"]) .step-journey-game__reset-btn:hover { background: var(--leaf-soft); }
-:root:not([data-theme="dark"]) .sjg-summary-overlay { background: color-mix(in srgb, var(--leaf-soft) 80%, transparent); }
-:root:not([data-theme="dark"]) .sjg-summary-card {
-  background: linear-gradient(160deg, var(--leaf-soft), var(--leaf-soft-strong));
-  color: var(--n900);
-}
-:root:not([data-theme="dark"]) .sjg-summary-card :is(.sjg-summary-title, .sjg-summary-desc, .sjg-progress-text, .sjg-reward-item) { color: var(--n900); }
-:root:not([data-theme="dark"]) .sjg-summary-progress,
-:root:not([data-theme="dark"]) .sjg-reward-box,
-:root:not([data-theme="dark"]) .sjg-reward-item { background: color-mix(in srgb, var(--fixed-white) 55%, transparent); }
-
-[data-theme="dark"] .step-journey-game :is(.step-journey-game__loading, .sjg-summary-title, .sjg-summary-desc, .sjg-progress-text, .sjg-reward-item) { color: var(--fixed-white); }
+[data-theme="dark"] .step-journey-game .step-journey-game__loading { color: var(--fixed-white); }
 
 
 /* ═══ [แก้ตามที่ระบุ] ป็อปอัพยืนยันเปลี่ยนจุดหมาย — กลางจอ กรอบ/ขอบแบบกระดานจัดอันดับ ═══ */
@@ -381,3 +268,133 @@
 }
 .step-journey-game__reset-btn:hover,
 :root:not([data-theme="dark"]) .step-journey-game__reset-btn:hover { background: var(--leaf-soft-active); }
+
+/* ═══ [Responsive] มือถือ/สมาร์ทวอทช์ ═══ */
+/* มือถือ: แถบสถิติย้ายลงล่างเต็มความกว้าง (กฎ ≤520px ด้านบน) — จำกัดความสูงไม่ให้บังแผนที่ทั้งจอ
+   แล้วเลื่อนดูในแถบแทน */
+@media (max-width: 520px) {
+  .step-journey-game__side-panel { max-height: 48vh; max-height: 48dvh; }
+  .step-journey-game__panel-toggle { top: 56px; right: 6px; width: 48px; height: 48px; }
+  .step-journey-game__panel-toggle-img { width: 42px; height: 42px; }
+  .step-journey-game__close-btn { top: 12px; right: 12px; }
+}
+
+/* หน้าสรุปผล (ม้วนกระดาษ) เลื่อนได้บนจอเตี้ย — ดู DiaryRewardScroll.css */
+
+/* สมาร์ทวอทช์ (≤ 300px): ปุ่มแสดง/ซ่อนแถบเหลือแค่ไอคอน, แถบสถิติเต็มจอแบบเลื่อนได้ */
+@media (max-width: 300px) {
+  .step-journey-game--center { padding: 10px; }
+  .step-journey-game__panel-toggle { width: 40px; height: 40px; top: 52px; right: 8px; }
+  .step-journey-game__panel-toggle-img { width: 34px; height: 34px; }
+  .step-journey-game__side-panel { padding: 0 6px; max-height: 60dvh; gap: 6px; bottom: 6px; }
+  .step-journey-game__controls { padding: 6px; }
+}
+
+/* ═══ ปุ่มซิงค์ก้าว — เด่น กดง่าย บอกสถานะชัด (soft-shaded / นูนนุ่ม) ═══ */
+.sjg-sync-label { font-family: var(--font-display); font-size: 13px; color: rgba(255, 255, 255, 0.85); }
+.sjg-sync-main {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; min-height: 48px; padding: 10px 14px;
+  border: none; border-radius: 16px; cursor: pointer;
+  font-family: var(--font-display); font-size: 15px; color: #1B4332;
+  background: linear-gradient(180deg, #d8f3dc 0%, #74c69d 100%);
+  box-shadow: 0 5px 0 #2d6a4f, 0 10px 18px rgba(0, 0, 0, 0.25), inset 0 2px 0 rgba(255, 255, 255, 0.75);
+  transition: transform .12s ease, box-shadow .12s ease, filter .15s ease;
+}
+.sjg-sync-main:hover:not(:disabled) { filter: brightness(1.05); }
+.sjg-sync-main:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 #2d6a4f, 0 4px 8px rgba(0, 0, 0, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.75); }
+.sjg-sync-main:disabled { cursor: progress; filter: saturate(0.6); }
+.sjg-sync-main__icon { font-size: 20px; }
+.sjg-sync-main--busy .sjg-sync-main__icon { animation: sjgSpin 1s linear infinite; display: inline-block; }
+.sjg-sync-main--live {
+  color: #7a1f0f;
+  background: linear-gradient(180deg, #ffe1d6 0%, #ff9f7a 100%);
+  box-shadow: 0 5px 0 #b5462a, 0 10px 18px rgba(0, 0, 0, 0.25), inset 0 2px 0 rgba(255, 255, 255, 0.75);
+}
+@keyframes sjgSpin { to { transform: rotate(360deg); } }
+.sjg-sync-status { margin: 0; font-size: 12px; color: rgba(255, 255, 255, 0.82); text-align: center; }
+.sjg-manual-save {
+  flex-shrink: 0; min-height: 42px; padding: 0 14px;
+  border: none; border-radius: 12px; cursor: pointer;
+  font-family: var(--font-display); font-size: 14px; color: #4A2C0A;
+  background: linear-gradient(180deg, #ffe08a, #f5b301);
+  box-shadow: 0 3px 0 #c98a00, inset 0 2px 0 rgba(255, 255, 255, 0.7);
+}
+.sjg-manual-save:active { transform: translateY(2px); box-shadow: 0 1px 0 #c98a00, inset 0 2px 0 rgba(255, 255, 255, 0.7); }
+/* แผงควบคุม: กระจกฝ้าแยกจากแผนที่ */
+.step-journey-game__controls {
+  background: rgba(10, 22, 16, 0.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2); backdrop-filter: blur(12px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+@media (max-width: 300px) {
+  .sjg-sync-main { min-height: 40px; font-size: 13px; padding: 8px; }
+  .sjg-manual-save { padding: 0 8px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .sjg-sync-main--busy .sjg-sync-main__icon { animation: none; } }
+
+/* ชั้นเนื้อหาแผนที่ (เส้นทาง/ตัวละคร/หีบ/สภาพอากาศ) */
+.sjg-map-layer { position: absolute; inset: 0; }
+
+/* ชวนเปิดหีบที่เส้นชัย — กระจกฝ้ากลางล่างเหนือแถบเมนู */
+.sjg-chest-prompt {
+  position: absolute; left: 50%; bottom: calc(var(--gpf-safe-bottom, 90px) + 10px); transform: translateX(-50%);
+  z-index: 30; display: flex; align-items: center; gap: 8px; justify-content: center;
+  width: max-content; max-width: calc(100% - 24px); box-sizing: border-box; padding: 6px 8px 6px 14px; border-radius: 99px;
+  background: rgba(10, 22, 16, 0.6); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(255, 209, 102, 0.8); color: #fff; font-family: var(--font-display); font-size: 13px;
+  animation: sjgChestPrompt .4s cubic-bezier(.22, 1, .36, 1) both;
+}
+.sjg-chest-prompt button {
+  min-height: 32px; padding: 0 12px; border: none; border-radius: 99px; cursor: pointer; white-space: nowrap;
+  font-family: inherit; font-size: 13px; color: #4A2C0A;
+  background: linear-gradient(180deg, #ffe08a, #f5b301);
+  box-shadow: 0 4px 0 #c98a00, inset 0 2px 0 rgba(255, 255, 255, 0.75);
+}
+.sjg-chest-prompt button:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #c98a00; }
+@keyframes sjgChestPrompt { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* แผนที่ทริปที่เดินสำเร็จแล้ว (เปิดเควสซ้ำในวันเดียวกัน) — การ์ดกระจกฝ้าล่างจอเหนือแถบเมนู */
+.sjg-done-card {
+  position: absolute; left: 50%; bottom: calc(var(--gpf-safe-bottom, 90px) + 10px); transform: translateX(-50%);
+  z-index: 30; width: min(380px, calc(100% - 24px)); box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; border-radius: 16px;
+  background: rgba(10, 22, 16, 0.62); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(255, 209, 102, 0.85); color: #fff; font-family: var(--font-display);
+}
+.sjg-done-card__title { font-size: 13px; }
+.sjg-done-card__steps { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-size: 13px; }
+.sjg-done-card__steps b { font-size: 20px; color: #ffd166; }
+.sjg-done-card__over { padding: 1px 8px; border-radius: 99px; background: #e85d2a; font-size: 11px; }
+.sjg-done-card__goal { font-size: 11px; opacity: 0.8; }
+.sjg-done-card__sync { display: flex; gap: 6px; align-items: center; }
+.sjg-done-card__sync .sjg-manual-save { min-height: 34px; font-size: 12px; }
+/* [แก้ตามที่ระบุ] ช่อง "ก้าวรวมวันนี้" พื้นขาว ตัวอักษรเข้ม + ประกายวิบวับตอนโฟกัส */
+.sjg-done-card .qg-input {
+  height: 34px; padding: 0 12px; font-size: 13px; border-radius: 12px;
+  background: #ffffff; color: #1b3a2a; border: 1.5px solid #ffd166;
+}
+.sjg-done-card .qg-input::placeholder { color: #7a8f82; }
+.sjg-done-card .qg-input:focus { outline: none; animation: sjgInputTwinkle 1.6s ease-in-out infinite; }
+@keyframes sjgInputTwinkle {
+  0%, 100% { box-shadow: 0 0 6px rgba(255, 255, 255, 0.6); }
+  50% { box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.55), 0 0 14px rgba(255, 255, 255, 0.95); }
+}
+@media (max-width: 300px) { .sjg-done-card__steps b { font-size: 18px; } .sjg-done-card__sync { flex-wrap: wrap; } }
+
+/* [แก้ตามที่ระบุ] การ์ดล่างของแผนที่ที่สำเร็จแล้ว: ปุ่ม กลับ / ดูแผนที่ (แทนช่องกรอกก้าว) */
+.sjg-done-card__actions { display: flex; gap: 8px; margin-top: 2px; }
+.sjg-done-card__btn {
+  flex: 1; min-height: 34px; border: none; border-radius: 99px; cursor: pointer;
+  font-family: var(--font-display); font-size: 13px; color: #4A2C0A;
+  background: linear-gradient(180deg, #ffe08a, #f5b301); box-shadow: 0 3px 0 #c98a00, inset 0 2px 0 rgba(255, 255, 255, 0.75);
+}
+.sjg-done-card__btn--ghost { color: #fff; background: rgba(255, 255, 255, 0.16); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55); }
+.sjg-done-card__btn:active { transform: translateY(2px); }
+/* ดูแผนที่ใหญ่: ปุ่มกลับลอยกลางล่าง */
+.sjg-bigmap-back {
+  position: absolute; left: 50%; bottom: calc(var(--gpf-safe-bottom, 90px) + 12px); transform: translateX(-50%); z-index: 30;
+  padding: 8px 22px; border: 1.5px solid rgba(255, 209, 102, 0.85); border-radius: 99px; cursor: pointer;
+  background: rgba(10, 22, 16, 0.62); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  color: #fff; font-family: var(--font-display); font-size: 14px;
+}

@@ -7,6 +7,7 @@
 
 export const queryKeys = {
   me: ['me'] as const,
+  progression: ['progression'] as const,
   tree: ['tree'] as const,
   questLogs: (dateKey?: string) => (dateKey ? (['quest-logs', dateKey] as const) : (['quest-logs'] as const)),
   moodEntries: (days?: number) => (days ? (['mood-entries', days] as const) : (['mood-entries'] as const)),

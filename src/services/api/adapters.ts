@@ -117,10 +117,13 @@ export function toQuestLogEntry(raw: Record<string, unknown>): QuestLogEntry {
 }
 
 export function toInventoryItem(raw: Record<string, unknown>): InventoryItem {
+  // ไอเทมที่มี ShopItem.code (เช่นรางวัลจุดสำรวจ) ใช้ code เป็นรหัสฝั่งหน้าเว็บ — ตรงกับ key ใน
+  // DECORATION_ITEM_META จึงแสดงในคลัง/บนต้นไม้ได้ (แถวที่ไม่มี code ใช้ uuid เดิม)
+  const code = (raw.shopItem as { code?: unknown } | undefined)?.code
   return {
     id: raw.id as string,
     userId: raw.userId as string,
-    shopItemId: raw.shopItemId as string,
+    shopItemId: typeof code === 'string' && code ? code : (raw.shopItemId as string),
     isEquipped: Boolean(raw.isEquipped),
     purchasedAt: raw.purchasedAt as string,
     shopItem: raw.shopItem as InventoryItem['shopItem'],

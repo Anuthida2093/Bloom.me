@@ -66,7 +66,7 @@ export default function TreeSummaryModal({ open, onClose, mbtiType, username }: 
                 borderRadius: 14, background: theme.accent + '14', border: `1px solid ${theme.accent}33`,
               }}
             >
-              <div style={{ fontSize: 22, lineHeight: 1 }} aria-hidden="true">🌳</div>
+              <img src={BADGE_ICONS.tree} alt="" style={{ width: 30, height: 30, objectFit: 'contain', flexShrink: 0 }} />
               <div>
                 <div style={{ fontFamily: 'Fredoka One', fontSize: 14, color: theme.accent }}>
                   ต้นไม้ประจำตัว: {species.name} <span style={{ color: 'var(--n300)', fontSize: 12 }}>({species.nameEn})</span>

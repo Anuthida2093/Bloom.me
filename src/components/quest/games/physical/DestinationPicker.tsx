@@ -52,8 +52,8 @@ export default function DestinationPicker({ onPicked }: DestinationPickerProps) 
   return (
     <div className="destination-picker">
       <div className="destination-picker__header">
-        <h2>เลือกจุดหมายทริปเดินของคุณ</h2>
-        <p>เลือกแผนที่ที่อยากไปถึง แล้วเริ่มสะสมก้าวเดินไปด้วยกัน</p>
+        <h2>เลือกแผนที่เดินวันนี้</h2>
+        <p>1 วัน = 1 ทริป — เดินให้ถึงเป้าก้าววันนี้ เปิดกล่องสมบัติระหว่างทาง แล้วรับรางวัลประจำวัน</p>
       </div>
       
       <div 

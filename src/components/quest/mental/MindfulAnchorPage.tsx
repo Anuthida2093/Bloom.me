@@ -7,7 +7,7 @@ import { useBreathingSession, PATTERN_478, PHASE_LABEL, type BreathPhase } from 
 import BreathingVisual, { type BreathingVisualMode } from '../shared/BreathingVisual'
 import type { QuestPlayPayload } from '../../../types.mental'
 import './MindfulAnchorPage.css'
-import { BADGE_ICONS } from '../../../config/iconAssets'
+import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
 
 const C_1 = '#7FE7D9'
 const C_2 = 'rgba(127,231,217,.55)'
@@ -174,7 +174,8 @@ export default function MindfulAnchorPage({ onComplete, onClose }: MindfulAnchor
       {/* ── ฉากที่ 1: เกริ่นนำ อธิบายวิธีเล่นและทฤษฎี ── */}
       {stage === 'intro' && (
         <div className="mindful-anchor__panel">
-          <div className="mindful-anchor__anchor-icon">⚓</div>
+          {/* [แก้ตามที่ระบุ] รูปของเควสแทนอีโมจิ ⚓ */}
+          <img src={QUEST_ICONS['ment-mindful-anchor']} alt="" className="mindful-anchor__anchor-icon" />
           <h1 className="mindful-anchor__title">ทอดสมอใจ</h1>
           <p className="mindful-anchor__subtitle">The Mindful Anchor · จังหวะหายใจ 4-7-8</p>
 

@@ -1,7 +1,6 @@
 import { http, API_MODE, mockDelay } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
-import { DEFAULT_JOURNEY_DEADLINE_DAYS, resolveJourneyStatus, calcMapTotalStepsTarget } from '../../config/journeyRules'
-import { JOURNEY_MAPS } from '../../config/journeyMaps'
+import { endOfTripDay, resolveJourneyStatus, calcMapTotalStepsTarget } from '../../config/journeyRules'
 import type { JourneyRecord } from '../../types.journey'
 import { getCachedMe } from './user.api'
 
@@ -9,47 +8,23 @@ import { getCachedMe } from './user.api'
  *  /api/journeys (backend branch feature/frontend-contract เพิ่มให้แล้ว จึงตั้งเป็น false) */
 const JOURNEY_LOCAL_ONLY: boolean = false
 
-/** เป้าหมายทริปล่าสุด (โหมด live) — ใช้เป็นด่านแรกของทริปถัดไปแบบเดียวกับโหมด mock */
-const LAST_DESTINATION_KEY = 'bloom:journey-last-destination'
-function readLastDestination(): string | null {
-  try { return window.localStorage.getItem(LAST_DESTINATION_KEY) } catch { return null }
-}
-function rememberDestination(mapId: string) {
-  try { window.localStorage.setItem(LAST_DESTINATION_KEY, mapId) } catch { /* ไม่มี storage ก็สุ่มด่านแรกแทน */ }
-}
-
 /** โหมด live: สถานะคำนวณจากสูตรก้าวตาม BMI ของหน้าเว็บ (journeyRules.ts) — ถ้าจบแล้วแจ้ง backend
  *  ผ่าน PATCH steps (steps: 0 + status ปลายทาง) เซิร์ฟเวอร์ห้ามแก้ทริปที่จบไปแล้วอยู่แล้ว */
 async function liveBmi(): Promise<number> {
   return (await getCachedMe()).bmi ?? 0
 }
 
-function getRandomMapIdExcluding(excludeIds: string[]): string {
-  const availableMaps = JOURNEY_MAPS.filter(m => !excludeIds.includes(m.id))
-  if (availableMaps.length === 0) return JOURNEY_MAPS[0].id
-  const randomIndex = Math.floor(Math.random() * availableMaps.length)
-  return availableMaps[randomIndex].id
-}
-
-function createMockJourney(destinationMapId: string, userId: string, previousDestinationId: string | null): JourneyRecord {
+/** ทริปรายวัน: เส้นทาง = แผนที่เดียวที่เลือก เส้นตาย = สิ้นวันนี้ */
+function createMockJourney(destinationMapId: string, userId: string): JourneyRecord {
   const now = new Date()
-  const deadline = new Date(now.getTime() + DEFAULT_JOURNEY_DEADLINE_DAYS * 24 * 60 * 60 * 1000)
-  
-  // 1. ด่าน 1 = จุดหมายของทริปที่แล้ว (ถ้าไม่มีให้สุ่ม)
-  const map1 = previousDestinationId || getRandomMapIdExcluding([destinationMapId])
-  // 2. ด่าน 2 = สุ่มด่านกลางที่ไม่ซ้ำกับด่าน 1 และด่านเป้าหมาย
-  const map2 = getRandomMapIdExcluding([map1, destinationMapId])
-  // 3. ด่าน 3 = เป้าหมายที่เลือก
-  const map3 = destinationMapId
-
   return {
     id: `local-journey-${Date.now()}`,
     userId,
     destinationMapId,
-    routeMapIds: [map1, map2, map3], // เก็บ 3 ด่านเรียงกัน
+    routeMapIds: [destinationMapId],
     progressOnCurrentMapSteps: 0,
     startedAt: now.toISOString(),
-    deadlineAt: deadline.toISOString(),
+    deadlineAt: endOfTripDay(now).toISOString(),
     status: 'IN_PROGRESS',
   }
 }
@@ -65,41 +40,92 @@ function refreshStatus(journey: JourneyRecord, bmi: number): JourneyRecord {
   return status === journey.status ? journey : { ...journey, status }
 }
 
+/* ทริปที่จบแล้วแต่ยังไม่ได้กดรับรางวัล — เดิม getActiveJourney คืน null ทันทีที่ทริปจบ (หมดเวลา/เดินครบ
+   ตอนปิดแอป) หน้าสรุปผลจึงไม่เคยขึ้นและรางวัลตามสัดส่วนหายเงียบ เก็บไว้ในเครื่องจนกว่าจะกดรับ */
+const PENDING_CLAIM_KEY = 'bloom:journey-pending-claim'
+
+function readPendingClaim(): JourneyRecord | null {
+  try {
+    const raw = window.localStorage.getItem(PENDING_CLAIM_KEY)
+    return raw ? (JSON.parse(raw) as JourneyRecord) : null
+  } catch { return null }
+}
+
+function rememberPendingClaim(journey: JourneyRecord) {
+  try { window.localStorage.setItem(PENDING_CLAIM_KEY, JSON.stringify(journey)) } catch { /* ไม่มี storage */ }
+}
+
+/** เรียกหลังกดรับรางวัลทริปแล้ว (finish เควส) */
+export function clearPendingJourneyClaim() {
+  try { window.localStorage.removeItem(PENDING_CLAIM_KEY) } catch { /* ไม่มี storage */ }
+}
+
+/** ทริปที่กำลังเดิน หรือทริปที่จบแล้วแต่ยังไม่รับรางวัล (status ≠ IN_PROGRESS → หน้าเว็บโชว์หน้าสรุปผล) */
 export async function getActiveJourney(): Promise<JourneyRecord | null> {
+  const pending = readPendingClaim()
+  if (pending) {
+    // ของบัญชีอื่นที่เคยล็อกอินเครื่องนี้ — ทิ้ง ไม่โชว์รางวัลข้ามบัญชี
+    const currentUserId = JOURNEY_LOCAL_ONLY || API_MODE === 'mock' ? getDb().user.id : (await getCachedMe()).id
+    if (pending.userId === currentUserId) return pending
+    clearPendingJourneyClaim()
+  }
+
   if (JOURNEY_LOCAL_ONLY || API_MODE === 'mock') {
     await mockDelay(120)
     const db = getDb()
-    if (!db.activeJourney) return null
+    if (!db.activeJourney || db.activeJourney.status !== 'IN_PROGRESS') return null
     const refreshed = refreshStatus(db.activeJourney, db.user.bmi ?? 0)
-    return refreshed.status === 'IN_PROGRESS' ? refreshed : null
+    if (refreshed.status !== 'IN_PROGRESS') {
+      updateDb((d) => { d.activeJourney = refreshed })
+      rememberPendingClaim(refreshed)
+    }
+    return refreshed
   }
   const journey = await http.get<JourneyRecord | null>('/journeys/active')
   if (!journey) return null
   const refreshed = refreshStatus(journey, await liveBmi())
   if (refreshed.status === journey.status) return journey
-  // หมดเวลา/เดินถึงแล้วระหว่างที่ไม่ได้เปิดแอป — บันทึกสถานะจบให้ backend
-  await http.patch<JourneyRecord>(`/journeys/${journey.id}/steps`, { steps: 0, status: refreshed.status })
-  return null
+  // หมดเวลา/เดินถึงแล้วระหว่างที่ไม่ได้เปิดแอป — บันทึกสถานะจบให้ backend แล้วรอให้ผู้เล่นกดรับรางวัล
+  const ended = await http.patch<JourneyRecord>(`/journeys/${journey.id}/steps`, { steps: 0, status: refreshed.status })
+  rememberPendingClaim(ended)
+  return ended
+}
+
+/** ยกเลิกทริปที่เดินอยู่ (ปุ่ม "เปลี่ยนจุดหมาย") — เดิมแค่ล้าง state หน้าเว็บ ทริปฝั่ง backend ยัง
+ *  IN_PROGRESS อยู่ ทำให้ POST /journeys ถัดไปโดน 409 JOURNEY_IN_PROGRESS ปิดเป็น TIME_UP โดยไม่ให้รางวัล */
+export async function abandonJourney(journeyId: string): Promise<void> {
+  clearPendingJourneyClaim()
+  if (JOURNEY_LOCAL_ONLY || API_MODE === 'mock') {
+    await mockDelay(80)
+    updateDb((d) => {
+      if (d.activeJourney?.id === journeyId) d.activeJourney = { ...d.activeJourney, status: 'TIME_UP' }
+    })
+    return
+  }
+  await http.patch<JourneyRecord>(`/journeys/${journeyId}/steps`, { steps: 0, status: 'TIME_UP' })
 }
 
 export async function startJourney(destinationMapId: string): Promise<JourneyRecord> {
   if (JOURNEY_LOCAL_ONLY || API_MODE === 'mock') {
     await mockDelay()
     const db = updateDb((d) => {
-      // จำเป้าหมายทริปเก่าเอาไว้เป็นจุดเริ่มของทริปใหม่
-      const prevDest = d.activeJourney?.destinationMapId || null
-      d.activeJourney = createMockJourney(destinationMapId, d.user.id, prevDest)
+      d.activeJourney = createMockJourney(destinationMapId, d.user.id)
     })
     return db.activeJourney as JourneyRecord
   }
-  // สุ่มเส้นทาง 3 ด่านฝั่งหน้าเว็บ (แคตตาล็อกแผนที่อยู่ที่ journeyMaps.ts) แล้วให้ backend เก็บ
-  const { routeMapIds } = createMockJourney(destinationMapId, '', readLastDestination())
-  const journey = await http.post<JourneyRecord>('/journeys', { destinationMapId, routeMapIds })
-  rememberDestination(destinationMapId)
-  return journey
+  // [backend ต้องปรับ] deadline ของทริปรายวัน = สิ้นวัน (ดู docs/PROGRESSION_API.md)
+  return http.post<JourneyRecord>('/journeys', {
+    destinationMapId, routeMapIds: [destinationMapId], deadlineAt: endOfTripDay().toISOString(),
+  })
 }
 
 export async function addSteps(journeyId: string, steps: number): Promise<JourneyRecord> {
+  const updated = await sendSteps(journeyId, steps)
+  if (updated.status !== 'IN_PROGRESS') rememberPendingClaim(updated)
+  return updated
+}
+
+async function sendSteps(journeyId: string, steps: number): Promise<JourneyRecord> {
   if (JOURNEY_LOCAL_ONLY || API_MODE === 'mock') {
     await mockDelay()
     const db = updateDb((d) => {

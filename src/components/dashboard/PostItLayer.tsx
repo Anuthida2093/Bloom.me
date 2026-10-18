@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useNavSafeMaxY } from '../../hooks/useNavSafeMaxY'
 import type { PostItData } from '../../types'
 
 /*============================================================================*\
@@ -23,6 +24,9 @@ const DRAG_THRESHOLD_PX = 6
 const clamp = (v: number) => Math.min(96, Math.max(4, v))
 
 export default function PostItLayer({ postIts, onOpen, onMove }: PostItLayerProps) {
+  /** ห้ามโพสอิทลงไปอยู่ใต้แถบเมนูล่าง — เผื่อครึ่งความสูงโพสอิท (~44px) */
+  const maxY = useNavSafeMaxY(44)
+  const clampY = (v: number) => Math.min(maxY, Math.max(4, v))
   const dragRef = useRef<{ id: string; startX: number; startY: number; moved: boolean } | null>(null)
   /** ตำแหน่งระหว่างลาก (ยังไม่บันทึก) — ปล่อยนิ้วแล้วค่อยส่ง onMove ครั้งเดียว */
   const [dragPos, setDragPos] = useState<{ id: string; x: number; y: number } | null>(null)
@@ -31,7 +35,7 @@ export default function PostItLayer({ postIts, onOpen, onMove }: PostItLayerProp
 
   const toPercent = (clientX: number, clientY: number) => ({
     x: clamp((clientX / window.innerWidth) * 100),
-    y: clamp((clientY / window.innerHeight) * 100),
+    y: clampY((clientY / window.innerHeight) * 100),
   })
 
   const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>, p: PostItData) => {
@@ -70,7 +74,7 @@ export default function PostItLayer({ postIts, onOpen, onMove }: PostItLayerProp
       {postIts.map((p, i) => {
         const dragging = dragPos?.id === p.id
         const x = dragging ? dragPos.x : clamp(p.positionX)
-        const y = dragging ? dragPos.y : clamp(p.positionY)
+        const y = dragging ? dragPos.y : clampY(p.positionY)
         return (
           <button
             key={p.id}

@@ -23,7 +23,17 @@ import { usePrefersReducedMotion } from '../../hooks/useMediaQuery'
 import { useNotifications } from '../../hooks/useNotifications'
 import { usePersistentState } from '../../hooks/usePersistentState'
 import { sceneEnter } from '../../config/motion'
-import { EXP_PER_LEVEL, STACK_PER_VISUAL_LEVEL, type MbtiType, type QuestCategory, type PostItData } from '../../types'
+import { calculateVisualLevel } from '../../utils/progression'
+import { useProgressFeed } from '../../hooks/useProgressFeed'
+import ProgressFeedToasts from './ProgressFeedToasts'
+import HudDelta from './HudDelta'
+import TimeCapsuleReminder from './TimeCapsuleReminder'
+import CardDropPopup from './CardDropPopup'
+import LearningGiftPopup from './LearningGiftPopup'
+import RewardBurst from '../common/RewardBurst'
+import { useCalorieGoalReward } from '../../hooks/useCalorieGoalReward'
+import { HOME_WATERING_EVENT, takeNewWaterDrop } from '../../utils/waterPrompt'
+import { EXP_PER_LEVEL, type MbtiType, type QuestCategory, type PostItData } from '../../types'
 import type { LeaderboardPlayer } from '../../config/leaderboardData'
 import type { QuestTabId } from '../../config/questCatalog'
 import { BADGE_ICONS } from '../../config/iconAssets'
@@ -50,7 +60,14 @@ import PostItLayer from './PostItLayer'
 import HomeAmbience from './HomeAmbience'
 import OverCalorieNotice from './OverCalorieNotice'
 import PlantIntro from './PlantIntro'
-import { computeCalorieTarget, getOverCalorieStreak, MEALS_CHANGED_EVENT, OVER_CALORIE_STREAK_DAYS } from '../../utils/nutrition'
+import { OPEN_SHOP_ITEM_EVENT, USE_SPECIAL_DUST_EVENT } from '../../config/stepChest'
+import SpecialDustPouch from './SpecialDustPouch'
+import DoubleRewardChip from './DoubleRewardChip'
+import { useStepSettlement } from '../../hooks/useStepSettlement'
+import { useVideoStallGuard } from '../../hooks/useVideoStallGuard'
+import { homeBackgroundSrc } from '../../config/homeBackgrounds'
+import { computeCalorieTarget, getOverCalorieStreak, getVisibleRocks, MEALS_CHANGED_EVENT, OVER_CALORIE_STREAK_DAYS } from '../../utils/nutrition'
+import { posterOf } from '../../utils/videoPoster'
 const TreeSummaryModal = lazy(() => import('../tree/TreeSummaryModal'))
 // [ใหม่ — ฟีเจอร์สตอรี่] เดิมปุ่มนี้ชื่อ "โพสต์" (📝) เป็น placeholder ล้วนๆ (setInfoAlert
 // เฉยๆ) ตอนนี้เปลี่ยนเป็น "สตอรี่" เปิดหน้า Feed/Search/Activity/Profile ภายในตัวเองจริง
@@ -68,7 +85,7 @@ const BG_PARALLAX = 0.25
 export default function Dashboard() {
   const {
     userData, treeStats, inventoryData, placedItems,
-    isLoggedIn, isGuest, setLoggedIn,
+    isLoggedIn, isGuest, setLoggedIn, isLoadingUser,
     streakCelebrationDays, setStreakCelebrationDays,
     handleBuy, handleEquip, handleClaimStreakReward, updateProfile,
     changePassword, deleteAccount,
@@ -76,11 +93,11 @@ export default function Dashboard() {
 
   const {
     questLogs, moodEntries, journalEntries, treeGrowthPulse, hasSoot, completedQuestCount,
-    waterPulseKey, handleToggleQuest, markIncineratorFailed, triggerWateringEffect,
+    handleToggleQuest, markIncineratorFailed, moodCheckinStatus,
   } = useProgress()
 
   const { handleMoodSubmit, earnedBadges, postIts, movePostIt, archivePostIt } = useMental()
-  const { isMuted, toggleMute } = useAudio()
+  const { isMuted } = useAudio()
   const { t } = useLanguage()
 
   const {
@@ -117,6 +134,10 @@ export default function Dashboard() {
   /** [เพิ่มตามที่ระบุ — ปุ่มแจ้งเตือนใหม่] แผงเดียวกับ showTreeStats แต่คนละปุ่ม — ปิดกันเอง
    *  เสมอ (เปิดอันนึงต้องปิดอีกอันเสมอ) กันแผงสองอันซ้อนกันแน่นในคอลัมน์ขวาแคบๆ */
   const [showNotifications, setShowNotifications] = useState(false)
+  /** เล่นบัวรดน้ำ (เปลี่ยนค่า = เล่น 1 ครั้ง) — state ในหน้า Home เอง mount ใหม่ = 0 ไม่เล่นซ้ำ */
+  const [wateringKey, setWateringKey] = useState(0)
+  /** เปิดร้านค้าแล้วโฟกัสไอเทมนี้ทันที (กดไอเทมแลกซื้อจากคลังไอเทม) */
+  const [shopFocusItem, setShopFocusItem] = useState<string | null>(null)
 
   /* ความสูงจริงของแถบคะแนนด้านบน → --hud-h (จอเล็กใช้วางกระดานจัดอันดับ/ปุ่มขวาให้ต่ำกว่าแถบนี้
      ดู Dashboard.css) — วัดใหม่ทุกครั้งที่ขนาดเปลี่ยน เช่น ป้ายขึ้นบรรทัดใหม่บนจอแคบ */
@@ -135,13 +156,18 @@ export default function Dashboard() {
      คำนวณจากมื้ออาหารที่บันทึกในเควส "แคลอรี่ตาม BMI" (utils/nutrition.ts) — อัปเดตทันทีที่บันทึกมื้อ */
   const calorieTarget = computeCalorieTarget(userData)
   const [overCalorieStreak, setOverCalorieStreak] = useState(() => getOverCalorieStreak(userData.id, calorieTarget))
+  /** ก้อนหินจากการทานเกินเป้าติดกัน (utils/nutrition.ts → getVisibleRocks) */
+  const [visibleRocks, setVisibleRocks] = useState(() => getVisibleRocks(userData.id, calorieTarget))
   useEffect(() => {
-    const refresh = () => setOverCalorieStreak(getOverCalorieStreak(userData.id, calorieTarget))
+    const refresh = () => {
+      setOverCalorieStreak(getOverCalorieStreak(userData.id, calorieTarget))
+      setVisibleRocks(getVisibleRocks(userData.id, calorieTarget))
+    }
     refresh()
     window.addEventListener(MEALS_CHANGED_EVENT, refresh)
     return () => window.removeEventListener(MEALS_CHANGED_EVENT, refresh)
   }, [userData.id, calorieTarget])
-  const showOverCalorie = overCalorieStreak >= OVER_CALORIE_STREAK_DAYS
+  const showOverCalorie = overCalorieStreak >= OVER_CALORIE_STREAK_DAYS && visibleRocks > 0
   useEffect(() => {
     const el = hudRef.current
     if (!el) return
@@ -181,6 +207,9 @@ export default function Dashboard() {
     document.addEventListener('pointerdown', onPointerDown)
     return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [showTreeStats, showNotifications])
+  // ฟีดเลเวลอัป/ทำเควส/ปลดล็อกไอเทมของคนที่เราติดตาม — poll ทุก 15 วิ เฉพาะผู้ใช้ที่ล็อกอินจริง (guest ไม่มีคนติดตาม)
+  // toast ข่าวเพื่อนทีละอัน ข้างกระดานจัดอันดับ (ไม่เก็บลงแผงแจ้งเตือน 🔔)
+  const progressFeed = useProgressFeed(isLoggedIn && !isGuest, userData.id || null)
   const { items: notificationItems, unreadCount: unreadNotifCount, markAllSeen: markNotificationsSeen, markRead: markNotificationRead } = useNotifications()
   /** พาไปเปิดโพสต์ที่เกี่ยวข้องใน Story ตอนกดแจ้งเตือนไลค์/คอมเมนต์/แชร์ — ส่งต่อเป็น
    *  initialPostId ของ StoryOverlay (ดู handleOpenNotificationPost ด้านล่าง) */
@@ -196,6 +225,9 @@ export default function Dashboard() {
   const [infoAlert, setInfoAlert] = useState<string | null>(null)
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  // [แก้ตามที่ระบุ] วิดีโอพื้นหลังเลือกได้ในการตั้งค่า (เดิมชี้ไฟล์ hero-waterfall.mp4 ที่ถูกลบไปแล้ว → พื้นหลังไม่ขึ้น)
+  const bgSrc = homeBackgroundSrc(settings.homeBackground)
+  const bgVideo = useVideoStallGuard(videoRef, bgSrc)
 
   /* ลากฉากต้นไม้ซ้าย-ขวา → วิดีโอพื้นหลังเลื่อนตามช้ากว่า (BG_PARALLAX เท่า) ให้รู้สึกว่าฉากหลังอยู่ไกล
      วิดีโอกว้างขึ้นเท่าระยะที่ต้องเลื่อน (ไม่เห็นขอบว่าง) — ใส่ style ตรงที่ DOM ไม่ re-render ทั้งหน้า */
@@ -277,7 +309,7 @@ export default function Dashboard() {
     sync()
     document.addEventListener('visibilitychange', sync)
     return () => document.removeEventListener('visibilitychange', sync)
-  }, [anyModalOpen, reducedMotion])
+  }, [anyModalOpen, reducedMotion, bgSrc, bgVideo.failed])
 
   useEffect(() => {
     const days = userData.streak
@@ -418,15 +450,66 @@ export default function Dashboard() {
     setInfoAlert('ดาวน์โหลดรูปต้นไม้แล้ว! เอาไปแชร์ต่อได้เลย 🌳')
   }
 
-  /** [ใหม่] แปลงคะแนนสะสม 3 หมวดของ "คนอื่น" เป็น level ต้นไม้ — สูตรเดียวกับที่
-   *  UserContext ใช้แปลงของเราเอง (STACK_PER_VISUAL_LEVEL = 50 คะแนนต่อ 1 level) */
+  /** [ใหม่] แปลงคะแนนสะสม 3 หมวดของ "คนอื่น" เป็น level ต้นไม้ — สูตรเดียวกับ backend
+   *  (utils/progression.ts → calculateVisualLevel, 50 คะแนนต่อ 1 level ไม่มีเพดาน) */
   const viewingTreeStats = viewingPlayer ? {
-    trunkBranchLevel: Math.max(1, Math.floor(viewingPlayer.knowledgeStack / STACK_PER_VISUAL_LEVEL) + 1),
-    leafFlowerLevel: Math.max(1, Math.floor(viewingPlayer.emotionStack / STACK_PER_VISUAL_LEVEL) + 1),
-    grassSoilLevel: Math.max(1, Math.floor(viewingPlayer.healthStack / STACK_PER_VISUAL_LEVEL) + 1),
+    trunkBranchLevel: calculateVisualLevel(viewingPlayer.knowledgeStack),
+    leafFlowerLevel: calculateVisualLevel(viewingPlayer.emotionStack),
+    grassSoilLevel: calculateVisualLevel(viewingPlayer.healthStack),
   } : null
 
   const expIntoLevel = userData.exp % EXP_PER_LEVEL
+  // กลับมาเห็นหน้า Home (ไม่มีหน้าเควส/ป็อปอัปบัง) หลังได้หยดน้ำใหม่ → บัวรดน้ำครั้งเดียว แล้วล้างธง
+  const homeVisible = !anyModalOpen && !introPhase && !viewingPlayer && isLoggedIn
+  useEffect(() => {
+    if (!homeVisible) return
+    const id = window.setTimeout(() => { if (takeNewWaterDrop(userData.id)) setWateringKey((k) => k + 1) }, 400)
+    return () => window.clearTimeout(id)
+  }, [homeVisible, userData.id])
+  // เปิดแอป/กลับมาที่แอป → ปิดรอบเควสก้าวของวันก่อนหน้าที่ยังไม่ได้รับ (ตัดรอบเที่ยงคืนเวลาไทย)
+  useStepSettlement(isLoggedIn && !introPhase)
+  // เควสแคลอรี่: 18:00 แล้วกินครบเป้า → นับสำเร็จให้อัตโนมัติ + หน้าจอรับรางวัล
+  const calorieReward = useCalorieGoalReward(isLoggedIn && !introPhase && !viewingPlayer)
+  // ปุ่ม "แลกซื้อ" ในป็อปอัปการ์ดจากหีบสมบัติ (เควสก้าว) → ปิดหน้าเควส เปิดร้านที่ป็อปอัปสินค้านั้นทันที
+  useEffect(() => {
+    const onOpenShopItem = (e: Event) => {
+      const code = (e as CustomEvent<string>).detail
+      if (!code) return
+      setShopFocusItem(code)
+      closeModal('quests')
+      setQuestsInitialQuest(null)
+      openModal('shop')
+    }
+    window.addEventListener(OPEN_SHOP_ITEM_EVENT, onOpenShopItem)
+    return () => window.removeEventListener(OPEN_SHOP_ITEM_EVENT, onOpenShopItem)
+  }, [closeModal, openModal])
+  // [แก้ตามที่ระบุ] ปุ่ม "ใช้" ผงพิเศษในคลังไอเทม → ปิดทุกหน้าที่เปิดอยู่ กลับหน้า Home แล้วโชว์ถุงสีม่วง
+  const [showDustPouch, setShowDustPouch] = useState(false)
+  useEffect(() => {
+    const onUseDust = () => {
+      ALL_MODAL_KEYS.forEach((key) => closeModal(key))
+      setViewingPlayer(null)
+      setShowDustPouch(true)
+    }
+    window.addEventListener(USE_SPECIAL_DUST_EVENT, onUseDust)
+    return () => window.removeEventListener(USE_SPECIAL_DUST_EVENT, onUseDust)
+  }, [closeModal, setViewingPlayer])
+  // [แก้ตามที่ระบุ] รับรางวัลหยดน้ำ → ปิดทุกหน้า กลับหน้า Home แล้วเล่นบัวรดน้ำต้นไม้ทันที
+  // (ล้างธงหยดน้ำใหม่ด้วย — effect homeVisible ด้านบนจะได้ไม่เล่นซ้ำอีกรอบ)
+  useEffect(() => {
+    let timer = 0
+    const onWatering = () => {
+      ALL_MODAL_KEYS.forEach((key) => closeModal(key))
+      setViewingPlayer(null)
+      takeNewWaterDrop(userData.id)
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => setWateringKey((k) => k + 1), 450)
+    }
+    window.addEventListener(HOME_WATERING_EVENT, onWatering)
+    return () => { window.removeEventListener(HOME_WATERING_EVENT, onWatering); window.clearTimeout(timer) }
+  }, [closeModal, setViewingPlayer, userData.id])
+  /** ผู้ใช้ใหม่ที่ยังไม่เคยได้คะแนนสุขภาพกาย — พื้นเขียวเรียบ ไม่มีหญ้า/ดอก (ทำเควสสุขภาพแล้วค่อยงอก) */
+  const isNewGround = userData.healthStack <= 0
 
   /** [แก้ตามที่ระบุ] ไอคอนที่ไฮไลต์ใน ActionMenuBar ต้องอิงจาก modal ที่เปิดอยู่จริงเสมอ —
    *  ไม่ว่าจะถูกเปิดจากปุ่มไหนก็ตาม (กันปัญหาไอคอนค้าง/ไม่ตรงกับหน้าจอที่เห็นจริง)
@@ -445,11 +528,28 @@ export default function Dashboard() {
 
   return (
     <div className={`dashboard${introPhase === 'play' ? ' dashboard--intro' : introPhase === 'reveal' ? ' dashboard--intro-reveal' : ''}`}>
+      {/* นัดทบทวน "แคปซูลเวลา" ที่ถึงเวลาแล้ว — เด้งทันทีหลังล็อกอิน (เฉพาะบัญชีจริง ไม่ใช่ guest) */}
+      <CardDropPopup />
+      <LearningGiftPopup />
+      {showDustPouch && <SpecialDustPouch onClose={() => setShowDustPouch(false)} />}
+      {calorieReward.rewarded && (
+        <RewardBurst
+          key={calorieReward.rewarded.key}
+          onClose={calorieReward.dismiss}
+          items={[
+            { key: 'coins', image: BADGE_ICONS.coins, amount: `+${calorieReward.rewarded.coins}`, label: 'เหรียญ' },
+            { key: 'exp', image: BADGE_ICONS.exp, amount: `+${calorieReward.rewarded.exp}`, label: 'EXP' },
+          ]}
+        />
+      )}
+      <TimeCapsuleReminder userId={userData.id} enabled={!introPhase && isLoggedIn && !isGuest && !viewingPlayer} />
+      {!introPhase && <ProgressFeedToasts current={progressFeed.current} onDismiss={progressFeed.dismiss} soundEnabled={settings.soundEnabled && !isMuted} />}
       {introPhase && (
         <PlantIntro
           mbtiType={userData.mbtiType as MbtiType}
           trunkBranchLevel={treeStats.trunkBranchLevel}
           leafFlowerLevel={treeStats.leafFlowerLevel}
+          userSeed={userData.id || null}
           onReveal={() => setIntroPhase('reveal')}
           onDone={() => { window.setTimeout(finishIntro, 1200) }}
         />
@@ -458,24 +558,32 @@ export default function Dashboard() {
           (useIsLowPowerMode) แล้วไม่แสดงวิดีโอพื้นหลังเลย เหลือแค่พื้นไล่สี (.dashboard__bg-still) และไฟล์
           poster/webm ที่อ้างไว้ก็ไม่มีอยู่จริง — ตอนนี้แสดงวิดีโอทุกขนาดจอ (พื้นไล่สีอยู่ใต้ไว้ระหว่างโหลด)
           ผู้ใช้ที่ขอลดการเคลื่อนไหว: วิดีโอหยุดนิ่งที่เฟรมแรก (#t=0.1) ยังเห็นภาพพื้นหลังเหมือนเดิม */}
-      <div className="dashboard__bg-still" aria-hidden="true" />
-      <video
-        ref={videoRef}
-        className="dashboard__bg-video"
-        loop muted playsInline preload="auto"
-        aria-hidden="true"
-      >
-        <source src="/assets/videos/intro/hero-waterfall.mp4#t=0.1" type="video/mp4" />
-      </video>
+      {/* [1.5] พื้นนิ่ง = เฟรมแรกของวิดีโอพื้นหลังที่เลือก (โปสเตอร์) — เห็นฉากทันทีก่อนวิดีโอพร้อม */}
+      <div className="dashboard__bg-still" aria-hidden="true" style={{ ['--bg-poster' as string]: `url("${posterOf(bgSrc)}")` } as React.CSSProperties} />
+      {/* [แก้ตามที่ระบุ] เน็ตไม่ดี: วิดีโอจางเข้าเฉพาะตอนเล่นได้จริง กระตุกรอโหลด/โหลดไม่ได้ → เห็นพื้นนิ่งแทน ไม่ค้าง */}
+      {!bgVideo.failed && (
+        <video
+          key={bgSrc}
+          ref={videoRef}
+          className={`dashboard__bg-video${bgVideo.ready ? ' is-ready' : ''}`}
+          loop muted playsInline preload="auto"
+          aria-hidden="true"
+          onError={bgVideo.fail}
+        >
+          <source src={`${bgSrc}#t=0.1`} type="video/mp4" onError={bgVideo.fail} />
+        </video>
+      )}
 
       {/* ═══ HUD แคปซูลกลางจอ ชิดขอบบน (แบบ V1) ═══ */}
       {!viewingPlayer && (isLoggedIn || isGuest) && (
         <div className="game-top-hud" ref={hudRef}>
-          <div className="hud-pill">
+          <div className="hud-pill hud-pill--level">
+            {/* รูปเลเวล = Seed.png (EXP.png ใช้กับแถบ EXP ข้างๆ) */}
             <img src={BADGE_ICONS.seed} className="icon-img hud-icon" alt="" />
             <span>{userData.mbtiType} Lv.{userData.level}</span>
+            <HudDelta value={userData.level} ready={!isLoadingUser} format={() => 'Level up!'} />
           </div>
-          <div className="hud-pill">
+          <div className="hud-pill hud-pill--exp" title={`EXP ${expIntoLevel}/${EXP_PER_LEVEL}`}>
             <img src={BADGE_ICONS.exp} className="icon-img hud-icon" alt="" />
             <div className="hud-bar-container">
               <div className="hud-bar-bg">
@@ -487,11 +595,13 @@ export default function Dashboard() {
           <div className="hud-pill">
             <img src={BADGE_ICONS.coins} className="icon-img hud-icon" alt="" />
             <span>{userData.coins.toLocaleString()}</span>
+            <HudDelta value={userData.coins} ready={!isLoadingUser} />
           </div>
-          <div className="hud-pill">
+          <div className="hud-pill hud-pill--streak">
             <img src={BADGE_ICONS.streak} className="icon-img hud-icon" alt="" />
             <span>{userData.streak}d</span>
           </div>
+          <DoubleRewardChip />
         </div>
       )}
 
@@ -504,13 +614,14 @@ export default function Dashboard() {
       <div className="dashboard__tree-layer">
         {viewingPlayer && viewingTreeStats ? (
           <>
-            {/* [แก้ตามที่ระบุ] ปุ่มกลับบ้านใช้รูป Return + ป้ายชื่อแบบป้ายกระดานจัดอันดับ */}
-            <button className="dashboard__back-btn lb-banner" onClick={() => setViewingPlayer(null)}>
-              <img src={BADGE_ICONS.back} className="icon-img" alt="" /> กลับบ้าน
+            {/* [แก้ตามที่ระบุ] ปุ่มกลับบ้านเหลือแค่ไอคอน Return — ข้อความ "กลับบ้าน" ชนป้ายชื่อต้นไม้เพื่อนบนจอเล็ก */}
+            <button className="dashboard__back-btn lb-banner" onClick={() => setViewingPlayer(null)} aria-label="กลับบ้าน" title="กลับบ้าน">
+              <img src={BADGE_ICONS.back} className="icon-img" alt="" />
             </button>
             <div className="dashboard__viewing-name-pill lb-banner">ต้นไม้ของ {viewingPlayer.username}</div>
             <ErrorBoundary scope="ต้นไม้">
               <TreeOfLife
+                userSeed={viewingPlayer.id}
                 mbtiType={viewingPlayer.mbtiType as MbtiType}
                 onTreeClick={() => { setHiddenFriendCardId(viewingPlayer.id); setShowTreeSummary(true) }}
                 groundRocks={(viewingPlayer.overCalorieDays ?? 0) >= OVER_CALORIE_STREAK_DAYS ? Math.min(6, viewingPlayer.overCalorieDays ?? 0) : 0}
@@ -530,6 +641,8 @@ export default function Dashboard() {
           <div ref={treeCaptureRef} className="dashboard__tree-capture-target">
             <ErrorBoundary scope="ต้นไม้">
               <TreeOfLife
+                userSeed={userData.id || null}
+                bareGround={isNewGround}
                 mbtiType={userData.mbtiType as MbtiType}
                 trunkBranchLevel={treeStats.trunkBranchLevel}
                 leafFlowerLevel={treeStats.leafFlowerLevel}
@@ -540,8 +653,9 @@ export default function Dashboard() {
                 placedItems={placedItems}
                 decorationPositions={decorationPositions}
                 onDecorationMove={updateDecorationPosition}
+                onDecorationStore={handleEquip}
                 onTreeClick={() => { setShowTreeStats(false); setShowNotifications(false); setShowTreeSummary(true) }}
-                groundRocks={showOverCalorie ? Math.min(6, overCalorieStreak) : 0}
+                groundRocks={visibleRocks}
                 growthPulse={anyModalOpen ? null : treeGrowthPulse}
                 hasSoot={hasSoot}
                 daysSinceLastOracle={daysSinceLastOracle}
@@ -552,10 +666,9 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* [เพิ่มรอบนี้ — เควส "แคลอรี่ตาม BMI"] แอนิเมชันบัวรดน้ำ — เล่นเองตอนกลับมาที่นี่
-            หลังปิดเควสสำเร็จ (เช็ค treeGrowthPulse.questCode ในตัวคอมโพเนนต์เอง) ไม่โชว์ตอน
-            กำลังดูต้นไม้ของคนอื่น (viewingPlayer) เพราะ pulse เป็นของบัญชีเราเองเสมอ */}
-        {!viewingPlayer && <WateringCanFx pulse={anyModalOpen ? null : treeGrowthPulse} waterPulseKey={waterPulseKey} />}
+        {/* แอนิเมชันบัวรดน้ำ — เล่นครั้งเดียวเมื่อกลับมาหน้า Home หลังได้หยดน้ำใหม่ หรือหลังกดรดน้ำในเช็คอิน
+            (wateringKey — ดู homeVisible effect ด้านบน) ไม่โชว์ตอนดูต้นไม้ของคนอื่น */}
+        {!viewingPlayer && <WateringCanFx waterPulseKey={wateringKey} />}
 
         {/* [แก้ตามที่ระบุ] โพสอิทลอยบนจอ — ขึ้นกลางต้นไม้ ลากไปวางตรงไหนก็ได้ (ดู PostItLayer.tsx) */}
         {!viewingPlayer && <PostItLayer postIts={postIts} onOpen={setOpenPostIt} onMove={movePostIt} />}
@@ -586,7 +699,9 @@ export default function Dashboard() {
       )}
 
       {/* ═══ ปุ่มลอยขวา: Tree Stats / Mood / Sound (แบบ V1) — หรือการ์ดข้อมูลต้นไม้เพื่อนตอนดูคนอื่น ═══ */}
-      <div className="dashboard__right-cluster">
+      {/* [แก้ตามที่ระบุ] เปิดแผงข้อมูลต้นไม้/แจ้งเตือน → ยกทั้งคลัสเตอร์ขึ้นเหนือ HUD ให้แผงทับแถบคะแนนด้านบน
+          (แบบเดียวกับแผงข้อมูล MBTI) — แผงเป็น position:fixed ในคลัสเตอร์ z-index 60 จึงเคยอยู่ใต้ HUD (90) */}
+      <div className={`dashboard__right-cluster${!viewingPlayer && (showTreeStats || showNotifications) ? ' dashboard__right-cluster--panel-open' : ''}`}>
         {viewingPlayer ? (
           <>
             {hiddenFriendCardId !== viewingPlayer.id && (
@@ -669,9 +784,7 @@ export default function Dashboard() {
                 <img src={BADGE_ICONS.notification} className="icon-img" alt="" />
                 {unreadNotifCount > 0 && <span className="nav-badge">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
               </button>
-              <button className="game-icon-btn sound-btn" onClick={toggleMute} title={isMuted ? 'เปิดเสียง' : 'ปิดเสียง'}>
-                {isMuted ? '🔇' : '🔊'}
-              </button>
+              {/* [แก้ตามที่ระบุ] เอาปุ่มเปิด/ปิดเสียงออกจากหน้า Home (รวมหน้าต้นไม้เพื่อน) — ปิดเสียงได้ที่หน้าตั้งค่า */}
               {/* [ใหม่ — ตามที่ระบุ] กล่องพยาบาลลอย — โผล่เองเฉพาะตอนตรวจพบอารมณ์กลุ่มลบติดต่อกัน
                   ≥3 วัน (ดู MedicalBoxAlert.tsx) คืน null เงียบๆ ถ้ายังไม่เข้าเงื่อนไข */}
               <MedicalBoxAlert moodEntries={moodEntries} onOpenMentalQuests={() => handleOpenQuestCategory('mental')} />
@@ -756,7 +869,7 @@ export default function Dashboard() {
         <Suspense fallback={null}>
           <AnimatePresence>
             <m.div key="shop" className="dashboard__modal-layer" {...sceneEnter}>
-              <ShopSection coins={userData.coins} inventoryData={inventoryData} onBuy={handleBuy} onEquip={handleEquip} onClose={() => closeModal('shop')} />
+              <ShopSection coins={userData.coins} inventoryData={inventoryData} onBuy={handleBuy} onEquip={handleEquip} initialItemId={shopFocusItem} onClose={() => { setShopFocusItem(null); closeModal('shop') }} />
             </m.div>
           </AnimatePresence>
         </Suspense>
@@ -775,6 +888,7 @@ export default function Dashboard() {
                 earnedBadges={earnedBadges}
                 onPlace={handleEquip}
                 onClose={() => closeModal('profile')}
+                onOpenShopItem={(itemId) => { setShopFocusItem(itemId); closeModal('profile'); openModal('shop') }}
               />
             </m.div>
           </AnimatePresence>
@@ -818,7 +932,8 @@ export default function Dashboard() {
             <m.div key="mood" className="dashboard__modal-layer" {...sceneEnter}>
               {/* [แก้ตามที่ระบุ] กด "รดน้ำต้นไม้" หลังเช็คอินเสร็จ → บัวรดน้ำขึ้นมารดน้ำต้นไม้ทันที */}
               <MoodCheckIn
-                onSubmit={async (mood, subMood, text) => { await handleMoodSubmit(mood, subMood, text); triggerWateringEffect() }}
+                checkinStatus={moodCheckinStatus}
+                onSubmit={async (mood, subMood, text) => { await handleMoodSubmit(mood, subMood, text); setWateringKey((k) => k + 1) }}
                 onSkip={() => closeModal('moodCheckin')}
               />
             </m.div>

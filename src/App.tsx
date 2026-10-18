@@ -7,6 +7,8 @@ import { AudioProvider } from './context/AudioContext'
 import { LanguageProvider } from './context/LanguageContext'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import RouteFallback from './components/common/RouteFallback'
+import RequireSession from './components/common/RequireSession'
+import RouteEffects from './components/common/RouteEffects'
 import { ApiError } from './services/http'
 
 /*============================================================================*\
@@ -38,6 +40,10 @@ const Dashboard = lazy(() => import('./components/dashboard/Dashboard'))
 const ProceduralTreePage = import.meta.env.DEV
   ? lazy(() => import('./experiments/procedural-tree/ProceduralTreePage'))
   : null
+// [ใหม่] เครื่องมือปักจุดเส้นทางเควสก้าว — เฉพาะตอน dev (ไม่ถูก bundle ใน build จริง)
+const WaypointEditorPage = import.meta.env.DEV
+  ? lazy(() => import('./experiments/waypoints/WaypointEditorPage'))
+  : null
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,6 +69,7 @@ export default function App() {
           <AudioProvider>
             <LazyMotion features={domAnimation}>
               <ErrorBoundary scope="แอปพลิเคชัน">
+                <RouteEffects />
                 <Suspense fallback={<RouteFallback />}>
                   <Routes>
                     <Route path="/" element={<WelcomeModal />} />
@@ -75,11 +82,14 @@ export default function App() {
                       path="/dashboard"
                       element={
                         <ErrorBoundary scope="หน้าหลัก">
-                          <Dashboard />
+                          <RequireSession>
+                            <Dashboard />
+                          </RequireSession>
                         </ErrorBoundary>
                       }
                     />
                     {ProceduralTreePage && <Route path="/dev/procedural-tree" element={<ProceduralTreePage />} />}
+                    {WaypointEditorPage && <Route path="/dev/waypoints" element={<WaypointEditorPage />} />}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Suspense>

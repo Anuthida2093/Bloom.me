@@ -106,10 +106,12 @@ export const KNOWLEDGE_DAILY: QuestDef[] = [
   },
   {
     code: 'know-deep-root', icon: '🌿', title: 'The Deep Root', titleTh: 'หยั่งรากลึก / โหมดจดจ่อ',
-    desc: 'จดจ่อกับงาน 90 นาทีเต็มโดยไม่ถูกรบกวน แล้วพักสมอง 15-20 นาที',
-    howTo: 'ตั้งเวลา 90 นาทีทำงาน/อ่านหนังสือแบบ Deep Work ห้ามวอกแวก ครบเวลาแล้วพักทันที 15-20 นาที ต้องพักสมองจริงๆ (หลับตา เดินเล่น) ห้ามเล่นมือถือ',
+    desc: 'จดจ่อ 90 นาที + พัก 15 นาที = 1 รอบ (วันละไม่เกิน 3 รอบ) — จบรอบแรกปลดล็อกเทกระเป๋าความจำ ครบ 3 รอบรับรางวัลพิเศษ',
+    howTo: 'อ่านหนังสือหรือทำงานแบบ Deep Work 90 นาที ห้ามวอกแวก แล้วพักสมองจริงๆ 15 นาที (หลับตา เดินเล่น ห้ามเล่นมือถือ) นับเป็น 1 รอบ — จบรอบแรก "เทกระเป๋าความจำผ่านเสียง" เล่นได้ทันที และกลับมาเล่นโหมดจดจ่อต่อได้อีกจนครบ 3 รอบของวัน (ครบ 3 รอบไม่กดข้าม ได้รางวัลพิเศษ: การ์ดแลกซื้อหรือเหรียญโบนัส) · โหมดปกติกดข้ามได้หลังจดจ่อครบ 45 นาที แต่ได้รางวัลครึ่งเดียว',
     theory: '90/20 Rule · Ultradian Rhythms (Psomas, 2021)',
-    category: 'KNOWLEDGE', controlType: 'TIMER', coinReward: 50, expReward: 40, isDaily: true,
+    // [แก้ตามที่ระบุ — Focus Mode] 1 รอบ (90+15) = ทำสำเร็จ 1 ครั้ง วันละไม่เกิน 3 ครั้ง — backend รองรับ
+    // Quest.maxPerDay + QuestLog.sequenceInDay อยู่แล้ว (seed ต้องตั้ง maxPerDay: 3 ให้ deep-root — ดู docs/PROGRESSION_API.md)
+    category: 'KNOWLEDGE', controlType: 'TIMER', coinReward: 50, expReward: 40, isDaily: true, maxPerDay: 3,
     gameKey: 'deep-root', energyLevel: 'HIGH', requiresQuestIds: ['know-active-focus'],
   },
   {
@@ -133,8 +135,10 @@ export const KNOWLEDGE_DAILY: QuestDef[] = [
     desc: 'ตอบคำถามสั้นๆ 5 ข้อประเมินผลการเรียนรู้ นำคะแนนไปรดน้ำต้นไม้',
     howTo: 'ให้คะแนน 5 ด้าน: ความชัดเจนของเป้าหมาย, การจดจ่อ, ความพยายามดึงข้อมูล, การพักผ่อนสมอง, ความพึงพอใจในการเติบโต — ตอบครบ 5 ข้อ บัวรดน้ำจะเทน้ำลงลำต้นพร้อมเอฟเฟกต์แสงวิบวับ',
     theory: 'Deliberate Practice · Ultradian Rhythms · Growth Mindset',
+    // [แก้บั๊ก] เดิม isLocked + unlockAfterQuestCount: 2 = ทำด่านไหนก็ได้ 2 ด่านแล้วด่านสุดท้ายปลดล็อกเลย
+    // (ข้ามด่าน 3-4 ได้) ตอนนี้ต้องผ่านด่านก่อนหน้า (ผสมเกสรข้ามศาสตร์) ตามลำดับเหมือนด่านอื่น
     category: 'KNOWLEDGE', controlType: 'PROGRESS_BAR', coinReward: 60, expReward: 50, isDaily: true,
-    isLocked: true, unlockAfterQuestCount: 2, gameKey: 'daily-checkin', energyLevel: 'LOW',
+    requiresQuestIds: ['know-cross-pollination'], gameKey: 'daily-checkin', energyLevel: 'LOW',
   },
 ]
 
@@ -151,26 +155,30 @@ export const KNOWLEDGE_SIDE: QuestDef[] = [
     // ContentReviewGame.tsx (เลือกวันเดียวทบทวนเป้าหมาย Active Focus ของวันนี้ 1-30 วันข้างหน้า
     // ตรงกับ backend config: minDaysAhead:1, maxDaysAhead:30)
     code: 'know-content-review', icon: '📅', title: 'Time Capsule', titleTh: 'แคปซูลเวลา',
-    desc: 'เลือกวันที่อยากกลับมาทบทวนเป้าหมายวันนี้ ระบบจะเตือนเมื่อถึงวันนั้น',
+    desc: 'ปลดล็อกเมื่อทำ "เทกระเป๋าความจำผ่านเสียง" สำเร็จ — ตั้งวัน-เวลากลับมาทบทวน ระบบเตือนเมื่อถึงเวลา',
     howTo: 'เลือกวันในอนาคต (1-30 วันข้างหน้า) ที่อยากกลับมาทบทวนเป้าหมาย/สิ่งที่ตั้งใจไว้วันนี้อีกครั้ง — ยิ่งเว้นระยะห่างพอดีกับจังหวะที่สมองกำลังจะลืม ยิ่งจำได้แม่นยำและนานขึ้น',
     theory: 'Spacing Effect (Cepeda et al., 2008)',
-    category: 'KNOWLEDGE', controlType: 'CALENDAR', coinReward: 40, expReward: 30, isDaily: false,
-    gameKey: 'content-review', energyLevel: 'LOW',
+    // isDaily: ตั้งแคปซูลใหม่ได้วันละครั้ง (หลังเทกระเป๋าความจำของวันนั้น) — เดิม false = ทำได้ครั้งเดียวตลอดชาติ
+    category: 'KNOWLEDGE', controlType: 'CALENDAR', coinReward: 40, expReward: 30, isDaily: true,
+    gameKey: 'content-review', energyLevel: 'LOW', requiresQuestIds: ['know-brain-dump'],
   },
   {
     code: 'know-guardian-of-rest', icon: '🛡️', title: 'Guardian of Rest', titleTh: 'ผู้พิทักษ์การพักผ่อน',
-    desc: 'ระบบตรวจจับอัตโนมัติ: ฝึกหนักเกิน 4-5 ชม./วัน ต้นไม้จะเริ่มไหม้เกรียม',
+    desc: 'พักผ่อนให้ครบ 15 นาทีหลังจดจ่อแต่ละรอบ แล้วกดรับรางวัลได้วันละครั้ง — ฝึกหนักเกิน 4-5 ชม./วัน ต้นไม้จะเริ่มไหม้เกรียม',
     howTo: 'บังคับหยุดฝึกเมื่อครบโควตา 4-5 ชั่วโมงของการฝึกหนักต่อวัน หากฝืนทำต่อ ต้นไม้จะเฉา (Burnout) — ทำงานอัตโนมัติจากเวลาสะสม',
     theory: 'Deliberate Practice — ขีดจำกัดการฝึกฝน 4-5 ชม./วัน',
-    category: 'KNOWLEDGE', coinReward: 30, expReward: 20, isDaily: false, isPassive: true,
-    gameKey: 'guardian-of-rest', energyLevel: 'LOW',
+    // ปลดล็อกเมื่อจบโหมดจดจ่อรอบแรกของวันนี้ (requiresQuestIds)
+    // [แก้ตามที่ระบุ] จ่ายรางวัลเมื่อพักครบ 15 นาทีเต็ม (utils/restLog.ts) — กดรับในหน้าเควส วันละครั้ง
+    category: 'KNOWLEDGE', coinReward: 30, expReward: 20, isDaily: true, isPassive: true,
+    gameKey: 'guardian-of-rest', energyLevel: 'LOW', requiresQuestIds: ['know-deep-root'],
   },
   {
     code: 'know-ten-year-forest', icon: '🏕️', title: 'Ten-Year Forest', titleTh: 'ป่าแห่งสิบปี',
-    desc: 'ปฏิทิน Streak วันต่อวัน — เข้าแอปต่อเนื่องทุกวัน ลำต้นเพิ่มวงปีใหม่',
+    desc: 'ปฏิทิน Streak วันต่อวัน — เข้าแอปต่อเนื่องครบ 21 วัน กดรับรางวัลได้วันละครั้ง',
     howTo: 'รักษาความต่อเนื่อง (login streak) ของการฝึกฝน ไม่จำเป็นต้องเยอะ แต่ต้องไม่ขาด',
     theory: 'The 10-Year Rule (Ericsson et al., 1993)',
-    category: 'KNOWLEDGE', coinReward: 20, expReward: 15, isDaily: false, isPassive: true,
+    // [แก้ตามที่ระบุ] รับรางวัลได้วันละครั้ง (isDaily) เมื่อ streak ต่อเนื่อง ≥ 21 วัน — เดิมไม่มีทางรับรางวัลเลย
+    category: 'KNOWLEDGE', coinReward: 20, expReward: 15, isDaily: true, isPassive: true,
     gameKey: 'ten-year-forest', energyLevel: 'LOW',
   },
 ]
@@ -227,8 +235,8 @@ export const PHYSICAL_DAILY: QuestDef[] = [
     // ซ้ำได้อีกเลยหลังสำเร็จครั้งแรก (ดูสรุปท้ายบทสนทนา) — ไม่มี maxPerDay ตัวนี้ผู้เล่นจะเดินได้
     // แค่ทริปเดียวตลอดชาติ เล่นซ้ำไม่ได้อีกเลยหลังถึงจุดหมายครั้งแรก
     code: 'phys-vitality-steps', icon: '🦶', title: 'Vitality Steps', titleTh: 'ก้าวเพื่อสุขภาพ',
-    desc: 'เลือกแผนที่ปลายทางที่อยากไปถึง แล้วเดินสะสมก้าวจริงพาตัวละครไปให้ถึง',
-    howTo: 'เลือกแผนที่จุดหมาย 1 ใบจาก 8 ใบ แล้วเดินสะสมก้าวไปเรื่อยๆ (ซิงก์จากเซ็นเซอร์/Health app หรือกรอกเอง) ตัวละครจะเดินตามเส้นทางบนแผนที่ตามสัดส่วนก้าวที่เดินได้ ถึงจุดหมายก่อนหมดเวลาที่ให้ไว้เพื่อรับรางวัล',
+    desc: 'ทริปรายวัน: เลือกแผนที่ 1 ใบ เดินให้ถึงเป้าก้าววันนี้ตาม BMI พาตัวละครไปถึงปลายทาง',
+    howTo: 'เลือกแผนที่ 1 ใบจาก 8 ใบสำหรับวันนี้ แล้วเดินสะสมก้าว (ซิงก์จาก Google Fit/Apple Health/เซนเซอร์ หรือกรอกเอง) ตัวละครเดินตามเส้นทางตามก้าวที่เดินได้ ถึงเป้าแล้วเปิดหีบสมบัติที่เส้นชัย (วันละ 1 ใบ) แล้วรับรางวัลวันนี้ — ตัดรอบเที่ยงคืน ถ้าลืมกดรับ ระบบสรุปรางวัลให้ตอนเปิดแอปครั้งถัดไป — เดินครบเป้าสะสม 21 วันขึ้นไป มีโอกาสได้ไอเทมแลกซื้อของพิเศษ/หายาก',
     theory: 'Physical Activity Guidelines — เดิน 8,000+ ก้าว/วัน ลดความเสี่ยงโรคหัวใจและเบาหวานชนิดที่ 2 ได้อย่างมีนัยสำคัญ',
     category: 'HEALTH', controlType: 'STEP_JOURNEY', coinReward: 60, expReward: 50, isDaily: false,
     gameKey: 'step-journey', energyLevel: 'LOW', maxPerDay: 1, isRepeatable: true,
@@ -239,7 +247,7 @@ export const PHYSICAL_DAILY: QuestDef[] = [
   {
     code: 'phys-balanced-nutrients', icon: '🍽️', title: 'Balanced Nutrients', titleTh: 'แคลอรี่ตาม BMI',
     desc: 'ถ่ายรูปมื้ออาหาร ให้ระบบช่วยดูแลเป้าหมายแคลอรี่ตามรูปร่างของคุณ',
-    howTo: 'ถ่ายรูปมื้ออาหารก่อนทานทุกมื้อ (ครบ 3 มื้อ/วันถือว่าสำเร็จ) ระบบจะคำนวณเป้าหมายแคลอรี่วันนี้ให้จาก BMI ของคุณ และช่วยตรวจสอบรูปเบื้องต้น',
+    howTo: 'ถ่ายรูปมื้ออาหารก่อนทานทุกมื้อ (ครบ 3 มื้อ/วันถือว่าสำเร็จ) ระบบจะคำนวณเป้าหมายแคลอรี่วันนี้ให้จาก BMI ของคุณ และช่วยตรวจสอบรูปเบื้องต้น — ถึง 18:00 แล้วกินครบเป้าแคลอรี่ของวัน รับรางวัลให้อัตโนมัติ',
     theory: 'Mifflin-St Jeor Equation (TDEE) ปรับตามเกณฑ์ BMI — ต่ำ/ปกติ/เกิน กำหนดส่วนเกิน/สมดุล/ส่วนขาดของพลังงานที่ต่างกัน',
     category: 'HEALTH', controlType: 'PHOTO', coinReward: 40, expReward: 30, isDaily: true,
     energyLevel: 'LOW',

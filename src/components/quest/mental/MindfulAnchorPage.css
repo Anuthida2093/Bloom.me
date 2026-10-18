@@ -114,7 +114,7 @@
 }
 
 .mindful-anchor__anchor-icon {
-  font-size: 46px;
+  width: 104px; height: 104px; object-fit: contain; display: block; margin: 0 auto;
   filter: drop-shadow(0 6px 18px var(--anchor-glow));
   animation: anchorSway 5.5s ease-in-out infinite;
 }

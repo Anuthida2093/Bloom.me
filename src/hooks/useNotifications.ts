@@ -6,6 +6,9 @@ import { usePosts } from '../context/PostContext'
 import { ALL_QUESTS, QUEST_CATALOG_BY_TAB, findQuestByCode, CATEGORY_TO_TAB, type QuestTabId } from '../config/questCatalog'
 import { BADGE_ICONS, QUEST_ICONS } from '../config/iconAssets'
 import type { ActivityItem } from '../types'
+import { describeStepChest } from '../config/stepChest'
+import { readStepSettlements, STEP_SETTLED_EVENT, type StepSettlementRecord } from '../services/stepSettlement'
+import { localDateKey } from '../services/api/progression.api'
 
 /*============================================================================*\
   useNotifications — [ไฟล์ใหม่ตามที่ระบุ] แจ้งเตือนรวม "แบบ derived" ล้วนๆ
@@ -32,9 +35,11 @@ import type { ActivityItem } from '../types'
      - เควสเสริม/ด่านถัดไปเปิดให้เล่นได้แล้ว (QUEST_UNLOCKED)
      - เพื่อน (คนที่เราติดตาม) โพสต์สตอรี่ใหม่ (FRIEND_STORY)
      - กิจกรรมบนสตอรี่ของเรา: ติดตาม/ไลค์/คอมเมนต์/แชร์ (NEW_FOLLOWER ฯลฯ)
-     - ถึงเวลาทำเควสนั้นๆ ของวันนี้แล้วแต่ยังไม่ได้ทำ (QUEST_REMINDER — ดู QUEST_REMINDERS) */
+     - ถึงเวลาทำเควสนั้นๆ ของวันนี้แล้วแต่ยังไม่ได้ทำ (QUEST_REMINDER — ดู QUEST_REMINDERS)
+     - ผลสรุปรางวัลก้าวเพื่อสุขภาพของเมื่อวาน ที่ระบบปิดรอบให้ตอนเปิดแอป (STEP_SETTLEMENT — services/stepSettlement.ts)
+   ข่าวเพื่อน (ทำภารกิจสำเร็จ/เลเวลอัป) เป็น toast ชั่วคราวข้างกระดานจัดอันดับเท่านั้น ไม่อยู่ในแผงนี้ */
 export type NotificationKind =
-  | 'QUEST_UNLOCKED' | 'QUEST_REMINDER' | 'FRIEND_STORY'
+  | 'QUEST_UNLOCKED' | 'QUEST_REMINDER' | 'FRIEND_STORY' | 'STEP_SETTLEMENT'
   | 'NEW_FOLLOWER' | 'LIKE_POST' | 'COMMENT_POST' | 'SHARED_POST_TO_YOU'
 
 /** เวลาเตือนให้ทำเควสแต่ละอันของวัน (ชั่วโมง:นาที) — เตือนเมื่อถึงเวลาแล้วและวันนี้ยังไม่ได้ทำ */
@@ -84,6 +89,20 @@ const ACTIVITY_ICON: Record<ActivityItem['type'], { icon: string; isImage: boole
   SHARED_POST_TO_YOU: { icon: BADGE_ICONS.share, isImage: true },
 }
 
+/** "ผลสรุปรางวัลก้าวเพื่อสุขภาพเมื่อวาน: เดินได้ 8,420 ก้าว ถึงเป้า ✅ · EXP +84 · เหรียญ +42 · หยดน้ำ +20 · หีบสมบัติ: …" */
+function settlementText(r: StepSettlementRecord, now: Date): string {
+  const yesterday = localDateKey(new Date(now.getTime() - 24 * 60 * 60 * 1000))
+  const when = r.date === yesterday
+    ? 'เมื่อวาน'
+    : `วันที่ ${new Date(`${r.date}T00:00:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}`
+  const parts = [
+    `เดินได้ ${r.steps.toLocaleString()} ก้าว ${r.goalMet ? 'ถึงเป้า ✅' : `(เป้า ${r.goal.toLocaleString()})`}`,
+    `EXP +${r.exp}`, `เหรียญ +${r.coins}`, `หยดน้ำ +${r.waterDrops}`,
+    ...(r.chest ? [describeStepChest(r.chest)] : []),
+  ]
+  return `ผลสรุปรางวัลก้าวเพื่อสุขภาพ${when}: ${parts.join(' · ')}`
+}
+
 function activityText(item: ActivityItem): string {
   switch (item.type) {
     case 'NEW_FOLLOWER': return `${item.actorName} เริ่มติดตามคุณ`
@@ -102,6 +121,13 @@ export function useNotifications() {
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 60_000)
     return () => window.clearInterval(id)
+  }, [])
+  // ระบบเพิ่งปิดรอบเควสก้าวเมื่อวานให้ → อ่านผลสรุปใหม่ (เก็บในเครื่อง ไม่ได้อยู่ใน state ของ React)
+  const [settledVersion, setSettledVersion] = useState(0)
+  useEffect(() => {
+    const onSettled = () => setSettledVersion((v) => v + 1)
+    window.addEventListener(STEP_SETTLED_EVENT, onSettled)
+    return () => window.removeEventListener(STEP_SETTLED_EVENT, onSettled)
   }, [])
   const [lastSeenAt, setLastSeenAt] = usePersistentState<string>('notif-last-seen', new Date(0).toISOString())
   /** รายการที่กดเปิดอ่านแล้ว (เก็บล่าสุดไม่เกิน 200 id) */
@@ -188,6 +214,16 @@ export function useNotifications() {
       })
     }
 
+    // ผลสรุปรางวัลก้าวของวันก่อนหน้า (ปิดรอบอัตโนมัติ) — ขึ้นตอนเช้า (notifyAt) ไม่ใช่ตอนตีหนึ่งที่ปิดรอบ
+    for (const r of readStepSettlements(userData.id)) {
+      if (r.notifyAt > now.toISOString()) continue
+      const stepIcon = QUEST_ICONS['phys-vitality-steps']
+      list.push({
+        id: `step-settle-${r.date}`, kind: 'STEP_SETTLEMENT', icon: stepIcon ?? '🦶', iconIsImage: !!stepIcon,
+        text: settlementText(r, now), createdAt: r.notifyAt,
+      })
+    }
+
     // สตอรี่ใหม่จากเพื่อน (คนที่เราติดตาม) — โพสต์ไม่ระบุตัวตนไม่นับ (ไม่รู้ว่าใครโพสต์)
     for (const post of posts) {
       if (post.isAnonymous || post.userId === userData.id || !isFollowing(post.userId)) continue
@@ -200,7 +236,9 @@ export function useNotifications() {
     }
 
     return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  }, [activity, questLogs, posts, userData.id, isFollowing, nowMs])
+    // settledVersion: อ่านผลสรุปจาก localStorage ใหม่เมื่อระบบเพิ่งปิดรอบ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activity, questLogs, posts, userData.id, isFollowing, nowMs, settledVersion])
 
   const unreadCount = useMemo(
     () => items.filter((n) => n.createdAt > lastSeenAt).length,

@@ -53,7 +53,7 @@ import GenericConfirmGame from '../components/quest/games/GenericConfirmGame'
   เปลี่ยนมาผ่าน registry ปกติแล้ว เพราะเนื้อหาใหม่ (เลือกแผนที่ปลายทาง 8 ใบ + เดินตามก้าวจริง)
   ไม่จำเป็นต้องมีฉาก/วิดีโอพื้นหลังเป็นของตัวเองอีกต่อไป อยู่ใน .game-shell__stage ได้พอดี —
   ตัด 'phys-vitality-steps' ออกจาก SPECIAL_QUEST_CODES ใน questCatalog.ts แล้วด้วย
-  VitalityStepsQuest.tsx เดิม (เลิกใช้แล้วตั้งแต่รอบก่อน) ยังไม่ได้ลบไฟล์ทิ้ง
+  VitalityStepsQuest.tsx เดิม (เลิกใช้แล้ว) ลบไฟล์ทิ้งแล้ว
 \*============================================================================*/
 
 export const QUEST_GAME_REGISTRY: Record<string, ComponentType<QuestGameProps>> = {

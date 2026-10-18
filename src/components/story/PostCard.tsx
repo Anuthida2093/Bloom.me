@@ -10,7 +10,9 @@ import EditPostModal from './EditPostModal'
 import { MOOD_TYPE_INFO } from '../../config/moodTypes'
 import { postImages } from '../../types'
 import PostImageCarousel from './PostImageCarousel'
-import { HeartLeafIcon, CommentIcon, ShareIcon } from './storyIcons'
+import { HeartLeafIcon, CommentIcon, ShareIcon, BookmarkIcon, VerifiedBadge } from './storyIcons'
+import { BADGE_ICONS } from '../../config/iconAssets'
+import { useSavedPost } from '../../utils/savedPosts'
 
 /*============================================================================*\
   PostCard — [แก้รอบนี้] การ์ดโพสต์ที่ใช้ซ้ำทุกที่ (ฟีดหลัก/โปรไฟล์/โพสต์ปิดโปรไฟล์/
@@ -24,6 +26,9 @@ import { HeartLeafIcon, CommentIcon, ShareIcon } from './storyIcons'
   [ข้อ 6] โพสต์ของตัวเอง (post.userId === ของเรา) มีปุ่ม ⋯ เปิดแก้ไขได้
   [ข้อ 8] รูปในโพสต์ใช้ width:100%;height:auto เสมอ (ดู Story.css .story-post-card__image)
   ไม่ครอบ/ตัด aspect ratio ไม่ว่ารูปจะเป็นแนวตั้ง/แนวนอน/สัดส่วนไหนก็ตาม
+  [แก้ตามที่ระบุ — เลย์เอาต์แบบ IG] หัวการ์ด (รูปโปรไฟล์มีวงแหวน · ชื่อ + Verified · ⋯) → รูปเต็มกว้าง
+  กรอบ 4:5 (จุดบอกรูปอยู่ใต้รูป) → แถวไอคอน (ถูกใจ คอมเมนต์ แชร์ | บันทึก ขวาสุด) → "ถูกใจโดย…"
+  → แคปชั่น (ชื่อตัวหนา) → ดูความคิดเห็นทั้งหมด → เวลาโพสต์
 \*============================================================================*/
 
 function initialOf(name: string): string {
@@ -51,6 +56,7 @@ export default function PostCard({ post }: { post: PostData }) {
   const [showShare, setShowShare] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [showOwnerMenu, setShowOwnerMenu] = useState(false)
+  const [saved, toggleSaved] = useSavedPost(userData.id, post.id)
 
   const isMe = post.userId === userData.id
   /* [แก้ตามที่ระบุ] เพื่อน = ติดตามกันทั้งสองฝ่าย · ติดตามแล้วแต่เขายังไม่ติดตามกลับ = "กำลังติดตาม" */
@@ -68,11 +74,18 @@ export default function PostCard({ post }: { post: PostData }) {
     requestViewProfile(post.userId, post.authorName)
   }
 
+  const displayName = post.isAnonymous ? 'ไม่ระบุตัวตน' : post.authorName
+  /** "ถูกใจโดย X และคนอื่นๆ อีก N คน" — ชื่อแรกเลือกเพื่อน/คนอื่นก่อนตัวเอง */
+  const firstLiker = post.likedBy.find((l) => l.userId !== userData.id) ?? post.likedBy[0]
+  const likeAction = () => { if (!post.likedByMe) setLikeBurst((k) => k + 1); toggleLike(post.id) }
+
   return (
-    <div className="story-post-card">
+    <div className="story-post-card story-post-card--ig">
       <div className="story-post-card__head">
-        <div className={`story-avatar story-avatar--clickable${post.isAnonymous ? ' story-avatar--anon' : ''}`} onClick={openAuthorProfile}>
-          {post.isAnonymous ? '?' : initialOf(post.authorName)}
+        <div className={`story-avatar-ring${post.isAnonymous ? ' story-avatar-ring--anon' : ''}`}>
+          <div className={`story-avatar story-avatar--clickable${post.isAnonymous ? ' story-avatar--anon' : ''}`} onClick={openAuthorProfile}>
+            {post.isAnonymous ? '?' : initialOf(post.authorName)}
+          </div>
           {showFollowBadge && (
             <button
               className="story-avatar__follow-btn"
@@ -84,39 +97,83 @@ export default function PostCard({ post }: { post: PostData }) {
           )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <button type="button" className="story-post-card__name story-post-card__name-btn" onClick={openAuthorProfile}>
-            {post.isAnonymous ? 'ไม่ระบุตัวตน' : post.authorName}
-          </button>
-          <div className="story-post-card__time">
-            {timeAgo(post.createdAt)}
+          <div className="story-post-card__name-row">
+            <button type="button" className="story-post-card__name story-post-card__name-btn" onClick={openAuthorProfile}>
+              {displayName}
+            </button>
+            {post.authorVerified && !post.isAnonymous && <VerifiedBadge />}
             {isFriendPost && <span className="story-post-card__friend-tag">เพื่อนของคุณ</span>}
             {status === 'following' && <span className="story-post-card__friend-tag story-post-card__friend-tag--pending">กำลังติดตาม</span>}
           </div>
+          {moodInfo && (
+            <div className="story-post-card__subline"><span aria-hidden="true">{moodInfo.emoji}</span> รู้สึก{moodInfo.label}</div>
+          )}
         </div>
-        {isMe && (
-          <div style={{ position: 'relative' }}>
-            <button className="story-post-card__menu-btn" title="ตัวเลือกโพสต์" onClick={() => setShowOwnerMenu((v) => !v)}>⋯</button>
-            {showOwnerMenu && (
-              <>
-                <div className="story-post-card__menu-scrim" onClick={() => setShowOwnerMenu(false)} />
-                <div className="story-post-card__menu">
-                  <button onClick={() => { setShowOwnerMenu(false); setShowEdit(true) }}>✏️ แก้ไขโพสต์</button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+        <div style={{ position: 'relative' }}>
+          <button className="story-post-card__menu-btn" title="ตัวเลือกโพสต์" aria-label="ตัวเลือกโพสต์" onClick={() => setShowOwnerMenu((v) => !v)}>⋯</button>
+          {showOwnerMenu && (
+            <>
+              <div className="story-post-card__menu-scrim" onClick={() => setShowOwnerMenu(false)} />
+              <div className="story-post-card__menu">
+                {isMe && <button onClick={() => { setShowOwnerMenu(false); setShowEdit(true) }}>✏️ แก้ไขโพสต์</button>}
+                {!isMe && <button onClick={() => { setShowOwnerMenu(false); openAuthorProfile() }}><img src={BADGE_ICONS.profile} className="icon-img" alt="" /> ดูโปรไฟล์</button>}
+                <button onClick={() => { setShowOwnerMenu(false); toggleSaved() }}>{saved ? '🔖 เลิกบันทึก' : '🔖 บันทึกโพสต์'}</button>
+                <button onClick={() => { setShowOwnerMenu(false); setShowShare(true) }}><img src={BADGE_ICONS.share} className="icon-img" alt="" /> ส่งให้เพื่อน</button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {moodInfo && (
-        <div className="story-post-card__mood">
-          <span aria-hidden="true">{moodInfo.emoji}</span> รู้สึก{moodInfo.label}
+      {/* โพสต์ข้อความล้วน (ไม่มีรูป) — ข้อความเป็นเนื้อหาหลักเหนือแถวไอคอน */}
+      {images.length === 0 && post.content && <div className="story-post-card__content">{post.content}</div>}
+
+      {/* รูปเต็มความกว้างการ์ด กรอบ 4:5 สม่ำเสมอ — ปัดซ้าย-ขวาแบบ snap ดูหลายรูป จุดบอกรูปอยู่ใต้รูป */}
+      <PostImageCarousel images={images} onDoubleTap={() => { if (!post.likedByMe) likeAction() }} />
+
+      <div className="story-post-card__actions story-post-card__actions--ig">
+        <button
+          className={`story-ig-btn story-ig-btn--like${post.likedByMe ? ' is-active' : ''}`}
+          onClick={likeAction}
+          aria-pressed={post.likedByMe}
+          aria-label={post.likedByMe ? 'เลิกถูกใจ' : 'ถูกใจ'}
+          title={post.likedByMe ? 'เลิกถูกใจ' : 'ถูกใจ'}
+        >
+          <HeartLeafIcon filled={post.likedByMe} key={likeBurst} />
+          {likeBurst > 0 && post.likedByMe && <span key={`b${likeBurst}`} className="story-action-pill__burst" aria-hidden="true" />}
+        </button>
+        <button className="story-ig-btn" onClick={() => setShowComments(true)} aria-label="คอมเมนต์" title="คอมเมนต์">
+          <CommentIcon />
+        </button>
+        <button className="story-ig-btn" onClick={() => setShowShare(true)} aria-label="ส่งให้เพื่อน" title="ส่งให้เพื่อน">
+          <ShareIcon />
+        </button>
+        <button
+          className={`story-ig-btn story-ig-btn--save${saved ? ' is-active' : ''}`}
+          onClick={toggleSaved}
+          aria-pressed={saved}
+          aria-label={saved ? 'เลิกบันทึก' : 'บันทึกโพสต์'}
+          title={saved ? 'เลิกบันทึก' : 'บันทึก'}
+        >
+          <BookmarkIcon filled={saved} />
+        </button>
+      </div>
+
+      {post.likeCount > 0 && (
+        <button type="button" className="story-post-card__likes" onClick={() => setShowLikers(true)} title="ดูคนที่ถูกใจ">
+          {post.likeCount === 1 && firstLiker
+            ? <>ถูกใจโดย <b>{firstLiker.username}</b></>
+            : firstLiker
+              ? <>ถูกใจโดย <b>{firstLiker.username}</b> และคนอื่นๆ อีก <b>{(post.likeCount - 1).toLocaleString()}</b> คน</>
+              : <>ถูกใจ <b>{post.likeCount.toLocaleString()}</b> คน</>}
+        </button>
+      )}
+
+      {images.length > 0 && post.content && (
+        <div className="story-post-card__caption">
+          <b className="story-post-card__caption-name">{displayName}</b> {post.content}
         </div>
       )}
-      {post.content && <div className="story-post-card__content">{post.content}</div>}
-
-      {/* [แก้ตามที่ระบุ] รูปได้หลายรูป (สูงสุด 20) เลื่อนซ้าย-ขวาดูได้ — รูปเต็มขอบการ์ด ไม่ตัดรูป */}
-      <PostImageCarousel images={images} />
 
       {post.tags && post.tags.length > 0 && (
         <div className="story-post-card__tags">
@@ -124,34 +181,13 @@ export default function PostCard({ post }: { post: PostData }) {
         </div>
       )}
 
-      {/* [แก้ตามที่ระบุ] ปุ่มถูกใจ/คอมเมนต์/ส่งให้เพื่อน — ป้ายเม็ดยาวแบบกระดานจัดอันดับ ไอคอนวาดเอง
-          หัวใจมีใบไม้งอกเป็นเอกลักษณ์ของแอป กดถูกใจแล้วหัวใจเด้ง + ประกายกระจาย */}
-      <div className="story-post-card__actions">
-        <div className={`story-action-pill story-action-pill--like${post.likedByMe ? ' is-active' : ''}`}>
-          <button
-            className="story-action-pill__icon-btn"
-            onClick={() => { if (!post.likedByMe) setLikeBurst((k) => k + 1); toggleLike(post.id) }}
-            aria-pressed={post.likedByMe}
-            aria-label={post.likedByMe ? 'เลิกถูกใจ' : 'ถูกใจ'}
-            title={post.likedByMe ? 'เลิกถูกใจ' : 'ถูกใจ'}
-          >
-            <HeartLeafIcon filled={post.likedByMe} key={likeBurst} />
-            {likeBurst > 0 && post.likedByMe && <span key={`b${likeBurst}`} className="story-action-pill__burst" aria-hidden="true" />}
-          </button>
-          {/* [ข้อ 10] กดตัวเลขเปิดรายชื่อคนถูกใจ · กดหัวใจ = ถูกใจ/เลิกถูกใจ */}
-          <button className="story-action-pill__count" onClick={() => setShowLikers(true)} disabled={post.likeCount === 0} title="ดูคนที่ถูกใจ">
-            {post.likeCount}
-          </button>
-        </div>
-        <button className="story-action-pill story-action-pill--comment" onClick={() => setShowComments(true)} title="คอมเมนต์">
-          <CommentIcon />
-          <span className="story-action-pill__label">{post.comments.length}</span>
+      {post.comments.length > 0 && (
+        <button type="button" className="story-post-card__view-comments" onClick={() => setShowComments(true)}>
+          ดูความคิดเห็นทั้งหมด {post.comments.length} รายการ
         </button>
-        <button className="story-action-pill story-action-pill--share" onClick={() => setShowShare(true)} title="ส่งให้เพื่อน">
-          <ShareIcon />
-          <span className="story-action-pill__label">ส่ง</span>
-        </button>
-      </div>
+      )}
+
+      <div className="story-post-card__timestamp">{timeAgo(post.createdAt)}</div>
 
       {showComments && <CommentsModal post={post} onClose={() => setShowComments(false)} />}
       {showLikers && <LikersModal post={post} onClose={() => setShowLikers(false)} />}

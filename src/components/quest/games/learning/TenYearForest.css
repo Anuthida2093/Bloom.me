@@ -1,0 +1,113 @@
+/* [แก้ตามที่ระบุ] การ์ดรางวัลรายวัน (streak ≥ 21 วัน) */
+.tyf-reward { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tyf-reward--ready { box-shadow: 0 0 0 2px var(--coin), 0 0 18px color-mix(in srgb, var(--coin) 45%, transparent); }
+.tyf-reward__text { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 4px; }
+.tyf-reward__text small { opacity: .8; }
+.tyf-reward__track { height: 8px; border-radius: 99px; background: color-mix(in srgb, currentColor 15%, transparent); overflow: hidden; }
+.tyf-reward__fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--g500), var(--coin)); }
+.tyf-reward__btn { flex-shrink: 0; }
+
+/* ป่าแห่งสิบปี — ปฏิทินการเรียนรู้ */
+.tyf-day__date { font-family: var(--font-display); font-size: 14px; margin-bottom: 6px; opacity: 0.9; }
+.tyf-day__body {
+  display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.tyf-row { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; line-height: 1.45; }
+.tyf-row > span:first-child { flex-shrink: 0; }
+.tyf-row--mirror { padding-top: 6px; border-top: 1px dashed rgba(255, 255, 255, 0.25); }
+.tyf-quote { display: block; margin-top: 2px; font-style: italic; opacity: 0.85; }
+.tyf-truth { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 99px; font-size: 12px; background: #d8f3dc; color: #1b4332; }
+.tyf-truth--warn { background: #fff4cf; color: #6b4a00; }
+
+/* ปฏิทินรายเดือน */
+.tyf-cal__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-family: var(--font-display); font-size: 16px; }
+.tyf-cal__head button {
+  width: 36px; height: 36px; border: none; border-radius: 50%; cursor: pointer; font-size: 20px; color: #1b4332;
+  background: linear-gradient(180deg, #ffffff, #c8ecd3); box-shadow: 0 3px 0 #74c69d, inset 0 2px 0 #fff;
+}
+.tyf-cal__head button:active { transform: translateY(2px); box-shadow: 0 1px 0 #74c69d; }
+.tyf-cal__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.tyf-cal__wd { text-align: center; font-size: 11px; opacity: 0.7; padding-bottom: 2px; }
+.tyf-cal__day {
+  position: relative; aspect-ratio: 1; min-height: 34px; border: none; border-radius: 10px; cursor: pointer;
+  display: flex; align-items: flex-start; justify-content: center; padding-top: 5px;
+  font-family: var(--font-display); font-size: 13px; color: inherit;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.tyf-cal__day.has-data { background: rgba(255, 255, 255, 0.18); }
+.tyf-cal__day.is-today { box-shadow: inset 0 0 0 2px #ffd166; }
+.tyf-cal__day.is-selected { background: linear-gradient(180deg, #ffe08a, #f5b301); color: #4A2C0A; box-shadow: 0 3px 0 #c98a00; }
+.tyf-cal__dots { position: absolute; bottom: 4px; left: 0; right: 0; display: flex; justify-content: center; gap: 3px; }
+.tyf-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+.tyf-dot--learn { background: #52b788; }
+.tyf-dot--review { background: #8ec5ff; }
+.tyf-dot--plan { background: #ffd166; box-shadow: 0 0 0 1px #c98a00; }
+.tyf-cal__legend { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; font-size: 11px; opacity: 0.85; }
+.tyf-cal__legend span { display: inline-flex; align-items: center; gap: 4px; }
+.tyf-detail .tyf-day__date { font-size: 15px; }
+@media (max-width: 300px) { .tyf-cal__day { min-height: 26px; font-size: 11px; padding-top: 2px; } .tyf-dot { width: 4px; height: 4px; } }
+
+/* ป็อปอัปรายละเอียดวัน (กดวันที่บนปฏิทิน) — portal ไป body จึงกำหนดสี/ปุ่มเองครบ */
+.tyf-popup {
+  position: fixed; inset: 0; z-index: 2600;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px 16px calc(var(--gpf-safe-bottom, 90px) + 8px); box-sizing: border-box;
+  background: rgba(6, 20, 14, 0.5); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  animation: tyfPopupFade 0.2s ease both;
+}
+.tyf-popup__card {
+  position: relative; width: min(420px, 100%); max-height: 100%; overflow-y: auto; box-sizing: border-box;
+  padding: 22px 18px 18px; border-radius: 22px; color: #fff;
+  background: linear-gradient(180deg, #2d6a4f, #1b4332);
+  border: 2px solid #ffd166; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  display: flex; flex-direction: column; gap: 10px;
+  animation: tyfPopupPop 0.3s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+.tyf-popup__card .tyf-day__date { padding-right: 40px; font-size: 16px; }
+.tyf-popup__card .qg-hint { font-size: 14px; color: rgba(255, 255, 255, 0.75); margin: 0; }
+.tyf-popup__close {
+  position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border: none; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.85);
+}
+.tyf-popup__ok {
+  align-self: center; min-width: 140px; padding: 10px 24px; border: none; border-radius: 99px; cursor: pointer;
+  font-family: var(--font-display); font-size: 15px; color: #1b4332;
+  background: linear-gradient(180deg, #ffffff, #c8ecd3); box-shadow: 0 3px 0 #74c69d, inset 0 2px 0 #fff;
+}
+.tyf-popup__ok:active { transform: translateY(2px); box-shadow: 0 1px 0 #74c69d; }
+@keyframes tyfPopupFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tyfPopupPop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .tyf-popup, .tyf-popup__card { animation: none; } }
+
+/* ปุ่มลัด เป้าหมาย / สิ่งที่จะทบทวน (เหนือปฏิทิน) */
+.tyf-shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tyf-shortcut {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 8px; cursor: pointer;
+  border: 1.5px solid rgba(255, 209, 102, 0.7); border-radius: 18px; color: inherit; font-family: var(--font-display);
+  background: rgba(255, 255, 255, 0.12);
+}
+.tyf-shortcut > span { font-size: 26px; line-height: 1; }
+.tyf-shortcut b { font-size: 15px; font-weight: 400; }
+.tyf-shortcut small { font-size: 11.5px; opacity: 0.75; }
+.tyf-shortcut:active { transform: translateY(2px); }
+
+/* รายการในป็อปอัป */
+.tyf-list { display: flex; flex-direction: column; gap: 8px; }
+.tyf-goal { border-radius: 14px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.tyf-goal.is-open { box-shadow: inset 0 0 0 1.5px #ffd166; }
+.tyf-goal__head {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; border: none; cursor: pointer;
+  background: none; color: #fff; font-family: var(--font-display); text-align: left;
+}
+.tyf-goal__name { flex: 1; font-size: 15px; text-decoration: underline; text-decoration-color: rgba(255, 209, 102, 0.6); text-underline-offset: 3px; }
+.tyf-goal__date { flex-shrink: 0; font-size: 12px; opacity: 0.8; }
+.tyf-goal .tyf-day__body { margin: 0 8px 8px; }
+.tyf-review { padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.1); font-size: 14px; }
+.tyf-review__what { margin-bottom: 8px; line-height: 1.45; }
+.tyf-review__stages { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.tyf-stage { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; padding: 6px 8px; border-radius: 10px; background: rgba(0, 0, 0, 0.15); font-size: 12.5px; }
+.tyf-stage__num { grid-row: span 2; align-self: center; padding: 3px 8px; border-radius: 99px; background: #ffd166; color: #5a3a08; font-family: var(--font-display); }
+.tyf-stage__state { opacity: 0.85; }
+.tyf-stage--done { opacity: 0.75; }
+.tyf-stage--missed .tyf-stage__num { background: #f4a261; }

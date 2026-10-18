@@ -46,7 +46,7 @@ interface CalorieProfile {
   gender: Gender
 }
 
-function computeAge(birthDate: string | null): number {
+export function computeAge(birthDate: string | null): number {
   if (!birthDate) return FALLBACK_AGE
   const birth = new Date(birthDate)
   if (Number.isNaN(birth.getTime())) return FALLBACK_AGE
@@ -58,7 +58,7 @@ function computeAge(birthDate: string | null): number {
 }
 
 /** สูตร Mifflin-St Jeor — BMR แบบพื้นฐาน */
-function computeBmr(heightCm: number, weightKg: number, age: number, gender: Gender): number {
+export function computeBmr(heightCm: number, weightKg: number, age: number, gender: Gender): number {
   const base = 10 * weightKg + 6.25 * heightCm - 5 * age
   return gender === 'MALE' ? base + 5 : base - 161
 }
@@ -124,4 +124,12 @@ export function getOverCalorieStreak(userId: string, target: number | null, maxD
     streak++
   }
   return streak
+}
+
+/** ก้อนหินบนพื้นดินจากการทานเกินติดต่อกัน (0 = ไม่มี, สูงสุด 6 ก้อน) */
+const MAX_ROCKS = 6
+
+export function getVisibleRocks(userId: string, target: number | null): number {
+  const streak = getOverCalorieStreak(userId, target)
+  return streak < OVER_CALORIE_STREAK_DAYS ? 0 : Math.min(MAX_ROCKS, streak)
 }

@@ -26,15 +26,18 @@ export interface TreeFit {
 export const TREE_BASE_Y_RATIO = 0.84
 
 /** จัดต้นให้พอดีกล่อง: โคนต้นที่ baseYRatio ของความสูง, ความสูงต้น = maxHeightRatio × growth */
-export function fitTree(model: TreeModel, width: number, height: number, baseYRatio = TREE_BASE_Y_RATIO, maxHeightRatio = 0.76): TreeFit {
+/** ความสูงต้นโตเต็มที่เทียบความสูงกล่อง — [ขยายรอบนี้] 0.76 → 0.82 ให้ต้นเด่นขึ้นบนหน้า Home */
+export const TREE_MAX_HEIGHT_RATIO = 0.82
+
+export function fitTree(model: TreeModel, width: number, height: number, baseYRatio = TREE_BASE_Y_RATIO, maxHeightRatio = TREE_MAX_HEIGHT_RATIO): TreeFit {
   const baseY = height * baseYRatio
   const targetH = height * maxHeightRatio * model.growth
   const halfW = Math.max(-model.bounds.minX, model.bounds.maxX, 0.5)
-  const scale = Math.min(targetH / Math.max(model.bounds.maxY, 0.5), (width * 0.49) / halfW)
+  const scale = Math.min(targetH / Math.max(model.bounds.maxY, 0.5), (width * 0.5) / halfW)
   return { scale, baseX: width / 2, baseY }
 }
 
-const toScreen = (p: Vec3, f: TreeFit): [number, number] => [f.baseX + p[0] * f.scale, f.baseY - p[1] * f.scale]
+export const toScreen = (p: Vec3, f: TreeFit): [number, number] => [f.baseX + p[0] * f.scale, f.baseY - p[1] * f.scale]
 
 /* ── สีพื้นตามความแห้ง (0 สด → 1 ดินร้าง) ไล่ต่อเนื่องระหว่างจุดสี
    จุด "สด" เก็บสีจากทุ่งหญ้าในวิดีโอพื้นหลัง hero-waterfall.mp4 (เขียวอมเหลืองแดดอุ่น ไกลสว่าง ใกล้เข้ม)
@@ -175,11 +178,8 @@ export function drawGround(ctx: CanvasRenderingContext2D, fit: TreeFit, width: n
   ctx.save()
   plotPath(ctx, p)
   ctx.clip()
-  ctx.strokeStyle = 'rgba(255, 244, 200, 0.35)'
-  ctx.lineWidth = Math.max(2, p.ry * 0.12)
-  ctx.beginPath()
-  ctx.ellipse(p.cx, p.cy + p.ry * 0.05, p.rx * 0.98, p.ry * 0.98, 0, Math.PI * 1.05, Math.PI * 1.95)
-  ctx.stroke()
+  // [แก้ตามที่ระบุ] เดิมมีเส้นแสงแดดคมๆ ตามขอบหลังของแปลง → เห็นเป็น "เส้นขอบ" ตัดกับพื้นหลัง ตัดออก
+  // (ขอบหลังค่อยๆ จางเข้ากับพื้นหลังแทน — ดูขั้น 7 ท้ายฟังก์ชัน)
 
   // สุ่มจุดในแปลง
   const inPlot = (): [number, number, number] => visiblePlotPoint(p, width, rand)
@@ -232,6 +232,20 @@ export function drawGround(ctx: CanvasRenderingContext2D, fit: TreeFit, width: n
   ctx.translate(-sx, -fit.baseY)
   ctx.fillRect(sx - sr * 1.1, fit.baseY - sr * 1.1, sr * 2.2, sr * 2.2)
   ctx.restore()
+
+  // ── 7) [แก้ตามที่ระบุ] ขอบหลังของแปลงจางกลืนกับพื้นหลัง (ไม่มีเส้นขอบตัดคม) ──
+  // ลบความทึบแบบไล่ระดับเฉพาะแถบด้านหลังของแปลง: ขอบบนสุดโปร่ง → ทึบเต็มที่ก่อนถึงโคนต้น
+  const fadeTop = p.cy - p.ry - 2
+  const fadeBottom = p.cy - p.ry * 0.35
+  ctx.save()
+  ctx.globalCompositeOperation = 'destination-out'
+  const fade = ctx.createLinearGradient(0, fadeTop, 0, fadeBottom)
+  fade.addColorStop(0, 'rgba(0, 0, 0, 1)')
+  fade.addColorStop(0.45, 'rgba(0, 0, 0, 0.45)')
+  fade.addColorStop(1, 'rgba(0, 0, 0, 0)')
+  ctx.fillStyle = fade
+  ctx.fillRect(0, fadeTop, width, fadeBottom - fadeTop)
+  ctx.restore()
 }
 
 /* ── ใบหญ้า/ดอกไม้ที่ไหวตามลม ── */
@@ -244,8 +258,12 @@ export interface Meadow {
   front: { blades: MeadowBlade[]; flowers: MeadowFlower[] }
 }
 
-/** ดอกเดซี่ขาวเกสรเหลืองเหมือนในวิดีโอ + ดอกส้มประปราย */
-const DAISY_PETALS = ['#fbf8ee', '#fbf8ee', '#fbf8ee', '#fff4d6', '#f2a25a']
+/** ดอกไม้ในทุ่งหญ้าหลายสี — เดซี่ขาวยังเป็นหลัก + ชมพู/ม่วง/ฟ้า/เหลือง/แดง/ส้มประปราย */
+const MEADOW_FLOWER_COLORS = [
+  '#fbf8ee', '#fbf8ee', '#fff4d6', '#ff9ec7', '#f472b6', '#c4a1ff', '#9b7bea', '#8ec5ff', '#ffd84d', '#ff6b6b', '#f2a25a',
+]
+/** เกสรกลางดอก — ดอกเหลืองใช้เกสรส้มให้ยังเห็นเป็นดอก */
+const flowerCenter = (petal: string) => (petal === '#ffd84d' ? '#e8873a' : '#f2c230')
 /** จำนวนใบหญ้าบนแปลงสูงสุด — วาดใหม่ทุกเฟรม จำกัดไว้ไม่ให้หนักเครื่อง */
 const MAX_PLOT_BLADES = 3600
 
@@ -256,8 +274,10 @@ const MAX_PLOT_BLADES = 3600
  * - dryness: หญ้าบาง เตี้ย เอนล้ม สีเหลือง→น้ำตาล ดอกหาย
  */
 export function buildMeadow(
-  fit: TreeFit, width: number, height: number, grassSoilLevel: number, dryness: number, viewWidth = width,
+  fit: TreeFit, width: number, height: number, grassSoilLevel: number, dryness: number, viewWidth = width, bare = false,
 ): Meadow {
+  // ผู้ใช้ใหม่ (ยังไม่มีคะแนนสุขภาพกาย): พื้นเขียวเรียบอย่างเดียว ไม่มีใบหญ้า/ดอกไม้ — ทำเควสสุขภาพแล้วค่อยงอก
+  if (bare) return { back: { blades: [], flowers: [] }, front: { blades: [], flowers: [] } }
   const step = toGroundVariant(grassSoilLevel)
   const level = Math.max(0, Math.min(100, grassSoilLevel))
   const dry = Math.max(0, Math.min(1, dryness))
@@ -286,7 +306,8 @@ export function buildMeadow(
       w: 1 + depth * 1.4,
       lean: (rand() - 0.5 + dry * 0.4) * bladeBase * scale * 0.7, // หญ้าแห้งเอนล้มไปทางเดียวมากกว่า
       color: color(),
-      alpha: 0.75 + depth * 0.25,
+      // หญ้าแถวหลังสุด (ขอบหลังแปลง) ค่อยๆ จางกลืนพื้นหลัง เหมือนผิวดินที่จางออก (drawGround ขั้น 7)
+      alpha: (0.75 + depth * 0.25) * Math.min(1, 0.15 + depth / 0.3),
       phase: rand() * Math.PI * 2,
       stiff: 0.7 + rand() * 0.6 + dry * 0.8, // หญ้าแห้งแข็ง ไหวน้อยกว่า
     })
@@ -325,7 +346,7 @@ export function buildMeadow(
     layerOf(y).flowers.push({
       x, y,
       r: Math.max(1.8, bladeBase * 0.24 * (0.6 + depth * 0.6)),
-      petal: DAISY_PETALS[Math.floor(rand() * DAISY_PETALS.length)],
+      petal: MEADOW_FLOWER_COLORS[Math.floor(rand() * MEADOW_FLOWER_COLORS.length)],
       phase: rand() * Math.PI * 2,
       stem: bladeBase * (0.6 + depth * 0.6) * (0.8 + rand() * 0.4),
     })
@@ -379,7 +400,7 @@ export function drawMeadow(ctx: CanvasRenderingContext2D, layer: Meadow['back'],
       ctx.ellipse(hx + Math.cos(a) * f.r * 0.62, hy + Math.sin(a) * f.r * 0.42, f.r * 0.42, f.r * 0.2, a, 0, Math.PI * 2)
       ctx.fill()
     }
-    ctx.fillStyle = '#f2c230'
+    ctx.fillStyle = flowerCenter(f.petal)
     ctx.beginPath()
     ctx.arc(hx, hy, f.r * 0.3, 0, Math.PI * 2)
     ctx.fill()
@@ -445,6 +466,7 @@ export function drawBranches(ctx: CanvasRenderingContext2D, model: TreeModel, fi
       ctx.globalAlpha = 1
     }
   }
+  drawTreeFace(ctx, model, fit, 'branches')
 }
 
 /** ลายเปลือกเฉพาะสายพันธุ์ — birch: ขีดดำแนวขวางบนเปลือกขาว / palm: วงแหวนรอบลำต้น / bamboo: ข้อปล้อง */
@@ -626,6 +648,13 @@ function paintLeaf(
   ctx.scale(L * leaf.widthScale * widthFactor, L)
   ctx.fillStyle = leaf.color
   ctx.fill(getLeafPath(model.leafShape))
+  // ใบมันวาว (จุดเด่นกลุ่ม SP): แสงสะท้อนรูปรีเรียวครึ่งซ้ายของใบ — ข้ามใบที่เล็กเกินจะเห็น
+  if (model.glossy && L >= 6) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.34)'
+    ctx.beginPath()
+    ctx.ellipse(-0.1, -0.5, 0.07, 0.24, -0.12, 0, Math.PI * 2)
+    ctx.fill()
+  }
   // เส้นกลางใบ (เห็นได้เฉพาะใบที่ใหญ่พอบนจอ)
   if (L >= 9) {
     ctx.beginPath()
@@ -753,7 +782,35 @@ export function drawFoliage(
     ctx.arc(x, y, R, 0, Math.PI * 2)
     ctx.fill()
   }
+  // ประกาย (จุดเด่นกลุ่ม NT): แสงฟุ้งนวล + ดาวสี่แฉกสีทองอ่อน วาดทับใบ/ผล
+  for (const s of model.sparkles ?? []) {
+    const [x, y] = toScreen(s.position, fit)
+    const R = Math.max(3, s.radius * fit.scale)
+    if (region && !overlaps(region, { x0: x - R * 1.6, y0: y - R * 1.6, x1: x + R * 1.6, y1: y + R * 1.6 })) continue
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, R * 1.6)
+    glow.addColorStop(0, 'rgba(255, 250, 220, 0.75)')
+    glow.addColorStop(1, 'rgba(255, 250, 220, 0)')
+    ctx.fillStyle = glow
+    ctx.beginPath()
+    ctx.arc(x, y, R * 1.6, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.translate(x, y)
+    ctx.rotate(s.rotation)
+    ctx.fillStyle = s.color
+    ctx.beginPath()
+    for (let k = 0; k < 8; k++) {
+      const r = k % 2 === 0 ? R : R * 0.24
+      const a = (k * Math.PI) / 4 - Math.PI / 2
+      if (k === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r)
+      else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r)
+    }
+    ctx.closePath()
+    ctx.fill()
+  }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  // หน้าต้นสน: วาดทับพุ่มเข็ม (ต้นอื่นวาดในชั้นกิ่ง — ฟังก์ชันข้ามให้เอง)
+  drawTreeFace(ctx, model, fit, 'foliage')
   if (region) ctx.restore()
 }
 
@@ -764,4 +821,88 @@ export function drawFlutterLeaf(
   paintLeaf(ctx, model, fit, dpr, i, angleOffset, widthFactor)
   applyCrownGlaze(ctx, model, fit, dpr, leafRect(model, fit, i))
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+}
+
+/* ── หน้าตาน่ารักบนต้นไม้ (สไตล์เกม 2D ธรรมชาติ) — แบบตา/ปาก/แก้มแดงสุ่มต่อผู้ใช้ (model.face) ──
+   ต้นทั่วไป: บนลำต้นหลัก (ชั้นกิ่ง) · สน: กลางพุ่มเข็มด้านหน้า (ชั้นใบ วาดทับใบ) · ไผ่: บนลำกลาง ใต้ใบ
+   ข้ามเมื่อเล็กเกินจะมองเห็น (ต้นกล้าเล็กมาก) */
+const FACE_MIN_RADIUS_PX = 9
+const FACE_MIN_ANCHOR_RADIUS_PX = 6
+const FACE_INK = '#3a2414'
+
+export function drawTreeFace(ctx: CanvasRenderingContext2D, model: TreeModel, fit: TreeFit, layer: 'branches' | 'foliage') {
+  const face = model.face
+  if (!face) return
+  let cx: number, cy: number, r: number
+  if (face.anchor) {
+    if ((layer === 'foliage') !== face.anchor.overFoliage) return
+    ;[cx, cy] = toScreen(face.anchor.position, fit)
+    r = face.anchor.radius * fit.scale
+    if (r < FACE_MIN_ANCHOR_RADIUS_PX) return
+  } else {
+    if (layer !== 'branches') return
+    const trunk = model.branches.find((b) => b.depth === 0)
+    if (!trunk) return
+    r = (trunk.radiusStart + (trunk.radiusEnd - trunk.radiusStart) * face.height) * fit.scale
+    if (r < FACE_MIN_RADIUS_PX) return
+    ;[cx, cy] = toScreen(pointOnBranch(trunk, face.height), fit)
+  }
+  paintFace(ctx, cx, cy, r, face)
+}
+
+function paintFace(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, face: TreeModel['face']) {
+  const { eyes, mouth, blush } = face
+  const gap = r * 0.42, ey = cy - r * 0.08, lw = Math.max(1.2, r * 0.08)
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.strokeStyle = FACE_INK
+  ctx.fillStyle = FACE_INK
+  ctx.lineWidth = lw
+
+  if (blush) {
+    ctx.fillStyle = 'rgba(255, 128, 140, 0.45)'
+    for (const s of [-1, 1]) {
+      ctx.beginPath()
+      ctx.ellipse(cx + s * gap * 1.35, ey + r * 0.28, r * 0.2, r * 0.12, 0, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    ctx.fillStyle = FACE_INK
+  }
+
+  for (const s of [-1, 1]) {
+    const ex = cx + s * gap
+    ctx.beginPath()
+    if (eyes === 0) {
+      ctx.arc(ex, ey, r * 0.11, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex + r * 0.035, ey - r * 0.04, r * 0.035, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = FACE_INK
+    } else if (eyes === 1) {
+      ctx.arc(ex, ey + r * 0.04, r * 0.13, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke() // ∩ ยิ้มตาปิด
+    } else if (eyes === 2) {
+      ctx.arc(ex, ey, r * 0.16, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = '#fff'
+      ctx.beginPath(); ctx.arc(ex + r * 0.05, ey - r * 0.06, r * 0.06, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(ex - r * 0.05, ey + r * 0.05, r * 0.03, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = FACE_INK
+    } else {
+      ctx.arc(ex, ey - r * 0.04, r * 0.12, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke() // ∪ ง่วงๆ
+    }
+  }
+
+  const my = cy + r * 0.22
+  ctx.beginPath()
+  if (mouth === 0) {
+    ctx.arc(cx, my - r * 0.06, r * 0.14, Math.PI * 0.2, Math.PI * 0.8); ctx.stroke()
+  } else if (mouth === 1) {
+    ctx.arc(cx, my - r * 0.05, r * 0.17, 0, Math.PI); ctx.closePath(); ctx.fill()
+    ctx.fillStyle = '#ff8a8a'; ctx.beginPath(); ctx.ellipse(cx, my + r * 0.07, r * 0.08, r * 0.045, 0, 0, Math.PI * 2); ctx.fill()
+  } else if (mouth === 2) {
+    ctx.moveTo(cx - r * 0.16, my - r * 0.04)
+    ctx.quadraticCurveTo(cx - r * 0.08, my + r * 0.08, cx, my - r * 0.02)
+    ctx.quadraticCurveTo(cx + r * 0.08, my + r * 0.08, cx + r * 0.16, my - r * 0.04)
+    ctx.stroke() // ω
+  } else {
+    ctx.ellipse(cx, my, r * 0.07, r * 0.09, 0, 0, Math.PI * 2); ctx.fill()
+  }
+  ctx.restore()
 }

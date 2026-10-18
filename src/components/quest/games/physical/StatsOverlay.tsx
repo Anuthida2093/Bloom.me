@@ -19,17 +19,20 @@ import './StatsOverlay.css'
 interface StatsOverlayProps {
   todaySteps: number
   dailyStepTarget: number
+  /** เป้าท้าทาย (ค่าสูงของช่วงตาม BMI — config/stepGoalByBmi.ts) */
+  stretchStepTarget?: number
+  /** โบนัสของระดับ BMI นี้ */
+  bonusLabel?: string
+  /** ระยะทางวันนี้ที่จัดรูปแบบแล้ว (utils/strideDistance.ts) — null = ไม่มีส่วนสูง ไม่แสดง */
+  todayDistance?: string | null
   /** null = ผู้เล่นยังไม่กรอกส่วนสูง/น้ำหนัก (ดู fallback เดียวกับที่เคยอยู่ใน
    *  PhysicalStatsView.tsx เดิม — ไฟล์นั้นไม่มีจุดเรียกใช้จริงแล้ว แต่ logic fallback ยังถูกต้อง) */
   bmi: number | null
   mapName: string
   mapProgressPct: number
-  /** [แก้ตามที่ระบุ] ทริป 3 วัน — วันที่เดินครบเป้าหมายแล้ว */
-  daysDone?: number
-  totalDays?: number
 }
 
-export default function StatsOverlay({ todaySteps, dailyStepTarget, bmi, mapName, mapProgressPct, daysDone = 0, totalDays = 3 }: StatsOverlayProps) {
+export default function StatsOverlay({ todaySteps, dailyStepTarget, stretchStepTarget, bonusLabel, todayDistance, bmi, mapName, mapProgressPct }: StatsOverlayProps) {
   const dailyPct = dailyStepTarget > 0 ? Math.min(100, (todaySteps / dailyStepTarget) * 100) : 0
   const clampedTripPct = Math.min(100, Math.max(0, mapProgressPct))
 
@@ -45,17 +48,14 @@ export default function StatsOverlay({ todaySteps, dailyStepTarget, bmi, mapName
           <div className="stats-overlay__track">
             <div className="stats-overlay__fill" style={{ width: `${dailyPct}%` }} />
           </div>
-        </div>
-      </div>
-
-      <div className="stats-overlay__tile">
-        <span className="stats-overlay__tile-icon" aria-hidden="true">📅</span>
-        <div className="stats-overlay__tile-body">
-          <span className="stats-overlay__tile-label">วันที่เดินครบเป้า</span>
-          <span className="stats-overlay__tile-value">{daysDone}/{totalDays}</span>
-          <div className="stats-overlay__track">
-            <div className="stats-overlay__fill stats-overlay__fill--trip" style={{ width: `${(Math.min(daysDone, totalDays) / totalDays) * 100}%` }} />
-          </div>
+          {(todayDistance || stretchStepTarget) && (
+            <span className="stats-overlay__tile-label">
+              {todayDistance ? `≈ ${todayDistance}` : ''}
+              {todayDistance && stretchStepTarget ? ' · ' : ''}
+              {stretchStepTarget ? `เป้าท้าทาย ${stretchStepTarget.toLocaleString()}` : ''}
+            </span>
+          )}
+          {bonusLabel && <span className="stats-overlay__tile-label">🎁 {bonusLabel}</span>}
         </div>
       </div>
 

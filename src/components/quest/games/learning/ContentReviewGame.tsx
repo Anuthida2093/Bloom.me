@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { QuestGameProps } from '../../../../types.mental'
 import { useAppContext } from '../../../../context/AppContext'
+import { addTimeCapsules } from '../../../../utils/timeCapsules'
 import '../games.css'
 
 /*============================================================================*\
@@ -20,6 +21,13 @@ import '../games.css'
 
 const MIN_DAYS_AHEAD = 1
 const MAX_DAYS_AHEAD = 30
+/** ตั้งนัดทบทวนได้หลายครั้ง (เว้นระยะแบบ Spacing Effect เช่น 1 / 7 / 30 วัน) */
+const MAX_REVIEWS = 3
+const DEFAULT_TIME = '19:00'
+/** ระยะห่างแนะนำของนัดที่ 1, 2, 3 */
+const SUGGESTED_GAPS = [1, 7, 30]
+
+interface ReviewSlot { date: string; time: string }
 
 function isoDateDaysFromNow(days: number): string {
   const d = new Date()
@@ -32,10 +40,18 @@ function formatThaiDate(iso: string): string {
 }
 
 export default function ContentReviewGame({ finish }: QuestGameProps) {
-  const { logActivity, questLogs } = useAppContext()
+  const { logActivity, questLogs, userData } = useAppContext()
   const minDate = isoDateDaysFromNow(MIN_DAYS_AHEAD)
   const maxDate = isoDateDaysFromNow(MAX_DAYS_AHEAD)
-  const [reviewDate, setReviewDate] = useState(minDate)
+  const [slots, setSlots] = useState<ReviewSlot[]>([{ date: minDate, time: DEFAULT_TIME }])
+  const reviewDate = slots[0].date
+  const updateSlot = (i: number, patch: Partial<ReviewSlot>) =>
+    setSlots((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
+  const addSlot = () => setSlots((prev) => {
+    const gap = SUGGESTED_GAPS[prev.length] ?? MAX_DAYS_AHEAD
+    return [...prev, { date: isoDateDaysFromNow(Math.min(MAX_DAYS_AHEAD, gap)), time: prev[prev.length - 1]?.time ?? DEFAULT_TIME }]
+  })
+  const removeSlot = (i: number) => setSlots((prev) => prev.filter((_, idx) => idx !== i))
 
   /** เป้าหมาย Active Focus ที่ทำสำเร็จวันนี้ (ถ้ามี) — โชว์ให้เห็นว่ากำลังนัดทบทวนอะไร
    *  ตรงกับ QuestLog.sourceQuestLogId ที่ backend เตรียมไว้ (ดู schema.prisma) */
@@ -63,15 +79,20 @@ export default function ContentReviewGame({ finish }: QuestGameProps) {
     return [...topics]
   }, [questLogs])
 
-  const canSubmit = reviewDate >= minDate && reviewDate <= maxDate
+  const canSubmit = slots.every((s) => s.date >= minDate && s.date <= maxDate && /^\d{2}:\d{2}$/.test(s.time))
 
   const handleSubmit = () => {
+    // เวลาในเครื่องของผู้ใช้ → ISO (ระบบเตือนเทียบกับเวลาเครื่องเหมือนกัน)
+    const reviewSchedule = slots
+      .map((s) => new Date(`${s.date}T${s.time}:00`).toISOString())
+      .sort()
+    addTimeCapsules(userData.id, reviewSchedule.map((at) => ({ at, goal: goalSkill, topics: reviewTopics })))
     logActivity({
       activityType: 'REVIEW',
       durationSeconds: 0,
-      meta: { scheduledReviewDate: reviewDate, sourceQuestLogId: todaysGoalLog?.id ?? null, mode: 'content-review', reviewTopics },
+      meta: { scheduledReviewDate: reviewDate, reviewSchedule, sourceQuestLogId: todaysGoalLog?.id ?? null, mode: 'content-review', reviewTopics },
     })
-    finish({ scheduledReviewDate: reviewDate, sourceQuestLogId: todaysGoalLog?.id ?? null, reviewTopics })
+    finish({ scheduledReviewDate: reviewDate, reviewSchedule, sourceQuestLogId: todaysGoalLog?.id ?? null, reviewTopics })
   }
 
   return (
@@ -96,29 +117,47 @@ export default function ContentReviewGame({ finish }: QuestGameProps) {
       )}
 
       <div className="qg-card">
-        <label className="qg-label" htmlFor="cr-date">อยากกลับมาทบทวนวันไหน</label>
-        <input
-          id="cr-date" className="qg-input" type="date"
-          min={minDate} max={maxDate}
-          value={reviewDate}
-          onChange={(e) => setReviewDate(e.target.value)}
-        />
+        <span className="qg-label">อยากกลับมาทบทวนวันไหน เวลาไหน (ตั้งได้ {MAX_REVIEWS} ครั้ง)</span>
+        {slots.map((slot, i) => (
+          <div key={i} className="qg-row" style={{ gap: 8, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span className="qg-tag">ครั้งที่ {i + 1}</span>
+            <input
+              className="qg-input" type="date" aria-label={`วันทบทวนครั้งที่ ${i + 1}`}
+              min={minDate} max={maxDate} value={slot.date}
+              onChange={(e) => updateSlot(i, { date: e.target.value })}
+              style={{ flex: '1 1 140px', minWidth: 0 }}
+            />
+            <input
+              className="qg-input" type="time" aria-label={`เวลาทบทวนครั้งที่ ${i + 1}`}
+              value={slot.time}
+              onChange={(e) => updateSlot(i, { time: e.target.value })}
+              style={{ flex: '0 1 110px', minWidth: 0 }}
+            />
+            {slots.length > 1 && (
+              <button type="button" className="qg-btn qg-btn--ghost" onClick={() => removeSlot(i)} aria-label={`ลบนัดครั้งที่ ${i + 1}`} style={{ padding: '6px 12px' }}>ลบ</button>
+            )}
+          </div>
+        ))}
+        {slots.length < MAX_REVIEWS && (
+          <button type="button" className="qg-btn qg-btn--ghost" onClick={addSlot} style={{ marginTop: 10 }}>
+            + เพิ่มนัดทบทวน (แนะนำ {SUGGESTED_GAPS[slots.length]} วันข้างหน้า)
+          </button>
+        )}
         <p className="qg-hint" style={{ marginTop: 6 }}>
-          เลือกได้ตั้งแต่พรุ่งนี้ถึง 30 วันข้างหน้า — ห่างกว่านี้จะลืม ถี่กว่านี้จะเสียเวลาเปล่า (ระบบจะเตือนเมื่อถึงวันนั้น)
+          เลือกได้ตั้งแต่พรุ่งนี้ถึง 30 วันข้างหน้า — ถึงเวลาแล้วระบบจะเด้งป็อปอัพเตือนทันทีที่เข้าแอป
         </p>
       </div>
 
       {canSubmit && (
         <div className="qg-card">
-          <div className="qg-title">นัดทบทวนวันที่</div>
+          <div className="qg-title">นัดทบทวน</div>
           <div className="qg-stat-grid">
-            <div className="qg-stat">
-              <strong>{formatThaiDate(reviewDate)}</strong>
-              {/* [แก้ react-hooks/purity] เลี่ยงเรียก Date.now() ระหว่าง render — คำนวณจำนวนวัน
-                  จากส่วนต่างระหว่าง reviewDate กับ minDate (ค่าที่คงที่แล้วใน state/scope นี้)
-                  บวกกลับด้วย MIN_DAYS_AHEAD แทน ได้ผลลัพธ์เดียวกันโดยไม่พึ่งเวลา "ตอนนี้" ตรงๆ */}
-              <span>อีก {Math.round((new Date(reviewDate).getTime() - new Date(minDate).getTime()) / 86_400_000) + MIN_DAYS_AHEAD} วัน</span>
-            </div>
+            {slots.map((slot, i) => (
+              <div key={i} className="qg-stat">
+                <strong>{formatThaiDate(slot.date)} · {slot.time} น.</strong>
+                <span>อีก {Math.round((new Date(slot.date).getTime() - new Date(minDate).getTime()) / 86_400_000) + MIN_DAYS_AHEAD} วัน</span>
+              </div>
+            ))}
           </div>
         </div>
       )}

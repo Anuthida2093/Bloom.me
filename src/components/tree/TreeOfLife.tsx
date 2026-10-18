@@ -1,6 +1,6 @@
-import { memo, useCallback, useMemo, useRef, useState, useEffect, type PointerEvent as ReactPointerEvent } from 'react'
+import { memo, useCallback, useMemo, useRef, useState, useEffect, useLayoutEffect, type PointerEvent as ReactPointerEvent } from 'react'
 import { type PostItData, type MbtiType, type RiskLevel, type PlacedItem, type DecorationPositionMap, type QuestCategory } from '../../types'
-import { DECORATION_EMOJI, DECORATION_ZONE_POSITION } from '../../config/decorationItems'
+import { DECORATION_EMOJI, defaultDecorationLayout, maxDecorationScale } from '../../config/decorationItems'
 import { ITEM_ICONS } from '../../config/iconAssets'
 import { useIsSmallScreen, usePrefersReducedMotion } from '../../hooks/useMediaQuery'
 import { groundDryness } from '../../config/groundFertility'
@@ -11,6 +11,7 @@ import { playSfx } from '../../utils/audioPlayer'
 import { useAppContext } from '../../context/AppContext'
 import { useHorizontalPan } from '../../hooks/useHorizontalPan'
 import './TreeOfLife.css'
+import { buildPlacementGeometry, constrainPlacement, placementRuleOf, type PlacementGeometry } from './decorationPlacement'
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -80,7 +81,10 @@ const LEAF_HEALTH_FILTER: Record<HealthPhase, string> = {
 /** [แก้ตามที่ระบุ] ละอองดาวที่โปรยลงมาที่ต้นไม้ตอนทำเควสสำเร็จ — ตำแหน่ง/ขนาด/จังหวะคงที่ (ไม่สุ่มทุก render)
  *  x = % แนวนอนของแถบต้นไม้ (กระจุกรอบทรงพุ่มกลางจอ) · land = % ความสูงที่ละอองจางหาย (บนพุ่ม→โคนต้น) */
 const STARDUST = Array.from({ length: 64 }, (_, i) => ({
-  x: 32 + ((i * 37) % 37),
+  // [แก้บั๊ก] เดิม 32 + ((i * 37) % 37) — (i*37)%37 = 0 เสมอ ละอองทั้ง 64 เม็ดกองที่ x 32% (ซ้ายของต้น)
+  // ตอนนี้กระจายรอบแกนลำต้นจริง: 50% ของแถบต้นไม้ = baseX ของ fitTree (โคนต้นอยู่กึ่งกลางแถบเสมอ
+  // และแถบนี้เลื่อน/ย่อขยายไปพร้อมฉาก) ± 18%
+  x: 50 + (((i * 23) % 37) - 18),
   // [แก้ตามที่ระบุ] ผงเล็กมากๆ ผสมดาวกับจุดกลม — จุด 1.5-3px / ดาว 4-6px
   star: i % 3 === 0,
   size: i % 3 === 0 ? 4 + (i % 3) : 1.5 + (i % 4) * 0.5,
@@ -97,7 +101,7 @@ const GROUND_ROCKS = [
   { left: 37, top: 88, size: 1 }, { left: 62, top: 89, size: 0.85 }, { left: 44, top: 91.5, size: 0.7 },
   { left: 56, top: 92, size: 1.1 }, { left: 30, top: 91, size: 0.8 }, { left: 69, top: 92.5, size: 0.95 },
 ]
-const ROCK_IMAGE = '/assets/images/icons/Item/stone.png'
+const ROCK_IMAGE = '/assets/images/icons/Item/stone.webp'
 
 /** กอหญ้าหน้าก้อนหิน: 4-8 ใบหญ้า (จำนวน/ความสูง/ทิศเอนต่างกันต่อก้อน) — SVG ล้วน */
 function GrassTuft({ seed }: { seed: number }) {
@@ -132,10 +136,12 @@ interface TreeOfLifeProps {
   riskLevel?: RiskLevel
   placedItems?: PlacedItem[]
   /** [ข้อกำหนดข้อ 3] พิกัดที่ผู้ใช้ลากปรับเองแล้ว (เก็บใน AppContext) — ถ้าไอเทมไหนยังไม่เคย
-   *  ลาก จะ fallback ไปตำแหน่งโซนเริ่มต้น (DECORATION_ZONE_POSITION) เหมือนเดิม */
+   *  ลาก จะใช้ตำแหน่งเริ่มต้น (defaultDecorationLayout — กระถางขวา, ของแขวน/ลายโพสอิทในพุ่มใบ) */
   decorationPositions?: DecorationPositionMap
   /** [ข้อกำหนดข้อ 3] เรียกทุกครั้งที่ลากไอเทมวางเสร็จ (pointer up) พร้อมพิกัด % ใหม่ */
   onDecorationMove?: (itemId: string, xPct: number, yPct: number) => void
+  /** [แก้ตามที่ระบุ] แตะไอเทมแล้วกด "เก็บ" → เก็บกลับเข้าคลัง */
+  onDecorationStore?: (itemId: string) => void
   /** [ข้อกำหนดข้อ 2] คลิกที่ตัวต้นไม้ (นอกเหนือ hotspot โคนต้น) → เปิดบทความสรุปจาก AI */
   onTreeClick?: () => void
   /** [ใหม่] "แรงสั่นสะเทือนแห่งการเติบโต" — ยิงมาจาก AppContext ทุกครั้งที่ทำเควสสำเร็จจริง
@@ -165,6 +171,10 @@ interface TreeOfLifeProps {
   postIts?: PostItData[]
   onPostItClick?: (postIt: PostItData) => void
   className?: string
+  /** id ผู้ใช้ — ต้นของแต่ละคนแตกกิ่ง/พุ่ม/ดอก/หน้าตาไม่ซ้ำกัน (สีสายพันธุ์คงเดิม) */
+  userSeed?: string | null
+  /** ผู้ใช้ใหม่ (ยังไม่มีคะแนนสุขภาพกาย) — พื้นเขียวเรียบ ไม่มีหญ้า/ดอกไม้ */
+  bareGround?: boolean
 }
 
 function TreeOfLifeBase({
@@ -176,6 +186,7 @@ function TreeOfLifeBase({
   placedItems = [],
   decorationPositions = {},
   onDecorationMove,
+  onDecorationStore,
   onTreeClick,
   growthPulse,
   hasSoot = false,
@@ -188,6 +199,8 @@ function TreeOfLifeBase({
   groundRocks = 0,
   onPostItClick,
   className,
+  userSeed = null,
+  bareGround = false,
 }: TreeOfLifeProps) {
   /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] ใบเหี่ยว/ร่วงตามจำนวนวันที่ไม่ได้ทำเควสหมวดจิตใจ */
   const leafHealthPhase = useMemo(() => toHealthPhase(daysSinceLastMentalQuest), [daysSinceLastMentalQuest])
@@ -205,8 +218,8 @@ function TreeOfLifeBase({
 
   /* ต้นไม้ procedural: รูปทรงตาม MBTI, โตตาม trunkBranchLevel, ดอกตาม leafFlowerLevel (ดู buildTreeModel) */
   const treeModel = useMemo(
-    () => buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, compact: isSmallScreen }),
-    [mbtiType, trunkBranchLevel, leafFlowerLevel, isSmallScreen],
+    () => buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, compact: isSmallScreen, userSeed }),
+    [mbtiType, trunkBranchLevel, leafFlowerLevel, isSmallScreen, userSeed],
   )
 
 
@@ -240,6 +253,11 @@ function TreeOfLifeBase({
     ? Math.round(viewW * (containerSize.w > containerSize.h ? WORLD_FACTOR_LANDSCAPE : WORLD_FACTOR_PORTRAIT))
     : viewW
   const panRange = Math.max(0, worldW - viewW)
+  /* [2.4] โซนพื้นดิน/ต้นไม้ของจอนี้ — คำนวณจากเรขาคณิตเดียวกับที่ ProceduralTreeCanvas วาด (ดู decorationPlacement.ts) */
+  const placementGeometry = useMemo(
+    () => (containerSize ? buildPlacementGeometry(treeModel, viewW, worldW || viewW, containerSize.h) : null),
+    [treeModel, viewW, worldW, containerSize],
+  )
   const applyPan = useCallback((pan: number, range: number) => {
     if (worldRef.current) worldRef.current.style.transform = `translate3d(${pan}px, 0, 0)`
     onPanChange?.(pan, range)
@@ -315,7 +333,8 @@ function TreeOfLifeBase({
           viewWidth={viewW}
           panRef={panRef}
           grassSoilLevel={grassSoilLevel}
-          dryness={groundDry}
+          dryness={bareGround ? 0 : groundDry}
+          bareGround={bareGround}
           animateWind={!reducedMotion}
           foliageStyle={{
             filter: LEAF_HEALTH_FILTER[leafHealthPhase],
@@ -453,7 +472,9 @@ function TreeOfLifeBase({
         placedItems={placedItems}
         decorationPositions={decorationPositions}
         onDecorationMove={onDecorationMove}
+        onDecorationStore={onDecorationStore}
         containerRef={bandRef}
+        placementGeometry={placementGeometry}
       />
 
       </div>
@@ -466,12 +487,36 @@ interface DecorationLayerProps {
   placedItems: PlacedItem[]
   decorationPositions: DecorationPositionMap
   onDecorationMove?: (itemId: string, xPct: number, yPct: number, scale?: number) => void
+  /** [แก้ตามที่ระบุ] ปุ่ม "เก็บ" — เก็บไอเทมกลับเข้าคลัง (ถอดออกจากต้นไม้) */
+  onDecorationStore?: (itemId: string) => void
   containerRef: React.RefObject<HTMLDivElement | null>
+  /** [2.4] โซนวางของจอนี้ — null = ยังวัดขนาดไม่เสร็จ (ไม่บังคับกฎชั่วคราว) */
+  placementGeometry: PlacementGeometry | null
 }
 
-/** [ใหม่ — ตามที่ระบุ] ขอบเขต scale ที่อนุญาต กันย่อ/ขยายจนดูแปลก */
-const MIN_DECORATION_SCALE = 0.5
-const MAX_DECORATION_SCALE = 2.5
+/** [2.4] กรอบเส้นประบอกโซนที่วางได้ระหว่างลาก — ยังวัดขนาดไม่เสร็จใช้กรอบเดิม (inset 4%) */
+function dropZoneStyle(rule: ReturnType<typeof placementRuleOf>, geo: PlacementGeometry | null): React.CSSProperties | undefined {
+  if (!geo) return undefined
+  const groundTop = geo.plot.cy - geo.plot.ry
+  if (rule === 'ground') {
+    return { inset: 'auto', left: '2%', right: '2%', top: `${groundTop}%`, bottom: '2%', borderRadius: '50% 50% 24px 24px / 40% 40% 24px 24px' }
+  }
+  if (rule === 'tree') {
+    const c = geo.crown
+    return { inset: 'auto', left: `${c.cx - c.rx}%`, top: `${c.cy - c.ry}%`, width: `${c.rx * 2}%`, height: `${c.ry * 2}%`, borderRadius: '50%' }
+  }
+  return { inset: 'auto', left: '2%', right: '2%', top: '4%', height: `${Math.max(10, groundTop - 6)}%` }
+}
+
+/** กดค้างนานเท่านี้ (ms) โดยไม่ขยับ → เข้าโหมดย่อ/ขยาย · ขยับเกินระยะนี้ (px) ก่อนครบเวลา → ย้ายตำแหน่ง */
+const LONG_PRESS_MS = 450
+const MOVE_SLOP_PX = 6
+
+/** [ใหม่ — ตามที่ระบุ] ขอบเขต scale ที่อนุญาต กันย่อ/ขยายจนดูแปลก
+ *  [แก้ตามที่ระบุ] เล็กสุด 100% (เดิม 50% เล็กจนมองไม่เห็น) — ค่าที่เคยเซฟไว้ต่ำกว่านี้แสดงเป็น 100% */
+const MIN_DECORATION_SCALE = 1
+/** ปุ่มลอย/แผงของหน้า Home ที่อยู่เหนือชั้นต้นไม้ — ไอเทมตกแต่งต้องไม่ไปอยู่ใต้สิ่งเหล่านี้ */
+const DECORATION_OBSTACLES = '.dashboard__right-cluster, .dashboard__corner-actions, .dashboard__panel--left, .game-top-hud'
 
 /** ขนาดฐาน (px) ของกล่องไอเทมตกแต่งที่ scale:1 — ต้องคำนวณด้วยสูตรเดียวกับ
  * clamp(20px, 6vw, 34px) ใน TreeOfLife.css (.tree-of-life__decoration-item) เพราะตอน
@@ -496,7 +541,7 @@ function getBaseDecorationSizePx(): number {
  * ศูนย์กลางไอเทม" เทียบกับตอนเริ่มลาก — pattern เดียวกับระบบลากย้ายตำแหน่งเดิมด้านบน
  * (onPointerDown/Move/Up + setPointerCapture) ไม่ได้คิดกลไกใหม่
  */
-function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, containerRef }: DecorationLayerProps) {
+function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, onDecorationStore, containerRef, placementGeometry }: DecorationLayerProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [previewPos, setPreviewPos] = useState<{ xPct: number; yPct: number } | null>(null)
 
@@ -508,93 +553,199 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
    *  handlePointerMove */
   const resizeStartRef = useRef<{ centerX: number; centerY: number; startDistance: number; baseScale: number } | null>(null)
 
-  const getEffectivePosition = (item: PlacedItem): { left: string; top: string } => {
-    if (draggingId === item.itemId && previewPos) {
-      return { left: `${previewPos.xPct}%`, top: `${previewPos.yPct}%` }
+  /* ห้ามไอเทมใดๆ อยู่ใต้แถบเมนูล่าง (ActionMenuBar): วัดขอบบนของแถบจริงเทียบกับกล่องต้นไม้
+     แล้วจำกัด y สูงสุด — ใช้ทั้งตำแหน่งเริ่มต้น ตำแหน่งที่เคยลากเซฟไว้ และระหว่างลาก */
+  const [maxYPct, setMaxYPct] = useState(96)
+  /* [แก้บั๊กไอเทมหาย] ปุ่ม/แผงลอยของหน้า Home (คลัสเตอร์ปุ่มขวา ปุ่มมุมล่าง กระดานจัดอันดับ แถบ HUD) อยู่เหนือ
+     ชั้นต้นไม้ — กระถาง/รูปปั้นที่ตำแหน่งเริ่มต้นตกไปอยู่ใต้ปุ่มพวกนี้จึง "มองไม่เห็น" ตอนนี้วัดกรอบปุ่มจริง
+     (% ของแถบต้นไม้) แล้วเลื่อนไอเทมหลบให้พ้นทุกครั้งที่แสดงผล */
+  const [obstacles, setObstacles] = useState<{ x0: number; y0: number; x1: number; y1: number }[]>([])
+  const [bandSize, setBandSize] = useState<{ w: number; h: number } | null>(null)
+  useLayoutEffect(() => {
+    const measure = () => {
+      const box = containerRef.current?.getBoundingClientRect()
+      if (!box || box.height <= 0 || box.width <= 0) return
+      const nav = document.querySelector('.action-menu-container')?.getBoundingClientRect()
+      // เว้นครึ่งกล่องไอเทม + วงกลมปุ่มที่เลือกที่ยื่นขึ้นจากแถบ (~ครึ่งความสูงแถบ)
+      const reserve = getBaseDecorationSizePx() / 2 + (nav ? nav.height / 2 : 0) + 8
+      const limit = nav && nav.height > 0 ? ((nav.top - reserve - box.top) / box.height) * 100 : 96
+      setMaxYPct(Math.max(30, Math.min(96, limit)))
+      const rects: { x0: number; y0: number; x1: number; y1: number }[] = []
+      document.querySelectorAll(DECORATION_OBSTACLES).forEach((el) => {
+        const r = el.getBoundingClientRect()
+        if (r.width <= 0 || r.height <= 0) return
+        rects.push({
+          x0: ((r.left - box.left) / box.width) * 100, x1: ((r.right - box.left) / box.width) * 100,
+          y0: ((r.top - box.top) / box.height) * 100, y1: ((r.bottom - box.top) / box.height) * 100,
+        })
+      })
+      setObstacles(rects)
+      setBandSize({ w: box.width, h: box.height })
     }
-    const custom = decorationPositions[item.itemId]
-    if (custom) return { left: `${custom.xPct}%`, top: `${custom.yPct}%` }
-    const zonePos = DECORATION_ZONE_POSITION[item.zone]
-    return zonePos
+    measure()
+    // ปุ่ม/แผงเลื่อนขึ้นมาทีหลัง (แอนิเมชันเข้า) และกระดานจัดอันดับย่อ/ขยายได้ — วัดซ้ำ
+    const late = window.setTimeout(measure, 900)
+    const ro = new ResizeObserver(measure)
+    document.querySelectorAll(DECORATION_OBSTACLES).forEach((el) => ro.observe(el))
+    window.addEventListener('resize', measure)
+    return () => { window.clearTimeout(late); ro.disconnect(); window.removeEventListener('resize', measure) }
+  }, [containerRef])
+
+  /** เลื่อนไอเทมให้พ้นปุ่มบนจอ: ขยับเข้าหาลำต้น (x 50%) ก่อน ถ้ายังทับค่อยขยับขึ้น */
+  const avoidObstacles = (pos: { xPct: number; yPct: number }, item: PlacedItem) => {
+    if (!bandSize || obstacles.length === 0) return pos
+    const half = (getBaseDecorationSizePx() * getEffectiveScale(item)) / 2
+    const hx = (half / bandSize.w) * 100, hy = (half / bandSize.h) * 100
+    let { xPct: x, yPct: y } = pos
+    const hits = () => obstacles.some((o) => x + hx > o.x0 && x - hx < o.x1 && y + hy > o.y0 && y - hy < o.y1)
+    for (let i = 0; i < 40 && hits(); i++) {
+      if (Math.abs(x - 50) > 3) x += x > 50 ? -3 : 3
+      else y = Math.max(8, y - 3)
+    }
+    return { xPct: x, yPct: y }
+  }
+
+  const layout = defaultDecorationLayout(placedItems.map((i) => i.itemId))
+  const basePosition = (item: PlacedItem): { xPct: number; yPct: number } =>
+    decorationPositions[item.itemId] ?? layout[item.itemId] ?? { xPct: 50, yPct: 30 }
+
+  /** [แก้ตามที่ระบุ — 2.4] บังคับกฎโซนของไอเทม (รูปปั้น=พื้นดิน, ของแขวน=ต้นไม้, โพสอิท=ห้ามลงพื้น) */
+  const constrain = (itemId: string, pos: { xPct: number; yPct: number }) =>
+    constrainPlacement(placementRuleOf(itemId), pos, placementGeometry, maxYPct)
+
+  /** ตำแหน่งที่ใช้จริงของไอเทม: ค่าที่เซฟ/ค่าเริ่มต้น → หลบปุ่มบนจอ → บังคับโซน (ตำแหน่งเก่าที่ผิดกฎถูกดึงกลับ) */
+  const resolvedPosition = (item: PlacedItem): { xPct: number; yPct: number } => {
+    const base = basePosition(item)
+    return constrain(item.itemId, avoidObstacles({ xPct: base.xPct, yPct: Math.min(base.yPct, maxYPct) }, item))
+  }
+
+  const getEffectivePosition = (item: PlacedItem): { left: string; top: string } => {
+    if (draggingId === item.itemId && previewPos) return { left: `${previewPos.xPct}%`, top: `${previewPos.yPct}%` }
+    const pos = resolvedPosition(item)
+    return { left: `${pos.xPct}%`, top: `${pos.yPct}%` }
   }
 
   const getEffectiveScale = (item: PlacedItem): number => {
     if (resizingId === item.itemId && previewScale !== null) return previewScale
-    return decorationPositions[item.itemId]?.scale ?? 1
+    return Math.max(MIN_DECORATION_SCALE, decorationPositions[item.itemId]?.scale ?? 1)
   }
 
   const clampPct = (v: number) => Math.min(96, Math.max(4, v))
-  const clampScale = (v: number) => Math.min(MAX_DECORATION_SCALE, Math.max(MIN_DECORATION_SCALE, v))
+  const clampY = (v: number) => Math.min(maxYPct, Math.max(4, v))
+  const clampScale = (v: number, itemId: string) => Math.min(maxDecorationScale(itemId), Math.max(MIN_DECORATION_SCALE, v))
 
-  const handlePointerDown = (e: ReactPointerEvent<HTMLSpanElement>, itemId: string) => {
+  /** ย่อ/ขยายทีละขั้น (ปุ่ม −/+ หรือหมุนล้อเมาส์บนไอเทม) แล้วบันทึกทันที */
+  const stepScale = (item: PlacedItem, factor: number) => {
+    if (!onDecorationMove) return
+    const pos = resolvedPosition(item)
+    const next = clampScale((decorationPositions[item.itemId]?.scale ?? 1) * factor, item.itemId)
+    onDecorationMove(item.itemId, pos.xPct, pos.yPct, Math.round(next * 100) / 100)
+  }
+
+  // แตะที่อื่น (นอกไอเทมที่เลือก/แถบปรับขนาด) → ยกเลิกการเลือก
+  useEffect(() => {
+    if (!selectedId) return
+    const onDown = (e: PointerEvent) => {
+      const el = e.target as Element | null
+      if (el?.closest?.('.tree-of-life__decoration-item, .tree-of-life__decoration-toolbar')) return
+      setSelectedId(null)
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [selectedId])
+
+  /* [แก้ตามที่ระบุ] วิธีจับไอเทมบนหน้า Home:
+       - กดแล้วลากทันที = ย้ายตำแหน่ง
+       - กดค้าง (~0.45 วิ) แล้วลาก = ย่อ/ขยาย (ลากออกจากกลางไอเทม = ใหญ่ขึ้น, ลากเข้า = เล็กลง) ไม่โชว์ตัวเลข %
+       - แตะเฉยๆ = โชว์ปุ่ม "เก็บ" (เก็บไอเทมกลับเข้าคลัง)
+     สถานะระหว่างกดเก็บใน ref (อ่าน/เขียนเฉพาะใน handler — ไม่อ่านตอน render) */
+  const pressRef = useRef<{ itemId: string; x: number; y: number; timer: number; mode: 'pending' | 'move' | 'resize' } | null>(null)
+  /** เพิ่งลาก/ย่อขยายเสร็จ → กลืน click ที่เบราว์เซอร์ยิงตามมา ไม่ให้เปิดปุ่ม "เก็บ" */
+  const suppressClickRef = useRef(false)
+
+  const handlePointerDown = (e: ReactPointerEvent<HTMLSpanElement>, item: PlacedItem) => {
     if (!onDecorationMove) return // ไม่รองรับการลากถ้าผู้เรียกใช้ไม่ได้ผูก handler ไว้
     e.stopPropagation()
-    e.currentTarget.setPointerCapture(e.pointerId)
-    setDraggingId(itemId)
+    const el = e.currentTarget
+    el.setPointerCapture(e.pointerId)
+    if (pressRef.current) window.clearTimeout(pressRef.current.timer)
+    const timer = window.setTimeout(() => {
+      const press = pressRef.current
+      if (!press || press.mode !== 'pending') return
+      const rect = el.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height / 2
+      const startDistance = Math.max(14, Math.hypot(press.x - centerX, press.y - centerY))
+      const baseScale = Math.max(MIN_DECORATION_SCALE, decorationPositions[item.itemId]?.scale ?? 1)
+      resizeStartRef.current = { centerX, centerY, startDistance, baseScale }
+      press.mode = 'resize'
+      setSelectedId(null)
+      setResizingId(item.itemId)
+      setPreviewScale(baseScale)
+      try { navigator.vibrate?.(15) } catch { /* ไม่รองรับการสั่น */ }
+    }, LONG_PRESS_MS)
+    pressRef.current = { itemId: item.itemId, x: e.clientX, y: e.clientY, timer, mode: 'pending' }
   }
 
   const handlePointerMove = (e: ReactPointerEvent<HTMLSpanElement>) => {
-    if (!draggingId || !containerRef.current) return
-    const rect = containerRef.current.getBoundingClientRect()
-    const xPct = clampPct(((e.clientX - rect.left) / rect.width) * 100)
-    const yPct = clampPct(((e.clientY - rect.top) / rect.height) * 100)
-    setPreviewPos({ xPct, yPct })
+    const press = pressRef.current
+    if (!press || !containerRef.current) return
+    if (press.mode === 'pending') {
+      if (Math.hypot(e.clientX - press.x, e.clientY - press.y) < MOVE_SLOP_PX) return
+      window.clearTimeout(press.timer)
+      press.mode = 'move'
+      setSelectedId(null)
+      setDraggingId(press.itemId)
+    }
+    if (press.mode === 'move') {
+      const rect = containerRef.current.getBoundingClientRect()
+      const xPct = clampPct(((e.clientX - rect.left) / rect.width) * 100)
+      const yPct = clampY(((e.clientY - rect.top) / rect.height) * 100)
+      // ลากออกนอกโซนไม่ได้ — ไอเทมติดขอบโซนที่ใกล้นิ้วที่สุดแทน
+      setPreviewPos(constrain(press.itemId, { xPct, yPct }))
+      return
+    }
+    const start = resizeStartRef.current
+    if (!start) return
+    const ratio = (Math.hypot(e.clientX - start.centerX, e.clientY - start.centerY) || 1) / start.startDistance
+    setPreviewScale(clampScale(start.baseScale * ratio, press.itemId))
   }
 
-  const handlePointerUp = () => {
-    if (draggingId && previewPos && onDecorationMove) {
-      onDecorationMove(draggingId, previewPos.xPct, previewPos.yPct)
+  const handlePointerUp = (item: PlacedItem) => {
+    const press = pressRef.current
+    if (!press) return
+    window.clearTimeout(press.timer)
+    if (press.mode === 'move' && previewPos && onDecorationMove) {
+      onDecorationMove(press.itemId, previewPos.xPct, previewPos.yPct)
+    } else if (press.mode === 'resize' && previewScale !== null && onDecorationMove) {
+      const pos = resolvedPosition(item)
+      onDecorationMove(item.itemId, pos.xPct, pos.yPct, Math.round(previewScale * 100) / 100)
     }
+    suppressClickRef.current = press.mode !== 'pending'
+    pressRef.current = null
+    resizeStartRef.current = null
     setDraggingId(null)
     setPreviewPos(null)
+    setResizingId(null)
+    setPreviewScale(null)
   }
 
-  /** [ใหม่] คลิก/แตะที่ตัวไอเทม (ไม่ใช่ handle) — สลับเลือก/ยกเลิกเลือก ไม่ยุ่งกับระบบลาก
-   *  ย้ายตำแหน่งเดิมเลย (onClick ของเบราว์เซอร์จะไม่ยิงเองถ้าเพิ่งลากไปจริงๆ อยู่แล้ว) */
+  /** แตะที่ตัวไอเทม (ไม่ได้ลาก/ไม่ได้กดค้าง) — สลับโชว์/ซ่อนปุ่ม "เก็บ" */
   const handleItemClick = (e: React.MouseEvent<HTMLSpanElement>, itemId: string) => {
     if (!onDecorationMove) return
     e.stopPropagation()
+    if (suppressClickRef.current) { suppressClickRef.current = false; return }
     setSelectedId((prev) => (prev === itemId ? null : itemId))
-  }
-
-  /** [ใหม่] เริ่มลาก resize handle — วัดจุดศูนย์กลางกล่องไอเทม (จาก parentElement ของ handle
-   *  เอง) แล้วจำระยะห่างเริ่มต้น + scale เดิมไว้ใน ref เพื่อคำนวณอัตราส่วนตอน pointermove */
-  const handleResizePointerDown = (e: ReactPointerEvent<HTMLSpanElement>, item: PlacedItem) => {
-    e.stopPropagation()
-    e.currentTarget.setPointerCapture(e.pointerId)
-    const itemEl = e.currentTarget.parentElement
-    if (!itemEl) return
-    const rect = itemEl.getBoundingClientRect()
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-    const startDistance = Math.hypot(e.clientX - centerX, e.clientY - centerY) || 1
-    resizeStartRef.current = { centerX, centerY, startDistance, baseScale: decorationPositions[item.itemId]?.scale ?? 1 }
-    setResizingId(item.itemId)
-    setPreviewScale(resizeStartRef.current.baseScale)
-  }
-
-  const handleResizePointerMove = (e: ReactPointerEvent<HTMLSpanElement>) => {
-    const start = resizeStartRef.current
-    if (!resizingId || !start) return
-    const currentDistance = Math.hypot(e.clientX - start.centerX, e.clientY - start.centerY) || 1
-    const ratio = currentDistance / start.startDistance
-    setPreviewScale(clampScale(start.baseScale * ratio))
-  }
-
-  const handleResizePointerUp = (item: PlacedItem) => {
-    if (resizingId === item.itemId && previewScale !== null && onDecorationMove) {
-      const pos = decorationPositions[item.itemId] ?? zonePositionAsPct(item)
-      onDecorationMove(item.itemId, pos.xPct, pos.yPct, previewScale)
-    }
-    setResizingId(null)
-    setPreviewScale(null)
-    resizeStartRef.current = null
   }
 
   return (
     <>
-      <div className={`tree-of-life__drop-zone-hint ${draggingId ? 'tree-of-life__drop-zone-hint--visible' : ''}`} />
-      <div className="tree-of-life__decorations" aria-hidden="true">
+      {/* [2.4] ระหว่างลาก แสดงโซนที่วางไอเทมชิ้นนี้ได้ (พื้นดิน / ทรงพุ่ม / เหนือพื้นดิน) */}
+      <div
+        className={`tree-of-life__drop-zone-hint ${draggingId ? 'tree-of-life__drop-zone-hint--visible' : ''}`}
+        style={draggingId ? dropZoneStyle(placementRuleOf(draggingId), placementGeometry) : undefined}
+      />
+      <div className="tree-of-life__decorations">
         {placedItems.map((item) => {
           const pos = getEffectivePosition(item)
           const scale = getEffectiveScale(item)
@@ -602,29 +753,36 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
           const isDraggable = !!onDecorationMove
           const isDragging = draggingId === item.itemId
           const isSelected = selectedId === item.itemId
+          const isResizing = resizingId === item.itemId
           return (
             <span
               key={item.itemId}
-              className={`tree-of-life__decoration-item ${isDraggable ? 'tree-of-life__decoration-item--draggable' : ''} ${isDragging ? 'tree-of-life__decoration-item--dragging' : ''}`}
+              className={`tree-of-life__decoration-item ${isDraggable ? 'tree-of-life__decoration-item--draggable' : ''} ${isDragging ? 'tree-of-life__decoration-item--dragging' : ''}${isResizing ? ' tree-of-life__decoration-item--resizing' : ''}`}
               style={{ left: pos.left, top: pos.top, width: boxSize, height: boxSize }}
-              title={isDraggable ? `${item.itemId} — ลากเพื่อจัดวางใหม่ กดเพื่อปรับขนาด` : item.itemId}
-              onPointerDown={(e) => handlePointerDown(e, item.itemId)}
+              title={isDraggable ? 'ลากเพื่อย้าย · กดค้างแล้วลากเพื่อย่อ/ขยาย · แตะเพื่อเก็บ' : undefined}
+              onPointerDown={(e) => handlePointerDown(e, item)}
               onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
+              onPointerUp={() => handlePointerUp(item)}
+              onPointerCancel={() => handlePointerUp(item)}
               onClick={(e) => handleItemClick(e, item.itemId)}
+              onContextMenu={isDraggable ? (e) => e.preventDefault() : undefined}
+              onWheel={isDraggable ? (e) => stepScale(item, e.deltaY < 0 ? 1.1 : 1 / 1.1) : undefined}
             >
               <DecorationVisual itemId={item.itemId} />
-              {isDraggable && isSelected && (
+              {isDraggable && isSelected && onDecorationStore && (
+                // [แก้ตามที่ระบุ] แตะไอเทม → ปุ่ม "เก็บ" อย่างเดียว (ไม่มีปุ่ม −/+ และตัวเลข % แล้ว)
                 <span
-                  className="tree-of-life__decoration-resize-handle"
-                  title="ลากเพื่อปรับขนาด"
-                  onPointerDown={(e) => handleResizePointerDown(e, item)}
-                  onPointerMove={handleResizePointerMove}
-                  onPointerUp={() => handleResizePointerUp(item)}
-                  onPointerCancel={() => handleResizePointerUp(item)}
+                  className="tree-of-life__decoration-toolbar"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  ⤡
+                  <button
+                    type="button"
+                    className="tree-of-life__decoration-store"
+                    onClick={() => { setSelectedId(null); onDecorationStore(item.itemId) }}
+                  >
+                    เก็บ
+                  </button>
                 </span>
               )}
             </span>
@@ -633,15 +791,6 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
       </div>
     </>
   )
-}
-
-/** [ใหม่] แปลงตำแหน่งเริ่มต้นของไอเทม (โซนตายตัว % string เช่น '50%') ให้เป็นตัวเลข % ล้วนๆ
- *  ไว้ใช้ตอนบันทึก scale ของไอเทมที่ยังไม่เคยถูกลากย้ายตำแหน่งมาก่อนเลย (ไม่มี custom
- *  position ใน decorationPositions ยังใช้ตำแหน่งโซนเริ่มต้นอยู่) — ไม่งั้น onDecorationMove
- *  จะได้ x/y เป็น undefined ตอนบันทึก scale ครั้งแรกก่อนเคยลากย้ายที่เลยสักครั้ง */
-function zonePositionAsPct(item: PlacedItem): { xPct: number; yPct: number } {
-  const zonePos = DECORATION_ZONE_POSITION[item.zone]
-  return { xPct: parseFloat(zonePos.left), yPct: parseFloat(zonePos.top) }
 }
 
 /*============================================================================*\

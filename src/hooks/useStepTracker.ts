@@ -1,15 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { HealthFitness } from '@capacitor/health-fitness'
 import type { StepReading } from '../services/stepTracking'
-import { getActiveJourney, addSteps } from '../services/api/journey.api'
 
 /*============================================================================*\
   useStepTracker.ts — [ไฟล์ใหม่ — เฟส 3] อ่านก้าวเดินจริงจาก Health Connect (Android) /
   Apple HealthKit (iOS) ผ่าน @capacitor/health-fitness — ใช้ได้เฉพาะตอนรันเป็นแอป native
   ผ่าน Capacitor เท่านั้น (Capacitor.isNativePlatform() === false เสมอตอนรันบนเว็บเบราว์เซอร์
   ปกติ ณ localhost/production เว็บ — ฟังก์ชันในไฟล์นี้จะไม่ถูกเรียกเลยในกรณีนั้น ปล่อยให้ฝั่งที่
-  เรียกใช้ (VitalityStepsQuest.tsx) ตกไปที่ DeviceMotion/กรอกมือเดิมตามลำดับ fallback)
+  เรียกใช้ (StepJourneyGame.tsx) ตกไปที่ DeviceMotion/กรอกมือเดิมตามลำดับ fallback)
   ────────────────────────────────────────────────────────────────────────────
   [สำคัญ — อ่านจาก .d.ts จริงของแพ็กเกจที่ลงไปจริง ไม่ใช่เดา] API ของปลั๊กอินนี้ไม่มี
   requestAuthorization({ read: [...] }) หรือ aggregate function ตรงๆ แบบที่มักเดากันแบบง่ายๆ
@@ -105,14 +104,14 @@ export interface UseStepTrackerResult {
    *  ไม่ได้แปลว่า permission ผ่านแล้ว แค่บอกว่า "มีให้ลองใช้" */
   isNativeHealthAvailable: boolean
   /** 'health-connect' บน Android / 'healthkit' บน iOS / null ถ้าไม่ใช่ native platform —
-   *  ให้ฝั่งเรียกใช้ (VitalityStepsQuest.tsx) ใช้ตัดสินใจ dataSource เริ่มต้นโดยไม่ต้อง import
+   *  ให้ฝั่งเรียกใช้ (StepJourneyGame.tsx) ใช้ตัดสินใจ dataSource เริ่มต้นโดยไม่ต้อง import
    *  Capacitor เองซ้ำ */
   nativePlatform: NativeHealthPlatform | null
   isRequesting: boolean
   /** ขอ permission + query ก้าววันนี้ในครั้งเดียว (ต้องเรียกจาก user gesture ตรงๆ เหมือน
    *  Google Fit OAuth/DeviceMotion permission — ดู stepTracking.ts) คืน null = ไม่พร้อมใช้งาน
    *  (ไม่ใช่ native platform / permission ถูกปฏิเสธ / query ล้มเหลว / parse ผลลัพธ์ไม่ได้) —
-   *  ไม่ throw ไม่ว่ากรณีไหน ให้ฝั่งเรียกใช้ (VitalityStepsQuest.tsx) ตกไป fallback ถัดไปเองแทน */
+   *  ไม่ throw ไม่ว่ากรณีไหน ให้ฝั่งเรียกใช้ (StepJourneyGame.tsx) ตกไป fallback ถัดไปเองแทน */
   requestNativeSteps: () => Promise<StepReading | null>
 }
 
@@ -155,32 +154,16 @@ export function useStepTracker(): UseStepTrackerResult {
     } catch {
       // [ตามที่ระบุ] permission ถูกปฏิเสธ/ query ล้มเหลว → ไม่ throw ทำแอป crash คืน null
       // เฉยๆ ให้ฝั่งเรียกใช้ตัดสินใจ fallback เอง (ดู describeStepSyncError ใน stepTracking.ts
-      // สำหรับข้อความอธิบายให้ผู้ใช้เห็นตอนเรียกจาก VitalityStepsQuest.tsx)
+      // สำหรับข้อความอธิบายให้ผู้ใช้เห็นตอนเรียกจาก StepJourneyGame.tsx)
       return null
     } finally {
       setIsRequesting(false)
     }
   }, [isNative, nativePlatform])
 
-  /** [ตามที่ระบุ — เฟส 3 ข้อ 5] sync ก้าวสะสมเข้า journey ที่กำลังเดินอยู่ "ตอนแอปเปิดขึ้นมา"
-   *  เท่านั้น (ครั้งเดียวตอน mount ผ่าน dependency array ว่าง) ไม่ sync ต่อเนื่องตลอดเวลาเพื่อ
-   *  ประหยัดแบต — [ข้อจำกัดเฟสนี้] hook นี้ยังไม่ได้ mount อยู่ที่ root ของแอป (ยังไม่มีหน้าจอ
-   *  Journey ถาวรจนกว่าจะถึงเฟส 6) จึง "เปิดแอปขึ้นมา" ในทางปฏิบัติตอนนี้หมายถึง "เปิดเควสก้าว
-   *  เพื่อสุขภาพขึ้นมา" (จุดเดียวที่เรียก useStepTracker() อยู่ตอนนี้) — ต้องย้าย hook นี้ไป mount
-   *  ที่ App.tsx/AppContext ตอนเฟส 6 มีหน้าจอ Journey จริงถ้าต้องการ sync ตั้งแต่เปิดแอปจริงๆ */
-  useEffect(() => {
-    if (!isNative) return
-    let cancelled = false
-    ;(async () => {
-      const reading = await requestNativeSteps()
-      if (cancelled || !reading) return
-      const activeJourney = await getActiveJourney()
-      if (cancelled || !activeJourney) return
-      await addSteps(activeJourney.id, reading.steps)
-    })()
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- ตั้งใจรันครั้งเดียวตอน mount เท่านั้น
-  }, [])
+  // [ลบออก] เดิมมี effect ตอน mount ที่ addSteps(ก้าวทั้งวันจาก Health Connect/HealthKit) เข้าทริปตรงๆ
+  // — ข้ามเพดานก้าวรายวัน (recordJourneySteps) และนับซ้ำทุกครั้งที่เปิดเควส ชนกับการซิงค์ใน
+  // StepJourneyGame.tsx ตอนนี้ StepJourneyGame ซิงค์อัตโนมัติครั้งเดียวตอนเปิดเองผ่านเส้นทางเดียวกับปุ่ม 🔄
 
   return { isNativeHealthAvailable: isNative, nativePlatform, isRequesting, requestNativeSteps }
 }

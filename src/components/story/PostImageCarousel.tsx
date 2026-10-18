@@ -5,15 +5,27 @@ import { useRef, useState } from 'react'
   ปัด (มือถือ) / ลาก-เลื่อน (ทัชแพด) ผ่าน scroll-snap · ปุ่มลูกศรซ้าย/ขวา · จุดบอกตำแหน่ง + ตัวเลข 1/5
   รูปแรกกำหนดสัดส่วนกรอบ รูปถัดไปแสดงเต็มกรอบแบบไม่ตัด (contain)
 \*============================================================================*/
-export default function PostImageCarousel({ images }: { images: string[] }) {
+/* [แก้ตามที่ระบุ — แบบ IG] ทุกโพสต์ใช้กรอบ 4:5 เต็มกว้างการ์ด (รูปเดียวก็เหมือนกัน) — รูปแสดงครบไม่ครอป
+   (contain) ช่องว่างรอบรูปเติมด้วยรูปเดียวกันแบบเบลอ (ไม่เป็นแถบดำ) · จุดบอกตำแหน่งย้ายมาอยู่ "ใต้รูป"
+   · แตะรูปสองครั้ง = ถูกใจ (onDoubleTap) */
+function Slide({ src, eager }: { src: string; eager: boolean }) {
+  return (
+    <>
+      <img className="story-carousel__backdrop" src={src} alt="" aria-hidden="true" loading={eager ? 'eager' : 'lazy'} draggable={false} />
+      <img className="story-carousel__img" src={src} alt="" loading={eager ? 'eager' : 'lazy'} draggable={false} />
+    </>
+  )
+}
+
+export default function PostImageCarousel({ images, onDoubleTap }: { images: string[]; onDoubleTap?: () => void }) {
   const trackRef = useRef<HTMLDivElement | null>(null)
   const [index, setIndex] = useState(0)
 
   if (images.length === 0) return null
   if (images.length === 1) {
     return (
-      <div className="story-post-card__image-wrap">
-        <img className="story-post-card__image" src={images[0]} alt="" loading="lazy" />
+      <div className="story-carousel story-carousel--single" onDoubleClick={onDoubleTap}>
+        <div className="story-carousel__slide"><Slide src={images[0]} eager={false} /></div>
       </div>
     )
   }
@@ -32,11 +44,11 @@ export default function PostImageCarousel({ images }: { images: string[] }) {
   }
 
   return (
-    <div className="story-carousel" aria-roledescription="carousel">
+    <div className="story-carousel" aria-roledescription="carousel" onDoubleClick={onDoubleTap}>
       <div className="story-carousel__track" ref={trackRef} onScroll={handleScroll}>
         {images.map((src, i) => (
           <div key={i} className="story-carousel__slide" aria-label={`รูปที่ ${i + 1} จาก ${images.length}`}>
-            <img src={src} alt="" loading={i === 0 ? 'eager' : 'lazy'} draggable={false} />
+            <Slide src={src} eager={i === 0} />
           </div>
         ))}
       </div>
@@ -48,7 +60,7 @@ export default function PostImageCarousel({ images }: { images: string[] }) {
       {index < images.length - 1 && (
         <button type="button" className="story-carousel__nav story-carousel__nav--next" onClick={() => goTo(index + 1)} aria-label="รูปถัดไป">›</button>
       )}
-      <div className="story-carousel__dots" aria-hidden="true">
+      <div className="story-carousel__dots story-carousel__dots--below" aria-hidden="true">
         {images.map((_, i) => <span key={i} className={i === index ? 'is-active' : ''} />)}
       </div>
     </div>

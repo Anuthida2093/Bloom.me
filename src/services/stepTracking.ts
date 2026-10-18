@@ -6,14 +6,14 @@
     a) Google Fit REST API — แม่นยำสุด (ใช้ pedometer จริงของโทรศัพท์ผ่าน Google Fit ที่
        ผู้ใช้ติดตั้งไว้แล้ว) แต่ต้องมี Google Cloud Console project + OAuth client ID จริง
        ตั้งไว้ใน .env (VITE_GOOGLE_FIT_CLIENT_ID) ก่อนถึงจะใช้งานได้ — ถ้ายังไม่ตั้งค่า
-       isGoogleFitConfigured() จะเป็น false และฝั่งเรียกใช้ (VitalityStepsQuest.tsx) จะข้าม
+       isGoogleFitConfigured() จะเป็น false และฝั่งเรียกใช้ (StepJourneyGame.tsx) จะข้าม
        ไปลอง (b) ต่อเองโดยอัตโนมัติ ไม่มี error โผล่ให้ผู้ใช้เห็นเพราะเรื่องนี้
     b) DeviceMotion API — นับก้าวประมาณจากเซนเซอร์เครื่องตรงๆ ใช้ได้ทันทีไม่ต้องตั้งค่า
        อะไรเพิ่ม แต่แม่นยำต่ำกว่ามาก (ดูคำเตือนที่ startDeviceMotionStepCounter ด้านล่าง)
     c) ทั้งสองทางใช้ไม่ได้เลย (ไม่ได้ตั้งค่า Google Fit + เบราว์เซอร์ไม่รองรับ/ปฏิเสธ
        DeviceMotion) → โยน error ที่มีความหมายชัดเจน ให้ฝั่งเรียกใช้ fallback ไปโหมดกรอกมือ/
        ถ่ายรูปยืนยันที่มีอยู่แล้วในระบบ (ไม่ได้ implement ที่นี่ — นั่นคือ UI เดิมของ
-       VitalityStepsQuest.tsx อยู่แล้ว)
+       StepJourneyGame.tsx อยู่แล้ว)
 
   [ทำไมไม่เรียก Google Fit อัตโนมัติตอนเปิดหน้า] OAuth popup ถูกเบราว์เซอร์บล็อกถ้าไม่ได้เปิด
   จาก user gesture ตรงๆ (คลิกปุ่ม) — ฟังก์ชัน sync*() ด้านล่างทั้งหมดจึงต้องถูกเรียกจาก

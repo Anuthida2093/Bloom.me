@@ -27,42 +27,46 @@
  *  (ไฟล์กลุ่มนี้ไม่ใช่ "ไอคอน") ย้ายด้วย git mv และเปลี่ยนชื่อไฟล์ให้ตรงรายชื่อที่เจ้าของโปรเจกต์ให้มา
  *  (ตัวพิมพ์ใหญ่นำ เช่น Water.png/Coins.png/Home.png, แก้ 'Learning Quests.npg.png' → 'Learning
  *  Quests.png') — key ทุกตัวคงชื่อเดิม โค้ดที่เรียก BADGE_ICONS.xxx จึงไม่ต้องแก้
- *  [ยังไม่มีไฟล์] leaf (🍃) — ไม่มีไฟล์ leaf ใดๆ ทั้งในโฟลเดอร์เดิมและใหม่ */
+ *  [ยังไม่มีไฟล์] leaf (🍃) — ไม่มีไฟล์ leaf ใดๆ ทั้งในโฟลเดอร์เดิมและใหม่
+ *  [แก้ตามที่ระบุ — โหลดเร็วขึ้น] ใช้ .webp ที่ scripts/optimize-images.mjs สร้างจาก PNG (ไฟล์ PNG ต้นฉบับยังอยู่ —
+ *  เปลี่ยนรูป = วาง PNG ใหม่ทับแล้วรัน `node scripts/optimize-images.mjs`) */
 const DECOR = '/assets/images/decorations'
 
 export const BADGE_ICONS = {
-  water: `${DECOR}/Water.png`,
-  seed: `${DECOR}/Seed.png`,
-  exp: `${DECOR}/EXP.png`,
-  tree: `${DECOR}/tree.png`,
-  streak: `${DECOR}/Streak.png`,
-  coins: `${DECOR}/Coins.png`,
-  trophy: `${DECOR}/badge.png`,
-  item: `${DECOR}/Item.png`,
-  questTab: `${DECOR}/Quest Icon.png`,
-  learningTab: `${DECOR}/Learning Quests.png`,
-  physicalTab: `${DECOR}/Physical Quests.png`,
-  mentalTab: `${DECOR}/Mental Quests.png`,
-  store: `${DECOR}/Store.png`,
-  home: `${DECOR}/Home.png`,
-  checkin: `${DECOR}/Check-in.png`,
-  profile: `${DECOR}/profile.png`,
-  rank1: `${DECOR}/1.png`,
-  rank2: `${DECOR}/2.png`,
-  rank3: `${DECOR}/3.png`,
-  friends: `${DECOR}/Friends.png`,
-  share: `${DECOR}/Share.png`,
-  notification: `${DECOR}/Notification.png`,
+  water: `${DECOR}/Water.webp`,
+  seed: `${DECOR}/Seed.webp`,
+  exp: `${DECOR}/EXP.webp`,
+  tree: `${DECOR}/tree.webp`,
+  streak: `${DECOR}/Streak.webp`,
+  coins: `${DECOR}/Coins.webp`,
+  trophy: `${DECOR}/badge.webp`,
+  item: `${DECOR}/Item.webp`,
+  questTab: `${DECOR}/Quest Icon.webp`,
+  learningTab: `${DECOR}/Learning Quests.webp`,
+  physicalTab: `${DECOR}/Physical Quests.webp`,
+  mentalTab: `${DECOR}/Mental Quests.webp`,
+  store: `${DECOR}/Store.webp`,
+  home: `${DECOR}/Home.webp`,
+  checkin: `${DECOR}/Check-in.webp`,
+  profile: `${DECOR}/profile.webp`,
+  // [ใหม่ตามที่ระบุ] ปุ่มสตอรี่บน ActionMenuBar
+  story: `${DECOR}/Story.webp`,
+  rank1: `${DECOR}/1.webp`,
+  rank2: `${DECOR}/2.webp`,
+  rank3: `${DECOR}/3.webp`,
+  friends: `${DECOR}/Friends.webp`,
+  share: `${DECOR}/Share.webp`,
+  notification: `${DECOR}/Notification.webp`,
   // ไม่มีคำอธิบายจุดใช้งานในเอกสาร — ยังไม่ได้ต่อสายใช้งานที่ไหน เก็บ path ไว้เผื่ออนาคต
-  flower: `${DECOR}/Flower.png`,
+  flower: `${DECOR}/Flower.webp`,
   // บัวรดน้ำบินเข้าต้นไม้หลังปิดเควส Balanced Nutrients สำเร็จ (ดู WateringCanFx.tsx)
-  wateringCan: `${DECOR}/Watering Can.png`,
+  wateringCan: `${DECOR}/Watering Can.webp`,
   // กล่องพยาบาลลอยมุมจอ แจ้งเตือนอารมณ์ลบต่อเนื่อง (ดู MedicalBoxAlert.tsx)
-  medicalBox: `${DECOR}/Medical Box.png`,
+  medicalBox: `${DECOR}/Medical Box.webp`,
   // [ใหม่] ปุ่มควบคุมทั่วไป — แทนสัญลักษณ์ข้อความ ←/✕/⚙️
-  back: `${DECOR}/Return.png`,
-  close: `${DECOR}/Cross.png`,
-  settings: `${DECOR}/Settings.png`,
+  back: `${DECOR}/Return.webp`,
+  close: `${DECOR}/Cross.webp`,
+  settings: `${DECOR}/Settings.webp`,
 } as const
 
 /** ไอคอนหมวดเควส (QUEST_TABS[].emoji) — ครบทั้ง 3 หมวดแล้ว (รอบก่อนหน้าหมวดสุขภาพกายยังไม่มี
@@ -84,37 +88,42 @@ export const RANK_CATEGORY_ICONS: Record<'level' | 'knowledgeStack' | 'healthSta
 }
 
 /** ไอคอนเควสแต่ละตัว — key = QuestDef.code จริงใน questCatalog.ts (เช็คตรงกันแล้ว)
- *  จาก public/assets/images/icons/quests/ — เควสที่ไม่มีในนี้ (know-guardian-of-rest,
- *  know-ten-year-forest) ไม่มีไฟล์ภาพจริงในโฟลเดอร์ ให้ผู้เรียกใช้ fallback เป็น quest.icon
+ *  จาก public/assets/images/icons/quests/ — เควสที่ไม่มีในนี้ (know-ten-year-forest)
+ *  ไม่มีไฟล์ภาพจริงในโฟลเดอร์ ให้ผู้เรียกใช้ fallback เป็น quest.icon
  *  (emoji เดิม) เอง อย่าใส่ key มั่วเพื่อให้ครบ */
 export const QUEST_ICONS: Record<string, string> = {
-  'know-active-focus': '/assets/images/icons/quests/Active Focus.png',
-  'know-deep-root': '/assets/images/icons/quests/The Deep Root.png',
-  'know-brain-dump': '/assets/images/icons/quests/Brain Dump.png',
-  'know-cross-pollination': '/assets/images/icons/quests/Cross-Pollination.png',
-  'know-daily-checkin': '/assets/images/icons/quests/Daily Learning Check-in.png',
+  'know-active-focus': '/assets/images/icons/quests/Active Focus.webp',
+  'know-deep-root': '/assets/images/icons/quests/The Deep Root.webp',
+  'know-brain-dump': '/assets/images/icons/quests/Brain Dump.webp',
+  'know-cross-pollination': '/assets/images/icons/quests/Cross-Pollination.webp',
+  'know-daily-checkin': '/assets/images/icons/quests/Daily Learning Check-in.webp',
   // [แก้ตามที่ระบุ] key เปลี่ยนตาม code ใหม่ 'know-content-review' (ดู questCatalog.ts) —
   // ยังไม่มีไฟล์ภาพใหม่ชื่อ "Time Capsule.png" ให้ ใช้ไฟล์เดิม "Strategic Delay.png" ไปก่อน
-  'know-content-review': '/assets/images/icons/quests/Strategic Delay.png',
+  'know-content-review': '/assets/images/icons/quests/Strategic Delay.webp',
+  // [ใหม่ตามที่ระบุ] ผู้พิทักษ์การพักผ่อน (ไฟล์ "The guardian of rest.png")
+  'know-guardian-of-rest': '/assets/images/icons/quests/The guardian of rest.webp',
   // [แก้ตามที่ระบุ] key เปลี่ยนตาม code ใหม่ที่ sync กับ backend แล้ว (ดู questCatalog.ts) —
   // ไฟล์ภาพจริงบนดิสก์ยังชื่อเดิม (Photosynthesis.png/Pure Water.png) ไม่ได้เปลี่ยนไฟล์
-  'phys-sunlit-root': '/assets/images/icons/quests/Photosynthesis.png',
-  'phys-green-vision': '/assets/images/icons/quests/Green Vision.png',
-  'phys-hydration-drop': '/assets/images/icons/quests/Pure Water.png',
-  'phys-soil-restoration': '/assets/images/icons/quests/Soil Restoration.png',
-  'ment-oracle-activation': '/assets/images/icons/quests/Oracle Activation.png',
+  'phys-sunlit-root': '/assets/images/icons/quests/Photosynthesis.webp',
+  'phys-green-vision': '/assets/images/icons/quests/Green Vision.webp',
+  'phys-hydration-drop': '/assets/images/icons/quests/Pure Water.webp',
+  'phys-soil-restoration': '/assets/images/icons/quests/Soil Restoration.webp',
+  // [ใหม่ตามที่ระบุ] ก้าวเพื่อสุขภาพ / แคลอรี่ตาม BMI
+  'phys-vitality-steps': '/assets/images/icons/quests/Step for health.webp',
+  'phys-balanced-nutrients': '/assets/images/icons/quests/Calories.webp',
+  'ment-oracle-activation': '/assets/images/icons/quests/Oracle Activation.webp',
   // [แก้จากเอกสารร่าง] เอกสารเขียน key ว่า 'ment-incinerator' — code จริงใน questCatalog.ts
   // คือ 'ment-cognitive-incinerator' (เช็คแล้วตรงกับ ALL_QUESTS จริง)
-  'ment-cognitive-incinerator': '/assets/images/icons/quests/Cognitive Incinerator.png',
-  'ment-mindful-anchor': '/assets/images/icons/quests/Mindful Anchor.png',
-  'ment-reframer-journal': '/assets/images/icons/quests/Reframer.png',
-  'ment-gratitude-shield': '/assets/images/icons/quests/Gratitude.png',
+  'ment-cognitive-incinerator': '/assets/images/icons/quests/Cognitive Incinerator.webp',
+  'ment-mindful-anchor': '/assets/images/icons/quests/Mindful Anchor.webp',
+  'ment-reframer-journal': '/assets/images/icons/quests/Reframer.webp',
+  'ment-gratitude-shield': '/assets/images/icons/quests/Gratitude.webp',
 }
 
 /** [ไม่ได้ใช้จริง] นกฮูกบน LearningQuestMap.tsx วาดด้วย inline SVG (ดู OwlAvatar.tsx) มาแต่ต้น
  *  ไม่เคยเป็น emoji 🦉 เลยสักจุดในโค้ด (grep ทั้งโปรเจกต์แล้วไม่เจอ) จึงไม่มีจุดไหนต้องแทน —
  *  เก็บ path ไฟล์ไว้เผื่ออนาคตอยากเปลี่ยนจาก SVG เป็นภาพจริงแทน แต่ยังไม่ได้ต่อสายใช้งานจริง */
-export const OWL_AVATAR_ICON = '/assets/images/icons/quests/OwlAvatar.png'
+export const OWL_AVATAR_ICON = '/assets/images/icons/quests/OwlAvatar.webp'
 
 /** ไอคอนไอเทมตกแต่ง — key = DecorationItemMeta id จริงใน src/config/decorationItems.ts
  *  (ไม่ใช่ชื่อไฟล์ตรงๆ แบบตารางในเอกสาร เพราะ id จริงในระบบเป็น 'frog-guard'/'fox-statue' ฯลฯ)
@@ -139,29 +148,29 @@ export const OWL_AVATAR_ICON = '/assets/images/icons/quests/OwlAvatar.png'
  *  flame-pattern — ไม่มีแถวไหนในตาราง 23 รายการของเอกสารตรงกับไอเทมเหล่านี้เลย */
 export const ITEM_ICONS: Record<string, string> = {
   // ── ไอเทมเดิมที่มีอยู่แล้วในระบบ — จับคู่ความหมายตรงกับแถวในเอกสารแล้ว อัปเดตรูปเป็นไฟล์จริง ──
-  'frog-guard': '/assets/images/icons/Item/frog.png', // กบวิเศษ
-  'fox-statue': '/assets/images/icons/Item/fox.png', // สุนัขจิ้งจอก
-  'forest-unicorn': '/assets/images/icons/Item/unicorn.png', // ยูนิคอร์น
-  'lucky-clover': '/assets/images/icons/Item/Clover.png', // Clover
-  'diamond-gem': '/assets/images/icons/Item/diamond.png', // เพชร
-  'moon-charm': '/assets/images/icons/Item/moon pendant.png', // รูปเสี้ยวพระจันทร์
-  'magic-wand': '/assets/images/icons/Item/Magic Staff.png', // ไม้เท้าเวทมนตร์ (ls จริง: ตัว S ใหญ่)
-  'crystal-ball': '/assets/images/icons/Item/marble.png', // ลูกแก้ว
-  'cherry-blossom': '/assets/images/icons/Item/sakura.png', // ซากุระ
-  'calm-butterfly': '/assets/images/icons/Item/butterfly.png', // ผีเสื้อ
+  'frog-guard': '/assets/images/icons/Item/frog.webp', // กบวิเศษ
+  'fox-statue': '/assets/images/icons/Item/fox.webp', // สุนัขจิ้งจอก
+  'forest-unicorn': '/assets/images/icons/Item/unicorn.webp', // ยูนิคอร์น
+  'lucky-clover': '/assets/images/icons/Item/Clover.webp', // Clover
+  'diamond-gem': '/assets/images/icons/Item/diamond.webp', // เพชร
+  'moon-charm': '/assets/images/icons/Item/moon pendant.webp', // รูปเสี้ยวพระจันทร์
+  'magic-wand': '/assets/images/icons/Item/Magic Staff.webp', // ไม้เท้าเวทมนตร์ (ls จริง: ตัว S ใหญ่)
+  'crystal-ball': '/assets/images/icons/Item/marble.webp', // ลูกแก้ว
+  'cherry-blossom': '/assets/images/icons/Item/sakura.webp', // ซากุระ
+  'calm-butterfly': '/assets/images/icons/Item/butterfly.webp', // ผีเสื้อ
 
   // ── ไอเทมใหม่ทั้งหมด 13 ตัวจากเอกสาร — เพิ่มเข้า ShopSection.tsx/decorationItems.ts จริงแล้ว ──
-  'fire-dragon': '/assets/images/icons/Item/dragon0.png', // มังกรไฟ
-  'white-dragon': '/assets/images/icons/Item/dragon1.png', // มังกรขาว
-  'magic-parrot': '/assets/images/icons/Item/bird.png', // นกแก้ววิเศษ
-  'parrot': '/assets/images/icons/Item/bird1.png', // นกแก้ว
-  'ribbon-knot': '/assets/images/icons/Item/knot.png', // โบว์
-  'glass-orb': '/assets/images/icons/Item/glass.png', // แก้ว (ls จริง: ตัว g เล็กทั้งหมด)
-  'magic-flame': '/assets/images/icons/Item/magic light.png', // ไฟวิเศษ
-  'cat-statue': '/assets/images/icons/Item/cat.png', // แมว
-  'rabbit-statue': '/assets/images/icons/Item/rabbit.png', // กระต่าย
-  'pendant-charm': '/assets/images/icons/Item/pendant.png', // จี้
-  'cherry-fruit': '/assets/images/icons/Item/cherry.png', // เชอรี่
-  'seedling-pot': '/assets/images/icons/Item/seedling pot.png', // กระถางต้นกล้า
-  'stone-statue': '/assets/images/icons/Item/stone.png', // ก้อนหิน
+  'fire-dragon': '/assets/images/icons/Item/dragon0.webp', // มังกรไฟ
+  'white-dragon': '/assets/images/icons/Item/dragon1.webp', // มังกรขาว
+  'magic-parrot': '/assets/images/icons/Item/bird.webp', // นกแก้ววิเศษ
+  'parrot': '/assets/images/icons/Item/bird1.webp', // นกแก้ว
+  'ribbon-knot': '/assets/images/icons/Item/knot.webp', // โบว์
+  'glass-orb': '/assets/images/icons/Item/glass.webp', // แก้ว (ls จริง: ตัว g เล็กทั้งหมด)
+  'magic-flame': '/assets/images/icons/Item/magic light.webp', // ไฟวิเศษ
+  'cat-statue': '/assets/images/icons/Item/cat.webp', // แมว
+  'rabbit-statue': '/assets/images/icons/Item/rabbit.webp', // กระต่าย
+  'pendant-charm': '/assets/images/icons/Item/pendant.webp', // จี้
+  'cherry-fruit': '/assets/images/icons/Item/cherry.webp', // เชอรี่
+  'seedling-pot': '/assets/images/icons/Item/seedling pot.webp', // กระถางต้นกล้า
+  'stone-statue': '/assets/images/icons/Item/stone.webp', // ก้อนหิน
 }

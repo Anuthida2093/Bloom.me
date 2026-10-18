@@ -4,16 +4,22 @@
 
 .cat-companion {
   position: absolute;
-  width: 40px;
-  height: 40px;
+  /* [แก้ตามที่ระบุ] ใหญ่ขึ้นเกือบ 2 เท่า — แผนที่ 1024px ย่อลงบนมือถือ เดิม 72px เหลือตัวเล็กมาก */
+  /* [แก้ตามที่ระบุ] ใหญ่ขึ้นอีก 140 → 184px · ตำแหน่ง/ทิศเดินตามเส้นทางทีละเฟรม (CatCompanion.tsx)
+     จึงไม่มี transition ของ left/top แล้ว (เดิมทำให้เดินตัดมุมเป็นเส้นตรง) — transform ตั้งจาก JS */
+  width: 184px;
+  height: 184px;
   object-fit: contain;
-  transform: translate(-50%, -68%);
-  transition: left 0.6s cubic-bezier(0.22, 1, 0.36, 1), top 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: 50% 68%;
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.4));
   z-index: 6;
   pointer-events: none;
 }
 
+/* เดินอยู่ → เด้งตัวเบาๆ เหมือนก้าวเท้า (ขยับทั้งภาพด้วย margin ไม่ชน transform ที่ JS ตั้ง) */
+.cat-companion--walking { animation: catCompanionHop .36s ease-in-out infinite; }
+@keyframes catCompanionHop { 0%, 100% { margin-top: 0; } 50% { margin-top: -10px; } }
+
 @media (prefers-reduced-motion: reduce) {
-  .cat-companion { transition: none; }
+  .cat-companion--walking { animation: none; }
 }

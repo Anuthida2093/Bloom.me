@@ -38,7 +38,7 @@ export default function PlayerTreeCard({ player, onClose }: PlayerTreeCardProps)
     /* [แก้ตามที่ระบุ] กรอบ/สีพื้นแบบกระดานจัดอันดับ — ชุดเดียวกับแผงข้อมูลต้นไม้ของเราเอง
        (สว่าง: เขียวอ่อน/ดำ, มืด: เขียวเข้ม/ขาวทั้งหมด) ต้นไม้ประจำ MBTI ของเพื่อนขึ้นก่อน */
     <div className="tree-of-life__tooltip tree-info-panel lb-frame player-tree-card">
-      <div className="lb-frame__banner">🌳 {player.username}</div>
+      <div className="lb-frame__banner"><img src={BADGE_ICONS.tree} className="icon-img icon-img--lg" alt="" style={{ verticalAlign: 'middle' }} /> {player.username}</div>
       {onClose && (
         <button className="tree-of-life__tooltip-close" title="ปิด" aria-label="ปิด" onClick={onClose}>
           <img src={BADGE_ICONS.close} className="icon-img" alt="" />
@@ -49,7 +49,7 @@ export default function PlayerTreeCard({ player, onClose }: PlayerTreeCardProps)
         <MiniTree theme={MBTI_TREE_THEME[player.mbtiType as MbtiType] ?? MBTI_TREE_THEME.INFP} size={84} />
         <div style={{ display: 'flex', gap: 6 }}>
           <span className="tag" style={{ background: 'var(--ti-row)', color: 'var(--ti-text)' }}>{player.mbtiType}</span>
-          <span className="tag" style={{ background: 'var(--ti-row)', color: 'var(--ti-text)' }}>🌳 Lv.{player.level}</span>
+          <span className="tag" style={{ background: 'var(--ti-row)', color: 'var(--ti-text)' }}><img src={BADGE_ICONS.tree} className="icon-img" alt="" /> Lv.{player.level}</span>
         </div>
         <div style={{ textAlign: 'center', color: 'var(--ti-text)' }}>
           <div style={{ fontSize: 17, fontWeight: 800 }}>{species.name} <span style={{ fontSize: 13, opacity: 0.75 }}>({species.nameEn})</span></div>

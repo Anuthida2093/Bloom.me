@@ -1,0 +1,57 @@
+/* ═══════════════════════════════════════════════════════════════
+   MapFrame.css — กรอบแผนที่ตอนย่อพอดีจอ + พื้นลายจุดรอบนอก (MapFrame.tsx)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* [แก้ตามที่ระบุ] พื้นรอบแผนที่: เขียวอ่อน + ประกายดาววิบวับ (MapStars) */
+.step-journey-game.is-map-framed {
+  background-color: #dff3d4;
+  background-image: radial-gradient(ellipse at 50% 35%, #f3fbe9 0%, #dff3d4 55%, #cdebc0 100%);
+}
+:root[data-theme="dark"] .step-journey-game.is-map-framed {
+  background-color: #1d3b2a;
+  background-image: radial-gradient(ellipse at 50% 35%, #2b5239 0%, #1d3b2a 60%, #15301f 100%);
+}
+
+.map-stars { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.map-stars__star {
+  position: absolute; transform: translate(-50%, -50%) scale(0.2); opacity: 0;
+  background: radial-gradient(circle, #ffffff 0 20%, #fff6c8 34%, rgba(255, 236, 160, 0) 70%);
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  filter: drop-shadow(0 0 3px rgba(255, 220, 120, 0.9));
+  animation: mapStarTwinkle 3s ease-in-out infinite;
+}
+@keyframes mapStarTwinkle {
+  0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.2) rotate(0deg); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(45deg); }
+}
+
+/* มุมมนของตัวแผนที่ — ตัดมุมภาพให้รับกับกรอบ (ค่ารัศมีเป็นพิกเซลภาพ ก่อนย่อ: ตั้งจาก --mf-radius) */
+.is-map-framed .step-journey-game__map-canvas { clip-path: inset(0 round var(--mf-radius, 40px)); }
+
+.map-frame {
+  position: absolute; z-index: 2; pointer-events: none; box-sizing: border-box;
+  border-radius: 18px;
+  /* กรอบซ้อนชั้น: ขาวครีม → ทอง → ขาว + เงานุ่ม */
+  box-shadow:
+    0 0 0 5px #fffaf0,
+    0 0 0 9px #f4b84b,
+    0 0 0 12px #fffaf0,
+    0 12px 28px rgba(60, 40, 10, 0.28);
+  animation: mapFrameIn 0.45s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+@keyframes mapFrameIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+
+/* ป้ายชื่อแผนที่ติดขอบบนของกรอบ */
+.map-frame__ribbon {
+  position: absolute; top: -14px; left: 50%; transform: translate(-50%, -50%);
+  max-width: calc(100% - 64px); padding: 6px 16px; box-sizing: border-box;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  border-radius: 999px; background: linear-gradient(180deg, #ffe39a, #f4b84b);
+  color: #5a3a08; font-family: var(--font-display); font-size: 14px;
+  box-shadow: 0 3px 0 #c98a00, 0 6px 12px rgba(0, 0, 0, 0.18), inset 0 2px 0 rgba(255, 255, 255, 0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-frame { animation: none; }
+  .map-stars__star { animation: none; opacity: 0.6; transform: translate(-50%, -50%); }
+}

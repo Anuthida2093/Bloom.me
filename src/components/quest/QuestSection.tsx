@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLanguage } from '../../context/LanguageContext'
 import GameplayFrame from './GameplayFrame'
 import type { QuestLogEntry, UserData, TreeStats, PlacedItem, DecorationPositionMap, MoodEntryData, QuestCategory } from '../../types'
@@ -12,8 +12,9 @@ import { QUEST_ICONS, QUEST_TAB_ICONS } from '../../config/iconAssets'
 import { useAppContext, DAILY_FOCUS_QUOTA_MINUTES } from '../../context/AppContext'
 import QuestRewardCelebration, { type QuestCelebrationData } from './QuestRewardCelebration'
 import QuestFeedbackPrompt, { type QuestFeedbackPromptData } from './QuestFeedbackPrompt'
-import { playSfx } from '../../utils/audioPlayer'
+import { playSfx, stopSfx } from '../../utils/audioPlayer'
 import GameAlert from '../ui/GameAlert'
+import { isQuestDoneNow } from '../../utils/questCompletion'
 import { BADGE_ICONS } from '../../config/iconAssets'
 import '../leaderboard/leaderboardRow.css'
 
@@ -73,7 +74,8 @@ function isInCurfew(curfew: { bedtime: string; curfewHours: number } | null): bo
 /** เควสที่ทำสำเร็จแล้วยังกดเข้าไปใช้งานต่อได้ (ไม่ได้รางวัลซ้ำ) */
 // [แก้ตามที่ระบุ] คำขอบคุณ/ไดอะรี่ของฉัน ทำสำเร็จแล้วกดอีก → เปิดการ์ด "ทำแล้ววันนี้" ของเควส (เขียนเพิ่ม/
 // ดูประวัติ/ปิด) แทนป็อปอัพเตือน — เขียนเพิ่มเก็บลงประวัติได้ทุกเมื่อ แต่ไม่ได้รางวัลซ้ำ
-const REOPENABLE_WHEN_DONE = ['phys-balanced-nutrients', 'ment-gratitude-shield', 'ment-reframer-journal']
+// ป่าแห่งสิบปี/ผู้พิทักษ์การพักผ่อน: รับรางวัลวันนี้แล้วยังเปิดดูปฏิทิน/เวลาพักได้ (ในหน้าซ่อนปุ่มรับซ้ำ)
+const REOPENABLE_WHEN_DONE = ['phys-balanced-nutrients', 'ment-gratitude-shield', 'ment-reframer-journal', 'know-ten-year-forest', 'know-guardian-of-rest']
 
 export default function QuestSection({
   questLogs = [], userData = DEFAULT_USER_DATA, treeStats = DEFAULT_TREE_STATS,
@@ -88,7 +90,6 @@ export default function QuestSection({
 
   const [activeTab, setActiveTab] = useState<QuestTabId>(initialTab)
   const { t } = useLanguage()
-  const [confirmQuest, setConfirmQuest] = useState<QuestDef | null>(null)
   const [playingQuest, setPlayingQuest] = useState<QuestDef | null>(null)
   /** ป็อบอัพแจ้งเหตุผลที่กดเควสไม่ได้ (ล็อก/ทำแล้ววันนี้) */
   const [questNotice, setQuestNotice] = useState<{ icon: string; message: string; title?: string; iconImg?: string } | null>(null)
@@ -150,7 +151,6 @@ export default function QuestSection({
   \*──────────────────────────────────────────────────────────────────────────*/
   const handleChangeTab = (nextTab: QuestTabId) => {
     if (nextTab === activeTab) return
-    setConfirmQuest(null)
     setPlayingQuest(null)
     setSpecialQuest(null)
     setActiveTab(nextTab)
@@ -166,14 +166,20 @@ export default function QuestSection({
     handleChangeTab(initialTab)
   }
 
-  const anyGameplayOpen = !!confirmQuest || !!playingQuest || !!specialQuest
+  const anyGameplayOpen = !!playingQuest || !!specialQuest
+  // [แก้ตามที่ระบุ — 1.4] ปิดหน้าเล่นเควส (กลับแผนที่เควส) → ตัดเสียงพิมพ์ที่ยังเล่นค้างทันที
+  // (เควสเป็นเลเยอร์ในหน้าเดียวกัน ไม่ได้เปลี่ยน route — RouteEffects จึงไม่ทำงานตรงนี้)
+  // ตัดเฉพาะ KEYPRESS — เสียงฉลองรับรางวัลที่เล่นตอนปิดหน้าเกมต้องดังต่อ
+  useEffect(() => {
+    if (!anyGameplayOpen) stopSfx('KEYPRESS')
+  }, [anyGameplayOpen])
   useEscapeKey(onClose, !anyGameplayOpen)
 
   const tab = QUEST_TABS.find((t) => t.id === activeTab) ?? QUEST_TABS[0]
   const catalog = QUEST_CATALOG_BY_TAB[activeTab]
 
-  const isCompleted = (questCode: string): boolean =>
-    questLogs.some((l) => l.quest?.code === questCode && l.status === 'COMPLETED')
+  /** เควสรายวันนับเฉพาะวันนี้ · หมวดการเรียนรู้ทำครบทุกด่าน = เริ่มรอบใหม่จากด่านแรก (utils/questCompletion.ts) */
+  const isCompleted = (questCode: string): boolean => isQuestDoneNow(questLogs, questCode)
 
   /** [เพิ่มรอบนี้ — เควสเล่นซ้ำได้ต่อวัน] นับจำนวนครั้งที่ทำสำเร็จ "วันนี้" จริงๆ (อิง completedAt)
    *  ใช้กับเควสที่มี maxPerDay เช่น phys-pure-water — เควสอื่นไม่มี maxPerDay จึงไม่ถูกเรียกใช้ */
@@ -200,12 +206,19 @@ export default function QuestSection({
    *  KNOWLEDGE_DAILY 4 ตัวหลังใส่ requiresQuestIds ไล่ตามลำดับเดิมไว้ครบแล้ว (ดู questCatalog.ts) */
   const isRequiredQuestsIncomplete = (q: QuestDef): boolean => {
     if (!q.requiresQuestIds || q.requiresQuestIds.length === 0) return false
-    return q.requiresQuestIds.some((code) => !isCompleted(code))
+    return q.requiresQuestIds.some((code) => !isCompleted(code) && !isDailyLimitReached(code))
+  }
+  /** [Focus Mode] โหมดจดจ่อครบ 3 รอบของวันแล้ว (maxPerDay) — เส้นทางการเรียนรู้รอบถัดไปของวันเดียวกัน
+   *  เล่นโหมดจดจ่อซ้ำไม่ได้ จึงถือว่าผ่านด่านนี้แล้ว ไม่ล็อกด่านที่ตามหลัง */
+  const isDailyLimitReached = (code: string): boolean => {
+    const def = findQuestByCode(code)
+    return !!def?.maxPerDay && getTodayCompletionCount(code) >= def.maxPerDay
   }
 
   /** เหตุผลที่เควสนี้ยังกดไม่ได้ (null = กดได้) — ใช้ทั้งล็อกจริงและอธิบายให้ผู้ใช้ฟัง */
   const getLockReason = (q: QuestDef): string | null => {
-    if (q.maxPerDay && getTodayCompletionCount(q.code) >= q.maxPerDay) {
+    // ก้าวเพื่อสุขภาพ: ทำครบวันนี้แล้วยังเปิดดูแผนที่ที่เดินสำเร็จได้ (ในเกมไม่ให้เริ่มทริปใหม่ซ้ำ)
+    if (q.maxPerDay && getTodayCompletionCount(q.code) >= q.maxPerDay && q.code !== 'phys-vitality-steps') {
       return `ทำครบโควตาวันนี้แล้ว (${q.maxPerDay}/${q.maxPerDay}) พรุ่งนี้มาใหม่นะ`
     }
     if (q.isLocked && completedDailyCount < (q.unlockAfterQuestCount ?? 1)) {
@@ -244,9 +257,11 @@ export default function QuestSection({
    *  เควสที่เล่นไม่ได้ (ล็อก/ครบโควตา/ทำสำเร็จแล้ววันนี้) แจ้งเหตุผลเป็นป็อบอัพแทน (เดิมข้อความนี้
    *  อยู่ในป็อบอัพยืนยัน — ตอนนี้โชว์เฉพาะตอนที่ต้องบอกจริงๆ) */
   const handleSelectQuest = (q: QuestDef) => {
-    if (q.isPassive) return
+    // [แก้บั๊ก] เดิม `if (q.isPassive) return` — เควสเสริม passive 2 ตัว (ผู้พิทักษ์การพักผ่อน / ป่าแห่งสิบปี)
+    // จึงกดแล้วไม่มีอะไรเกิดขึ้นเลย ตอนนี้เปิดหน้าข้อมูลของมันได้ (หน้านั้นปิดด้วย exit ไม่ให้รางวัลซ้ำ)
     const lockReason = getLockReason(q)
-    if (lockReason) { setQuestNotice({ icon: '🔒', title: 'ยังเล่นไม่ได้', message: `${q.titleTh}
+    // [แก้ตามที่ระบุ] ป็อปอัปเควสที่ยังล็อก ใช้รูปของเควสนั้นแทนแม่กุญแจ 🔒
+    if (lockReason) { setQuestNotice({ icon: q.icon, iconImg: QUEST_ICONS[q.code], title: 'ยังเล่นไม่ได้', message: `${q.titleTh}
 ${lockReason}` }); return }
     // [แก้ตามที่ระบุ] เควสแคลอรี่ตาม BMI ถ่ายบันทึกมื้อได้เรื่อยๆ ทั้งวัน — ทำสำเร็จแล้วก็ยังเข้าได้
     // (ข้างในซ่อนปุ่มรับรางวัลซ้ำเอง ดู BalancedNutrientsQuest.tsx)
@@ -258,13 +273,6 @@ ${lockReason}` }); return }
     openQuest(q)
   }
 
-  const handleStartQuest = () => {
-    if (!confirmQuest) return
-    const quest = confirmQuest
-    setConfirmQuest(null)
-    openQuest(quest)
-  }
-
   /** [ใหม่] เปิดเควสจาก code ตรงๆ — ใช้โดยแดชบอร์ด/หน้าประเมิน ที่อยากพาไปทำเควสทันที */
   const handleOpenQuestByCode = (questCode: string) => {
     const quest = findQuestByCode(questCode)
@@ -274,7 +282,6 @@ ${lockReason}` }); return }
     const targetTab: QuestTabId =
       quest.category === 'EMOTION' ? 'mental' : quest.category === 'HEALTH' ? 'physical' : 'knowledge'
     handleChangeTab(targetTab)
-    setConfirmQuest(null)
     openQuest(quest)
   }
 
@@ -317,9 +324,12 @@ ${lockReason}` }); return }
       <div className={`quest-section-title-pill lb-banner${specialQuest ? ` quest-section-title-pill--${specialQuest.code}` : ''}`}>
         {/* [อัปเดตรอบนี้] ทั้ง 3 หมวดมีไฟล์รูปจริงครบแล้ว (ดู iconAssets.ts) */}
         <span>
-          {QUEST_TAB_ICONS[tab.id]
-            ? <img src={QUEST_TAB_ICONS[tab.id]} className="icon-img" alt="" />
-            : tab.emoji} {/* [แก้ตามที่ระบุ] ระหว่างเปิดเควสแบบเต็มหน้า (เช่น ไดอะรี่ของฉัน) ป้ายกลางบนเป็นชื่อเควสนั้น */}
+          {/* [แก้ตามที่ระบุ] เปิดเควสอยู่ → รูปของเควสนั้น · หน้ารวมหมวด → รูปหมวด */}
+          {specialQuest && QUEST_ICONS[specialQuest.code]
+            ? <img src={QUEST_ICONS[specialQuest.code]} className="icon-img" alt="" />
+            : QUEST_TAB_ICONS[tab.id]
+              ? <img src={QUEST_TAB_ICONS[tab.id]} className="icon-img" alt="" />
+              : tab.emoji} {/* [แก้ตามที่ระบุ] ระหว่างเปิดเควสแบบเต็มหน้า (เช่น ไดอะรี่ของฉัน) ป้ายกลางบนเป็นชื่อเควสนั้น */}
           {specialQuest ? specialQuest.titleTh : t(`questZone.${activeTab}`)}
         </span>
       </div>
@@ -345,9 +355,6 @@ ${lockReason}` }); return }
             accent={tab.accent}
             accentBg={tab.accentBg}
             onSelectQuest={handleSelectQuest}
-            confirmQuest={confirmQuest}
-            onStartQuest={handleStartQuest}
-            onCancelConfirm={() => setConfirmQuest(null)}
             playingQuest={playingQuest}
             onCompletePlaying={handleCompletePlaying}
             onClosePlaying={handleClosePlaying}
@@ -396,18 +403,13 @@ ${lockReason}` }); return }
           .quest-section-title-pill { font-size: 14px; padding: 4px 14px; }
         }
         /* [แก้ตามที่ระบุ] รูปประจำหมวด (สุขภาพ/การเรียนรู้/สุขภาพจิต) บนป้ายหัวหน้าเควสใหญ่ขึ้น */
-        /* ไฟล์รูปหมวด (Learning/Physical/Mental Quests.png 798x434) มีขอบโปร่งใสกว้างมาก เนื้อรูปจริง
-           แค่ ~35-40% ของไฟล์ — ขยายกล่องรูปแยกต่อไฟล์ให้เนื้อรูปสูง ~42px แล้วหักขอบโปร่งใสด้วย
-           margin ติดลบ ป้ายจึงไม่สูงตาม (มือถือเล็กลงราว 15%) */
+        /* [อัปเดต 2026-10-18 — รูปชุดใหม่] Learning/Physical/Mental Quests.png ใหม่เนื้อรูปเต็มไฟล์ ~91-95%
+           (เดิม 798x434 เนื้อรูปแค่ ~35-40% จึงเคยขยายกล่องเป็น ~100-120px แล้วหักขอบด้วย margin ติดลบ) —
+           ตอนนี้กล่อง ~44px พอ ใช้ขนาดเดียวกันทุกรูป (รวมรูปของเควสที่เปิดอยู่) margin ติดลบเล็กน้อยไม่ให้ป้ายสูงตาม */
         .quest-section-title-pill > span { display: inline-flex; align-items: center; gap: 8px; }
-        .quest-section-title-pill .icon-img { vertical-align: middle; flex-shrink: 0; }
-        .quest-section-title-pill .icon-img[src*="Learning Quests"] { width: 118px; height: 118px; margin: -38px -32px; }
-        .quest-section-title-pill .icon-img[src*="Physical Quests"] { width: 99px; height: 99px; margin: -28px -34px; }
-        .quest-section-title-pill .icon-img[src*="Mental Quests"]   { width: 120px; height: 120px; margin: -39px -36px; }
+        .quest-section-title-pill .icon-img { vertical-align: middle; flex-shrink: 0; width: 44px; height: 44px; margin: -10px 0; }
         @media (max-width: 768px) {
-          .quest-section-title-pill .icon-img[src*="Learning Quests"] { width: 100px; height: 100px; margin: -32px -27px; }
-          .quest-section-title-pill .icon-img[src*="Physical Quests"] { width: 84px; height: 84px; margin: -24px -29px; }
-          .quest-section-title-pill .icon-img[src*="Mental Quests"]   { width: 102px; height: 102px; margin: -33px -31px; }
+          .quest-section-title-pill .icon-img { width: 38px; height: 38px; margin: -9px 0; }
         }
 
         /* [แก้] ปุ่มปิด — แยกจากป้ายชื่อโซน คงตำแหน่งมุมขวาบนเดิมไว้ นี่คือปุ่มปิดเดียวของ

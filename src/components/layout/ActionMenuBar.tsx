@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLanguage } from '../../context/LanguageContext'
 import { QUEST_TABS, type QuestTabId } from '../../config/questCatalog'
 import { BADGE_ICONS, QUEST_TAB_ICONS } from '../../config/iconAssets'
+import { prefetchAsset, LEARNING_MAP_VIDEO } from '../../utils/prefetchAsset'
 import './ActionMenuBar.css'
 
 /** [แก้ตามที่ระบุ] เอา 'inventory' (ย้ายไปอยู่ในหน้าโปรไฟล์) และ 'settings' (ย้ายไปเป็นปุ่ม
@@ -39,6 +40,7 @@ const NAV_ICON_IMAGES: Partial<Record<NavKey, string>> = {
   quests: BADGE_ICONS.questTab,
   shop: BADGE_ICONS.store,
   home: BADGE_ICONS.home,
+  story: BADGE_ICONS.story,
   profile: BADGE_ICONS.profile,
 }
 
@@ -56,6 +58,8 @@ export default function ActionMenuBar({
      หรือปุ่มอื่นๆ — ให้ปิดเองอัตโนมัติ (แตะในเมนู/แถบเมนูนี้เองไม่นับ ปุ่มเควสสลับเปิด-ปิดตามเดิม) */
   useEffect(() => {
     if (!showQuestMenu) return
+    // [1.5] เปิดเมนูเควส = กำลังจะเลือกหมวด → ดึงวิดีโอแผนที่เควสการเรียนรู้ (ไฟล์ใหญ่สุด) มารอในแคช
+    prefetchAsset(LEARNING_MAP_VIDEO)
     const onPointerDown = (e: PointerEvent) => {
       if ((e.target as Element | null)?.closest('.action-menu-container')) return
       setShowQuestMenu(false)
@@ -118,7 +122,7 @@ export default function ActionMenuBar({
             <li key={item.key} className={active === item.key ? 'active' : ''}>
               {/* role="button" → ได้ยินเสียงคลิกกลางของระบบ (AudioContext) เหมือนปุ่มอื่น */}
               <a role="button" tabIndex={0} onClick={() => handleClick(item.key)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(item.key) } }}>
-                <span className="nav-icon">
+                <span className={`nav-icon nav-icon--${item.key}`}>
                   {NAV_ICON_IMAGES[item.key]
                     ? <img src={NAV_ICON_IMAGES[item.key]} className="icon-img" alt={t(`nav.${item.key}`)} />
                     : <span className="nav-icon-emoji" aria-hidden="true">{item.icon}</span>}

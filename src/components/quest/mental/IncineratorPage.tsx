@@ -6,7 +6,8 @@ import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../../hooks/useEscapeKey'
 import './IncineratorPage.css'
 import '../../leaderboard/leaderboardRow.css'
-import { BADGE_ICONS } from '../../../config/iconAssets'
+import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
+import { posterOf } from '../../../utils/videoPoster'
 
 type Stage = 'ask' | 'write' | 'reading' | 'crumpling' | 'drag' | 'burning' | 'done'
 
@@ -235,7 +236,8 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
             transition={{ type: 'spring', stiffness: 260, damping: 22 }}
           >
             <div className="lb-banner incinerator-popup__banner">เตาเผาขยะความคิด</div>
-            <div className="incinerator-frame__icon-lg">🔥</div>
+            {/* [แก้ตามที่ระบุ] รูปของเควสแทนอีโมจิ 🔥 */}
+            <img src={QUEST_ICONS['ment-cognitive-incinerator']} alt="" className="incinerator-frame__icon-lg" />
             <h2 className="incinerator-frame__title">วันนี้มีเรื่องอะไรหนักใจไหม?</h2>
             <p className="incinerator-frame__desc">หยิบมันออกมาจากหัว แล้วสลักลงบนแผ่นหินเพื่อนำไปเผาทำลายทิ้งกัน</p>
             <div className="incinerator-frame__btn-row">
@@ -252,7 +254,7 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
         {(['write', 'reading', 'crumpling', 'drag', 'burning'].includes(stage)) && (
           <motion.div key="game" className="incinerator-frame__game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div ref={videoContainerRef} className="incinerator-video-container">
-              <video key={activeConfig.src} className="incinerator-video-container__video" autoPlay loop muted playsInline>
+              <video key={activeConfig.src} className="incinerator-video-container__video" poster={posterOf(activeConfig.src)} autoPlay loop muted playsInline>
                 <source src={activeConfig.src} type="video/mp4" />
               </video>
 
@@ -287,7 +289,7 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
 
               {stage === 'burning' && (
                 <motion.div className="incinerator-frame__affirmation-banner" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
-                  <p className="incinerator-frame__affirmation-title">🔥 สลายความคิดลบสำเร็จ</p>
+                  <p className="incinerator-frame__affirmation-title">สลายความคิดลบสำเร็จ</p>
                   <p className="incinerator-frame__affirmation-sub">{selectedAffirmation}</p>
                 </motion.div>
               )}
@@ -343,8 +345,11 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
               )}
             </div>
 
+            {/* [แก้ตามที่ระบุ — 3.4] ตัวเลือกคำพูดติดหัวย้ายขึ้นบนสุด ใต้หัวข้อ "เตาเผาขยะความคิด"
+                (มือถือ) — กล่องพิมพ์ยังอยู่ตำแหน่งเดิมชิดล่าง · จอใหญ่ CSS วางกลุ่มนี้ไว้เหนือกล่องพิมพ์เหมือนเดิม */}
             {stage === 'write' && (
-              <motion.div className="incinerator-frame__input-container" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <motion.div className="incinerator-frame__top" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
+                <div className="lb-banner incinerator-frame__top-title">เตาเผาขยะความคิด</div>
                 <div className="incinerator-chips-group">
                   <span className="incinerator-chips-label">💡 คำพูดติดในหัวของคุณบ่อยๆ:</span>
                   <div className="incinerator-chips-list">
@@ -355,7 +360,11 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
                     ))}
                   </div>
                 </div>
+              </motion.div>
+            )}
 
+            {stage === 'write' && (
+              <motion.div className="incinerator-frame__input-container" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <div className="incinerator-frame__input-bar">
                   <input
                     value={text}
@@ -365,7 +374,8 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
                     onKeyDown={(e) => { if (e.key === 'Enter') handleCrumple() }}
                   />
                   <button className="incinerator-action-btn incinerator-action-btn--input" onClick={() => handleCrumple()} disabled={!text.trim()}>
-                    🪨 เปลี่ยนเป็นหิน
+                    {/* [แก้ตามที่ระบุ — 3.4] ปุ่มส่งเปลี่ยนชื่อเป็น "เผา" (เดิม "🪨 เปลี่ยนเป็นหิน") */}
+                    <img src={QUEST_ICONS['ment-cognitive-incinerator']} alt="" className="incinerator-action-btn__icon" /> เผา
                   </button>
                 </div>
               </motion.div>

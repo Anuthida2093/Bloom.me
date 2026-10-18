@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, type CSSProperties, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties, type RefObject } from 'react'
 import type { TreeModel } from './buildTreeModel'
-import { buildMeadow, drawBranches, drawFlutterLeaf, drawFoliage, drawGround, drawMeadow, fitTree, leafRect } from './drawTree2D'
+import { buildMeadow, drawBranches, drawFlutterLeaf, drawFoliage, drawGround, drawMeadow, fitTree, leafRect, toScreen } from './drawTree2D'
 
 interface ProceduralTreeCanvasProps {
   model: TreeModel
@@ -18,12 +18,20 @@ interface ProceduralTreeCanvasProps {
   animateWind?: boolean
   /** style ชั้นใบ (filter ใบเหี่ยว/ความจาง) — ลำต้นไม่โดนผลนี้ */
   foliageStyle?: CSSProperties
+  /** ผู้ใช้ใหม่: พื้นเขียวเรียบ ไม่สร้างใบหญ้า/ดอกไม้ */
+  bareGround?: boolean
 }
 
 /** หญ้าไหวที่ ~30 fps พอ (ลมช้าๆ) — ประหยัดแบตมือถือครึ่งหนึ่งเทียบกับ 60 fps */
 const WIND_FRAME_MS = 1000 / 30
 /** ชั้นที่กว้างเท่าฉาก (ดิน/หญ้า) ใช้ความละเอียดไม่เกินนี้ — ฉากกว้างหลายเท่าจอ ประหยัดหน่วยความจำ */
 const WIDE_LAYER_MAX_DPR = 1.5
+/** ดอกที่มีประกายวิบวับได้สูงสุดกี่ดอก (ประกายดาว NT วิบวับทุกดวง) */
+const MAX_FLOWER_GLINTS = 14
+
+/** สุ่มแบบคงที่ต่อ index (ตำแหน่ง/จังหวะวิบวับไม่เปลี่ยนทุก render) */
+const hash01 = (i: number) => { const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x) }
+
 /** ใบไหวพร้อมกันได้สูงสุดกี่ใบ (ธรรมชาติ: ทีละ 2-3 ใบ ไม่ไหวทั้งพุ่ม) */
 const FLUTTER_SLOTS = 3
 
@@ -46,7 +54,7 @@ interface FlutterSlot {
  * ดิน/ลำต้น/ใบ วาดใหม่เฉพาะตอนข้อมูลหรือขนาดเปลี่ยน — มีแค่ 2 ชั้นหญ้าที่วาดซ้ำทุกเฟรม (เฉพาะช่วงที่อยู่ในจอ)
  */
 export default function ProceduralTreeCanvas({
-  model, size, viewWidth, panRef, grassSoilLevel, dryness, animateWind = true, foliageStyle,
+  model, size, viewWidth, panRef, grassSoilLevel, dryness, animateWind = true, foliageStyle, bareGround = false,
 }: ProceduralTreeCanvasProps) {
   const groundRef = useRef<HTMLCanvasElement>(null)
   const meadowBackRef = useRef<HTMLCanvasElement>(null)
@@ -87,7 +95,7 @@ export default function ProceduralTreeCanvas({
     if (!size || size.w < 2 || size.h < 2 || view < 2 || !back || !front) return
     const d = Math.min(window.devicePixelRatio || 1, WIDE_LAYER_MAX_DPR)
     const fit = { ...fitTree(model, view, size.h), baseX: size.w / 2 }
-    const meadow = buildMeadow(fit, size.w, size.h, grassSoilLevel, dryness, view)
+    const meadow = buildMeadow(fit, size.w, size.h, grassSoilLevel, dryness, view, bareGround)
     const layers = [
       { canvas: back, data: meadow.back },
       { canvas: front, data: meadow.front },
@@ -121,7 +129,7 @@ export default function ProceduralTreeCanvas({
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
-  }, [model, size, view, bandLeft, panRef, grassSoilLevel, dryness, animateWind])
+  }, [model, size, view, bandLeft, panRef, grassSoilLevel, dryness, animateWind, bareGround])
 
   // ใบไหวตามลมทีละ 2-3 ใบ — ช่องละใบ แต่ละช่องไหว 1.2-2.4 วินาที แล้วพักสุ่ม ไม่พร้อมกัน
   useEffect(() => {
@@ -191,6 +199,17 @@ export default function ProceduralTreeCanvas({
     }
   }, [model, size, view, animateWind])
 
+  // [เพิ่มตามที่ระบุ] ประกายวิบวับบนดอกไม้ + ประกายดาว (NT) — ชั้น DOM แอนิเมชัน CSS ไม่ต้องวาด canvas ใหม่ทุกเฟรม
+  const glints = useMemo(() => {
+    if (!animateWind || !size || size.h < 2 || view < 2) return []
+    const fit = fitTree(model, view, size.h)
+    const flowers = model.flowers.filter((_, i) => hash01(i) < MAX_FLOWER_GLINTS / Math.max(MAX_FLOWER_GLINTS, model.flowers.length))
+    return [
+      ...flowers.map((f, i) => ({ key: `f${i}`, at: toScreen(f.position, fit), size: Math.max(8, f.radius * fit.scale * 1.3), seed: i })),
+      ...(model.sparkles ?? []).map((s, i) => ({ key: `s${i}`, at: toScreen(s.position, fit), size: Math.max(10, s.radius * fit.scale * 2.2), seed: i + 50 })),
+    ]
+  }, [model, size, view, animateWind])
+
   const bandStyle: CSSProperties = { left: bandLeft, width: view }
   return (
     <>
@@ -210,6 +229,21 @@ export default function ProceduralTreeCanvas({
         style={{ ...foliageStyle, ...bandStyle }}
         aria-hidden="true"
       />
+      {glints.length > 0 && (
+        <div className="tree-glints" style={bandStyle} aria-hidden="true">
+          {glints.map((g) => (
+            <span
+              key={g.key}
+              className="tree-glint"
+              style={{
+                left: g.at[0], top: g.at[1], width: g.size, height: g.size,
+                animationDelay: `${(hash01(g.seed) * 4).toFixed(2)}s`,
+                animationDuration: `${(2.2 + hash01(g.seed + 7) * 1.8).toFixed(2)}s`,
+              }}
+            />
+          ))}
+        </div>
+      )}
     </>
   )
 }

@@ -18,8 +18,8 @@ const TEXT_SHADOW = '0 1px 3px var(--glass-b-60), 0 2px 12px var(--glass-b-45)'
 const LOGO_SRC = '/assets/images/logo/Logo.png'
 
 // ประโยคแนะนำแอป — ประโยคที่พูดถึงหมวดเควสจะต่อท้ายด้วยรูปไอคอนหมวดนั้น (แทน emoji เดิม)
-/* [แก้ตามที่ระบุ] รูปท้ายประโยคใหญ่ขึ้น — ไฟล์หมวดเควส (798x434) มีขอบโปร่งใสกว้างมาก (เนื้อรูปจริงสูง ~35%)
-   จึงขยายกล่องรูปแล้วหักขอบโปร่งใสด้วย margin ติดลบ ไม่ให้บรรทัดสูงขึ้น · ประโยคแรกใช้รูปโลโก้แทน 🌱 */
+/* รูปท้ายประโยค — [อัปเดต 2026-10-18] รูปหมวดเควสชุดใหม่เนื้อรูปเต็มไฟล์แล้ว จึงลดกล่องจาก 5.2em เหลือ 2.2em
+   (เดิมไฟล์ 798x434 เนื้อรูปจริงแค่ ~35%) · ประโยคแรกใช้รูปโลโก้แทน 🌱 */
 const MESSAGES: { key: TranslationKey; icon?: { src: string; fallback: string; logo?: boolean } }[] = [
   { key: 'welcome.message1', icon: { src: LOGO_SRC, fallback: '🌱', logo: true } },
   { key: 'welcome.message2', icon: { src: BADGE_ICONS.learningTab, fallback: '📚' } },
@@ -52,7 +52,7 @@ export default function WelcomeModal() {
           <>
             {' '}
             <span className={icon.logo ? 'welcome-msg-icon welcome-msg-icon--logo' : 'welcome-msg-icon'}>
-              <ImageWithFallback src={icon.src} fallback={icon.fallback} size={icon.logo ? '2.3em' : '5.2em'} inline />
+              <ImageWithFallback src={icon.src} fallback={icon.fallback} size={icon.logo ? '2.3em' : '2.2em'} inline />
             </span>
           </>
         )}

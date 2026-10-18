@@ -10,7 +10,9 @@ import {
   type PostItData,
 } from '../../types'
 import type { JourneyRecord } from '../../types.journey'
+import type { StepChestReward } from '../../config/stepChest'
 import type { BrainDumpRecord } from '../../types.mental'
+import { MOCK_USER_PROFILE } from './mockData'
 
 /*============================================================================*\
   mockDb.ts — [ไฟล์ใหม่] ข้อมูลจำลองสำหรับโหมด VITE_API_MODE=mock
@@ -47,6 +49,45 @@ export interface MockPasswordResetToken {
   expiresAt: string
 }
 
+/** ความก้าวหน้าระยะยาว — จำลองตารางที่ backend ยังไม่มี (ดู docs/PROGRESSION_API.md)
+ *  เดิมวันที่เดินครบเป้าเก็บใน localStorage แยก (หายเมื่อเปลี่ยนเครื่อง) ตอนนี้อยู่กับบัญชี */
+export interface MockStepDay {
+  steps: number
+  goal: number
+  goalMet: boolean
+  /** แผนที่/ทริปของวันนั้น — เปิดดูแผนที่ที่เดินสำเร็จย้อนหลังได้ */
+  mapId?: string | null
+  journeyId?: string | null
+  /** หีบสมบัติของวันนั้น (เปิดแล้ว) — 1 ใบต่อวันที่ถึงเป้า ผลสุ่มเก็บไว้ เปิดซ้ำได้ผลเดิม */
+  chest?: (StepChestReward & { openedAt: string }) | null
+}
+
+export interface MockProgression {
+  /** วันที่สร้างบัญชี (YYYY-MM-DD) — นับวันเดินครบเป้าสะสมตั้งแต่วันนี้ (เซิร์ฟเวอร์เท่านั้น) */
+  firstLoginDate: string
+  stepDays: Record<string, MockStepDay>
+  /** เวลาที่ปลดล็อกระบบการ์ดถาวร (ครบ 21 วันเดินถึงเป้า) — null = ยังไม่ปลดล็อก */
+  cardsUnlockedAt?: string | null
+  /** การ์ดแลกซื้อ: itemCode → จำนวนใบ */
+  exchangeCards: Record<string, number>
+  /** วันที่ได้บัฟ "รางวัลคูณสอง" (YYYY-MM-DD) — เดิมมาจากกล่องระหว่างทาง ซึ่งเลิกใช้แล้ว */
+  doubleRewardDate: string | null
+  /** โบนัสที่สุ่มไปแล้ว (key เช่น deep-root:2026-10-06:1) — idempotent */
+  bonusRolls: Record<string, { cardItemCode: string | null; coins: number }>
+  /** [ใหม่] ผงพิเศษในคลัง (จากหีบสมบัติ) */
+  specialDust?: number
+  /** [ใหม่] การ์ด ×2 ที่ยังไม่ได้ใช้ (จากหีบสมบัติ) */
+  doubleCards?: number
+  /** [ใหม่] การ์ด ×2 ที่ใช้อยู่ หมดเวลาเมื่อไร (ISO) — null/ผ่านไปแล้ว = ไม่มีบัฟ */
+  doubleRewardUntil?: string | null
+  /** ของขวัญสุ่มเมื่อจบรอบเส้นทางการเรียนรู้ (key = id ของ log ที่ปิดรอบ) — idempotent */
+  learningGifts?: Record<string, import('../../config/learningGift').LearningGift>
+}
+
+export function emptyProgression(firstLoginDate: string): MockProgression {
+  return { firstLoginDate, stepDays: {}, cardsUnlockedAt: null, exchangeCards: {}, doubleRewardDate: null, bonusRolls: {} }
+}
+
 /** [เพิ่มรอบนี้ — แยกข้อมูลเกมต่อบัญชี] ข้อมูลเกมทั้งหมดของ "หนึ่งบัญชี" — เดิมฟิลด์เหล่านี้อยู่
  * บนสุดของ MockDb ตรงๆ และใช้ร่วมกันทุกบัญชีในเบราว์เซอร์เดียวกัน (บั๊ก: login/register เปลี่ยน
  * แค่ d.user แต่ไม่แตะ questLogs เลย ทำให้บัญชีใหม่เห็นเควส/mood/โพสต์ของบัญชีก่อนหน้า) ตอนนี้
@@ -67,6 +108,7 @@ export interface MockAccountProfile {
   postIts?: PostItData[]
   /** ประวัติเควสเทกระเป๋าความจำผ่านเสียง */
   brainDumps?: BrainDumpRecord[]
+  progression?: MockProgression
 }
 
 export interface MockDb {
@@ -102,6 +144,8 @@ export interface MockDb {
   /** [เพิ่มรอบนี้ — เฟส 2 ระบบ Journey] journey ที่กำลังเดินอยู่ตอนนี้ของบัญชี active — null คือ
    *  ยังไม่เริ่มเดินทริปไหนเลย ดู src/services/api/journey.api.ts */
   activeJourney: JourneyRecord | null
+  /** ความก้าวหน้าระยะยาวของบัญชี active (วันเดินครบเป้า/ไอเทมแลกซื้อ/บัฟ) — null = ยังไม่เคยสร้าง */
+  progression: MockProgression | null
 }
 
 /** [ใหม่] โพสต์ตัวอย่าง 2 อัน — ใช้ userId ตรงกับ MOCK_LEADERBOARD_PLAYERS (p1/p2 ใน
@@ -185,6 +229,7 @@ const EMPTY_DB: MockDb = {
   activeJourney: null,
   postIts: [],
   brainDumps: [],
+  progression: null,
 }
 
 /** ดึงมิเรอร์บนสุดของ db มาเป็นสแนปช็อตหนึ่งก้อน (ไว้เก็บเข้า profiles ก่อนสลับบัญชี) */
@@ -201,6 +246,7 @@ function snapshotActiveProfile(db: MockDb): MockAccountProfile {
     activeJourney: db.activeJourney,
     postIts: db.postIts,
     brainDumps: db.brainDumps,
+    progression: db.progression ?? undefined,
   }
 }
 
@@ -217,16 +263,24 @@ function applyProfileToMirror(db: MockDb, profile: MockAccountProfile) {
   db.activeJourney = profile.activeJourney
   db.postIts = profile.postIts ?? []
   db.brainDumps = profile.brainDumps ?? []
+  db.progression = profile.progression ?? null
 }
 
 /** ข้อมูลเริ่มต้นของบัญชีที่ "ไม่เคยมีมาก่อน" — ใช้ posts/activity ตัวอย่างชุดเดียวกับ EMPTY_DB
  * (โคลนใหม่ทุกครั้งกันบัญชีต่างๆ แชร์ reference อาร์เรย์เดียวกันโดยไม่ตั้งใจ) */
 function createFreshProfile(userSeed: Partial<UserData>): MockAccountProfile {
   return {
-    user: { ...DEFAULT_USER_DATA, id: 'mock-user', username: 'ผู้มาเยือน', ...userSeed },
+    // ค่าเริ่มต้นของบัญชีใหม่ (เลเวล/เหรียญ/ไอเทมที่ปลดล็อก) ปรับได้ที่ mockData.ts → MOCK_USER_PROFILE
+    user: {
+      ...DEFAULT_USER_DATA, id: 'mock-user', username: 'ผู้มาเยือน',
+      level: MOCK_USER_PROFILE.level, exp: MOCK_USER_PROFILE.exp, coins: MOCK_USER_PROFILE.coins,
+      ...userSeed,
+    },
     questLogs: [],
     moodEntries: [],
-    inventory: [],
+    inventory: MOCK_USER_PROFILE.unlockedItems.map((code) => ({
+      id: `local-${code}`, userId: 'mock-user', shopItemId: code, isEquipped: false, purchasedAt: new Date(0).toISOString(),
+    })),
     posts: structuredClone(SEED_POSTS),
     following: [],
     activity: structuredClone(SEED_ACTIVITY),
