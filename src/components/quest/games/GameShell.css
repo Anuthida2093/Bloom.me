@@ -463,3 +463,7 @@
 
 /* เควสปกติ (ไม่เต็มจอ) ไม่มีแถบหัวแล้ว — เว้นบนให้ป้ายชื่อเควสลอย ไม่ทับเนื้อหา */
 .game-shell__body:not(.game-shell__body--fullscreen) { padding-top: 64px; }
+
+/* [แก้ตามที่ระบุ] รูปเควสบนป้ายชื่อด้านบน (แทนอีโมจิ) — สูงเท่าบรรทัดป้าย ไม่ดันป้ายให้สูงขึ้น */
+.game-shell__pill-icon { display: inline-flex; align-items: center; }
+.game-shell__pill-icon-img { width: 1.9em; height: 1.9em; object-fit: contain; margin: -0.45em 0; display: block; }

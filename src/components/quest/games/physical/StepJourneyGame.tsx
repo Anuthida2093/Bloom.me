@@ -373,8 +373,8 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
   const stepRewardPreview = journey
     ? calculateStepReward({ steps: journey.progressOnCurrentMapSteps, bmi, consecutiveGoalDays: progression.goalStreakDays })
     : null
-  // บัฟคูณสองจากกล่องวันนี้ — รางวัลเควสจริงคูณที่เซิร์ฟเวอร์ ตรงนี้แค่แสดงให้ตรงกัน
-  const rewardMultiplier = progression.doubleRewardToday ? 2 : 1
+  // การ์ด ×2 ที่ใช้อยู่ — รางวัลเควสจริงคูณที่เซิร์ฟเวอร์ ตรงนี้แค่แสดงให้ตรงกัน
+  const rewardMultiplier = progression.doubleRewardActive ? 2 : 1
 
   const syncStatusText = isSyncing
     ? 'กำลังซิงค์…'

@@ -7,7 +7,7 @@ import {
 } from '../../config/exchangeItems'
 import { toInventoryItem } from './adapters'
 import { getMe } from './user.api'
-import { rollStepChest, type StepChestReward } from '../../config/stepChest'
+import { DOUBLE_CARD_HOURS, rollStepChest, type StepChestReward } from '../../config/stepChest'
 import { bangkokDateString, calculateLevel } from '../../utils/progression'
 import { rollLearningGift, type LearningGift } from '../../config/learningGift'
 
@@ -27,7 +27,12 @@ import { rollLearningGift, type LearningGift } from '../../config/learningGift'
 export interface ProgressionSummary {
   /** การ์ดแลกซื้อ: itemCode → จำนวนใบ */
   exchangeCards: Record<string, number>
-  doubleRewardToday: boolean
+  /** [แก้ตามที่ระบุ] true = การ์ด ×2 กำลังทำงานอยู่ตอนนี้ (เดิม doubleRewardToday — บัฟทั้งวันจากกล่องที่เลิกใช้) */
+  doubleRewardActive: boolean
+  /** การ์ด ×2 ที่ใช้อยู่หมดเวลาเมื่อไร (ISO) — null = ไม่มีบัฟ · หน้าเว็บใช้นับถอยหลังเท่านั้น เซิร์ฟเวอร์ตัดสินเอง */
+  doubleRewardUntil: string | null
+  /** การ์ด ×2 ที่ยังไม่ได้ใช้ในคลัง */
+  doubleCards: number
   /** วันเดินครบเป้าติดกันล่าสุด — ใช้คิดโบนัสสตรีคของ BMI < 18.5 เท่านั้น */
   goalStreakDays: number
   /** [ใหม่] ผงพิเศษในคลัง (ได้จากหีบสมบัติ) */
@@ -81,10 +86,20 @@ function goalStreak(p: MockProgression): number {
   return streak
 }
 
+/** บัฟ ×2 ทำงานอยู่ไหม ณ เวลานี้ — การ์ด ×2 (12 ชม.) หรือบัฟทั้งวันแบบเก่า (doubleRewardDate) */
+function doubleActiveUntil(p: MockProgression | null | undefined, nowMs = Date.now()): string | null {
+  if (!p) return null
+  if (p.doubleRewardUntil && Date.parse(p.doubleRewardUntil) > nowMs) return p.doubleRewardUntil
+  return null
+}
+
 function summarize(p: MockProgression): ProgressionSummary {
+  const until = doubleActiveUntil(p)
   return {
     exchangeCards: { ...p.exchangeCards },
-    doubleRewardToday: p.doubleRewardDate === localDateKey(),
+    doubleRewardActive: !!until || p.doubleRewardDate === localDateKey(),
+    doubleRewardUntil: until,
+    doubleCards: p.doubleCards ?? 0,
     goalStreakDays: goalStreak(p),
     specialDust: p.specialDust ?? 0,
   }
@@ -226,6 +241,8 @@ export async function openStepChest(date: string): Promise<OpenStepChestResult> 
         d.user = { ...d.user, coins: d.user.coins + reward.amount }
       } else if (reward.kind === 'SPECIAL_DUST') {
         p.specialDust = (p.specialDust ?? 0) + reward.amount
+      } else if (reward.kind === 'DOUBLE_CARD') {
+        p.doubleCards = (p.doubleCards ?? 0) + reward.amount
       } else if (reward.kind === 'BONUS_EXP') {
         const exp = d.user.exp + reward.amount
         d.user = { ...d.user, exp, level: calculateLevel(exp) }
@@ -268,9 +285,41 @@ export async function consumeSpecialDust(): Promise<UseSpecialDustResult> {
   return http.post<UseSpecialDustResult>('/progression/special-dust/use')
 }
 
-/** true = วันนี้มีบัฟคูณสอง (ใช้คิดรางวัลเควสในโหมด mock) */
+export interface UseDoubleCardResult {
+  /** บัฟ ×2 หมดเวลาเมื่อไร (ISO) */
+  doubleRewardUntil: string
+  /** การ์ด ×2 ที่เหลือในคลัง */
+  remaining: number
+}
+
+/** POST /api/progression/double-card/use — [ใหม่] ใช้การ์ด ×2 1 ใบ → เหรียญ/EXP จากเควสทุกเควส ×2 นาน 12 ชั่วโมง
+ *  (นับจากเวลาเซิร์ฟเวอร์ตอนกดใช้) · error: 400 NO_DOUBLE_CARD (ไม่มีการ์ด) / 409 DOUBLE_ALREADY_ACTIVE
+ *  (ยังมีการ์ดใบก่อนทำงานอยู่ — ไม่ซ้อนเวลา กันเสียการ์ดฟรี) */
+export async function consumeDoubleCard(): Promise<UseDoubleCardResult> {
+  if (API_MODE === 'mock') {
+    await mockDelay()
+    const p = getDb().progression
+    if ((p?.doubleCards ?? 0) < 1) {
+      throw new ApiError(400, 'ไม่มีการ์ดคูณสองเหลือแล้ว', { error: { code: 'NO_DOUBLE_CARD' } })
+    }
+    if (doubleActiveUntil(p)) {
+      throw new ApiError(409, 'การ์ดคูณสองใบก่อนยังทำงานอยู่ — รอให้หมดเวลาก่อนแล้วค่อยใช้ใบใหม่', { error: { code: 'DOUBLE_ALREADY_ACTIVE' } })
+    }
+    let result!: UseDoubleCardResult
+    updateDb((d) => {
+      const prog = ensure(d)
+      prog.doubleCards = Math.max(0, (prog.doubleCards ?? 0) - 1)
+      prog.doubleRewardUntil = new Date(Date.now() + DOUBLE_CARD_HOURS * 3_600_000).toISOString()
+      result = { doubleRewardUntil: prog.doubleRewardUntil, remaining: prog.doubleCards }
+    })
+    return result
+  }
+  return http.post<UseDoubleCardResult>('/progression/double-card/use')
+}
+
+/** true = ตอนนี้มีบัฟคูณสอง (การ์ด ×2 ยังไม่หมดเวลา) — ใช้คิดรางวัลเควสในโหมด mock */
 export function mockHasDoubleReward(d: MockDb): boolean {
-  return d.progression?.doubleRewardDate === localDateKey()
+  return !!doubleActiveUntil(d.progression) || d.progression?.doubleRewardDate === localDateKey()
 }
 
 /** POST /api/shop/:id/exchange — แลกซื้อของพิเศษ/หายาก: หักเหรียญตามราคา + การ์ดครบจำนวน

@@ -478,7 +478,7 @@ input, select, textarea { font-family: var(--font-body); }
 /* [แก้ตามที่ระบุ] หน้าเควส/หน้าเล่นเควส: ปุ่มกากบาท (Cross.png) และย้อนกลับ (Return.png) แสดงแค่รูป
    ไม่มีวงกลม/พื้นหลัง/ขอบ — ครอบทุกหน้าเควส (แต่ละหน้ามีคลาสปุ่มปิดของตัวเอง จึงจับจาก "ปุ่มที่มีแค่รูป
    กากบาท/ย้อนกลับรูปเดียว" แทนการไล่แก้ทีละคลาส) เงารอบตัวรูปแทนวงกลม ให้ยังเห็นชัดบนทุกพื้นหลัง */
-:is(.quest-section-root, .game-shell, .camera-fullscreen-container) button:has(> img:only-child:is([src*="Cross.png"], [src*="Return.png"])) {
+:is(.quest-section-root, .game-shell, .camera-fullscreen-container) button:has(> img:only-child:is([src*="Cross."], [src*="Return."])) {
   background: none !important;
   border: none !important;
   box-shadow: none !important;
@@ -486,14 +486,14 @@ input, select, textarea { font-family: var(--font-body); }
   -webkit-backdrop-filter: none !important;
   padding: 0;
 }
-:is(.quest-section-root, .game-shell, .camera-fullscreen-container) button:has(> img:only-child:is([src*="Cross.png"], [src*="Return.png"])) > img {
+:is(.quest-section-root, .game-shell, .camera-fullscreen-container) button:has(> img:only-child:is([src*="Cross."], [src*="Return."])) > img {
   width: 36px !important;
   height: 36px !important;
   object-fit: contain;
   filter: drop-shadow(0 2px 5px var(--glass-b-35));
   transition: transform .15s ease;
 }
-:is(.quest-section-root, .game-shell, .camera-fullscreen-container) button:has(> img:only-child:is([src*="Cross.png"], [src*="Return.png"])):hover > img { transform: scale(1.08); }
+:is(.quest-section-root, .game-shell, .camera-fullscreen-container) button:has(> img:only-child:is([src*="Cross."], [src*="Return."])):hover > img { transform: scale(1.08); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ธีมกระดานจัดอันดับ (ใช้ซ้ำทั่วแอป) — การ์ด/ปุ่ม/ตัวหนังสือชุดเดียวกับกรอบ .lb-frame
@@ -577,7 +577,7 @@ input, select, textarea { font-family: var(--font-body); }
    จับจาก "ปุ่มที่มีรูป Cross.png เป็น element ลูกตัวเดียว" จึงครอบทุกหน้าโดยไม่ต้องไล่แก้ทีละคลาส
    (!important เพื่อชนะ inline style/คลาสเดิมของแต่ละหน้า) — ขนาดรูปคงเดิมของแต่ละที่
    เงารอบตัวรูปแทนวงกลม ให้ยังมองเห็นชัดบนทุกพื้นหลัง ═══ */
-button:has(> img:only-child[src*="Cross.png"]) {
+button:has(> img:only-child[src*="Cross."]) {
   background: none !important;
   background-color: transparent !important;
   border: none !important;
@@ -586,31 +586,31 @@ button:has(> img:only-child[src*="Cross.png"]) {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
-button:has(> img:only-child[src*="Cross.png"])::before,
-button:has(> img:only-child[src*="Cross.png"])::after { content: none !important; }
-button:has(> img:only-child[src*="Cross.png"]) > img {
+button:has(> img:only-child[src*="Cross."])::before,
+button:has(> img:only-child[src*="Cross."])::after { content: none !important; }
+button:has(> img:only-child[src*="Cross."]) > img {
   filter: drop-shadow(0 2px 4px var(--glass-b-30));
   transition: transform .15s ease;
 }
-button:has(> img:only-child[src*="Cross.png"]):hover > img { transform: scale(1.08); }
+button:has(> img:only-child[src*="Cross."]):hover > img { transform: scale(1.08); }
 
 /* ═══ [แก้ตามที่ระบุ] ขนาดปุ่มกากบาทมาตรฐานเดียวทั้งแอป ═══
    • หน้าเต็มจอ (ตั้งค่า/ร้านค้า/โปรไฟล์/สตอรี่/หน้าเควส/ประวัติ ฯลฯ) = 36px เท่าปุ่มกากบาทหน้าหลักเควสสุขภาพ
    • ป็อปอัพ (เช็คอินอารมณ์รายวัน/ข้อมูลต้นไม้/แจ้งเตือน/ป็อปอัพทุกอัน) = 28px เท่ากันหมด */
-button:has(> img:only-child[src*="Cross.png"]) > img {
+button:has(> img:only-child[src*="Cross."]) > img {
   width: 36px !important;
   height: 36px !important;
   object-fit: contain;
 }
 :is(.popup-close, .mood-checkin-close, .tree-of-life__tooltip-close, .medical-box-alert__close, .info-popup__close,
-    .quest-feedback-prompt__dismiss, .balanced-nutrients__history-close, .food-picker__close):has(> img:only-child[src*="Cross.png"]) > img,
+    .quest-feedback-prompt__dismiss, .balanced-nutrients__history-close, .food-picker__close):has(> img:only-child[src*="Cross."]) > img,
 :is(.mood-checkin-card, .ui-overlay__panel, .story-modal-card, .player-detail-modal-card, .quest-confirm-card, .lb-card)
-  button:has(> img:only-child[src*="Cross.png"]) > img {
+  button:has(> img:only-child[src*="Cross."]) > img {
   width: 28px !important;
   height: 28px !important;
 }
 /* ปุ่มลบเล็กๆ ในรายการ (ไม่ใช่ปุ่มปิดหน้า/ป็อปอัพ) */
-:is(.story-search-row__remove, .story-image-preview button):has(> img:only-child[src*="Cross.png"]) > img {
+:is(.story-search-row__remove, .story-image-preview button):has(> img:only-child[src*="Cross."]) > img {
   width: 20px !important;
   height: 20px !important;
 }
@@ -637,6 +637,7 @@ button:has(> img:only-child[src*="Cross.png"]) > img {
 .auth-card input::placeholder { color: color-mix(in srgb, #1a2e22 45%, transparent); }
 
 /* [แก้ตามที่ระบุ] รูปท้ายข้อความแนะนำหน้า Welcome — ขยายแต่ไม่ดันความสูงบรรทัด */
-.welcome-msg-icon { display: inline-block; vertical-align: middle; margin: -1.75em -1.35em; line-height: 0; }
+/* [อัปเดต 2026-10-18] รูปหมวดเควสชุดใหม่เนื้อรูปเต็มไฟล์แล้ว — ไม่ต้องหักขอบโปร่งใสมากอย่างเดิม */
+.welcome-msg-icon { display: inline-block; vertical-align: middle; margin: -.5em .05em -.4em .15em; line-height: 0; }
 .welcome-msg-icon--logo { margin: -.55em .05em -.45em .2em; }
 .welcome-msg-icon img { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .45)); }

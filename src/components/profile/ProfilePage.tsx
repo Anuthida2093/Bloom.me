@@ -30,6 +30,7 @@ import type { StepDayRecord } from '../../services/api/progression.api'
 import CompletedJourneyMap from '../quest/games/physical/CompletedJourneyMap'
 import ExchangeCards from './ExchangeCards'
 import SpecialDustTile from './SpecialDustTile'
+import DoubleCardTile from './DoubleCardTile'
 import HealthSummary from './HealthSummary'
 
 /*============================================================================*\
@@ -129,7 +130,7 @@ export default function ProfilePage({
   const [sparkleId, setSparkleId] = useState<string | null>(null)
   const { t, tv } = useLanguage()
   /** การ์ดแลกซื้อไอเทม — itemCode → จำนวนใบ */
-  const { exchangeCards, specialDust } = useProgression()
+  const { exchangeCards, specialDust, doubleCards, doubleRewardUntil } = useProgression()
   const cardEntries = Object.entries(exchangeCards).filter(([, n]) => n > 0)
   const { postIts } = useMental()
   /** [ย้ายตามที่ระบุ — ข้อ 12] เปิด JournalHistoryModal ของเควสไหน — null = ปิดอยู่ */
@@ -238,7 +239,7 @@ export default function ProfilePage({
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>{t('profile.inventory')}</div>
             <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>กดไอเทมเพื่อวางบนต้นไม้ กดซ้ำเพื่อถอด</p>
 
-            {groupedInventory.length === 0 && cardEntries.length === 0 && specialDust <= 0 ? (
+            {groupedInventory.length === 0 && cardEntries.length === 0 && specialDust <= 0 && doubleCards <= 0 && !doubleRewardUntil ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 'var(--fs-sm)' }}>
                 <div style={{ fontSize: 'calc(var(--fs-3xl) * 1.3)', marginBottom: 8 }}>📦</div>
                 ยังไม่มีไอเทมในคลัง — ไปซื้อจากร้านค้าได้เลย!
@@ -278,6 +279,7 @@ export default function ProfilePage({
                   <>
                     {/* [แก้ตามที่ระบุ] ผงพิเศษจากหีบสมบัติ — กด "ใช้" ไปเทใส่ต้นไม้ที่หน้า Home */}
                     <SpecialDustTile count={specialDust} />
+                    <DoubleCardTile count={doubleCards} activeUntil={doubleRewardUntil} />
                     <ExchangeCards cards={cardEntries} onOpenShopItem={onOpenShopItem} />
                   </>
                 )}

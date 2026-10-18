@@ -14,11 +14,17 @@ export const OPEN_SHOP_ITEM_EVENT = 'bloom:open-shop-item'
 /** ปุ่ม "ใช้" ผงพิเศษในคลังไอเทม → Dashboard ปิดหน้าที่เปิดอยู่ กลับหน้า Home แล้วโชว์ถุงสีม่วง */
 export const USE_SPECIAL_DUST_EVENT = 'bloom:use-special-dust'
 
+/** การ์ดคูณสอง — ใช้แล้วเหรียญ/EXP จากเควสทุกเควส ×2 นานเท่านี้ (เวลาจริง นับจากตอนกดใช้ — ตัดสินฝั่งเซิร์ฟเวอร์) */
+export const DOUBLE_CARD_HOURS = 12
+
+/** ไอคอนการ์ด ×2 (ชั่วคราว — SVG วาดเอง แทนด้วยงานอาร์ตจริงที่ path เดียวกันได้) */
+export const DOUBLE_CARD_ICON = '/assets/images/icons/double-card.svg'
+
 /** ไอคอนถุงผงพิเศษ (ชั่วคราว — SVG วาดเอง แทนด้วยงานอาร์ตจริงที่ path เดียวกันได้) */
 export const SPECIAL_DUST_ICON = '/assets/images/icons/special-dust.svg'
 
 /** BONUS_EXP = ของเก่า (ผลหีบในประวัติ) — [แก้ตามที่ระบุ] หีบใหม่สุ่ม SPECIAL_DUST แทน EXP */
-export type StepChestKind = 'EXCHANGE_CARD' | 'BONUS_COINS' | 'WATER_DROPS' | 'BONUS_EXP' | 'SPECIAL_DUST'
+export type StepChestKind = 'EXCHANGE_CARD' | 'BONUS_COINS' | 'WATER_DROPS' | 'BONUS_EXP' | 'SPECIAL_DUST' | 'DOUBLE_CARD'
 
 export interface StepChestLoot {
   kind: StepChestKind
@@ -32,8 +38,10 @@ export interface StepChestLoot {
 export const STEP_CHEST_LOOT: StepChestLoot[] = [
   // การ์ดออกได้เฉพาะเมื่อระบบการ์ดปลดล็อกแล้ว (เดินถึงเป้าสะสม 21 วัน — ตัดสินฝั่งเซิร์ฟเวอร์) ไม่งั้นข้ามช่องนี้
   { kind: 'EXCHANGE_CARD', weight: 15 },
-  { kind: 'BONUS_COINS', weight: 35, min: 20, max: 60 },
-  { kind: 'WATER_DROPS', weight: 25, min: 2, max: 5 },
+  { kind: 'BONUS_COINS', weight: 30, min: 20, max: 60 },
+  { kind: 'WATER_DROPS', weight: 22, min: 2, max: 5 },
+  // [ใหม่ตามที่ระบุ] การ์ด ×2 — เก็บในคลังไอเทม กด "ใช้" แล้วรางวัลเควสทุกเควส ×2 นาน 12 ชั่วโมง
+  { kind: 'DOUBLE_CARD', weight: 10, min: 1, max: 1 },
   // [แก้ตามที่ระบุ] ผงพิเศษแทน EXP โบนัส — เก็บในคลังไอเทม กด "ใช้" แล้วเทใส่ต้นไม้ที่หน้า Home (+1-2 EXP)
   { kind: 'SPECIAL_DUST', weight: 25, min: 1, max: 1 },
 ]
@@ -52,6 +60,7 @@ export function describeStepChest(c: StepChestReward): string {
   if (c.kind === 'BONUS_COINS') return `หีบสมบัติ: เหรียญโบนัส +${c.amount}`
   if (c.kind === 'WATER_DROPS') return `หีบสมบัติ: หยดน้ำ +${c.amount}`
   if (c.kind === 'SPECIAL_DUST') return `หีบสมบัติ: ผงพิเศษ +${c.amount}`
+  if (c.kind === 'DOUBLE_CARD') return `หีบสมบัติ: การ์ดคูณสอง +${c.amount}`
   return `หีบสมบัติ: EXP โบนัส +${c.amount}`
 }
 

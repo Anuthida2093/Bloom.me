@@ -113,7 +113,7 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
     // กลางคัน (ดู GameShell.tsx) — รางวัลครึ่งเดียวแบบตายตัว ไม่คิดตามสัดส่วนเวลาที่ทำจริง
     // เพื่อไม่ให้ผู้เล่นได้ประโยชน์จากการข้ามเร็วกว่าข้ามช้า
     const skipped = payload?.skipped === true
-    // บัฟ "รางวัลคูณสองวันนี้" — EXP/เหรียญของทุกเควสที่ทำสำเร็จวันนี้ ×2 (ไม่มีแหล่งที่มาแล้ว: กล่องระหว่างทางถูกเลิกใช้)
+    // การ์ด ×2 ที่ใช้อยู่ (12 ชม. นับจากตอนกดใช้) — EXP/เหรียญของทุกเควสที่ทำสำเร็จระหว่างนั้น ×2
     const doubled = mockHasDoubleReward(getDb())
     const rewardMultiplier = (skipped ? 0.5 : 1) * (doubled ? 2 : 1)
     const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)

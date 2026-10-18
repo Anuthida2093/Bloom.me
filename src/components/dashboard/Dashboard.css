@@ -525,19 +525,21 @@
    (มือถือ ~43px) รูปล้นกล่องปุ่มได้แต่ไม่รับคลิก (pointer-events:none) ช่องกดยังเป็นขนาดปุ่มเดิม ═══ */
 .game-icon-btn { position: relative; }
 .game-icon-btn .icon-img { pointer-events: none; flex-shrink: 0; }
-.game-icon-btn .icon-img[src$="/tree.png"]         { width: 110px; height: 110px; }
-.game-icon-btn .icon-img[src$="/Check-in.png"]     { width: 134px; height: 134px; }
-.game-icon-btn .icon-img[src$="/Notification.png"] { width: 115px; height: 115px; }
-.game-icon-btn .icon-img[src$="/Share.png"]        { width: 116px; height: 116px; }
-.game-icon-btn .icon-img[src$="/Friends.png"]      { width: 104px; height: 104px; }
-/* สตอรี่ยังเป็นอีโมจิ 📖 — ขยายให้สูงใกล้เคียงรูปตั้งค่า */
+/* [อัปเดต 2026-10-18 — รูปชุดใหม่] tree/Notification/Share/Friends.png ใหม่เนื้อรูปเต็มไฟล์ ~86-95% แล้ว
+   (เดิม ~40-50%) จึงลดกล่องรูปลงให้สูงที่ตาเห็น ~50px เท่าปุ่มตั้งค่าเหมือนเดิม · Check-in.png ยังเป็นไฟล์เดิม
+   จับคู่ด้วย [src*="/ชื่อ."] ให้ใช้ได้ทั้ง .png และ .webp */
+.game-icon-btn .icon-img[src*="/tree."]         { width: 64px; height: 64px; }
+.game-icon-btn .icon-img[src*="/Check-in."]     { width: 134px; height: 134px; }
+.game-icon-btn .icon-img[src*="/Notification."] { width: 60px; height: 60px; }
+.game-icon-btn .icon-img[src*="/Share."]        { width: 72px; height: 72px; }
+.game-icon-btn .icon-img[src*="/Friends."]      { width: 100px; height: 100px; }
 .dashboard__corner-actions--left .game-icon-btn { font-size: 50px; }
 @media (max-width: 768px) {
-  .game-icon-btn .icon-img[src$="/tree.png"]         { width: 91px; height: 91px; }
-  .game-icon-btn .icon-img[src$="/Check-in.png"]     { width: 111px; height: 111px; }
-  .game-icon-btn .icon-img[src$="/Notification.png"] { width: 95px; height: 95px; }
-  .game-icon-btn .icon-img[src$="/Share.png"]        { width: 96px; height: 96px; }
-  .game-icon-btn .icon-img[src$="/Friends.png"]      { width: 86px; height: 86px; }
+  .game-icon-btn .icon-img[src*="/tree."]         { width: 53px; height: 53px; }
+  .game-icon-btn .icon-img[src*="/Check-in."]     { width: 111px; height: 111px; }
+  .game-icon-btn .icon-img[src*="/Notification."] { width: 50px; height: 50px; }
+  .game-icon-btn .icon-img[src*="/Share."]        { width: 60px; height: 60px; }
+  .game-icon-btn .icon-img[src*="/Friends."]      { width: 83px; height: 83px; }
   .dashboard__corner-actions--left .game-icon-btn { font-size: 42px; }
 }
 
@@ -608,4 +610,19 @@
   .dashboard__back-btn,
   .dashboard__viewing-name-pill { padding: 4px 10px; font-size: var(--fs-xs); }
   .dashboard__viewing-name-pill { max-width: calc(100vw - 110px); overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* ═══ [ใหม่ตามที่ระบุ] ป้ายการ์ด ×2 ใต้ HUD — ลอยแยกจากแถวแคปซูล ไม่ดันแถวให้ล้นบนมือถือ ═══ */
+.hud-double {
+  position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 3px 12px 3px 6px; border-radius: var(--r-pill);
+  background: linear-gradient(180deg, #FFE59A, #F7B544); color: #6B3A0B;
+  border: 2px solid #C77A1F; box-shadow: 0 2px 0 #9A5512, 0 0 14px rgba(255, 201, 60, .55);
+  font-family: var(--font-display); font-size: var(--fs-sm); pointer-events: auto;
+}
+.hud-double img { width: 24px; height: 24px; object-fit: contain; margin: -4px 0; }
+@media (max-width: 400px) {
+  .hud-double { font-size: var(--fs-xs); padding: 2px 10px 2px 4px; }
+  .hud-double img { width: 20px; height: 20px; }
 }

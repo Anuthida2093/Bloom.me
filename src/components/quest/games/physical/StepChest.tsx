@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { MapDef } from '../../../../types.journey'
-import { OPEN_SHOP_ITEM_EVENT, type StepChestReward, SPECIAL_DUST_ICON } from '../../../../config/stepChest'
+import { DOUBLE_CARD_HOURS, DOUBLE_CARD_ICON, OPEN_SHOP_ITEM_EVENT, type StepChestReward, SPECIAL_DUST_ICON } from '../../../../config/stepChest'
 import { BADGE_ICONS, ITEM_ICONS } from '../../../../config/iconAssets'
 import { DECORATION_ITEM_META } from '../../../../config/decorationItems'
 import { exchangeItemName } from '../../../../config/exchangeItems'
@@ -9,6 +9,7 @@ import { useAppContext } from '../../../../context/AppContext'
 import { useEscapeKey } from '../../../../hooks/useEscapeKey'
 import { playSfx } from '../../../../utils/audioPlayer'
 import { withLivePath } from './journeyPathMath'
+import { requestHomeWatering } from '../../../../utils/waterPrompt'
 import './StepChest.css'
 
 /*============================================================================*\
@@ -47,6 +48,7 @@ const SCROLL_VIEW: Record<Exclude<StepChestReward['kind'], 'EXCHANGE_CARD'>, { i
   WATER_DROPS: { icon: BADGE_ICONS.water, title: (n) => `หยดน้ำ +${n}`, text: 'เอาไปรดน้ำต้นไม้ที่หน้าแรกได้เลย' },
   BONUS_EXP: { icon: BADGE_ICONS.exp, title: (n) => `EXP โบนัส +${n}`, text: 'ต้นไม้ของคุณเติบโตขึ้นอีกนิดแล้ว' },
   SPECIAL_DUST: { icon: SPECIAL_DUST_ICON, title: (n) => `ผงพิเศษ +${n}`, text: 'เก็บไว้ในคลังไอเทมแล้ว — กด "ใช้" เพื่อโปรยผงวิบวับใส่ต้นไม้ที่หน้าแรก' },
+  DOUBLE_CARD: { icon: DOUBLE_CARD_ICON, title: (n) => `การ์ดคูณสอง +${n}`, text: `เก็บไว้ในคลังไอเทมแล้ว — กด "ใช้" เมื่อพร้อม รางวัลเควสทุกเควส ×2 นาน ${DOUBLE_CARD_HOURS} ชั่วโมง` },
 }
 
 interface StepChestPopupProps {
@@ -57,8 +59,13 @@ interface StepChestPopupProps {
   onRetry: () => void
 }
 
-export function StepChestPopup({ reward, error, onClose, onRetry }: StepChestPopupProps) {
+export function StepChestPopup({ reward, error, onClose: closePopup, onRetry }: StepChestPopupProps) {
   const { settings } = useAppContext()
+  // [แก้ตามที่ระบุ] ได้หยดน้ำจากหีบ → ปิดแล้วกลับหน้า Home ไปรดน้ำต้นไม้
+  const onClose = () => {
+    closePopup()
+    if (reward?.kind === 'WATER_DROPS') requestHomeWatering()
+  }
   useEscapeKey(() => { if (reward || error) onClose() })
 
   useEffect(() => {

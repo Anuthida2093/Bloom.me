@@ -41,7 +41,7 @@ export default function StoryHeader({
           <StorySearchDropdown query={query} onPicked={() => { onQueryChange(''); inputRef.current?.blur() }} />
         )}
       </div>
-      <button className="story-header__icon-btn" title="กิจกรรม" onClick={onOpenActivity}>🔔</button>
+      <button className="story-header__icon-btn story-header__icon-btn--img" title="กิจกรรม" aria-label="กิจกรรม" onClick={onOpenActivity}><img src={BADGE_ICONS.notification} alt="" /></button>
       {/* [แก้ตามที่ระบุ] สามขีดแสดงทุกขนาดจอ — จอแคบ: เปิด/ปิดเมนูแบบลิ้นชัก · จอกว้าง (โน้ตบุ๊ก): ซ่อน/แสดงแถบเมนูข้าง */}
       <button className="story-header__icon-btn" title="เมนู" aria-label="เมนู" onClick={onToggleMobileSidebar}>☰</button>
       {/* [แก้ข้อ 4] ปุ่มปิดมาตรฐาน — ทรงเดียวกับปุ่มปิดของ ProfilePage.tsx (วงกลมพื้นการ์ด+เงา

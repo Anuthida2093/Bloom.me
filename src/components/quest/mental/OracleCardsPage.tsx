@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { MoodEntryData } from '../../../types'
+import { requestHomeWatering } from '../../../utils/waterPrompt'
 import { ORACLE_CARDS, selectOracleCards, type OracleCard } from './oracleCardData'
 import { generateOracleMessage } from './oracleMessageGenerator'
 import { useTypewriter } from '../../../hooks/useTypewriter'
@@ -81,6 +82,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
     // ปิดหน้าเควสให้เองอยู่แล้ว ไม่เรียก onClose ซ้ำ
     onComplete()
     updateProfile({ waterDrops: (userData.waterDrops ?? 0) + WATER_DROP_REWARD })
+    requestHomeWatering() // [แก้ตามที่ระบุ] ได้หยดน้ำ → กลับหน้า Home แล้วรดน้ำต้นไม้
   }
 
   const handleSkip = () => {

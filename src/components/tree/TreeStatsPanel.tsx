@@ -10,7 +10,7 @@ import {
 } from '../../types'
 import TreeInfoPanel from './TreeInfoPanel'
 import { useLanguage } from '../../context/LanguageContext'
-import { BADGE_ICONS } from '../../config/iconAssets'
+import { BADGE_ICONS, QUEST_TAB_ICONS } from '../../config/iconAssets'
 
 const C_3 = '#8B6000'
 
@@ -45,18 +45,17 @@ export default function TreeStatsPanel({
   const expPct = Math.min(100, (expIntoLevel / EXP_PER_LEVEL) * 100)
 
   const growthStats = [
-    { icon: '🧠', label: t('stats.learning'), sub: t('stats.subTrunk'), val: toBarPct(userData.knowledgeStack), color: 'var(--b500)' },
-    { icon: '💪', label: t('stats.physical'), sub: t('stats.subMeadow'), val: toBarPct(userData.healthStack), color: 'var(--g600)' },
-    { icon: '❤️', label: t('stats.mental'), sub: t('stats.subLeaves'), val: toBarPct(userData.emotionStack), color: 'var(--purple)' },
+    { icon: '🧠', img: QUEST_TAB_ICONS.knowledge, label: t('stats.learning'), sub: t('stats.subTrunk'), val: toBarPct(userData.knowledgeStack), color: 'var(--b500)' },
+    { icon: '💪', img: QUEST_TAB_ICONS.physical, label: t('stats.physical'), sub: t('stats.subMeadow'), val: toBarPct(userData.healthStack), color: 'var(--g600)' },
+    { icon: '❤️', img: QUEST_TAB_ICONS.mental, label: t('stats.mental'), sub: t('stats.subLeaves'), val: toBarPct(userData.emotionStack), color: 'var(--purple)' },
   ]
 
   // [ตัวแปรตรง backend] เดิมโชว์ learningHours/stepsTotal ซึ่งไม่มี field แบบนี้ใน backend
   // เลย (ไม่มีใน docs/VARIABLE_DICTIONARY.md) — เปลี่ยนมาโชว์ค่าที่มาจาก backend จริงแทน
-  // [แก้ตามที่ระบุ] เพิ่ม field img ให้ 3 ตัวที่มีไฟล์รูปจริง (เลเวล/Streak/Coins) — "ต้นไม้"
-  // (🌳) ไม่อยู่ในตารางแทนอีโมจิรอบนี้ (ไม่มีแถวระบุไว้ชัดเจน) ยังคง emoji เดิมไว้ก่อน
+  // [แก้ตามที่ระบุ] ทุกตัวใช้ไฟล์รูปจริง — ต้นไม้ใช้ tree.png (ตารางรูปรอบ 2026-10-18)
   const quickStats = [
     { icon: '⭐', img: BADGE_ICONS.exp, label: t('stats.level'), val: `Lv.${userData.level}`, color: 'var(--b500)' },
-    { icon: '🌳', img: undefined as string | undefined, label: t('stats.tree'), val: `Lv.${treeStats.level}`, color: theme.accent },
+    { icon: '🌳', img: BADGE_ICONS.tree, label: t('stats.tree'), val: `Lv.${treeStats.level}`, color: theme.accent },
     { icon: '🔥', img: BADGE_ICONS.streak, label: 'Streak', val: `${userData.streak}d`, color: 'var(--orange)' },
     { icon: '🪙', img: BADGE_ICONS.coins, label: 'Coins', val: userData.coins.toLocaleString(), color: TEXT_1 },
   ]
@@ -92,7 +91,7 @@ export default function TreeStatsPanel({
             <div key={s.label} style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                 <div>
-                  <span style={{ fontSize: 13 }}>{s.icon}</span>
+                  <span style={{ fontSize: 13 }}>{s.img ? <img src={s.img} className="icon-img icon-img--lg" alt="" style={{ verticalAlign: 'middle' }} /> : s.icon}</span>
                   <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', marginLeft: 4 }}>{s.label}</span>
                 </div>
                 <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: s.color }}>{Math.round(s.val)}%</span>
@@ -111,7 +110,7 @@ export default function TreeStatsPanel({
         <div className="tree-stats-panel__section grid grid-cols-4 md:grid-cols-2 gap-1.5" style={{ animationDelay: '180ms' }}>
           {quickStats.map(s => (
             <div key={s.label} className="tree-stats-panel__quick-stat" style={{ background: 'var(--bg)', borderRadius: 10, padding: '6px 4px', textAlign: 'center', border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 15 }}>{s.img ? <img src={s.img} className="icon-img" alt="" /> : s.icon}</div>
+              <div style={{ fontSize: 15 }}><img src={s.img} className="icon-img" alt="" /></div>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 12, color: s.color, wordBreak: 'break-word' }}>{s.val}</div>
               <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
             </div>

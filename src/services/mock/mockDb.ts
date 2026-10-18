@@ -76,6 +76,10 @@ export interface MockProgression {
   bonusRolls: Record<string, { cardItemCode: string | null; coins: number }>
   /** [ใหม่] ผงพิเศษในคลัง (จากหีบสมบัติ) */
   specialDust?: number
+  /** [ใหม่] การ์ด ×2 ที่ยังไม่ได้ใช้ (จากหีบสมบัติ) */
+  doubleCards?: number
+  /** [ใหม่] การ์ด ×2 ที่ใช้อยู่ หมดเวลาเมื่อไร (ISO) — null/ผ่านไปแล้ว = ไม่มีบัฟ */
+  doubleRewardUntil?: string | null
   /** ของขวัญสุ่มเมื่อจบรอบเส้นทางการเรียนรู้ (key = id ของ log ที่ปิดรอบ) — idempotent */
   learningGifts?: Record<string, import('../../config/learningGift').LearningGift>
 }

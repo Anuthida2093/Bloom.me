@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react'
+import { BADGE_ICONS } from '../../config/iconAssets'
 import { MBTI_TREE_THEME, type MbtiType, type RiskLevel } from '../../types'
 import { toGroundVariant } from '../../config/treeAssets'
 import { groundDryness, groundStage, knowledgeGrowthMultiplier } from '../../config/groundFertility'
@@ -55,7 +56,7 @@ export default function TreeInfoPanel({
   const groundStg = groundStage(groundDry)
 
   return (
-    <InfoFramePanel banner={<>🌳 {t('treeInfo.title')}</>} onClose={onClose}>
+    <InfoFramePanel banner={<><img src={BADGE_ICONS.tree} className="icon-img icon-img--lg" alt="" style={{ verticalAlign: 'middle' }} /> {t('treeInfo.title')}</>} onClose={onClose}>
         {/* [แก้ตามที่ระบุ] ต้นไม้ประจำ MBTI แบบเดียวกับในตารางจัดอันดับ/หน้าเลือก MBTI (MiniTree)
             ขึ้นก่อน แล้วค่อยเป็นข้อความ "ต้นไม้ของ ..." */}
         <FadeInText className="tree-info-panel__tree">

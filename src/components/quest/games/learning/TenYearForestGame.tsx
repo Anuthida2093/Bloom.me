@@ -161,7 +161,7 @@ export default function TenYearForestGame({ exit, finish }: QuestGameProps) {
       {/* [แก้ตามที่ระบุ] รางวัลรายวันของป่าแห่งสิบปี — streak ครบ 21 วันขึ้นไป กดรับได้วันละครั้ง */}
       <div className={`qg-card tyf-reward${streakReady && !claimedToday ? ' tyf-reward--ready' : ''}`}>
         <div className="tyf-reward__text">
-          <b>{claimedToday ? '🌳 รับรางวัลวันนี้แล้ว' : streakReady ? '🌳 รางวัลป่าแห่งสิบปีพร้อมแล้ว!' : '🌱 เข้าแอปต่อเนื่องให้ครบ 21 วัน'}</b>
+          <b><img src={streakReady ? BADGE_ICONS.tree : BADGE_ICONS.seed} className="icon-img" alt="" /> {claimedToday ? 'รับรางวัลวันนี้แล้ว' : streakReady ? 'รางวัลป่าแห่งสิบปีพร้อมแล้ว!' : 'เข้าแอปต่อเนื่องให้ครบ 21 วัน'}</b>
           <small>
             {claimedToday
               ? 'กลับมารับใหม่พรุ่งนี้ — อย่าให้ streak ขาดนะ'

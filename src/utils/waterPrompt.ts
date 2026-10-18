@@ -24,3 +24,16 @@ export function takeNewWaterDrop(userId: string): boolean {
     return true
   } catch { return false }
 }
+
+/** ดูว่ามีหยดน้ำใหม่ที่ยังไม่ได้เห็นไหม (ไม่ล้างธง) */
+export function hasNewWaterDrop(userId: string): boolean {
+  if (!userId) return false
+  try { return window.localStorage.getItem(key(userId)) === '1' } catch { return false }
+}
+
+/** [แก้ตามที่ระบุ] ได้รางวัลหยดน้ำ → Dashboard ปิดทุกหน้าที่เปิดอยู่ กลับหน้า Home แล้วเล่นบัวรดน้ำต้นไม้ทันที */
+export const HOME_WATERING_EVENT = 'bloom:home-watering'
+
+export function requestHomeWatering(): void {
+  window.dispatchEvent(new CustomEvent(HOME_WATERING_EVENT))
+}

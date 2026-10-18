@@ -40,6 +40,7 @@ const NAV_ICON_IMAGES: Partial<Record<NavKey, string>> = {
   quests: BADGE_ICONS.questTab,
   shop: BADGE_ICONS.store,
   home: BADGE_ICONS.home,
+  story: BADGE_ICONS.story,
   profile: BADGE_ICONS.profile,
 }
 
@@ -121,7 +122,7 @@ export default function ActionMenuBar({
             <li key={item.key} className={active === item.key ? 'active' : ''}>
               {/* role="button" → ได้ยินเสียงคลิกกลางของระบบ (AudioContext) เหมือนปุ่มอื่น */}
               <a role="button" tabIndex={0} onClick={() => handleClick(item.key)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(item.key) } }}>
-                <span className="nav-icon">
+                <span className={`nav-icon nav-icon--${item.key}`}>
                   {NAV_ICON_IMAGES[item.key]
                     ? <img src={NAV_ICON_IMAGES[item.key]} className="icon-img" alt={t(`nav.${item.key}`)} />
                     : <span className="nav-icon-emoji" aria-hidden="true">{item.icon}</span>}

@@ -32,12 +32,12 @@ interface QuestRewardCelebrationProps {
 }
 
 export default function QuestRewardCelebration({ data, onDone }: QuestRewardCelebrationProps) {
-  const { doubleRewardToday } = useProgression()
+  const { doubleRewardActive } = useProgression()
   if (!data) return null
 
   const { quest, skipped } = data
-  // บัฟ "รางวัลคูณสองวันนี้" (ตอนนี้ไม่มีแหล่งที่มา — กล่องระหว่างทางถูกเลิกใช้) — แสดงให้ตรงกับที่เซิร์ฟเวอร์ให้จริง
-  const mult = (skipped ? 0.5 : 1) * (doubleRewardToday ? 2 : 1)
+  // การ์ด ×2 ที่ใช้อยู่ (12 ชม.) — แสดงให้ตรงกับที่เซิร์ฟเวอร์ให้จริง
+  const mult = (skipped ? 0.5 : 1) * (doubleRewardActive ? 2 : 1)
   const coin = Math.round(quest.coinReward * mult)
   const exp = Math.round(quest.expReward * mult)
 

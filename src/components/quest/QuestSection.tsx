@@ -260,7 +260,8 @@ export default function QuestSection({
     // [แก้บั๊ก] เดิม `if (q.isPassive) return` — เควสเสริม passive 2 ตัว (ผู้พิทักษ์การพักผ่อน / ป่าแห่งสิบปี)
     // จึงกดแล้วไม่มีอะไรเกิดขึ้นเลย ตอนนี้เปิดหน้าข้อมูลของมันได้ (หน้านั้นปิดด้วย exit ไม่ให้รางวัลซ้ำ)
     const lockReason = getLockReason(q)
-    if (lockReason) { setQuestNotice({ icon: '🔒', title: 'ยังเล่นไม่ได้', message: `${q.titleTh}
+    // [แก้ตามที่ระบุ] ป็อปอัปเควสที่ยังล็อก ใช้รูปของเควสนั้นแทนแม่กุญแจ 🔒
+    if (lockReason) { setQuestNotice({ icon: q.icon, iconImg: QUEST_ICONS[q.code], title: 'ยังเล่นไม่ได้', message: `${q.titleTh}
 ${lockReason}` }); return }
     // [แก้ตามที่ระบุ] เควสแคลอรี่ตาม BMI ถ่ายบันทึกมื้อได้เรื่อยๆ ทั้งวัน — ทำสำเร็จแล้วก็ยังเข้าได้
     // (ข้างในซ่อนปุ่มรับรางวัลซ้ำเอง ดู BalancedNutrientsQuest.tsx)
@@ -323,9 +324,12 @@ ${lockReason}` }); return }
       <div className={`quest-section-title-pill lb-banner${specialQuest ? ` quest-section-title-pill--${specialQuest.code}` : ''}`}>
         {/* [อัปเดตรอบนี้] ทั้ง 3 หมวดมีไฟล์รูปจริงครบแล้ว (ดู iconAssets.ts) */}
         <span>
-          {QUEST_TAB_ICONS[tab.id]
-            ? <img src={QUEST_TAB_ICONS[tab.id]} className="icon-img" alt="" />
-            : tab.emoji} {/* [แก้ตามที่ระบุ] ระหว่างเปิดเควสแบบเต็มหน้า (เช่น ไดอะรี่ของฉัน) ป้ายกลางบนเป็นชื่อเควสนั้น */}
+          {/* [แก้ตามที่ระบุ] เปิดเควสอยู่ → รูปของเควสนั้น · หน้ารวมหมวด → รูปหมวด */}
+          {specialQuest && QUEST_ICONS[specialQuest.code]
+            ? <img src={QUEST_ICONS[specialQuest.code]} className="icon-img" alt="" />
+            : QUEST_TAB_ICONS[tab.id]
+              ? <img src={QUEST_TAB_ICONS[tab.id]} className="icon-img" alt="" />
+              : tab.emoji} {/* [แก้ตามที่ระบุ] ระหว่างเปิดเควสแบบเต็มหน้า (เช่น ไดอะรี่ของฉัน) ป้ายกลางบนเป็นชื่อเควสนั้น */}
           {specialQuest ? specialQuest.titleTh : t(`questZone.${activeTab}`)}
         </span>
       </div>
@@ -399,18 +403,13 @@ ${lockReason}` }); return }
           .quest-section-title-pill { font-size: 14px; padding: 4px 14px; }
         }
         /* [แก้ตามที่ระบุ] รูปประจำหมวด (สุขภาพ/การเรียนรู้/สุขภาพจิต) บนป้ายหัวหน้าเควสใหญ่ขึ้น */
-        /* ไฟล์รูปหมวด (Learning/Physical/Mental Quests.png 798x434) มีขอบโปร่งใสกว้างมาก เนื้อรูปจริง
-           แค่ ~35-40% ของไฟล์ — ขยายกล่องรูปแยกต่อไฟล์ให้เนื้อรูปสูง ~42px แล้วหักขอบโปร่งใสด้วย
-           margin ติดลบ ป้ายจึงไม่สูงตาม (มือถือเล็กลงราว 15%) */
+        /* [อัปเดต 2026-10-18 — รูปชุดใหม่] Learning/Physical/Mental Quests.png ใหม่เนื้อรูปเต็มไฟล์ ~91-95%
+           (เดิม 798x434 เนื้อรูปแค่ ~35-40% จึงเคยขยายกล่องเป็น ~100-120px แล้วหักขอบด้วย margin ติดลบ) —
+           ตอนนี้กล่อง ~44px พอ ใช้ขนาดเดียวกันทุกรูป (รวมรูปของเควสที่เปิดอยู่) margin ติดลบเล็กน้อยไม่ให้ป้ายสูงตาม */
         .quest-section-title-pill > span { display: inline-flex; align-items: center; gap: 8px; }
-        .quest-section-title-pill .icon-img { vertical-align: middle; flex-shrink: 0; }
-        .quest-section-title-pill .icon-img[src*="Learning Quests"] { width: 118px; height: 118px; margin: -38px -32px; }
-        .quest-section-title-pill .icon-img[src*="Physical Quests"] { width: 99px; height: 99px; margin: -28px -34px; }
-        .quest-section-title-pill .icon-img[src*="Mental Quests"]   { width: 120px; height: 120px; margin: -39px -36px; }
+        .quest-section-title-pill .icon-img { vertical-align: middle; flex-shrink: 0; width: 44px; height: 44px; margin: -10px 0; }
         @media (max-width: 768px) {
-          .quest-section-title-pill .icon-img[src*="Learning Quests"] { width: 100px; height: 100px; margin: -32px -27px; }
-          .quest-section-title-pill .icon-img[src*="Physical Quests"] { width: 84px; height: 84px; margin: -24px -29px; }
-          .quest-section-title-pill .icon-img[src*="Mental Quests"]   { width: 102px; height: 102px; margin: -33px -31px; }
+          .quest-section-title-pill .icon-img { width: 38px; height: 38px; margin: -9px 0; }
         }
 
         /* [แก้] ปุ่มปิด — แยกจากป้ายชื่อโซน คงตำแหน่งมุมขวาบนเดิมไว้ นี่คือปุ่มปิดเดียวของ

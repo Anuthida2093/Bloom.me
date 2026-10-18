@@ -32,7 +32,7 @@ describe('progression — โหมด mock', () => {
   it('หน้าเว็บไม่ได้รับตัวนับวันสะสม/สถานะปลดล็อก', async () => {
     const { api } = await setup(25)
     const summary = await api.getProgression()
-    expect(Object.keys(summary).sort()).toEqual(['doubleRewardToday', 'exchangeCards', 'goalStreakDays', 'specialDust'])
+    expect(Object.keys(summary).sort()).toEqual(['doubleCards', 'doubleRewardActive', 'doubleRewardUntil', 'exchangeCards', 'goalStreakDays', 'specialDust'])
   })
 
   it('ทำเควสการเรียนรู้ครบ 5 ด่าน → log สุดท้ายได้ของขวัญสุ่ม 1 ครั้ง · ด่านก่อนหน้าไม่ได้', async () => {
@@ -63,6 +63,37 @@ describe('progression — โหมด mock', () => {
     expect(res.expGained).toBeLessThanOrEqual(2)
     expect(db.getDb().user.exp).toBe(before + res.expGained)
     expect((await api.getProgression()).specialDust).toBe(1)
+  })
+
+  it('การ์ด ×2: ใช้แล้วรางวัลเควส ×2 นาน 12 ชม. · ซ้อนไม่ได้ · ไม่มีการ์ด → 400 NO_DOUBLE_CARD', async () => {
+    const { db, api, quest } = await setup(0)
+    await expect(api.consumeDoubleCard()).rejects.toMatchObject({ code: 'NO_DOUBLE_CARD' })
+    db.updateDb((d) => { d.progression!.doubleCards = 2 })
+
+    const coins0 = db.getDb().user.coins
+    await quest.completeQuest({ questCode: 'phys-green-vision' })
+    const normalGain = db.getDb().user.coins - coins0
+
+    const res = await api.consumeDoubleCard()
+    expect(res.remaining).toBe(1)
+    const hours = (Date.parse(res.doubleRewardUntil) - Date.now()) / 3_600_000
+    expect(hours).toBeGreaterThan(11.9)
+    expect(hours).toBeLessThanOrEqual(12)
+    await expect(api.consumeDoubleCard()).rejects.toMatchObject({ code: 'DOUBLE_ALREADY_ACTIVE' })
+
+    const summary = await api.getProgression()
+    expect(summary.doubleRewardActive).toBe(true)
+    expect(summary.doubleCards).toBe(1)
+
+    const coins1 = db.getDb().user.coins
+    await quest.completeQuest({ questCode: 'phys-sunlit-root' })
+    const { findQuestByCode } = await import('../../../config/questCatalog')
+    expect(db.getDb().user.coins - coins1).toBe(findQuestByCode('phys-sunlit-root')!.coinReward * 2)
+    expect(normalGain).toBe(findQuestByCode('phys-green-vision')!.coinReward)
+
+    // หมดเวลาแล้ว → ไม่คูณอีก
+    db.updateDb((d) => { d.progression!.doubleRewardUntil = new Date(Date.now() - 1000).toISOString() })
+    expect((await api.getProgression()).doubleRewardActive).toBe(false)
   })
 
   it('บันทึกก้าวรายวันพร้อมแผนที่ — ประวัติเปิดดูแผนที่ของวันนั้นได้ และเก็บก้าวค่ามากสุด', async () => {

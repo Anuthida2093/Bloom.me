@@ -62,6 +62,9 @@
 .story-header__icon-btn:hover { opacity: .85; }
 /* [แก้ตามที่ระบุ] ธีมมืด: วงกลมกลายเป็นสีอ่อน (--n900 กลับสี) — ไอคอนสามขีด/กระดิ่งต้องเป็นสีดำ */
 [data-theme="dark"] .story-header__icon-btn { color: var(--fixed-black); }
+/* [แก้ตามที่ระบุ] กระดิ่งใช้รูป Notification.png — ไม่มีวงกลมทึบด้านหลัง (รูปมีกรอบสีของตัวเองแล้ว) */
+.story-header__icon-btn--img, [data-theme="dark"] .story-header__icon-btn--img { background: transparent; padding: 0; }
+.story-header__icon-btn--img img { width: 46px; height: 46px; object-fit: contain; display: block; }
 /* [แก้ข้อ 4] ปุ่มปิดมาตรฐาน — ทรงเดียวกับปุ่มปิดของ ProfilePage.tsx (วงกลมพื้นการ์ด+เงา
    สีอ่อน ไม่ใช่วงกลมทึบเข้มแบบกระดิ่ง/แฮมเบอร์เกอร์) แทนที่ปุ่ม Home ลอยกลางจอที่ตัดออกแล้ว —
    อยู่ในแถวหัวข้อซึ่งอยู่ใต้ Navbar หลักพอดี (เทียบเท่า "ลอยมุมขวาบน ใต้ Navbar" ตามที่ระบุ

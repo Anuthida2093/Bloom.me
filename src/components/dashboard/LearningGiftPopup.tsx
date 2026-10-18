@@ -5,6 +5,7 @@ import { useProgress } from '../../context/AppContext'
 import { useUI } from '../../context/UIContext'
 import { playSfx } from '../../utils/audioPlayer'
 import RewardBurst from '../common/RewardBurst'
+import { requestHomeWatering } from '../../utils/waterPrompt'
 
 /*============================================================================*\
   LearningGiftPopup — [แก้ตามที่ระบุ] ของขวัญสุ่มเมื่อทำเควสการเรียนรู้ครบทั้ง 5 ด่าน
@@ -27,7 +28,11 @@ export default function LearningGiftPopup() {
       : { image: BADGE_ICONS.water, amount: `+${learningGift.amount}`, label: 'หยดน้ำ' }
   return (
     <RewardBurst
-      onClose={dismissLearningGift}
+      onClose={() => {
+        const water = learningGift.kind === 'WATER_DROPS'
+        dismissLearningGift()
+        if (water) requestHomeWatering() // [แก้ตามที่ระบุ] ได้หยดน้ำ → กลับหน้า Home แล้วรดน้ำต้นไม้
+      }}
       items={[{ key: `${learningGift.key}`, ...item }]}
       note={<>ของขวัญจากการเรียนรู้ครบทั้ง 5 ด่าน 🎁<br />เส้นทางเริ่มรอบใหม่แล้ว — กลับไปเล่นด่านแรกได้เลย</>}
     />

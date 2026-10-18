@@ -9,6 +9,7 @@ import path from 'node:path'
 
 const DIRS = [
   'public/assets/images/icons/quests',
+  'public/assets/images/decorations',
   'public/assets/images/icons/Item',
   'public/assets/images/mini-game/vitality-steps',
 ]

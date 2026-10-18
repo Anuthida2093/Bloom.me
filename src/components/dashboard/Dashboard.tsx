@@ -32,7 +32,7 @@ import CardDropPopup from './CardDropPopup'
 import LearningGiftPopup from './LearningGiftPopup'
 import RewardBurst from '../common/RewardBurst'
 import { useCalorieGoalReward } from '../../hooks/useCalorieGoalReward'
-import { takeNewWaterDrop } from '../../utils/waterPrompt'
+import { HOME_WATERING_EVENT, takeNewWaterDrop } from '../../utils/waterPrompt'
 import { EXP_PER_LEVEL, type MbtiType, type QuestCategory, type PostItData } from '../../types'
 import type { LeaderboardPlayer } from '../../config/leaderboardData'
 import type { QuestTabId } from '../../config/questCatalog'
@@ -62,6 +62,7 @@ import OverCalorieNotice from './OverCalorieNotice'
 import PlantIntro from './PlantIntro'
 import { OPEN_SHOP_ITEM_EVENT, USE_SPECIAL_DUST_EVENT } from '../../config/stepChest'
 import SpecialDustPouch from './SpecialDustPouch'
+import DoubleRewardChip from './DoubleRewardChip'
 import { useStepSettlement } from '../../hooks/useStepSettlement'
 import { useVideoStallGuard } from '../../hooks/useVideoStallGuard'
 import { homeBackgroundSrc } from '../../config/homeBackgrounds'
@@ -493,6 +494,20 @@ export default function Dashboard() {
     window.addEventListener(USE_SPECIAL_DUST_EVENT, onUseDust)
     return () => window.removeEventListener(USE_SPECIAL_DUST_EVENT, onUseDust)
   }, [closeModal, setViewingPlayer])
+  // [แก้ตามที่ระบุ] รับรางวัลหยดน้ำ → ปิดทุกหน้า กลับหน้า Home แล้วเล่นบัวรดน้ำต้นไม้ทันที
+  // (ล้างธงหยดน้ำใหม่ด้วย — effect homeVisible ด้านบนจะได้ไม่เล่นซ้ำอีกรอบ)
+  useEffect(() => {
+    let timer = 0
+    const onWatering = () => {
+      ALL_MODAL_KEYS.forEach((key) => closeModal(key))
+      setViewingPlayer(null)
+      takeNewWaterDrop(userData.id)
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => setWateringKey((k) => k + 1), 450)
+    }
+    window.addEventListener(HOME_WATERING_EVENT, onWatering)
+    return () => { window.removeEventListener(HOME_WATERING_EVENT, onWatering); window.clearTimeout(timer) }
+  }, [closeModal, setViewingPlayer, userData.id])
   /** ผู้ใช้ใหม่ที่ยังไม่เคยได้คะแนนสุขภาพกาย — พื้นเขียวเรียบ ไม่มีหญ้า/ดอก (ทำเควสสุขภาพแล้วค่อยงอก) */
   const isNewGround = userData.healthStack <= 0
 
@@ -585,6 +600,7 @@ export default function Dashboard() {
             <img src={BADGE_ICONS.streak} className="icon-img hud-icon" alt="" />
             <span>{userData.streak}d</span>
           </div>
+          <DoubleRewardChip />
         </div>
       )}
 

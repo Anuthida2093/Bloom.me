@@ -247,7 +247,7 @@ export default function SettingsModal({
 
         <Section label={t('settings.account')} index={5} accent={theme.accent} full>
           <div className="settings-account-grid">
-            <SettingBtn icon="👤" label={t('settings.profile')} onClick={() => setActiveSubModal('profile')} accent={theme.accent} />
+            <SettingBtn icon={<img src={BADGE_ICONS.profile} className="icon-img icon-img--lg" alt="" />} label={t('settings.profile')} onClick={() => setActiveSubModal('profile')} accent={theme.accent} />
             <SettingBtn icon={<img src={BADGE_ICONS.notification} className="icon-img" alt="" />} label={t('settings.notifications')} onClick={() => setActiveSubModal('notifications')} accent={theme.accent} />
             <SettingBtn icon="🔒" label={t('settings.privacy')} onClick={() => setActiveSubModal('privacy')} accent={theme.accent} />
             <SettingBtn icon="📤" label={t('settings.export')} onClick={handleExportData} accent={theme.accent} />

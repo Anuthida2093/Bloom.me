@@ -236,3 +236,9 @@
   .quest-floating-menu { padding: 8px; }
   .quest-floating-menu .icon-img { width: 28px; height: 28px; }
 }
+
+/* [แก้ตามที่ระบุ] ไอคอนเควส (Quest Icon) เป็นรูปทรงสูงเกือบเต็มกรอบ จึงดูใหญ่กว่าปุ่มอื่น — ย่อให้เล็กลง */
+.liquid-nav-bar ul li a .nav-icon--quests .icon-img {
+  width: calc(var(--nav-icon-size) * .8);
+  height: calc(var(--nav-icon-size) * .8);
+}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BADGE_ICONS, ITEM_ICONS } from '../../../../config/iconAssets'
-import { describeStepChest, type StepChestReward, SPECIAL_DUST_ICON } from '../../../../config/stepChest'
+import { describeStepChest, type StepChestReward, SPECIAL_DUST_ICON, DOUBLE_CARD_ICON } from '../../../../config/stepChest'
 import { playSfx } from '../../../../utils/audioPlayer'
 import './DiaryRewardScroll.css'
 
@@ -33,7 +33,7 @@ export interface DiaryRewardScrollProps {
 
 function chestIcon(c: StepChestReward): React.ReactNode {
   if (c.kind === 'EXCHANGE_CARD') return c.cardItemCode && ITEM_ICONS[c.cardItemCode] ? <img src={ITEM_ICONS[c.cardItemCode]} alt="" /> : '🎴'
-  return <img src={c.kind === 'BONUS_COINS' ? BADGE_ICONS.coins : c.kind === 'WATER_DROPS' ? BADGE_ICONS.water : c.kind === 'SPECIAL_DUST' ? SPECIAL_DUST_ICON : BADGE_ICONS.exp} alt="" />
+  return <img src={c.kind === 'BONUS_COINS' ? BADGE_ICONS.coins : c.kind === 'WATER_DROPS' ? BADGE_ICONS.water : c.kind === 'SPECIAL_DUST' ? SPECIAL_DUST_ICON : c.kind === 'DOUBLE_CARD' ? DOUBLE_CARD_ICON : BADGE_ICONS.exp} alt="" />
 }
 
 export default function DiaryRewardScroll(props: DiaryRewardScrollProps) {

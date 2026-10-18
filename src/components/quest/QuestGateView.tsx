@@ -1,6 +1,6 @@
 import { isQuestFullyDoneToday, type QuestDef } from '../../config/questCatalog'
 import { SAFETY_NET_CONTACTS } from '../../config/screening'
-import { QUEST_ICONS } from '../../config/iconAssets'
+import { BADGE_ICONS, QUEST_ICONS } from '../../config/iconAssets'
 import { useEffect, useState } from 'react'
 import { useAppContext } from '../../context/AppContext'
 import { computeCalorieTarget, loadMeals, totalCalories, MEALS_CHANGED_EVENT } from '../../utils/nutrition'
@@ -167,7 +167,7 @@ export default function QuestGateView({
               {done && !stepSuccess && <span className="quest-gate-view__row-status quest-gate-view__row-status--done">✓ สำเร็จแล้ว</span>}
               {!done && locked && !stepSuccess && <span className="quest-gate-view__row-status quest-gate-view__row-status--locked">🔒 ล็อกอยู่</span>}
               {!done && !locked && moodGated && (
-                <span className="quest-gate-view__row-status quest-gate-view__row-status--mood">🌤️ เช็คอินก่อน</span>
+                <span className="quest-gate-view__row-status quest-gate-view__row-status--mood"><img src={BADGE_ICONS.checkin} className="icon-img" alt="" style={{ width: '2.2em', height: '2.2em', margin: '-.6em -.5em' }} /> เช็คอินก่อน</span>
               )}
             </button>
           )
@@ -256,8 +256,8 @@ export default function QuestGateView({
         /* [แก้ตามที่ระบุ — ตัวเลือก B] เอาวงกลมไล่สี/เงาออก เหลือแค่กล่องขนาดคงที่ 2.5cm ไว้
            จัดตำแหน่งไอคอน ไม่มีพื้นหลัง/ขอบ/เงาอีกต่อไป */
         .quest-gate-view__row-icon {
-          /* [แก้ตามที่ระบุ] รูปเควสในรายการใหญ่ขึ้นหน่อย (เดิม 2.5cm) */
-          flex-shrink: 0; width: 2.9cm; height: 2.9cm;
+          /* [แก้ตามที่ระบุ] รูปเควสหน้าแรกของหมวดกาย/ใจเล็กลงอีกนิด (เคย 2.9cm) — จอเล็กย่อตามความกว้าง */
+          flex-shrink: 0; width: min(2.4cm, 19vw); height: min(2.4cm, 19vw);
           display: flex; align-items: center; justify-content: center; font-size: 22px;
         }
         .quest-gate-view__row-icon-img {

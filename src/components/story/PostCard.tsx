@@ -11,6 +11,7 @@ import { MOOD_TYPE_INFO } from '../../config/moodTypes'
 import { postImages } from '../../types'
 import PostImageCarousel from './PostImageCarousel'
 import { HeartLeafIcon, CommentIcon, ShareIcon, BookmarkIcon, VerifiedBadge } from './storyIcons'
+import { BADGE_ICONS } from '../../config/iconAssets'
 import { useSavedPost } from '../../utils/savedPosts'
 
 /*============================================================================*\
@@ -115,9 +116,9 @@ export default function PostCard({ post }: { post: PostData }) {
               <div className="story-post-card__menu-scrim" onClick={() => setShowOwnerMenu(false)} />
               <div className="story-post-card__menu">
                 {isMe && <button onClick={() => { setShowOwnerMenu(false); setShowEdit(true) }}>✏️ แก้ไขโพสต์</button>}
-                {!isMe && <button onClick={() => { setShowOwnerMenu(false); openAuthorProfile() }}>👤 ดูโปรไฟล์</button>}
+                {!isMe && <button onClick={() => { setShowOwnerMenu(false); openAuthorProfile() }}><img src={BADGE_ICONS.profile} className="icon-img" alt="" /> ดูโปรไฟล์</button>}
                 <button onClick={() => { setShowOwnerMenu(false); toggleSaved() }}>{saved ? '🔖 เลิกบันทึก' : '🔖 บันทึกโพสต์'}</button>
-                <button onClick={() => { setShowOwnerMenu(false); setShowShare(true) }}>📤 ส่งให้เพื่อน</button>
+                <button onClick={() => { setShowOwnerMenu(false); setShowShare(true) }}><img src={BADGE_ICONS.share} className="icon-img" alt="" /> ส่งให้เพื่อน</button>
               </div>
             </>
           )}

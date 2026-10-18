@@ -23,7 +23,7 @@
 
 ```
 GET  /api/progression/me
-  → { exchangeCards: { [itemCode]: n }, doubleRewardToday, goalStreakDays }   // ห้ามมีตัวนับ 21 วัน
+  → { exchangeCards: { [itemCode]: n }, doubleRewardActive, doubleRewardUntil, doubleCards, goalStreakDays, specialDust }   // ห้ามมีตัวนับ 21 วัน
 
 PUT  /api/steps/days/:date            body { steps, goal, mapId?, journeyId? }  // date = YYYY-MM-DD วันไทย (Asia/Bangkok)
   → ProgressionSummary                // เก็บ steps ค่ามากสุดของวัน goalMet = steps >= goal · ครบ 21 วัน → ปลดล็อกการ์ด
@@ -32,7 +32,7 @@ GET  /api/steps/days
   → [{ date, steps, goal, goalMet, mapId, journeyId, chest }]   // ใหม่สุดก่อน — chest = ผลหีบ (null = ยังไม่เปิด)
 
 POST /api/steps/days/:date/chest                                 // ใหม่ — หีบสมบัติ 1 ใบต่อวันที่ถึงเป้า
-  → { reward: { kind: 'EXCHANGE_CARD'|'BONUS_COINS'|'WATER_DROPS'|'BONUS_EXP', amount, cardItemCode },
+  → { reward: { kind: 'EXCHANGE_CARD'|'BONUS_COINS'|'WATER_DROPS'|'SPECIAL_DUST'|'DOUBLE_CARD', amount, cardItemCode },
       alreadyOpened: boolean }                                    // เปิดซ้ำ = คืนผลเดิม ไม่ให้รางวัลซ้ำ
   ✗ 400 { error: { code: 'GOAL_NOT_MET' } }                       // StepDay ของวันนั้นยังไม่ goalMet
   // เซิร์ฟเวอร์ให้รางวัลเอง: เหรียญ/EXP เข้า User, การ์ดเข้า ExchangeCard
@@ -128,3 +128,20 @@ model ExchangeCard {
 | `know-guardian-of-rest` | มีแค่ badge `guardian-of-rest` | Quest row รายวัน + `requiresQuestIds: [deep-root]` — complete ได้เมื่อพักครบ 15 นาที — log ของ deep-root สร้างหลังช่วงพักจบแล้ว เซิร์ฟเวอร์จึงตรวจได้ว่า "วันนี้มี deep-root ที่ไม่ใช่ skipped อย่างน้อย 1 log" (เวลาพักจริงตอนนี้อยู่ในเครื่อง) |
 
 หน้าเว็บตรวจเงื่อนไขทั้งสองข้อก่อนโชว์ปุ่มรับรางวัล แต่ยังไม่มีเซิร์ฟเวอร์ตรวจซ้ำ
+
+## 6. การ์ด ×2 (เพิ่ม 2026-10-18)
+
+- ได้จากหีบสมบัติเควสก้าว (`DOUBLE_CARD`, น้ำหนักสุ่มใน `src/config/stepChest.ts`) — เก็บในคลัง ยังไม่ทำงานจนกว่าจะกดใช้
+- กดใช้ → เหรียญ/EXP จาก **ทุกเควส** ×2 นาน **12 ชั่วโมงเวลาจริง** นับจากเวลาเซิร์ฟเวอร์ตอนกดใช้ (ไม่ใช่ถึงเที่ยงคืน)
+- ใช้ซ้อนไม่ได้ระหว่างใบก่อนยังทำงาน (กันเสียการ์ดฟรี)
+
+```
+POST /api/progression/double-card/use
+  → { doubleRewardUntil: ISO string, remaining: number }
+  ✗ 400 { error: { code: 'NO_DOUBLE_CARD' } }
+  ✗ 409 { error: { code: 'DOUBLE_ALREADY_ACTIVE' } }
+```
+
+- `POST /api/quest-logs/complete` คูณรางวัลเองเมื่อ `now < user.doubleRewardUntil` (ข้าม = ครึ่งเดียว แล้วค่อย ×2)
+- Prisma (ร่าง): `User.doubleCards Int @default(0)`, `User.doubleRewardUntil DateTime?`
+- หน้าเว็บใช้ `doubleRewardUntil` นับถอยหลังบนจอเท่านั้น — การคูณจริงตัดสินฝั่งเซิร์ฟเวอร์
