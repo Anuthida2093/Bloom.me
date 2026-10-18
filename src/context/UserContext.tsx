@@ -248,7 +248,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (error instanceof ApiError && error.code === 'INSUFFICIENT_COINS') {
         void queryClient.invalidateQueries({ queryKey: queryKeys.me }) // ดึงยอดเหรียญจริงมาแสดง
-        return 'เหรียญไม่พอสำหรับไอเทมนี้ ทำเควสเพื่อสะสมเหรียญเพิ่มได้เลย'
+        return shopApi.INSUFFICIENT_COINS_MESSAGE
       }
       return error instanceof ApiError ? error.userMessage : 'ซื้อไม่สำเร็จ ลองอีกครั้ง'
     }

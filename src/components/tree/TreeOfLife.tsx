@@ -11,6 +11,7 @@ import { playSfx } from '../../utils/audioPlayer'
 import { useAppContext } from '../../context/AppContext'
 import { useHorizontalPan } from '../../hooks/useHorizontalPan'
 import './TreeOfLife.css'
+import { buildPlacementGeometry, constrainPlacement, placementRuleOf, type PlacementGeometry } from './decorationPlacement'
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -249,6 +250,11 @@ function TreeOfLifeBase({
     ? Math.round(viewW * (containerSize.w > containerSize.h ? WORLD_FACTOR_LANDSCAPE : WORLD_FACTOR_PORTRAIT))
     : viewW
   const panRange = Math.max(0, worldW - viewW)
+  /* [2.4] โซนพื้นดิน/ต้นไม้ของจอนี้ — คำนวณจากเรขาคณิตเดียวกับที่ ProceduralTreeCanvas วาด (ดู decorationPlacement.ts) */
+  const placementGeometry = useMemo(
+    () => (containerSize ? buildPlacementGeometry(treeModel, viewW, worldW || viewW, containerSize.h) : null),
+    [treeModel, viewW, worldW, containerSize],
+  )
   const applyPan = useCallback((pan: number, range: number) => {
     if (worldRef.current) worldRef.current.style.transform = `translate3d(${pan}px, 0, 0)`
     onPanChange?.(pan, range)
@@ -464,6 +470,7 @@ function TreeOfLifeBase({
         decorationPositions={decorationPositions}
         onDecorationMove={onDecorationMove}
         containerRef={bandRef}
+        placementGeometry={placementGeometry}
       />
 
       </div>
@@ -477,6 +484,22 @@ interface DecorationLayerProps {
   decorationPositions: DecorationPositionMap
   onDecorationMove?: (itemId: string, xPct: number, yPct: number, scale?: number) => void
   containerRef: React.RefObject<HTMLDivElement | null>
+  /** [2.4] โซนวางของจอนี้ — null = ยังวัดขนาดไม่เสร็จ (ไม่บังคับกฎชั่วคราว) */
+  placementGeometry: PlacementGeometry | null
+}
+
+/** [2.4] กรอบเส้นประบอกโซนที่วางได้ระหว่างลาก — ยังวัดขนาดไม่เสร็จใช้กรอบเดิม (inset 4%) */
+function dropZoneStyle(rule: ReturnType<typeof placementRuleOf>, geo: PlacementGeometry | null): React.CSSProperties | undefined {
+  if (!geo) return undefined
+  const groundTop = geo.plot.cy - geo.plot.ry
+  if (rule === 'ground') {
+    return { inset: 'auto', left: '2%', right: '2%', top: `${groundTop}%`, bottom: '2%', borderRadius: '50% 50% 24px 24px / 40% 40% 24px 24px' }
+  }
+  if (rule === 'tree') {
+    const c = geo.crown
+    return { inset: 'auto', left: `${c.cx - c.rx}%`, top: `${c.cy - c.ry}%`, width: `${c.rx * 2}%`, height: `${c.ry * 2}%`, borderRadius: '50%' }
+  }
+  return { inset: 'auto', left: '2%', right: '2%', top: '4%', height: `${Math.max(10, groundTop - 6)}%` }
 }
 
 /** [ใหม่ — ตามที่ระบุ] ขอบเขต scale ที่อนุญาต กันย่อ/ขยายจนดูแปลก */
@@ -507,7 +530,7 @@ function getBaseDecorationSizePx(): number {
  * ศูนย์กลางไอเทม" เทียบกับตอนเริ่มลาก — pattern เดียวกับระบบลากย้ายตำแหน่งเดิมด้านบน
  * (onPointerDown/Move/Up + setPointerCapture) ไม่ได้คิดกลไกใหม่
  */
-function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, containerRef }: DecorationLayerProps) {
+function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, containerRef, placementGeometry }: DecorationLayerProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [previewPos, setPreviewPos] = useState<{ xPct: number; yPct: number } | null>(null)
 
@@ -575,10 +598,19 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
   const basePosition = (item: PlacedItem): { xPct: number; yPct: number } =>
     decorationPositions[item.itemId] ?? layout[item.itemId] ?? { xPct: 50, yPct: 30 }
 
+  /** [แก้ตามที่ระบุ — 2.4] บังคับกฎโซนของไอเทม (รูปปั้น=พื้นดิน, ของแขวน=ต้นไม้, โพสอิท=ห้ามลงพื้น) */
+  const constrain = (itemId: string, pos: { xPct: number; yPct: number }) =>
+    constrainPlacement(placementRuleOf(itemId), pos, placementGeometry, maxYPct)
+
+  /** ตำแหน่งที่ใช้จริงของไอเทม: ค่าที่เซฟ/ค่าเริ่มต้น → หลบปุ่มบนจอ → บังคับโซน (ตำแหน่งเก่าที่ผิดกฎถูกดึงกลับ) */
+  const resolvedPosition = (item: PlacedItem): { xPct: number; yPct: number } => {
+    const base = basePosition(item)
+    return constrain(item.itemId, avoidObstacles({ xPct: base.xPct, yPct: Math.min(base.yPct, maxYPct) }, item))
+  }
+
   const getEffectivePosition = (item: PlacedItem): { left: string; top: string } => {
     if (draggingId === item.itemId && previewPos) return { left: `${previewPos.xPct}%`, top: `${previewPos.yPct}%` }
-    const base = basePosition(item)
-    const pos = avoidObstacles({ xPct: base.xPct, yPct: Math.min(base.yPct, maxYPct) }, item)
+    const pos = resolvedPosition(item)
     return { left: `${pos.xPct}%`, top: `${pos.yPct}%` }
   }
 
@@ -594,9 +626,9 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
   /** ย่อ/ขยายทีละขั้น (ปุ่ม −/+ หรือหมุนล้อเมาส์บนไอเทม) แล้วบันทึกทันที */
   const stepScale = (item: PlacedItem, factor: number) => {
     if (!onDecorationMove) return
-    const pos = basePosition(item)
+    const pos = resolvedPosition(item)
     const next = clampScale((decorationPositions[item.itemId]?.scale ?? 1) * factor, item.itemId)
-    onDecorationMove(item.itemId, pos.xPct, Math.min(pos.yPct, maxYPct), Math.round(next * 100) / 100)
+    onDecorationMove(item.itemId, pos.xPct, pos.yPct, Math.round(next * 100) / 100)
   }
 
   // แตะที่อื่น (นอกไอเทมที่เลือก/แถบปรับขนาด) → ยกเลิกการเลือก
@@ -623,7 +655,8 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
     const rect = containerRef.current.getBoundingClientRect()
     const xPct = clampPct(((e.clientX - rect.left) / rect.width) * 100)
     const yPct = clampY(((e.clientY - rect.top) / rect.height) * 100)
-    setPreviewPos({ xPct, yPct })
+    // ลากออกนอกโซนไม่ได้ — ไอเทมติดขอบโซนที่ใกล้นิ้วที่สุดแทน
+    setPreviewPos(constrain(draggingId, { xPct, yPct }))
   }
 
   const handlePointerUp = () => {
@@ -668,8 +701,8 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
 
   const handleResizePointerUp = (item: PlacedItem) => {
     if (resizingId === item.itemId && previewScale !== null && onDecorationMove) {
-      const pos = basePosition(item)
-      onDecorationMove(item.itemId, pos.xPct, Math.min(pos.yPct, maxYPct), previewScale)
+      const pos = resolvedPosition(item)
+      onDecorationMove(item.itemId, pos.xPct, pos.yPct, previewScale)
     }
     setResizingId(null)
     setPreviewScale(null)
@@ -678,7 +711,11 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, c
 
   return (
     <>
-      <div className={`tree-of-life__drop-zone-hint ${draggingId ? 'tree-of-life__drop-zone-hint--visible' : ''}`} />
+      {/* [2.4] ระหว่างลาก แสดงโซนที่วางไอเทมชิ้นนี้ได้ (พื้นดิน / ทรงพุ่ม / เหนือพื้นดิน) */}
+      <div
+        className={`tree-of-life__drop-zone-hint ${draggingId ? 'tree-of-life__drop-zone-hint--visible' : ''}`}
+        style={draggingId ? dropZoneStyle(placementRuleOf(draggingId), placementGeometry) : undefined}
+      />
       <div className="tree-of-life__decorations">
         {placedItems.map((item) => {
           const pos = getEffectivePosition(item)

@@ -36,13 +36,16 @@ export async function getInventory(): Promise<InventoryItem[]> {
   return raw.map(toInventoryItem)
 }
 
+/** [แก้ตามที่ระบุ — 2.4] ข้อความเมื่อเหรียญไม่พอ (backend ตอบ 400 INSUFFICIENT_COINS) — ใช้ทั้งซื้อและแลกซื้อ */
+export const INSUFFICIENT_COINS_MESSAGE = 'จำนวนเหรียญของคุณไม่เพียงพอ'
+
 export async function buyItem(shopItemId: string, price: number): Promise<BuyResult> {
   if (API_MODE === 'mock') {
     await mockDelay()
     // ตรงกับ backend: เหรียญไม่พอ → 400 INSUFFICIENT_COINS (ไม่ใช่เงียบแล้วคืนผลเหมือนซื้อสำเร็จ)
     const current = getDb()
     if (!current.inventory.some((i) => i.shopItemId === shopItemId) && current.user.coins < price) {
-      throw new ApiError(400, 'เหรียญไม่พอสำหรับไอเทมนี้', { error: { code: 'INSUFFICIENT_COINS' } })
+      throw new ApiError(400, INSUFFICIENT_COINS_MESSAGE, { error: { code: 'INSUFFICIENT_COINS' } })
     }
     const db = updateDb((d) => {
       if (d.inventory.some((i) => i.shopItemId === shopItemId)) return

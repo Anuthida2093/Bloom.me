@@ -12,12 +12,11 @@ import { useProgression } from '../../hooks/useProgression'
 import { exchangeItem } from '../../services/api/progression.api'
 import { ApiError } from '../../services/http'
 import { queryKeys } from '../../services/queryKeys'
-import { getShopItems } from '../../services/api/shop.api'
+import { getShopItems, INSUFFICIENT_COINS_MESSAGE } from '../../services/api/shop.api'
 import { MOCK_SHOP_ITEMS, type MockShopItem } from '../../services/mock/mockData'
 
 const BG_28 = '#FFF9CC'
 const BG_29 = '#FFE566'
-const C_30 = 'rgba(139,94,60,.4)'
 
 interface ShopCategoryDef {
   id: string
@@ -64,7 +63,9 @@ const findShopItem = (items: Record<string, ShopItem[]>, id: string | null | und
 
 export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () => {}, onEquip = () => {}, onClose, initialItemId = null }: ShopSectionProps) {
   useLockBodyScroll()
-  useEscapeKey(() => onClose?.())
+  /** [แก้ตามที่ระบุ — 2.4] ตัวเลือกหมวด (เปิดจากปุ่มตัวกรอง) — Esc ปิดตัวเลือกก่อน แล้วค่อยปิดร้าน */
+  const [filterOpen, setFilterOpen] = useState(false)
+  useEscapeKey(() => (filterOpen ? setFilterOpen(false) : onClose?.()))
   const { t } = useLanguage()
   const { playGameSound } = useAudio()
   // รายการสินค้า: โหลดผ่าน service (mock = mockData.ts · live = GET /api/shop) — ระหว่างโหลดใช้ชุดจำลองไปก่อน ไม่กระพริบ
@@ -78,6 +79,8 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
   })
   const progression = useProgression()
   const queryClient = useQueryClient()
+  const currentItems = shopItems[shopCategory as keyof typeof shopItems] ?? []
+  const currentCategory = CATEGORIES.find((c) => c.id === shopCategory) ?? CATEGORIES[0]
 
   // [ใหม่] ห่อ onBuy ด้วยเสียงรับรางวัล/ซื้อของ — ตามที่ระบุ "ShopSection.tsx: Call
   // playGameSound('reward-claim') when ... buying an item"
@@ -101,6 +104,10 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
       if (error instanceof ApiError && error.code === 'INSUFFICIENT_CARDS') {
         const missing = (error.detail as { error?: { missing?: number } } | undefined)?.error?.missing
         return { error: null, missing: missing ?? EXCHANGE_REQUIREMENTS[item.id]?.tokens ?? 1 }
+      }
+      if (error instanceof ApiError && error.code === 'INSUFFICIENT_COINS') {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.me }) // ดึงยอดเหรียญจริงมาแสดง
+        return { error: INSUFFICIENT_COINS_MESSAGE }
       }
       return { error: error instanceof ApiError ? error.userMessage : 'แลกซื้อไม่สำเร็จ ลองอีกครั้ง' }
     }
@@ -139,29 +146,50 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
           </div>
         </div>
 
-        {/* Category pills */}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 28, flexWrap: 'wrap' }}>
-          {CATEGORIES.map(cat => (
+        {/* [แก้ตามที่ระบุ — 2.4] แทนแท็บหมวดที่ตัดบรรทัดบนจอแคบ: จำนวนไอเทม + ปุ่มตัวกรอง (แบบเดียวกันทุกขนาดจอ)
+            กดตัวกรอง → ตัวเลือก 3 หมวด (แสดงจำนวนของแต่ละหมวด) */}
+        <div className="shop-toolbar">
+          <span className="shop-toolbar__count">{currentItems.length} ชิ้น</span>
+          <div className="shop-filter">
             <button
-              key={cat.id}
               type="button"
-              onClick={() => setShopCategory(cat.id)}
-              style={{
-                padding: '10px 22px', border: '2px solid color-mix(in srgb, var(--coin) 70%, var(--g600))', borderRadius: 'var(--r-pill)', cursor: 'pointer',
-                background: shopCategory === cat.id ? 'var(--b500)' : 'var(--fixed-white)',
-                color: shopCategory === cat.id ? 'var(--fixed-white)' : 'var(--b700)',
-                fontFamily: 'var(--font-display)', fontSize: 15,
-                boxShadow: shopCategory === cat.id ? `0 4px 14px ${C_30}` : 'var(--sh-card)',
-                transition: 'all .2s', display: 'flex', alignItems: 'center', gap: 6,
-              }}>
-              <span style={{ fontSize: 18 }}>{cat.emoji}</span>{cat.label}
+              className="shop-filter__btn"
+              onClick={() => setFilterOpen((v) => !v)}
+              aria-haspopup="listbox"
+              aria-expanded={filterOpen}
+            >
+              <span aria-hidden="true">{currentCategory.emoji}</span>
+              <span>{currentCategory.label}</span>
+              <span className="shop-filter__caret" aria-hidden="true">▾</span>
             </button>
-          ))}
+            {filterOpen && (
+              <>
+                <div className="shop-filter__backdrop" onClick={() => setFilterOpen(false)} />
+                <ul className="shop-filter__menu" role="listbox" aria-label="เลือกหมวดสินค้า">
+                  {CATEGORIES.map((cat) => (
+                    <li key={cat.id}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={shopCategory === cat.id}
+                        className={`shop-filter__option${shopCategory === cat.id ? ' is-active' : ''}`}
+                        onClick={() => { setShopCategory(cat.id); setFilterOpen(false) }}
+                      >
+                        <span aria-hidden="true">{cat.emoji}</span>
+                        <span className="shop-filter__option-label">{cat.label}</span>
+                        <span className="shop-filter__option-count">{(shopItems[cat.id as keyof typeof shopItems] ?? []).length}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Items grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 16 }}>
-          {(shopItems[shopCategory as keyof typeof shopItems] ?? []).map(item => {
+          {currentItems.map(item => {
             const owned = inventoryData.some(i => i.shopItemId === item.id)
             const equipped = inventoryData.some(i => i.shopItemId === item.id && i.isEquipped)
             const canAfford = coins >= item.price
@@ -256,6 +284,44 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
         background: #FFF9C4; box-shadow: inset 0 0 0 1.5px #f5b301;
       }
       .shop-card__token-req img { width: 20px; height: 20px; object-fit: contain; }
+
+      /* [2.4] แถบจำนวนไอเทม + ตัวกรองหมวด */
+      .shop-toolbar {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        margin: 0 auto 20px; max-width: 1100px;
+      }
+      .shop-toolbar__count { font-size: 15px; color: var(--text); }
+      .shop-filter { position: relative; }
+      .shop-filter__btn {
+        display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 16px;
+        border: 2px solid color-mix(in srgb, var(--coin) 70%, var(--g600)); border-radius: var(--r-pill);
+        background: var(--fixed-white); color: var(--b700); font-size: 15px; cursor: pointer;
+        box-shadow: var(--sh-card); white-space: nowrap;
+      }
+      .shop-filter__caret { font-size: 12px; transition: transform .2s ease; }
+      .shop-filter__btn[aria-expanded="true"] .shop-filter__caret { transform: rotate(180deg); }
+      .shop-filter__backdrop { position: fixed; inset: 0; z-index: 9; }
+      .shop-filter__menu {
+        position: absolute; right: 0; top: calc(100% + 8px); z-index: 10;
+        min-width: 240px; margin: 0; padding: 6px; list-style: none;
+        background: var(--fixed-white); border-radius: var(--r-md);
+        border: 2px solid color-mix(in srgb, var(--coin) 70%, var(--g600)); box-shadow: var(--sh-modal);
+      }
+      .shop-filter__option {
+        display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 8px 12px;
+        border: none; border-radius: var(--r-sm); background: transparent; color: var(--b700);
+        font-size: 15px; text-align: left; cursor: pointer;
+      }
+      .shop-filter__option:hover { background: var(--leaf-soft); }
+      .shop-filter__option.is-active { background: var(--b500); color: var(--fixed-white); }
+      .shop-filter__option-label { flex: 1; }
+      .shop-filter__option-count {
+        min-width: 26px; padding: 0 8px; border-radius: 99px; text-align: center; font-size: 13px;
+        background: color-mix(in srgb, currentColor 14%, transparent);
+      }
+      @media (max-width: 360px) {
+        .shop-filter__menu { min-width: min(240px, calc(100vw - 40px)); }
+      }
     `}</style>
     </div>
   )
