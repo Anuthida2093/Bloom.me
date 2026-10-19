@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const ROUTE = ['flower-garden', 'bamboo-forest', 'mountain-range']
 
-describe('journey lifecycle — โหมด mock', () => {
+describe('journey lifecycle โหมด mock', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.stubEnv('VITE_API_MODE', 'mock')

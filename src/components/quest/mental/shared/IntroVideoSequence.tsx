@@ -67,8 +67,8 @@ export default function IntroVideoSequence({ videoSrc, audioSrc, overlayText, ac
   --lc-bg-1: rgba(0,0,0,.7);
   background: linear-gradient(180deg, var(--glass-b-55) 0%, transparent 30%, transparent 65%, var(--lc-bg-1) 100%);
 }
-        /* [แก้ตามที่ระบุ — ข้อ 13] เดิม bottom:8% วัดจากขอบล่างจอเป็นสัดส่วน ไม่เผื่อ
-           ActionMenuBar (ลอยทับแยกชั้นอยู่แล้ว, z-index:1000) ที่อาจบังข้อความนี้บนจอเล็ก —
+        /* [แก้ตามที่ระบุ ข้อ 13] เดิม bottom:8% วัดจากขอบล่างจอเป็นสัดส่วน ไม่เผื่อ
+           ActionMenuBar (ลอยทับแยกชั้นอยู่แล้ว, z-index:1000) ที่อาจบังข้อความนี้บนจอเล็ก 
            เปลี่ยนไปใช้ --gpf-safe-bottom (โทเคนกลางเดียวกับที่ CameraCapture.css/
            QuestGateView.tsx ใช้กันชนจุดเดียวกัน) แทนสัดส่วนคงที่ */
         .intro-video-seq__overlay-text-wrap {
@@ -78,7 +78,7 @@ export default function IntroVideoSequence({ videoSrc, audioSrc, overlayText, ac
         @media (max-width: 480px) {
           .intro-video-seq { --intro-text-size: 14px; }
         }
-        /* [แก้ตามที่ระบุ] วิดีโอ "ไดอะรี่ของฉัน" / "เกราะแห่งความขอบคุณ" เต็มจอทุกขนาดจอ (cover) — เดิมมือถือแนวตั้ง
+        /* [แก้ตามที่ระบุ] วิดีโอ "ไดอะรี่ของฉัน" / "เกราะแห่งความขอบคุณ" เต็มจอทุกขนาดจอ (cover) เดิมมือถือแนวตั้ง
            ย่อวิดีโอให้เห็นครบเฟรม (contain) ชิดบนแล้วข้อความต่อด้านล่าง ตอนนี้ข้อความลอยบนวิดีโอเหนือแถบเมนูแทน */
       `}</style>
     </div>

@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const DAY = 86_400_000
 const bkkDate = (msAgo: number) => new Date(Date.now() + 7 * 3_600_000 - msAgo).toISOString().slice(0, 10)
 
-describe('stepSettlement — โหมด mock', () => {
+describe('stepSettlement โหมด mock', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.stubEnv('VITE_API_MODE', 'mock')

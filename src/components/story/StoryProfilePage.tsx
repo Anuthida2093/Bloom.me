@@ -40,7 +40,7 @@ export default function StoryProfilePage({ onBack, onEditProfile, onViewTree }: 
   )
 
   const handleShareProfile = async () => {
-    const shareData = { title: 'ARBOR HORIZON — โปรไฟล์สตอรี่', text: `ดูโปรไฟล์ของ ${userData.username} บน ARBOR HORIZON`, url: window.location.href }
+    const shareData = { title: 'ARBOR HORIZON โปรไฟล์สตอรี่', text: `ดูโปรไฟล์ของ ${userData.username} บน ARBOR HORIZON`, url: window.location.href }
     if (navigator.share) {
       try { await navigator.share(shareData) } catch { /* ผู้ใช้ยกเลิกเอง */ }
       return
@@ -66,7 +66,7 @@ export default function StoryProfilePage({ onBack, onEditProfile, onViewTree }: 
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--lb-card-text)' }}>{userData.username}</div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--lb-card-text-sub)', marginBottom: 2 }}>รายละเอียด</div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--lb-card-text)' }}>{userData.bio || 'ยังไม่มีรายละเอียด — กด "แก้ไขโปรไฟล์" เพื่อเพิ่ม'}</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--lb-card-text)' }}>{userData.bio || 'ยังไม่มีรายละเอียด กด "แก้ไขโปรไฟล์" เพื่อเพิ่ม'}</div>
         </div>
       </div>
 

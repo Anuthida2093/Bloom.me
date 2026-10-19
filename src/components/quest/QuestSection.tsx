@@ -11,7 +11,6 @@ import { Z_INDEX } from '../../config/zIndex'
 import { QUEST_ICONS, QUEST_TAB_ICONS } from '../../config/iconAssets'
 import { useAppContext, DAILY_FOCUS_QUOTA_MINUTES } from '../../context/AppContext'
 import QuestRewardCelebration, { type QuestCelebrationData } from './QuestRewardCelebration'
-import QuestFeedbackPrompt, { type QuestFeedbackPromptData } from './QuestFeedbackPrompt'
 import { playSfx, stopSfx } from '../../utils/audioPlayer'
 import GameAlert from '../ui/GameAlert'
 import { isQuestDoneNow } from '../../utils/questCompletion'
@@ -85,7 +84,7 @@ export default function QuestSection({
 }: QuestSectionProps) {
   useLockBodyScroll()
 
-  const { focusMinutesToday, screenCurfew, consecutiveNegativeDays, settings, earnedBadges, submitQuestFeedback } = useAppContext()
+  const { focusMinutesToday, screenCurfew, settings } = useAppContext()
   const sfxOpts = { volume: settings.sfxVolume, enabled: settings.soundEnabled }
 
   const [activeTab, setActiveTab] = useState<QuestTabId>(initialTab)
@@ -106,11 +105,8 @@ export default function QuestSection({
    *  handleCompletePlaying (เกมทุกตัวที่ผ่าน GameShell/registry) และ handleCompleteSpecial
    *  (5 หน้าเควสสุขภาพจิตแบบเต็มกรอบ) เรียกจุดเดียวนี้ทั้งคู่ ดู QuestRewardCelebration.tsx */
   const [celebration, setCelebration] = useState<QuestCelebrationData | null>(null)
-  /** [เพิ่มตามที่ระบุ — กลไกใหม่แทน 'know-mirror-of-truth'] ป้ายขอ feedback ลอยคู่กับป้าย
-   *  ฉลองรางวัล ยิงจากจุดเดียวกันเสมอ (ทุกเส้นทางทำเควสสำเร็จ) — หยุดถามอัตโนมัติเมื่อ badge
-   *  "Mirror of Truth" ปลดล็อกแล้ว (ดู MentalContext.earnedBadges) กันแสดงป้ายรบกวนไปเรื่อยๆ
-   *  ทั้งที่ไม่มีประโยชน์ต่อผู้ใช้อีกแล้ว */
-  const [feedbackPrompt, setFeedbackPrompt] = useState<QuestFeedbackPromptData | null>(null)
+  /* [แก้ตามที่ระบุ] เลิกแสดงป้ายขาวเล็ก "รู้สึกยังไงกับเควสนี้?" หลังเล่นเควส — ความรู้สึกหลังเล่น
+     บันทึกผ่านเควสเสริม "กระจกแห่งความจริง" แทน (MirrorOfTruthGame.tsx) */
   const triggerCelebration = (questCode: string, skipped: boolean) => {
     const questDef = findQuestByCode(questCode)
     if (!questDef) return
@@ -121,15 +117,6 @@ export default function QuestSection({
     // [แก้ตามที่ระบุ] เอาเสียง "ต้นไม้โต" ออก — ใช้เสียงประกายเวทมนตร์แทน (ออร่าที่ต้นไม้เล่นเสียงของตัวเองอีกครั้ง)
     playSfx('WING', sfxOpts)
     setCelebration({ quest: questDef, skipped, key: Date.now() })
-    if (!earnedBadges.includes('mirror-of-truth')) {
-      setFeedbackPrompt({ questCode, completedAt: new Date().toISOString(), key: Date.now() })
-    }
-  }
-
-  const handleQuestFeedback = (reaction: 'good' | 'neutral' | 'bad') => {
-    if (!feedbackPrompt) return
-    submitQuestFeedback(feedbackPrompt.questCode, feedbackPrompt.completedAt, reaction)
-    setFeedbackPrompt(null)
   }
 
   /*──────────────────────────────────────────────────────────────────────────*\
@@ -224,11 +211,20 @@ export default function QuestSection({
     if (q.isLocked && completedDailyCount < (q.unlockAfterQuestCount ?? 1)) {
       return `ต้องทำเควสประจำวันให้ครบ ${q.unlockAfterQuestCount ?? 1} ข้อก่อน`
     }
+    if (q.unlockStreakDays && userData.streak < q.unlockStreakDays) {
+      return `ปลดล็อกเมื่อเข้าแอปต่อเนื่องครบ ${q.unlockStreakDays} วัน (ตอนนี้ ${userData.streak} วัน)`
+    }
     if (!q.isLocked && isRequiredQuestsIncomplete(q)) {
+      // [แก้ตามที่ระบุ] เควสเสริมบอกชื่อเควสที่ต้องทำก่อน (ด่านหลักใช้ข้อความเดิม)
+      const isSide = catalog.side.some((s) => s.code === q.code)
+      if (isSide) {
+        const names = (q.requiresQuestIds ?? []).map((code) => `"${findQuestByCode(code)?.titleTh ?? code}"`).join(' และ ')
+        return `ปลดล็อกเมื่อทำ ${names} สำเร็จวันนี้`
+      }
       return 'ต้องทำด่านก่อนหน้าในเส้นทางนี้ให้สำเร็จก่อน'
     }
     if (q.energyLevel === 'HIGH') {
-      if (atRisk) return 'พักเควสหนักไว้ก่อน — ผลประเมินสุขภาพใจล่าสุดบอกว่าควรพัก'
+      if (atRisk) return 'พักเควสหนักไว้ก่อน ผลประเมินสุขภาพใจล่าสุดบอกว่าควรพัก'
       if (overFocusQuota) return 'วันนี้โฟกัสครบโควตาแล้ว พักสายตาและสมองก่อนดีกว่า'
       if (inCurfew) return 'อยู่ในช่วงตัดจอก่อนนอนที่คุณตั้งไว้เอง'
     }
@@ -237,16 +233,8 @@ export default function QuestSection({
 
   const isQuestLocked = (q: QuestDef) => getLockReason(q) !== null
 
-  /** แถบอธิบายเหตุผลรวมที่หัว sidebar */
-  const globalNotice = atRisk
-    ? 'โหมดถนอมใจกำลังทำงาน — เควสที่ใช้พลังงานสูงถูกพักไว้ชั่วคราว ลองเควสสายผ่อนคลายก่อนนะ'
-    : overFocusQuota
-      ? `วันนี้โฟกัสไปแล้ว ${Math.round(focusMinutesToday / 60 * 10) / 10} ชม. ครบโควตาที่ตั้งไว้ — เควสเรียนหนักถูกพักไว้`
-      : inCurfew
-        ? 'ถึงเวลาตัดจอก่อนนอนแล้ว เควสเรียนหนักถูกพักไว้จนถึงพรุ่งนี้'
-        : consecutiveNegativeDays >= 2
-          ? `รู้สึกแย่ติดกันมา ${consecutiveNegativeDays} วันแล้ว ถ้าไหวลองเควสสายผ่อนคลายในหมวดสุขภาพจิตดูนะ`
-          : null
+  /* [แก้ตามที่ระบุ] ลบป้ายเหลืองลอย (โหมดถนอมใจ / ครบโควตาโฟกัส / ตัดจอ / รู้สึกแย่ติดกัน) ที่ทับหน้าหลักเควส
+     เหตุผลที่เควสถูกพักยังแจ้งตอนกดเควสที่ล็อกอยู่ (getLockReason) */
 
   const openQuest = (quest: QuestDef) => {
     if (SPECIAL_QUEST_CODES.includes(quest.code)) setSpecialQuest(quest)
@@ -337,11 +325,7 @@ ${lockReason}` }); return }
 
       <QuestRewardCelebration data={celebration} onDone={() => setCelebration(null)} />
       <GameAlert open={questNotice !== null} icon={questNotice?.icon} iconImg={questNotice?.iconImg} title={questNotice?.title} message={questNotice?.message ?? ''} onClose={() => setQuestNotice(null)} />
-      <QuestFeedbackPrompt data={feedbackPrompt} onReact={handleQuestFeedback} onDismiss={() => setFeedbackPrompt(null)} />
 
-      {globalNotice && (
-        <div className="quest-section-notice">{globalNotice}</div>
-      )}
 
       <div className="quest-section-body">
         <div className="quest-gameplay-frame-wrap">
@@ -377,7 +361,7 @@ ${lockReason}` }); return }
 
       <style>{`
         .quest-section-root {
-          /* [แก้] เต็มจอเสมอ ไม่มีการลดขนาด/เพิ่ม padding ที่กล่องนี้หรือกล่องลูกใดๆ อีกแล้ว —
+          /* [แก้] เต็มจอเสมอ ไม่มีการลดขนาด/เพิ่ม padding ที่กล่องนี้หรือกล่องลูกใดๆ อีกแล้ว 
              รอบก่อนเคยลอง padding-bottom ที่ .quest-section-body แต่พื้นหลังเข้ม "ของจริง"
              ไม่ได้อยู่ที่กล่องนี้หรือกล่องลูก (มันอยู่ลึกเข้าไปในแต่ละหน้าเอง เช่น
              .learning-quest-map/.incinerator-frame/วิดีโอพื้นหลัง) พื้นที่ padding เลยโชว์
@@ -395,7 +379,7 @@ ${lockReason}` }); return }
         /* [แก้ตามที่ระบุ] ป้ายชื่อโซนลอยกึ่งกลางด้านบนจอ แทน NavbarQuest เดิม (แบบ V1) */
         .quest-section-title-pill {
           /* [แก้ตามที่ระบุ] หน้าตาป้ายแบบม้วนกระดาษขอบทองเดียวกับกระดานจัดอันดับ (.lb-banner ใน
-             leaderboardRow.css) + ตัวหนังสือเล็กลงจาก 24px — ที่นี่คุมแค่ตำแหน่ง/ขนาด */
+             leaderboardRow.css) + ตัวหนังสือเล็กลงจาก 24px ที่นี่คุมแค่ตำแหน่ง/ขนาด */
           position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 30;
           padding: 5px 18px; font-size: 16px;
         }
@@ -403,14 +387,14 @@ ${lockReason}` }); return }
           .quest-section-title-pill { font-size: 14px; padding: 4px 14px; }
         }
         /* [แก้ตามที่ระบุ] รูปประจำหมวด (สุขภาพ/การเรียนรู้/สุขภาพจิต) บนป้ายหัวหน้าเควสใหญ่ขึ้น */
-        /* [อัปเดต 2026-10-18 — รูปชุดใหม่] Learning/Physical/Mental Quests.png ใหม่เนื้อรูปเต็มไฟล์ ~91-95%
-           (เดิม 798x434 เนื้อรูปแค่ ~35-40% จึงเคยขยายกล่องเป็น ~100-120px แล้วหักขอบด้วย margin ติดลบ) —
+        /* [อัปเดต 2026-10-18 รูปชุดใหม่] Learning/Physical/Mental Quests.png ใหม่เนื้อรูปเต็มไฟล์ ~91-95%
+           (เดิม 798x434 เนื้อรูปแค่ ~35-40% จึงเคยขยายกล่องเป็น ~100-120px แล้วหักขอบด้วย margin ติดลบ) 
            ตอนนี้กล่อง ~44px พอ ใช้ขนาดเดียวกันทุกรูป (รวมรูปของเควสที่เปิดอยู่) margin ติดลบเล็กน้อยไม่ให้ป้ายสูงตาม */
-        /* [แก้ตามที่ระบุ] รูปเล็กลงให้อยู่ในกรอบป้ายข้อความ (เดิม 44px ล้นขอบบน-ล่างของป้าย) — สูงตามตัวหนังสือ */
+        /* [แก้ตามที่ระบุ] รูปเล็กลงให้อยู่ในกรอบป้ายข้อความ (เดิม 44px ล้นขอบบน-ล่างของป้าย) สูงตามตัวหนังสือ */
         .quest-section-title-pill > span { display: inline-flex; align-items: center; gap: 6px; }
         .quest-section-title-pill .icon-img { vertical-align: middle; flex-shrink: 0; width: 1.6em; height: 1.6em; margin: -2px 0; object-fit: contain; }
 
-        /* [แก้] ปุ่มปิด — แยกจากป้ายชื่อโซน คงตำแหน่งมุมขวาบนเดิมไว้ นี่คือปุ่มปิดเดียวของ
+        /* [แก้] ปุ่มปิด แยกจากป้ายชื่อโซน คงตำแหน่งมุมขวาบนเดิมไว้ นี่คือปุ่มปิดเดียวของ
            ทั้งระบบเควส (GameplayFrame.tsx เอา toolbar ปุ่มปิดซ้ำออกไปแล้ว) มาตรฐาน
            เดียวกับปุ่มปิดในหน้าเควสพิเศษทุกหน้า: วงกลม 44x44px ลอยมุมขวาบน */
         .quest-section-close-btn {
@@ -422,25 +406,6 @@ ${lockReason}` }); return }
         }
         .quest-section-close-btn:hover { background: var(--n200); }
 
-        /* [ใหม่] อธิบายเหตุผลที่เควสบางตัวถูกล็อก — ย้ายจาก sidebar เดิมมาไว้ตรงนี้แทน */
-        .quest-section-notice {
-  position: absolute;
-  top: 62px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 30;
-  max-width: min(90vw, 480px);
-  padding: 10px 16px;
-  border-radius: 12px;
-  --lc-bg-1: rgba(251, 191, 36, .14);
-  background: var(--lc-bg-1);
-  --lc-border-2: rgba(251, 191, 36, .32);
-  border: 1px solid var(--lc-border-2);
-  color: var(--text-sub);
-  font-size: var(--fs-xs);
-  line-height: 1.6;
-  text-align: center;
-}
 
         .quest-gameplay-frame-wrap { flex: 1; min-height: 0; min-width: 0; position: relative; }
       `}</style>

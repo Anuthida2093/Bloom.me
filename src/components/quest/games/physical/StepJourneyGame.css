@@ -94,19 +94,14 @@
   height: 52px;
   padding: 0;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 99px;
-  overflow: hidden;
-  border: 2px solid var(--lb-gold-edge, rgba(255, 255, 255, 0.4));
-  background: var(--lb-card-bg, rgba(10, 22, 16, 0.6));
-  color: var(--lb-card-text, #fff);
-  font-family: var(--font-display);
-  font-size: 24px; line-height: 1; font-weight: 700;
+  /* [แก้ตามที่ระบุ] ใช้รูปนกฮูกอย่างเดียว ไม่มีวงกลมพื้นหลัง/ขอบ */
+  border: none;
+  background: none;
   cursor: pointer;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
 }
 .step-journey-game__panel-toggle:hover { filter: brightness(1.05); }
-.step-journey-game__panel-toggle-img { width: 46px; height: 46px; object-fit: contain; pointer-events: none; }
-.step-journey-game__panel-toggle[aria-expanded="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--coin) 60%, transparent); }
+.step-journey-game__panel-toggle-img { width: 52px; height: 52px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35)); }
+.step-journey-game__panel-toggle[aria-expanded="true"] .step-journey-game__panel-toggle-img { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--coin) 85%, transparent)); }
 .step-journey-game__reset-btn:disabled { opacity: .6; cursor: default; }
 
 /* [แก้ตามที่ระบุ] แถบข้อมูลเลื่อนเข้า-ออกจากขอบขวาแบบกระดานจัดอันดับ (อยู่ใต้ปุ่มนกฮูก) */
@@ -275,7 +270,7 @@
 @media (max-width: 520px) {
   .step-journey-game__side-panel { max-height: 48vh; max-height: 48dvh; }
   .step-journey-game__panel-toggle { top: 56px; right: 6px; width: 48px; height: 48px; }
-  .step-journey-game__panel-toggle-img { width: 42px; height: 42px; }
+  .step-journey-game__panel-toggle-img { width: 48px; height: 48px; }
   .step-journey-game__close-btn { top: 12px; right: 12px; }
 }
 
@@ -285,7 +280,7 @@
 @media (max-width: 300px) {
   .step-journey-game--center { padding: 10px; }
   .step-journey-game__panel-toggle { width: 40px; height: 40px; top: 52px; right: 8px; }
-  .step-journey-game__panel-toggle-img { width: 34px; height: 34px; }
+  .step-journey-game__panel-toggle-img { width: 40px; height: 40px; }
   .step-journey-game__side-panel { padding: 0 6px; max-height: 60dvh; gap: 6px; bottom: 6px; }
   .step-journey-game__controls { padding: 6px; }
 }

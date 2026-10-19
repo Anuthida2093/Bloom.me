@@ -985,7 +985,7 @@ export default function LearningQuestMap({
   overflow: hidden;
   --lc-bg-12: #0b1f16;
   background: var(--lc-bg-12);
-  /* [ใหม่ — pan/zoom] กันเบราว์เซอร์ตีความลาก/บีบนิ้วเป็น scroll/native-pinch-zoom ของหน้า
+  /* [ใหม่ pan/zoom] กันเบราว์เซอร์ตีความลาก/บีบนิ้วเป็น scroll/native-pinch-zoom ของหน้า
      ไปเอง ต้องปิดก่อน ไม่งั้น pointer-events ที่เขียนเองจะชนกับ gesture เดิมของเบราว์เซอร์
      บนมือถือ (ลากแล้วหน้าเลื่อนแทน/บีบซูมทั้งหน้าเว็บแทนที่จะซูมแค่แผนที่) */
   touch-action: none;
@@ -997,12 +997,12 @@ export default function LearningQuestMap({
         }
         .learning-quest-map__video {
           position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center;
-          /* [แก้ตามที่ระบุ — จอรัว/ไม่พร้อมกัน] วิดีโอ 5MB โหลดช้ากว่าส่วนอื่น — ซ่อนไว้แล้วค่อยจางเข้า
+          /* [แก้ตามที่ระบุ จอรัว/ไม่พร้อมกัน] วิดีโอ 5MB โหลดช้ากว่าส่วนอื่น ซ่อนไว้แล้วค่อยจางเข้า
              เมื่อเฟรมแรกพร้อม แทนการเด้งโผล่ทับพื้นหลังทึบกะทันหัน */
           opacity: 0; transition: opacity .45s cubic-bezier(.22,1,.36,1);
         }
         .learning-quest-map__video--ready { opacity: 1; }
-        /* [แก้ตามที่ระบุ — 1.5] ระหว่างรอวิดีโอ: พื้นป่าไล่เฉด + แสงวิ่งเบาๆ บอกว่ากำลังโหลด
+        /* [แก้ตามที่ระบุ 1.5] ระหว่างรอวิดีโอ: พื้นป่าไล่เฉด + แสงวิ่งเบาๆ บอกว่ากำลังโหลด
            แทนพื้นเขียวเรียบเปล่าๆ (โหนดด่าน/นกฮูกแสดงทันทีอยู่แล้ว ไม่ต้องรอวิดีโอ) */
         .learning-quest-map__canvas::before {
           content: ''; position: absolute; inset: 0; pointer-events: none;
@@ -1036,7 +1036,7 @@ export default function LearningQuestMap({
           to   { opacity: 1; transform: translate(-50%, -50%) scale(var(--node-scale, 1)); }
         }
 
-        /* ═══ ธีมสว่าง — [แก้ตามที่ระบุ] พื้นรอบแผนที่ + เงาขอบบน/ล่างเป็นเขียวอ่อนแบบกรอบกระดาน
+        /* ═══ ธีมสว่าง [แก้ตามที่ระบุ] พื้นรอบแผนที่ + เงาขอบบน/ล่างเป็นเขียวอ่อนแบบกรอบกระดาน
            จัดอันดับ (ตัววิดีโอแผนที่ป่ายังเป็นภาพเดิม) ป้ายชื่อด่านเป็นป้ายเขียวอ่อน ตัวหนังสือเข้ม ═══ */
         :root:not([data-theme="dark"]) .learning-quest-map { background: var(--leaf-soft); }
         :root:not([data-theme="dark"]) .learning-quest-map__scrim {
@@ -1136,7 +1136,7 @@ export default function LearningQuestMap({
   border: 1.5px solid var(--fixed-white);
 }
 
-        /* [ใหม่] ป้าย "เล่นซ้ำได้" — มุมล่างซ้ายของตราวงกลม (ตรงข้ามกับเลขลำดับด่านที่มุมขวาบน) */
+        /* [ใหม่] ป้าย "เล่นซ้ำได้" มุมล่างซ้ายของตราวงกลม (ตรงข้ามกับเลขลำดับด่านที่มุมขวาบน) */
         .learning-quest-map__node-repeat {
           position: absolute;
           bottom: -2px;
@@ -1159,23 +1159,21 @@ export default function LearningQuestMap({
           transition: left 1.4s cubic-bezier(.45,.05,.55,.95), top 1.4s cubic-bezier(.45,.05,.55,.95), transform 1.4s cubic-bezier(.45,.05,.55,.95);
         }
 
-        /* แถบข้างเควสเสริม — กระจกฝ้าชิดขวา ไม่บังเส้นทางด่านหลัก (โหนดอยู่ช่วงกลาง-ซ้ายของภาพ)
+        /* แถบข้างเควสเสริม กระจกฝ้าชิดขวา ไม่บังเส้นทางด่านหลัก (โหนดอยู่ช่วงกลาง-ซ้ายของภาพ)
            เว้นล่างด้วย --gpf-safe-bottom ไม่ให้ ActionMenuBar บัง */
-        /* [แก้ตามที่ระบุ] ปุ่มเปิด/ปิดเควสเสริม — แบบเดียวกับปุ่มนกฮูกของแผนที่ก้าวเพื่อสุขภาพ (ใต้ปุ่มกากบาท) */
+        /* [แก้ตามที่ระบุ] ปุ่มเปิด/ปิดเควสเสริม แบบเดียวกับปุ่มนกฮูกของแผนที่ก้าวเพื่อสุขภาพ (ใต้ปุ่มกากบาท) */
         .learning-quest-map__side-toggle {
           position: absolute; top: 62px; right: 8px; z-index: 21;
           width: 52px; height: 52px; padding: 0;
           display: flex; align-items: center; justify-content: center;
-          border-radius: 99px; overflow: hidden; cursor: pointer;
-          border: 2px solid var(--lb-gold-edge, rgba(255, 255, 255, 0.4));
-          background: var(--lb-card-bg, rgba(10, 22, 16, 0.6));
-          box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+          /* [แก้ตามที่ระบุ] ใช้รูปอย่างเดียว ไม่มีวงกลมพื้นหลังสีเขียว/ขอบ */
+          border: none; background: none; cursor: pointer;
         }
         .learning-quest-map__side-toggle:hover { filter: brightness(1.05); }
-        .learning-quest-map__side-toggle[aria-expanded="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--coin) 60%, transparent); }
-        .learning-quest-map__side-toggle-img { width: 44px; height: 44px; object-fit: contain; pointer-events: none; }
+        .learning-quest-map__side-toggle-img { width: 52px; height: 52px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35)); }
+        .learning-quest-map__side-toggle[aria-expanded="true"] .learning-quest-map__side-toggle-img { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--coin) 85%, transparent)); }
         .learning-quest-map__sidebar-head-img { width: 26px; height: 26px; object-fit: contain; }
-        /* แถบเควสเสริมอยู่ใต้ปุ่ม — เลื่อนเข้า-ออกจากขอบขวาแบบกระดานจัดอันดับ */
+        /* แถบเควสเสริมอยู่ใต้ปุ่ม เลื่อนเข้า-ออกจากขอบขวาแบบกระดานจัดอันดับ */
         .learning-quest-map__sidebar {
           position: absolute; top: 124px; right: 12px; z-index: 20;
           width: 236px; max-height: calc(100% - 124px - var(--gpf-safe-bottom, 0px) - 16px);
@@ -1222,7 +1220,7 @@ export default function LearningQuestMap({
         /* จอแคบ: ย่อขนาดปุ่ม/แถบ/การ์ดลงให้พอดีจอ (เปิด/ปิดด้วยปุ่มรูปเควสการเรียนรู้เหมือนทุกขนาดจอ) */
         @media (max-width: 720px) {
           .learning-quest-map__side-toggle { top: 56px; right: 6px; width: 48px; height: 48px; }
-          .learning-quest-map__side-toggle-img { width: 40px; height: 40px; }
+          .learning-quest-map__side-toggle-img { width: 48px; height: 48px; }
           .learning-quest-map__sidebar { top: 112px; right: 8px; width: min(190px, calc(100% - 16px)); border-radius: 16px; max-height: calc(100% - 112px - var(--gpf-safe-bottom, 0px) - 12px); }
           .learning-quest-map__sidebar-head { padding: 9px 12px; font-size: 14px; }
           .learning-quest-map__sidebar-list { gap: 6px; padding: 0 8px 10px; }

@@ -101,6 +101,8 @@ export const QUEST_ICONS: Record<string, string> = {
   // ยังไม่มีไฟล์ภาพใหม่ชื่อ "Time Capsule.png" ให้ ใช้ไฟล์เดิม "Strategic Delay.png" ไปก่อน
   'know-content-review': '/assets/images/icons/quests/Strategic Delay.webp',
   'know-strategic-delay': '/assets/images/icons/quests/Strategic Delay.webp',
+  // [แก้ตามที่ระบุ] กระจกแห่งความจริง ใช้รูป Glass.png
+  'know-mirror-of-truth': '/assets/images/icons/quests/Glass.webp',
   // [ใหม่ตามที่ระบุ] ผู้พิทักษ์การพักผ่อน (ไฟล์ "The guardian of rest.png")
   'know-guardian-of-rest': '/assets/images/icons/quests/The guardian of rest.webp',
   // [แก้ตามที่ระบุ] key เปลี่ยนตาม code ใหม่ที่ sync กับ backend แล้ว (ดู questCatalog.ts) —

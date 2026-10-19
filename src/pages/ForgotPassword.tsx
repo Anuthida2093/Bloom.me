@@ -74,7 +74,7 @@ export default function ForgotPassword() {
                   🧪 สำหรับเทสระหว่างพัฒนาเท่านั้น (ยังไม่มีระบบส่งอีเมลจริง)
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--lb-card-text-sub)', marginBottom: 10 }}>
-                  นี่คือลิงก์ที่ระบบจะส่งในอีเมลจริง — คลิกเพื่อทดสอบตั้งรหัสผ่านใหม่
+                  นี่คือลิงก์ที่ระบบจะส่งในอีเมลจริง คลิกเพื่อทดสอบตั้งรหัสผ่านใหม่
                 </div>
                 <Link
                   to={`/reset-password?token=${devToken}`}

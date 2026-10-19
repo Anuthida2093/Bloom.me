@@ -171,7 +171,7 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
               <PostListPage title="ที่ถูกใจ" posts={likedPosts} emptyMessage="ยังไม่ได้กดถูกใจโพสต์ไหนเลย" onBack={backToFeed} />
             )}
             {view === 'savedPosts' && (
-              <PostListPage title="บันทึก" posts={savedPosts} emptyMessage="ยังไม่ได้บันทึกโพสต์ไหนเลย — กดไอคอนบุ๊กมาร์กขวาของโพสต์เพื่อเก็บไว้ดูทีหลัง" onBack={backToFeed} />
+              <PostListPage title="บันทึก" posts={savedPosts} emptyMessage="ยังไม่ได้บันทึกโพสต์ไหนเลย กดไอคอนบุ๊กมาร์กขวาของโพสต์เพื่อเก็บไว้ดูทีหลัง" onBack={backToFeed} />
             )}
           </>
         )}

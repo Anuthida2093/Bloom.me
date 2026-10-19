@@ -24,6 +24,8 @@ interface TreeStatsPanelProps {
   daysSinceLastMentalQuest?: number | null
   daysSinceLastPhysicalQuest?: number | null
   onClose?: () => void
+  /** [แก้ตามที่ระบุ] ปุ่ม "ดูต้นไม้ของฉัน" — ซ่อนทุกอย่างบนหน้า Home เหลือต้นไม้ + พื้นดิน + พื้นหลัง */
+  onViewMyTree?: () => void
 }
 
 // สเกล stack (คะแนนสะสมดิบ) ให้เป็นเปอร์เซ็นต์แสดงผล 0-100 — เหมือนที่ HeroSection.tsx ใช้
@@ -38,6 +40,7 @@ export default function TreeStatsPanel({
   daysSinceLastMentalQuest = null,
   daysSinceLastPhysicalQuest = null,
   onClose = () => {},
+  onViewMyTree,
 }: TreeStatsPanelProps) {
   const theme = MBTI_TREE_THEME[userData.mbtiType as MbtiType] ?? MBTI_TREE_THEME.INFP
   const { t } = useLanguage()
@@ -129,6 +132,16 @@ export default function TreeStatsPanel({
             <div style={{ fontSize: 10, fontWeight: 600, opacity: .8 }}>{t('stats.moodSub')}</div>
           </div>
         </button>
+
+        {onViewMyTree && (
+          <button
+            onClick={onViewMyTree}
+            className="tree-stats-panel__section tree-stats-panel__mood-btn"
+            style={{ animationDelay: '300ms', width: '100%', padding: '11px', border: '2px solid var(--ti-text, var(--text))', borderRadius: 'var(--r-md)', background: 'color-mix(in srgb, var(--fixed-white) 35%, transparent)', color: 'var(--ti-text, var(--text))', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <img src={BADGE_ICONS.tree} className="icon-img" style={{ fontSize: 22 }} alt="" />
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 13 }}>ดูต้นไม้ของฉัน</div>
+          </button>
+        )}
 
         <style>{`
           @keyframes treeStatsSectionFadeUp {

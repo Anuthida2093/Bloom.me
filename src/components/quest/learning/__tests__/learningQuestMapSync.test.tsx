@@ -60,7 +60,7 @@ function renderHarness() {
   )
 }
 
-describe('LearningQuestMap — sync ทันทีหลังทำเควสสำเร็จ', () => {
+describe('LearningQuestMap, sync ทันทีหลังทำเควสสำเร็จ', () => {
   beforeEach(() => {
     window.localStorage.clear()
     vi.stubGlobal('ResizeObserver', MockResizeObserver)

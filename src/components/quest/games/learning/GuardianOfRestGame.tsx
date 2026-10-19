@@ -62,7 +62,7 @@ export default function GuardianOfRestGame({ exit, finish }: QuestGameProps) {
       </div>
 
       {restDone && !claimedToday && (
-        <button className="qg-btn" onClick={() => finish({ restMinutes: todayMinutes })}>พักครบ 15 นาทีแล้ว — รับรางวัล</button>
+        <button className="qg-btn" onClick={() => finish({ restMinutes: todayMinutes })}>พักครบ 15 นาทีแล้ว รับรางวัล</button>
       )}
       {!restDone && !claimedToday && (
         <p className="qg-hint">{active ? 'พักให้ครบเวลาก่อนนะ แล้วกลับมารับรางวัลที่นี่' : 'จดจ่อในโหมดจดจ่อให้ครบ 90 นาที ระบบจะเริ่มจับเวลาพัก 15 นาทีให้เอง'}</p>

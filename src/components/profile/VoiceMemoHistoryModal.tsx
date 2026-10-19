@@ -101,7 +101,7 @@ export default function VoiceMemoHistoryModal({ onClose }: VoiceMemoHistoryModal
             {sessions === null && <p className="voice-history__empty">กำลังโหลด...</p>}
             {sessions?.length === 0 && (
               <p className="voice-history__empty">
-                ยังไม่มีบันทึกเสียง — ลองเล่นเควส "เทกระเป๋าความจำผ่านเสียง" ในหมวดการเรียนรู้ดูนะ
+                ยังไม่มีบันทึกเสียง ลองเล่นเควส "เทกระเป๋าความจำผ่านเสียง" ในหมวดการเรียนรู้ดูนะ
               </p>
             )}
             {sessions && sessions.length > 0 && filtered.length === 0 && (
@@ -121,7 +121,7 @@ export default function VoiceMemoHistoryModal({ onClose }: VoiceMemoHistoryModal
                   {open && (
                     <span className="voice-history__detail">
                       <span className="voice-history__detail-label">สิ่งที่คุณพูด</span>
-                      <span className="voice-history__detail-text">{s.transcript || '—'}</span>
+                      <span className="voice-history__detail-text">{s.transcript || '-'}</span>
                       {s.missedTopics.length > 0 && (
                         <span className="voice-history__detail-missed">หัวข้อที่ลืม: {s.missedTopics.join(', ')}</span>
                       )}
@@ -135,7 +135,7 @@ export default function VoiceMemoHistoryModal({ onClose }: VoiceMemoHistoryModal
       </div>
 
       <style>{`
-        /* เต็มจอแบบหน้าตั้งค่า — หน้าตาเดียวกับประวัติไดอะรี่ของฉัน (JournalHistoryModal.tsx) */
+        /* เต็มจอแบบหน้าตั้งค่า หน้าตาเดียวกับประวัติไดอะรี่ของฉัน (JournalHistoryModal.tsx) */
         .voice-history {
           position: fixed; inset: 0; z-index: 900; background: var(--bg);
           overflow-y: auto; scrollbar-width: none; font-family: var(--font-display);

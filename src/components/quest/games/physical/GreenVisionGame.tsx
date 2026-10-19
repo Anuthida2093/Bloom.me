@@ -101,7 +101,7 @@ export default function GreenVisionGame({ finish, strictMode, skip }: QuestGameP
             {/* [แก้ตามที่ระบุ] รูปของเควสแทนอีโมจิ 👀 */}
             <img src={QUEST_ICONS['phys-green-vision']} alt="" style={{ width: 96, height: 96, objectFit: 'contain' }} />
             <div className="qg-title">มองหาอะไรที่อยู่ไกลราว 6 เมตร</div>
-            <p className="qg-hint">นอกหน้าต่าง ปลายทางเดิน หรือต้นไม้ไกลๆ ก็ได้ — พอกดเริ่ม จอจะหรี่ลงเองเพื่อไม่ให้คุณเผลอจ้องต่อ</p>
+            <p className="qg-hint">นอกหน้าต่าง ปลายทางเดิน หรือต้นไม้ไกลๆ ก็ได้ พอกดเริ่ม จอจะหรี่ลงเองเพื่อไม่ให้คุณเผลอจ้องต่อ</p>
             <button className="qg-btn" onClick={() => setChooseMode(true)}>เริ่มพักสายตา 20 วินาที</button>
           </>
         )}
@@ -140,7 +140,7 @@ export default function GreenVisionGame({ finish, strictMode, skip }: QuestGameP
               <input type="checkbox" checked={notifyWhenDone} onChange={(e) => setNotifyWhenDone(e.target.checked)} />
               <span>แจ้งเตือนเมื่อครบเวลา (เสียง/สั่น)</span>
             </label>
-            <button className="lb-btn lb-btn--wide lb-btn--ghost" onClick={() => startRest('normal')}>ไม่ต้อง — พักแบบปกติ (จอหรี่)</button>
+            <button className="lb-btn lb-btn--wide lb-btn--ghost" onClick={() => startRest('normal')}>ไม่ต้อง พักแบบปกติ (จอหรี่)</button>
             <button className="green-vision__choose-cancel" onClick={() => setChooseMode(false)}>ยกเลิก</button>
           </div>
         </div>

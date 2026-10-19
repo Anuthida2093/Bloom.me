@@ -122,7 +122,7 @@ export default function FriendsPage({ onBack, onViewPlayer }: FriendsPageProps) 
       <div className="friends-page__list">
         {rows.length === 0 ? (
           <div className="friends-page__empty">
-            {following.length === 0 ? 'ยังไม่มีเพื่อน — ลองติดตามคนอื่นในหน้าสตอรี่ก่อนนะ' : 'ไม่พบเพื่อนที่ตรงกับคำค้นหา'}
+            {following.length === 0 ? 'ยังไม่มีเพื่อน ลองติดตามคนอื่นในหน้าสตอรี่ก่อนนะ' : 'ไม่พบเพื่อนที่ตรงกับคำค้นหา'}
           </div>
         ) : (
           rows.map(({ player, isMutual }) => (

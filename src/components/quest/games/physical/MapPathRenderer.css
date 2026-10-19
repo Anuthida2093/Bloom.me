@@ -81,3 +81,12 @@
 @media (prefers-reduced-motion: reduce) {
   .mpr-wp__glow, .mpr-wp__ring, .mpr-wp--arrived .mpr-wp__dot { animation: none; }
 }
+
+/* [แก้ตามที่ระบุ] ป้อมทุก 5 จุด — ยังไม่ถึง = หินเทา ธงแดง · ผ่านแล้ว = หินทอง ธงทอง */
+.mpr-fort__wall { fill: #B9A88A; stroke: #4A3A24; stroke-width: 0.22; stroke-linejoin: round; }
+.mpr-fort__door { fill: #4A3A24; }
+.mpr-fort__pole { stroke: #4A3A24; stroke-width: 0.18; }
+.mpr-fort__flag { fill: #E2483C; stroke: #4A3A24; stroke-width: 0.1; }
+.mpr-fort--reached .mpr-fort__wall { fill: #F2D27A; }
+.mpr-fort--reached .mpr-fort__flag { fill: #FFC233; }
+.mpr-fort { filter: drop-shadow(0 0.3px 0.4px rgba(0, 0, 0, 0.45)); }

@@ -161,7 +161,7 @@ export default function WaypointEditorPage() {
               {copied ? '✓ คัดลอกแล้ว' : '📋 คัดลอกโค้ด'}
             </button>
           </div>
-          <p style={{ fontSize: 12, opacity: 0.8, margin: '0 0 6px' }}>{points.length} จุด — วางแทนรายการ '{map.id}' ใน MAP_PATH_POINTS (src/components/quest/games/physical/journeyPathMath.ts)</p>
+          <p style={{ fontSize: 12, opacity: 0.8, margin: '0 0 6px' }}>{points.length} จุด วางแทนรายการ '{map.id}' ใน MAP_PATH_POINTS (src/components/quest/games/physical/journeyPathMath.ts)</p>
           <textarea readOnly value={code} style={{ width: '100%', height: 360, fontFamily: 'ui-monospace, monospace', fontSize: 12, background: '#0b1310', color: '#cfe', border: '1px solid #354', borderRadius: 8, padding: 8, boxSizing: 'border-box' }} />
         </div>
       </div>

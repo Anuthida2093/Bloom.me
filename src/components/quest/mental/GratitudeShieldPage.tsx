@@ -67,7 +67,7 @@ export default function GratitudeShieldPage({ alreadyCompleted, onComplete, onCl
       <IntroVideoSequence
         videoSrc="/assets/videos/quest-mental/Gratitude-Shield.mp4"
         audioSrc="/assets/sounds/Gratitude-Shield.mp3"
-        overlayText="ยินดีต้อนรับสู่ คำขอบคุณ — วันนี้คุณอยากขอบคุณใคร? สิ่งดีๆ ที่คุณทำ หรือความใจดีที่ใครสักคนมอบให้ มาเรียบเรียงเป็นถ้อยคำขอบคุณจากใจกัน"
+        overlayText="ยินดีต้อนรับสู่ คำขอบคุณ วันนี้คุณอยากขอบคุณใคร? สิ่งดีๆ ที่คุณทำ หรือความใจดีที่ใครสักคนมอบให้ มาเรียบเรียงเป็นถ้อยคำขอบคุณจากใจกัน"
         accent={C_1}
         onComplete={() => setShowIntro(false)}
       />

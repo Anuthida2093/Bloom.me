@@ -119,7 +119,7 @@ export default function MBTISelect() {
         /* [แก้ตามที่ระบุ] มือถือ + iPad ไม่มีปุ่มกลับ (คงไว้เฉพาะแล็ปท็อป ≥1025px) */
         @media (max-width: 1024px) { .mbti-select-back { display: none; } }
 
-        /* โหมดสว่างใช้หน้าตาเดิม — โหมดมืดเท่านั้นที่เป็นการ์ดสีเขียว (ไม่มีขอบเหลือง) */
+        /* โหมดสว่างใช้หน้าตาเดิม โหมดมืดเท่านั้นที่เป็นการ์ดสีเขียว (ไม่มีขอบเหลือง) */
         [data-theme="dark"] .mbti-select-card {
           background: linear-gradient(180deg, var(--g700) 0%, var(--g800) 100%) !important;
           border: 2px solid var(--g500) !important;

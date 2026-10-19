@@ -72,7 +72,7 @@ function clampVisualLevel(visualLevel: number): number {
 /** โฟลเดอร์ลำต้นต้นทางที่ทีมงานส่งมอบมา (ชื่อภาษาไทย/มีช่องว่าง/วงเล็บ/em dash/เท่ากับปนกัน)
  *  — ยังใช้อยู่จนกว่าจะเลือกชุดภาพลำต้น (ดูหัวไฟล์) ใช้ encodeURI() ตอนประกอบ URL เสมอ
  *  (เข้ารหัสเฉพาะช่องว่าง/อักขระนอก ASCII ไม่แตะ '/','=','(',')' ที่ต้องคงไว้ในโครงสร้าง path) */
-const TRUNK_ROOT_FOLDER = 'ส่วนที่ 1 Trunk Layer (8 Level) — Shape A'
+const TRUNK_ROOT_FOLDER = 'ส่วนที่ 1 Trunk Layer (8 Level), Shape A'
 
 /** เลขรหัสต่อท้ายชื่อโฟลเดอร์ย่อยลำต้นแต่ละตัวอักษร (ของจริงบนดิสก์) */
 const TRUNK_SUFFIX: Record<RawShapeLetter, string> = { A: '10001', B: '10002', C: '10003', D: '10004' }

@@ -96,7 +96,7 @@ export default function DailyCheckinGame({ finish }: QuestGameProps) {
       ))}
 
       <div className="qg-card">
-        <label className="qg-label" htmlFor="dc-bonus">คำถามโบนัส (ไม่บังคับ) — พรุ่งนี้อยากปรับอะไรให้ดีขึ้น</label>
+        <label className="qg-label" htmlFor="dc-bonus">คำถามโบนัส (ไม่บังคับ) พรุ่งนี้อยากปรับอะไรให้ดีขึ้น</label>
         <input
           id="dc-bonus" className="qg-input" value={bonusNote} onChange={(e) => setBonusNote(e.target.value)}
           placeholder="เช่น เริ่มเรียนเร็วขึ้น 30 นาที"
@@ -106,7 +106,7 @@ export default function DailyCheckinGame({ finish }: QuestGameProps) {
 
       {needsBreeze && (
         <span className="qg-tag qg-tag--warn">
-          สมาธิและการพักผ่อนวันนี้ค่อนข้างต่ำ — ลองไปทำเควส "ทอดสมอใจ" (ฝึกหายใจ) ต่อดูนะ
+          สมาธิและการพักผ่อนวันนี้ค่อนข้างต่ำ ลองไปทำเควส "ทอดสมอใจ" (ฝึกหายใจ) ต่อดูนะ
         </span>
       )}
 

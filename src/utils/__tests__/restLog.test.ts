@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { activeRest, loadRestSessions, restTotals, startRest } from '../restLog'
 import { DEFAULT_DECORATION_SCALE, maxDecorationScale } from '../../config/decorationItems'
 
-describe('restLog — ผู้พิทักษ์การพักผ่อน (เวลาจริง ไม่ขึ้นกับหน้าจอ)', () => {
+describe('restLog ผู้พิทักษ์การพักผ่อน (เวลาจริง ไม่ขึ้นกับหน้าจอ)', () => {
   afterEach(() => window.localStorage.clear())
 
   it('เริ่มพัก 15 นาที: ระหว่างพักยังไม่นับ ครบแล้วนับเป็นเวลาพักที่ทำได้ทันที', () => {

@@ -55,7 +55,7 @@ export default function ChatListPage({ onBack, onOpenChat }: ChatListPageProps) 
       </div>
 
       {conversations.length === 0 && (
-        <div className="story-empty-state story-empty-state--compact">ยังไม่มีการสนทนา — ส่งโพสต์ให้เพื่อน หรือเลือกเพื่อนด้านล่างเพื่อเริ่มแชท</div>
+        <div className="story-empty-state story-empty-state--compact">ยังไม่มีการสนทนา ส่งโพสต์ให้เพื่อน หรือเลือกเพื่อนด้านล่างเพื่อเริ่มแชท</div>
       )}
 
       <div className="story-chat-list">

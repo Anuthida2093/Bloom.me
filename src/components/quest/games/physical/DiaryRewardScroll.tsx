@@ -50,7 +50,7 @@ export default function DiaryRewardScroll(props: DiaryRewardScrollProps) {
   const today = new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
   const lines: { key: string; icon: React.ReactNode; text: React.ReactNode; highlight?: boolean }[] = [
-    { key: 'steps', icon: '🦶', text: <>เดินได้ <b>{steps.toLocaleString()}</b> / {goal.toLocaleString()} ก้าว {reachedGoal ? '— ถึงเป้าแล้ว!' : ''}</> },
+    { key: 'steps', icon: '🦶', text: <>เดินได้ <b>{steps.toLocaleString()}</b> / {goal.toLocaleString()} ก้าว {reachedGoal ? ' ถึงเป้าแล้ว!' : ''}</> },
     { key: 'exp', icon: <img src={BADGE_ICONS.exp} alt="" />, text: <>EXP <b>+{exp}</b>{doubled && <span className="diary-scroll__x2">×2</span>}</> },
     { key: 'coins', icon: <img src={BADGE_ICONS.coins} alt="" />, text: <>เหรียญ <b>+{coins}</b>{doubled && <span className="diary-scroll__x2">×2</span>}</> },
     { key: 'water', icon: <img src={BADGE_ICONS.water} alt="" />, text: <>หยดน้ำ <b>+{waterDrops}</b></> },
@@ -64,7 +64,7 @@ export default function DiaryRewardScroll(props: DiaryRewardScrollProps) {
         <div className="diary-scroll__paper">
           <div className="diary-scroll__inner">
             <p className="diary-scroll__date">{today}</p>
-            <h2 id="diary-scroll-title" className="diary-scroll__title">{reachedGoal ? 'บันทึกการเดินทางวันนี้' : 'หมดวันแล้ว — บันทึกการเดินทาง'}</h2>
+            <h2 id="diary-scroll-title" className="diary-scroll__title">{reachedGoal ? 'บันทึกการเดินทางวันนี้' : 'หมดวันแล้ว บันทึกการเดินทาง'}</h2>
             <ul className="diary-scroll__lines">
               {lines.map((l, i) => (
                 <li

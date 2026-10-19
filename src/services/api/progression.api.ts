@@ -303,7 +303,7 @@ export async function consumeDoubleCard(): Promise<UseDoubleCardResult> {
       throw new ApiError(400, 'ไม่มีการ์ดคูณสองเหลือแล้ว', { error: { code: 'NO_DOUBLE_CARD' } })
     }
     if (doubleActiveUntil(p)) {
-      throw new ApiError(409, 'การ์ดคูณสองใบก่อนยังทำงานอยู่ — รอให้หมดเวลาก่อนแล้วค่อยใช้ใบใหม่', { error: { code: 'DOUBLE_ALREADY_ACTIVE' } })
+      throw new ApiError(409, 'การ์ดคูณสองใบก่อนยังทำงานอยู่ รอให้หมดเวลาก่อนแล้วค่อยใช้ใบใหม่', { error: { code: 'DOUBLE_ALREADY_ACTIVE' } })
     }
     let result!: UseDoubleCardResult
     updateDb((d) => {

@@ -64,9 +64,9 @@ export default function HealthSummary({ userData, questLogs }: { userData: UserD
       </button>
       {open.body && (
         <div className="health-summary__grid">
-          <Stat label="ส่วนสูง" value={height ? `${height} ซม.` : '—'} />
-          <Stat label="น้ำหนัก" value={weight ? `${weight} กก.` : '—'} />
-          <Stat label="น้ำหนักที่เหมาะสม" value={idealMin !== null ? `${idealMin}–${idealMax} กก.` : '—'} sub="BMI 18.5–22.9" />
+          <Stat label="ส่วนสูง" value={height ? `${height} ซม.` : '-'} />
+          <Stat label="น้ำหนัก" value={weight ? `${weight} กก.` : '-'} />
+          <Stat label="น้ำหนักที่เหมาะสม" value={idealMin !== null ? `${idealMin}–${idealMax} กก.` : '-'} sub="BMI 18.5–22.9" />
         </div>
       )}
 

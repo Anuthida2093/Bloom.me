@@ -41,7 +41,7 @@ export default function ActiveFocusGame({ finish }: QuestGameProps) {
           id="af-skill" className="qg-input" value={skill} onChange={(e) => setSkill(e.target.value)}
           placeholder="เช่น เขียน SQL join หลายตาราง"
         />
-        <p className="qg-hint" style={{ marginTop: 6 }}>ระบุให้แคบที่สุด — "อ่านหนังสือ" กว้างเกินกว่าที่สมองจะจับจุดพัฒนาได้</p>
+        <p className="qg-hint" style={{ marginTop: 6 }}>ระบุให้แคบที่สุด "อ่านหนังสือ" กว้างเกินกว่าที่สมองจะจับจุดพัฒนาได้</p>
       </div>
 
       <div className="qg-card">
@@ -67,7 +67,7 @@ export default function ActiveFocusGame({ finish }: QuestGameProps) {
         </div>
         {tooEasy && (
           <p className="qg-hint" style={{ marginTop: 10, color: TEXT_1 }}>
-            งานที่ทำได้สบายอยู่แล้วไม่ทำให้เก่งขึ้น Deliberate Practice ต้องอยู่เหนือระดับที่ทำได้ในปัจจุบันเล็กน้อย —
+            งานที่ทำได้สบายอยู่แล้วไม่ทำให้เก่งขึ้น Deliberate Practice ต้องอยู่เหนือระดับที่ทำได้ในปัจจุบันเล็กน้อย 
             ลองเพิ่มความยากหรือลดเวลาที่ให้ตัวเองดู
           </p>
         )}

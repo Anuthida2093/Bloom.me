@@ -38,8 +38,8 @@ interface Reward {
 }
 
 const REWARDS: Record<number, Reward> = {
-  7:  { item: 'golden-crown',        emoji: '👑', label: 'มงกุฎทอง', desc: 'ไอเทมตกแต่งพิเศษ — หาซื้อในร้านไม่ได้!' },
-  30: { item: 'glowing-butterfly',  emoji: '🦋', label: 'ผีเสื้อเรืองแสง', desc: 'ตำนาน — รางวัลสำหรับผู้อุทิศตน 30 วัน!' },
+  7:  { item: 'golden-crown',        emoji: '👑', label: 'มงกุฎทอง', desc: 'ไอเทมตกแต่งพิเศษ หาซื้อในร้านไม่ได้!' },
+  30: { item: 'glowing-butterfly',  emoji: '🦋', label: 'ผีเสื้อเรืองแสง', desc: 'ตำนาน รางวัลสำหรับผู้อุทิศตน 30 วัน!' },
 }
 
 // รางวัลสำรอง เผื่อ days ที่ส่งเข้ามาไม่ตรงกับ milestone ที่กำหนดไว้ (7 หรือ 30)

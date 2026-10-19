@@ -71,7 +71,7 @@ export default function BrainDumpModal({ onClose }: BrainDumpModalProps) {
 
         {saved && (
           <div style={{ textAlign: 'center', fontSize: 12.5, color: TEXT_4, fontWeight: 700, marginBottom: 12 }}>
-            ✅ บันทึกแล้ว — ความคิดของคุณถูกเก็บไว้อย่างปลอดภัย
+            ✅ บันทึกแล้ว ความคิดของคุณถูกเก็บไว้อย่างปลอดภัย
           </div>
         )}
 

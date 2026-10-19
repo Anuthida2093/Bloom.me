@@ -60,7 +60,7 @@ export default function CrossPollinationGame({ finish }: QuestGameProps) {
         </div>
         {hours < 2 && (
           <p className="qg-hint" style={{ marginTop: 10, color: TEXT_1 }}>
-            ยังไม่ถึง 2 ชั่วโมง สลับตอนนี้อาจตัดจังหวะที่กำลังลื่นไหลอยู่ — ทำต่อไปก่อนได้ แล้วค่อยกลับมา
+            ยังไม่ถึง 2 ชั่วโมง สลับตอนนี้อาจตัดจังหวะที่กำลังลื่นไหลอยู่ ทำต่อไปก่อนได้ แล้วค่อยกลับมา
           </p>
         )}
       </div>
@@ -87,7 +87,7 @@ export default function CrossPollinationGame({ finish }: QuestGameProps) {
         </div>
         {sameDomain && (
           <p className="qg-hint" style={{ marginTop: 10, color: TEXT_2 }}>
-            หมวดเดิมไม่นับเป็นการสลับ — Interleaving ต้องข้ามศาสตร์ สมองถึงจะได้ฝึกแยกแยะคอนเซปต์
+            หมวดเดิมไม่นับเป็นการสลับ Interleaving ต้องข้ามศาสตร์ สมองถึงจะได้ฝึกแยกแยะคอนเซปต์
           </p>
         )}
       </div>
@@ -115,7 +115,7 @@ export default function CrossPollinationGame({ finish }: QuestGameProps) {
             ))}
           </div>
         )}
-        <p className="qg-hint" style={{ marginTop: 8 }}>วิชาที่เพิ่มจะขึ้นในตัวเลือกด้านบนทั้งสองช่อง — กดที่ชื่อด้านบนนี้เพื่อลบ</p>
+        <p className="qg-hint" style={{ marginTop: 8 }}>วิชาที่เพิ่มจะขึ้นในตัวเลือกด้านบนทั้งสองช่อง กดที่ชื่อด้านบนนี้เพื่อลบ</p>
       </div>
 
       <button className="qg-btn" disabled={!canSubmit} onClick={handleSubmit}>ผสมเกสรข้ามศาสตร์</button>

@@ -11,7 +11,7 @@ import './index.css'
 
 const rootElement = document.getElementById('root')
 if (!rootElement) {
-  throw new Error('ไม่พบ element #root ใน index.html — ตรวจสอบว่า <div id="root"></div> ยังอยู่')
+  throw new Error('ไม่พบ element #root ใน index.html ตรวจสอบว่า <div id="root"></div> ยังอยู่')
 }
 
 // [ข้อกำหนดข้อ 1] BrowserRouter ครอบ App ที่นี่ — ให้ useNavigate/Routes ใน App.tsx

@@ -10,7 +10,7 @@ function dateDaysAgo(n: number): string {
   return new Date(Date.now() + 7 * 3_600_000 - n * 86_400_000).toISOString().slice(0, 10)
 }
 
-describe('progression — โหมด mock', () => {
+describe('progression โหมด mock', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.stubEnv('VITE_API_MODE', 'mock')
@@ -46,7 +46,7 @@ describe('progression — โหมด mock', () => {
     expect(['BONUS_COINS', 'WATER_DROPS']).toContain(gift!.kind) // ยังไม่ปลดล็อกการ์ด → ไม่มีการ์ด
   })
 
-  it('โหมดจดจ่อ: วันละไม่เกิน 3 รอบ — รอบที่ 4 → 409 DAILY_LIMIT_REACHED', async () => {
+  it('โหมดจดจ่อ: วันละไม่เกิน 3 รอบ รอบที่ 4 → 409 DAILY_LIMIT_REACHED', async () => {
     const { quest } = await setup(0)
     for (let i = 0; i < 3; i++) await quest.completeQuest({ questCode: 'know-deep-root', payload: { round: i + 1 } })
     await expect(quest.completeQuest({ questCode: 'know-deep-root' })).rejects.toMatchObject({ code: 'DAILY_LIMIT_REACHED' })
@@ -96,7 +96,7 @@ describe('progression — โหมด mock', () => {
     expect((await api.getProgression()).doubleRewardActive).toBe(false)
   })
 
-  it('บันทึกก้าวรายวันพร้อมแผนที่ — ประวัติเปิดดูแผนที่ของวันนั้นได้ และเก็บก้าวค่ามากสุด', async () => {
+  it('บันทึกก้าวรายวันพร้อมแผนที่ ประวัติเปิดดูแผนที่ของวันนั้นได้ และเก็บก้าวค่ามากสุด', async () => {
     const { api } = await setup(0)
     const today = api.localDateKey()
     await api.recordStepDay(today, 9_000, 8_000, { mapId: 'lotus-pond', journeyId: 'j1' })

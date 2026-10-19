@@ -23,7 +23,7 @@ export default function ContentSettingsPage({ onBack }: { onBack: () => void }) 
       <div className="story-toggle-row">
         <div>
           <div style={{ fontWeight: 700, fontSize: 13.5 }}>ซ่อนเนื้อหาที่มีคนรายงาน</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>ยังไม่มีระบบรายงานเนื้อหาจริงในรอบนี้ — เตรียม toggle ไว้ก่อน</div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>ยังไม่มีระบบรายงานเนื้อหาจริงในรอบนี้ เตรียม toggle ไว้ก่อน</div>
         </div>
         <button
           className={`story-follow-btn${hideReported ? ' story-follow-btn--following' : ''}`}

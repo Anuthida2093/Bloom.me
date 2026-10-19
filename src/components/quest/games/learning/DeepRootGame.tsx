@@ -163,8 +163,8 @@ export default function DeepRootGame({ finish, strictMode, skip }: QuestGameProp
       <div className="qg-row" style={{ justifyContent: 'center', flexWrap: 'wrap', gap: 6 }}>
         <span className={`qg-tag${phase === 'break' ? ' qg-tag--ok' : ''}`}>
           {phase === 'idle' && `พร้อมเริ่ม: จดจ่อ ${FOCUS_MINUTES} นาที + พัก ${BREAK_MINUTES} นาที = 1 รอบ`}
-          {phase === 'focus' && '🌿 กำลังหยั่งราก — ห้ามวอกแวก'}
-          {phase === 'break' && `☕ ช่วงพักสมอง ${BREAK_MINUTES} นาที — ห้ามเล่นมือถือ`}
+          {phase === 'focus' && '🌿 กำลังหยั่งราก ห้ามวอกแวก'}
+          {phase === 'break' && `☕ ช่วงพักสมอง ${BREAK_MINUTES} นาที ห้ามเล่นมือถือ`}
           {phase === 'done' && `✅ จบรอบที่ ${round} แล้ว!`}
         </span>
         <span className="qg-tag">รอบที่ {round}/{MAX_ROUNDS_PER_DAY} ของวันนี้</span>
@@ -186,16 +186,16 @@ export default function DeepRootGame({ finish, strictMode, skip }: QuestGameProp
         </div>
       )}
 
-      {paused && <span className="qg-tag qg-tag--warn">หยุดนับไว้แล้ว — กลับมาที่หน้าต่างนี้เพื่อทำต่อ</span>}
+      {paused && <span className="qg-tag qg-tag--warn">หยุดนับไว้แล้ว กลับมาที่หน้าต่างนี้เพื่อทำต่อ</span>}
       {distractions > 0 && <span className="qg-tag qg-tag--warn">วอกแวกไป {distractions} ครั้ง (สลับแท็บ)</span>}
 
       {phase === 'idle' && (
         <>
           <p className="qg-hint">
             {round === 1
-              ? 'จบรอบแรกแล้ว "เทกระเป๋าความจำผ่านเสียง" เล่นได้ทันที — กลับมาทำต่อให้ครบ 3 รอบของวัน รับรางวัลพิเศษ'
+              ? 'จบรอบแรกแล้ว "เทกระเป๋าความจำผ่านเสียง" เล่นได้ทันที กลับมาทำต่อให้ครบ 3 รอบของวัน รับรางวัลพิเศษ'
               : earnsThreeRoundBonus
-                ? 'รอบสุดท้ายของวันนี้ — จบโดยไม่กดข้าม รับรางวัลพิเศษ!'
+                ? 'รอบสุดท้ายของวันนี้ จบโดยไม่กดข้าม รับรางวัลพิเศษ!'
                 : round === MAX_ROUNDS_PER_DAY
                   ? 'รอบสุดท้ายของวันนี้ (มีรอบที่กดข้ามไปแล้ว จึงไม่มีรางวัลพิเศษวันนี้)'
                   : `ทำต่อให้ครบ ${MAX_ROUNDS_PER_DAY} รอบโดยไม่กดข้าม รับรางวัลพิเศษ`}
@@ -204,14 +204,14 @@ export default function DeepRootGame({ finish, strictMode, skip }: QuestGameProp
         </>
       )}
       {phase === 'break' && (
-        <p className="qg-hint">พักสมองจริงๆ นะ — หลับตา ยืดเส้น หรือเดินเล่น การพักคือส่วนหนึ่งของการฝึก</p>
+        <p className="qg-hint">พักสมองจริงๆ นะ หลับตา ยืดเส้น หรือเดินเล่น การพักคือส่วนหนึ่งของการฝึก</p>
       )}
 
       {phase === 'done' && (
         <div className="qg-card" style={{ textAlign: 'center' }}>
           {!earnsThreeRoundBonus && (
             <p className="qg-hint">
-              {round === 1 ? 'ปลดล็อก "เทกระเป๋าความจำผ่านเสียง" แล้ว — ' : ''}
+              {round === 1 ? 'ปลดล็อก "เทกระเป๋าความจำผ่านเสียง" แล้ว ' : ''}
               {round < MAX_ROUNDS_PER_DAY ? `เหลืออีก ${MAX_ROUNDS_PER_DAY - round} รอบของวันนี้ กลับมาเล่นต่อได้เลย` : 'ครบรอบของวันนี้แล้ว'}
             </p>
           )}
@@ -220,13 +220,13 @@ export default function DeepRootGame({ finish, strictMode, skip }: QuestGameProp
             <>
               <img src={BADGE_ICONS.item} alt="" style={{ width: 96, height: 96, objectFit: 'contain', margin: '0 auto' }} />
               <div className="qg-title">ได้รับ {exchangeCardLabel(bonus.cardItemCode)} 1 ใบ!</div>
-              <p className="qg-hint">เก็บไว้ในคลังไอเทม หมวด "การ์ดแลกซื้อไอเทม" — ใช้แลกซื้อที่ร้านค้า</p>
+              <p className="qg-hint">เก็บไว้ในคลังไอเทม หมวด "การ์ดแลกซื้อไอเทม" ใช้แลกซื้อที่ร้านค้า</p>
             </>
           )}
           {bonus && !bonus.cardItemCode && bonus.coins > 0 && (
             <div className="qg-title">โบนัสความตั้งใจ +{bonus.coins} เหรียญ <img src={BADGE_ICONS.coins} alt="" style={{ width: 28, height: 28, verticalAlign: 'middle' }} /></div>
           )}
-          {earnsThreeRoundBonus && bonus === null && <p className="qg-hint">เปิดรางวัลพิเศษไม่สำเร็จ (เชื่อมต่อเซิร์ฟเวอร์ไม่ได้) — รางวัลเควสยังได้ตามปกติ</p>}
+          {earnsThreeRoundBonus && bonus === null && <p className="qg-hint">เปิดรางวัลพิเศษไม่สำเร็จ (เชื่อมต่อเซิร์ฟเวอร์ไม่ได้) รางวัลเควสยังได้ตามปกติ</p>}
           <button className="qg-btn" onClick={handleFinish} disabled={earnsThreeRoundBonus && bonus === undefined} style={{ marginTop: 10 }}>
             เสร็จสิ้น รดน้ำลำต้น
           </button>

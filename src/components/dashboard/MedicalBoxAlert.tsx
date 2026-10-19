@@ -71,7 +71,7 @@ export default function MedicalBoxAlert({ moodEntries, onOpenMentalQuests }: Med
       <button
         className={isOpening ? 'medical-box-alert__fab medical-box-alert__fab--opening' : 'medical-box-alert__fab'}
         onClick={handleOpen}
-        title="เราสังเกตเห็นว่าช่วงนี้คุณรู้สึกไม่ค่อยดี — แตะเพื่อดูทางช่วยเหลือ"
+        title="เราสังเกตเห็นว่าช่วงนี้คุณรู้สึกไม่ค่อยดี แตะเพื่อดูทางช่วยเหลือ"
         aria-label="กล่องช่วยเหลือดูแลใจ"
       >
         {/* ยืนยันแล้วว่ามีไฟล์ Medical Box.png จริงในโฟลเดอร์ badges (ดู iconAssets.ts) —
@@ -103,7 +103,7 @@ export default function MedicalBoxAlert({ moodEntries, onOpenMentalQuests }: Med
               <h3 className="medical-box-alert__title">เราเป็นห่วงคุณนะ</h3>
               <p className="medical-box-alert__body">
                 ช่วงนี้เราสังเกตว่าอารมณ์ของคุณดูไม่ค่อยสดใสมาหลายวันติดกันเลย
-                ไม่เป็นไรนะถ้าจะรู้สึกแบบนี้ — ลองพักหายใจสักครู่ หรือเล่นเควสในหมวดสุขภาพจิต
+                ไม่เป็นไรนะถ้าจะรู้สึกแบบนี้ ลองพักหายใจสักครู่ หรือเล่นเควสในหมวดสุขภาพจิต
                 ดูก็ได้ ถ้าอยากคุยกับใครสักคนก็มีสายด่วนพร้อมรับฟังอยู่เสมอ
               </p>
               <a className="medical-box-alert__hotline" href={hotline.href}>
@@ -136,7 +136,7 @@ export default function MedicalBoxAlert({ moodEntries, onOpenMentalQuests }: Med
         .medical-box-alert__lid { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
         .medical-box-alert__lid img { width: 2.2cm; height: 2.2cm; object-fit: contain; }
 
-        /* เอฟเฟกต์ "ฝากล่องเปิดออก" สั้นๆ ตอนกด — หมุน+ยกขึ้นเบาๆ ก่อน popup จะโผล่ */
+        /* เอฟเฟกต์ "ฝากล่องเปิดออก" สั้นๆ ตอนกด หมุน+ยกขึ้นเบาๆ ก่อน popup จะโผล่ */
         .medical-box-alert__fab--opening .medical-box-alert__lid {
           animation: medicalBoxLidOpen .42s cubic-bezier(.34,1.56,.64,1) both;
         }
