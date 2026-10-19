@@ -169,6 +169,9 @@
 }
 
 /* ป้ายชื่อ "อันดับของฉัน" แถบล่าง */
+/* [แก้ตามที่ระบุ] แถบชื่อตัวเองกดได้ → ตารางจัดอันดับเต็มจอ (LeaderboardFullscreen) */
+.lb-frame__plate--button { width: 100%; font: inherit; text-align: left; cursor: pointer; }
+.lb-frame__plate--button:hover { filter: brightness(1.04); }
 .lb-frame__plate {
   display: flex;
   align-items: center;

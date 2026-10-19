@@ -274,6 +274,19 @@
 .story-subpage__head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
 .story-subpage__back { min-width: 44px; min-height: 44px; background: none; border: none; font-size: var(--fs-lg); color: var(--text-sub); }
 .story-subpage__title { font-family: var(--font-display); font-size: clamp(var(--fs-md), 4vw, var(--fs-lg)); color: var(--g800); }
+/* [แก้ตามที่ระบุ] ธีมมืด: หัวหน้าย่อยของสตอรี่ (โปรไฟล์ / บันทึก / ที่ถูกใจ ฯลฯ) เขียวเข้มบนพื้นเข้ม มองไม่เห็น → สีขาว */
+[data-theme="dark"] .story-subpage__title,
+[data-theme="dark"] .story-subpage .story-empty-state { color: var(--fixed-white); }
+
+/* [แก้ตามที่ระบุ] ปุ่ม แก้ไขโปรไฟล์ / แชร์โปรไฟล์ / ดูต้นไม้ — บรรทัดเดียว ห้ามขึ้นบรรทัดใหม่ ย่อตามจอ */
+.story-profile__actions { display: flex; gap: clamp(6px, 2vw, 10px); margin-bottom: 22px; flex-wrap: nowrap; }
+.story-profile__actions .lb-btn {
+  flex: 1 1 0; min-width: 0; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  padding-left: clamp(4px, 1.6vw, 14px); padding-right: clamp(4px, 1.6vw, 14px);
+  font-size: clamp(11px, 3.4vw, 15px);
+}
+.story-profile__actions .lb-btn .icon-img { width: 1.4em; height: 1.4em; flex-shrink: 0; }
 .story-empty-state { text-align: center; color: var(--text-muted); font-size: var(--fs-sm); padding: 40px 0; }
 
 .story-friend-row, .story-list-row {
@@ -816,3 +829,6 @@ button.story-tag { cursor: pointer; font-family: inherit; }
 }
 .story-post-card__timestamp { font-size: 11px; color: var(--text-muted); letter-spacing: .02em; }
 .story-post-card--ig .story-post-card__tags { margin-bottom: 4px; }
+
+/* [แก้ตามที่ระบุ] ตัวนับแฮชแท็ก (สูงสุด 5) */
+.story-compose-tags__count { font-weight: 400; opacity: .7; margin-left: 6px; font-size: .85em; }

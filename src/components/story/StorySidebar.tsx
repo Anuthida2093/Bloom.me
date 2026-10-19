@@ -9,7 +9,7 @@ import { BADGE_ICONS } from '../../config/iconAssets'
 \*============================================================================*/
 
 export type StoryView =
-  | 'feed' | 'profile' | 'friends' | 'chat' | 'anonymousPosts' | 'likedPosts' | 'contentSettings' | 'activity'
+  | 'feed' | 'profile' | 'friends' | 'chat' | 'anonymousPosts' | 'likedPosts' | 'savedPosts' | 'contentSettings' | 'activity'
 
 interface StorySidebarProps {
   onNavigate: (view: StoryView) => void
@@ -31,7 +31,9 @@ const GRID_ITEMS: { view: StoryView; icon: ReactNode; label: string }[] = [
   { view: 'anonymousPosts', icon: '🕶️', label: 'โพสต์ปิดโปรไฟล์' },
   { view: 'activity', icon: '🔔', label: 'กิจกรรม' },
   { view: 'likedPosts', icon: '❤️', label: 'ที่ถูกใจ' },
-  { view: 'contentSettings', icon: <img src={BADGE_ICONS.settings} className="icon-img" alt="" />, label: 'การตั้งค่าเนื้อหา' },
+  // [แก้ตามที่ระบุ] ปุ่มตั้งค่าเขียนแค่ "การตั้งค่า" + ปุ่ม "บันทึก" (โพสต์ที่กดบุ๊กมาร์กไว้) อยู่ข้างกัน
+  { view: 'contentSettings', icon: <img src={BADGE_ICONS.settings} className="icon-img" alt="" />, label: 'การตั้งค่า' },
+  { view: 'savedPosts', icon: '🔖', label: 'บันทึก' },
 ]
 
 export default function StorySidebar({ onNavigate, active }: StorySidebarProps) {

@@ -16,6 +16,17 @@ function load(userId: string): string[] {
   } catch { return [] }
 }
 
+/** [ใหม่ตามที่ระบุ] รายการ id โพสต์ที่บันทึกไว้ทั้งหมด (ล่าสุดก่อน) — หน้า "บันทึก" ในเมนูสามขีดของสตอรี่ */
+export function useSavedPostIds(userId: string): string[] {
+  const [ids, setIds] = useState(() => load(userId))
+  useEffect(() => {
+    const sync = () => setIds(load(userId))
+    window.addEventListener(CHANGED, sync)
+    return () => window.removeEventListener(CHANGED, sync)
+  }, [userId])
+  return ids
+}
+
 /** สถานะบันทึกของโพสต์หนึ่งโพสต์ + สลับบันทึก/เลิกบันทึก (ทุกการ์ดของโพสต์เดียวกันอัปเดตพร้อมกัน) */
 export function useSavedPost(userId: string, postId: string): [boolean, () => void] {
   const [saved, setSaved] = useState(() => load(userId).includes(postId))

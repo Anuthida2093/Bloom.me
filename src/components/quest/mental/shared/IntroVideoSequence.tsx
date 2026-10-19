@@ -78,24 +78,8 @@ export default function IntroVideoSequence({ videoSrc, audioSrc, overlayText, ac
         @media (max-width: 480px) {
           .intro-video-seq { --intro-text-size: 14px; }
         }
-        /* [แก้ตามที่ระบุ — 3.5] มือถือ/แท็บเล็ตแนวตั้ง: วิดีโอชิดบนกลางจอแบบเห็นครบทั้งเฟรม (contain ไม่ crop)
-           ข้อความต่อใต้วิดีโอ อยู่ในจอทั้งหมด ไม่ตกขอบ และไม่โดนแถบเมนูล่าง */
-        @media (max-width: 768px) and (orientation: portrait) {
-          .intro-video-seq {
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-            padding: 64px 0 calc(var(--gpf-safe-bottom, 80px) + 12px); box-sizing: border-box;
-            background: radial-gradient(circle at 50% 30%, #2a2340 0%, #120e1c 100%);
-          }
-          .intro-video-seq__video {
-            position: relative; inset: auto; width: 100%; height: auto; max-height: 58vh;
-            object-fit: contain; object-position: top center; flex-shrink: 1; min-height: 0;
-          }
-          .intro-video-seq__vignette { display: none; }
-          .intro-video-seq__overlay-text-wrap {
-            position: relative; bottom: auto; left: auto; transform: none;
-            margin-top: 18px; width: 100%; max-width: 520px; box-sizing: border-box;
-          }
-        }
+        /* [แก้ตามที่ระบุ] วิดีโอ "ไดอะรี่ของฉัน" / "เกราะแห่งความขอบคุณ" เต็มจอทุกขนาดจอ (cover) — เดิมมือถือแนวตั้ง
+           ย่อวิดีโอให้เห็นครบเฟรม (contain) ชิดบนแล้วข้อความต่อด้านล่าง ตอนนี้ข้อความลอยบนวิดีโอเหนือแถบเมนูแทน */
       `}</style>
     </div>
   )

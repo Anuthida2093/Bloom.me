@@ -19,7 +19,8 @@ import '../leaderboard/leaderboardRow.css'
   รูปถูกย่อก่อนแนบ (utils/imageResize.ts) ไม่ให้ข้อมูลใหญ่เกินไป
 \*============================================================================*/
 const MOODS = Object.values(MOOD_TYPE_INFO)
-const MAX_TAGS = 10
+/** [แก้ตามที่ระบุ] แฮชแท็กได้สูงสุด 5 อัน (เดิม 10) */
+const MAX_TAGS = 5
 
 function normalizeTag(raw: string): string {
   return raw.trim().replace(/^#+/, '').replace(/\s+/g, '_').slice(0, 30)
@@ -65,7 +66,7 @@ export default function ComposeStoryModal({ onClose }: { onClose: () => void }) 
   const handleSubmit = () => {
     if (!canPost) return
     const pendingTag = normalizeTag(tagInput)
-    const allTags = pendingTag && !tags.includes(pendingTag) ? [...tags, pendingTag] : tags
+    const allTags = (pendingTag && !tags.includes(pendingTag) ? [...tags, pendingTag] : tags).slice(0, MAX_TAGS)
     createPost({
       content: content.trim(),
       isAnonymous,
@@ -153,7 +154,7 @@ export default function ComposeStoryModal({ onClose }: { onClose: () => void }) 
 
           {/* 4) แฮชแท็ก */}
           <div className="story-compose-page__section">
-            <span className="story-compose-page__label">แฮชแท็ก</span>
+            <span className="story-compose-page__label">แฮชแท็ก <small className="story-compose-tags__count">{tags.length}/{MAX_TAGS}</small></span>
             <div className="story-compose-tags">
               {tags.map((tag) => (
                 <button key={tag} type="button" className="story-tag story-tag--removable" onClick={() => setTags((prev) => prev.filter((t) => t !== tag))} title="แตะเพื่อลบ">

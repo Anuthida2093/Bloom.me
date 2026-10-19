@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
 import { activeRest, loadRestSessions, restTotals, startRest } from '../restLog'
-import { maxDecorationScale } from '../../config/decorationItems'
+import { DEFAULT_DECORATION_SCALE, maxDecorationScale } from '../../config/decorationItems'
 
 describe('restLog — ผู้พิทักษ์การพักผ่อน (เวลาจริง ไม่ขึ้นกับหน้าจอ)', () => {
   afterEach(() => window.localStorage.clear())
@@ -25,9 +25,10 @@ describe('restLog — ผู้พิทักษ์การพักผ่อ�
 })
 
 describe('สเกลไอเทมตกแต่ง', () => {
-  it('รูปปั้น/กระถางขยายได้ 2 เท่าของของแขวน/ลายโพสอิท', () => {
+  it('เริ่มต้น 200% และขยายได้สูงสุด 500% ทุกหมวด', () => {
+    expect(DEFAULT_DECORATION_SCALE).toBe(2)
     expect(maxDecorationScale('fire-dragon')).toBe(5)
-    expect(maxDecorationScale('gold-star')).toBe(2.5)
-    expect(maxDecorationScale('cherry-blossom')).toBe(2.5)
+    expect(maxDecorationScale('gold-star')).toBe(5)
+    expect(maxDecorationScale('cherry-blossom')).toBe(5)
   })
 })

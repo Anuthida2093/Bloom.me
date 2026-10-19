@@ -1,6 +1,6 @@
 import { useMemo, useState, type MouseEvent } from 'react'
 import type { MapDef } from '../../../../types.journey'
-import { buildJourneyPathD, MAP_NATIVE_SIZE, waypointPathPcts, withLivePath } from './journeyPathMath'
+import { buildJourneyPathD, MAP_NATIVE_SIZE, markerWaypoints, waypointPathPcts, withLivePath } from './journeyPathMath'
 import './MapPathRenderer.css'
 
 /** โหมดช่วยแก้จุดเส้นทาง: เติม ?editPath ท้าย URL → แตะแผนที่แล้วขึ้นพิกัด x,y (%) ของจุดที่แตะ
@@ -93,7 +93,7 @@ export default function MapPathRenderer({ mapDef: mapDefProp, progressPct }: Map
 
         {/* [แก้ตามที่ระบุ] จุดระหว่างทาง: สีฟ้า (เดิมส้มขอบดำ) — ยังไม่ถึง = ฟ้าใสขอบขาว · ผ่านแล้ว = ฟ้าเข้มมีแสงเรือง
             · จุดที่นกฮูกเพิ่งไปถึง = วงแสงกะพริบขยายออก (จุดสิ้นสุดเป็นหีบสมบัติ — StepChestMarker) */}
-        {mapDef.waypoints.map((wp, i) => {
+        {markerWaypoints(mapDef).map((wp, i) => {
           const reached = i <= lastReached
           return (
             <g key={i} className={`mpr-wp${reached ? ' mpr-wp--reached' : ''}${i === lastReached ? ' mpr-wp--arrived' : ''}`}>

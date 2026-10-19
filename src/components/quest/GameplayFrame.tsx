@@ -34,7 +34,7 @@
   ทุกกรณี (ทั้ง default view และตอนกำลังเล่นเควสอยู่)
 \*============================================================================*/
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 import { MOOD_GATED_QUEST_CODES, CATEGORY_TO_TAB, type QuestDef, type QuestTabId } from '../../config/questCatalog'
 import { QUEST_ICONS } from '../../config/iconAssets'
@@ -65,6 +65,8 @@ const MINDFUL_ANCHOR_QUEST_CODE = 'ment-mindful-anchor'
  *  GameShell/questGameRegistry ปกติแล้ว (gameKey: 'step-journey') ไม่ใช่หน้าเต็มจอของตัวเองที่
  *  เรนเดอร์ตรงจากไฟล์นี้อีกต่อไป — ตัดออกจาก SPECIAL_QUEST_CODES ใน questCatalog.ts แล้วด้วย */
 const BALANCED_NUTRIENTS_QUEST_CODE = 'phys-balanced-nutrients'
+/** ชวนทำแบบประเมิน 5 ข้อครั้งแรกไปแล้วในรอบการใช้งานนี้ (sessionStorage) */
+const FIRST_SCREENING_PROMPT_KEY = 'bloom.screening.firstPrompted'
 
 interface GameplayFrameProps {
   activeTab: QuestTabId
@@ -111,8 +113,21 @@ export default function GameplayFrame({
   specialQuest, todaysMoodEntry, onRequestMoodCheckin, onCompleteSpecial, onCloseSpecial, onFailIncinerator,
   onOpenQuestByCode,
 }: GameplayFrameProps) {
-  const { pendingScreening, dismissScreening } = useAppContext()
+  const { pendingScreening, dismissScreening, requestScreening, screeningResults } = useAppContext()
   const [safetyNetOpen, setSafetyNetOpen] = useState(false)
+  const lastScreeningAt = screeningResults.length > 0 ? screeningResults[screeningResults.length - 1].createdAt : null
+
+  /* [แก้ตามที่ระบุ — ต้องมีการทำแบบประเมิน 5 ข้อ] ผู้ใช้ที่ยังไม่เคยทำ: เปิดแท็บสุขภาพจิตครั้งแรกของรอบการใช้งาน
+     → ชวนทำแบบประเมินทันที (ยัง "ขอข้ามไว้ก่อน" ได้ — ข้ามแล้วไม่ถามซ้ำจนกว่าจะเปิดแอปใหม่) */
+  useEffect(() => {
+    if (activeTab !== 'mental' || screeningResults.length > 0 || pendingScreening) return
+    try { if (sessionStorage.getItem(FIRST_SCREENING_PROMPT_KEY)) return } catch { /* storage ปิดอยู่ */ }
+    const t = window.setTimeout(() => {
+      try { sessionStorage.setItem(FIRST_SCREENING_PROMPT_KEY, '1') } catch { /* storage ปิดอยู่ */ }
+      requestScreening('ROUTINE')
+    }, 600)
+    return () => window.clearTimeout(t)
+  }, [activeTab, screeningResults.length, pendingScreening, requestScreening])
 
   /* ── [ใหม่] ยามกันหน้าซ้อน ──
      popup จะถูกเรนเดอร์ก็ต่อเมื่อเควสนั้นอยู่ในหมวดเดียวกับแท็บที่เปิดอยู่จริง
@@ -177,6 +192,8 @@ export default function GameplayFrame({
             getTodayCompletionCount={getTodayCompletionCount}
             onSelectQuest={onSelectQuest}
             onOpenSafetyNet={() => setSafetyNetOpen(true)}
+            onOpenScreening={() => requestScreening('ROUTINE')}
+            lastScreeningAt={lastScreeningAt}
             // [ใหม่] บอกล่วงหน้าที่เมนู FAB เลยว่าเควสไหนต้องเช็คอินอารมณ์ก่อน (ไพ่ทิพย์/สมุด
             // บันทึก) แทนที่จะปล่อยให้กดเข้าไปแล้วเจอ MoodGateScreen เงียบๆ โดยไม่มีสัญญาณอะไร
             // มาก่อนเลย — ใช้ MOOD_GATED_QUEST_CODES ตัวเดียวกับที่คุม fallback ด้านล่าง

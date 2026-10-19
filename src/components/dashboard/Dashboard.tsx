@@ -115,18 +115,18 @@ export default function Dashboard() {
   /** โพสอิทบนต้นไม้ที่กดเปิดอ่านอยู่ */
   const [openPostIt, setOpenPostIt] = useState<PostItData | null>(null)
   const [showTreeStats, setShowTreeStats] = useState(false)
-  /** [แก้ตามที่ระบุ] การ์ดต้นไม้เพื่อนเปิด/ปิดได้ — เก็บ id เพื่อนที่ถูกปิดการ์ดไว้ (ดูคนใหม่ = เปิดการ์ดเองอีกครั้ง) */
-  const [hiddenFriendCardId, setHiddenFriendCardId] = useState<string | null>(null)
-  const friendCardOpen = !!viewingPlayer && hiddenFriendCardId !== viewingPlayer.id
+  /** [แก้ตามที่ระบุ] การ์ดต้นไม้เพื่อนเปิด/ปิดได้ — เข้าไปดูต้นไม้เพื่อนแล้ว "ยังไม่ขึ้นการ์ด" (เดิมเด้งขึ้นเอง)
+   *  กดปุ่มต้นไม้/แตะต้นไม้ถึงจะเปิด — เก็บ id เพื่อนที่เปิดการ์ดอยู่ (ดูคนใหม่ = เริ่มแบบปิด) */
+  const [shownFriendCardId, setShownFriendCardId] = useState<string | null>(null)
+  const friendCardOpen = !!viewingPlayer && shownFriendCardId === viewingPlayer.id
   /* [แก้ตามที่ระบุ] การ์ดข้อมูลต้นไม้เพื่อนปิดเองเมื่อแตะที่อื่นบนหน้าจอ (ไม่ต้องกดกากบาท) —
      ยกเว้นแตะในการ์ดเอง หรือปุ่มต้นไม้ที่ใช้เปิด/ปิดการ์ด */
   useEffect(() => {
     if (!friendCardOpen || !viewingPlayer) return
-    const playerId = viewingPlayer.id
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Element | null
       if (target?.closest('.player-tree-card, .dashboard__friend-card-toggle')) return
-      setHiddenFriendCardId(playerId)
+      setShownFriendCardId(null)
     }
     document.addEventListener('pointerdown', onPointerDown)
     return () => document.removeEventListener('pointerdown', onPointerDown)
@@ -466,6 +466,14 @@ export default function Dashboard() {
     const id = window.setTimeout(() => { if (takeNewWaterDrop(userData.id)) setWateringKey((k) => k + 1) }, 400)
     return () => window.clearTimeout(id)
   }, [homeVisible, userData.id])
+  /* [แก้ตามที่ระบุ] หน้า Home เลื่อนขึ้นลงได้ (เลื่อนลงเห็นชั้นดินด้านล่างเพิ่ม) — ฉากแรกยังเป็นแบบเดิม
+     ไปหน้าอื่น/ดูต้นไม้เพื่อน แล้วกลับมา → ฉากแรกเสมอ: เลื่อนกลับบนสุด + ต้นไม้กึ่งกลางจอ (homeSceneKey) */
+  const treeLayerRef = useRef<HTMLDivElement | null>(null)
+  const homeSceneKey = `${homeVisible ? 'home' : 'away'}-${viewingPlayer?.id ?? 'me'}`
+  /* [แก้ตามที่ระบุ] พื้นหลังวิดีโอ/ภาพนิ่งอยู่กับที่ ไม่ขยับตามการเลื่อน — เลื่อนเฉพาะฉากต้นไม้ + ชั้นดิน */
+  useEffect(() => {
+    if (treeLayerRef.current) treeLayerRef.current.scrollTop = 0
+  }, [homeSceneKey])
   // เปิดแอป/กลับมาที่แอป → ปิดรอบเควสก้าวของวันก่อนหน้าที่ยังไม่ได้รับ (ตัดรอบเที่ยงคืนเวลาไทย)
   useStepSettlement(isLoggedIn && !introPhase)
   // เควสแคลอรี่: 18:00 แล้วกินครบเป้า → นับสำเร็จให้อัตโนมัติ + หน้าจอรับรางวัล
@@ -611,7 +619,7 @@ export default function Dashboard() {
 
       {!viewingPlayer && showOverCalorie && <OverCalorieNotice streakDays={overCalorieStreak} />}
 
-      <div className="dashboard__tree-layer">
+      <div ref={treeLayerRef} className="dashboard__tree-layer">
         {viewingPlayer && viewingTreeStats ? (
           <>
             {/* [แก้ตามที่ระบุ] ปุ่มกลับบ้านเหลือแค่ไอคอน Return — ข้อความ "กลับบ้าน" ชนป้ายชื่อต้นไม้เพื่อนบนจอเล็ก */}
@@ -623,13 +631,14 @@ export default function Dashboard() {
               <TreeOfLife
                 userSeed={viewingPlayer.id}
                 mbtiType={viewingPlayer.mbtiType as MbtiType}
-                onTreeClick={() => { setHiddenFriendCardId(viewingPlayer.id); setShowTreeSummary(true) }}
+                onTreeClick={() => { setShownFriendCardId(null); setShowTreeSummary(true) }}
                 groundRocks={(viewingPlayer.overCalorieDays ?? 0) >= OVER_CALORIE_STREAK_DAYS ? Math.min(6, viewingPlayer.overCalorieDays ?? 0) : 0}
                 trunkBranchLevel={viewingTreeStats.trunkBranchLevel}
                 leafFlowerLevel={viewingTreeStats.leafFlowerLevel}
                 grassSoilLevel={viewingTreeStats.grassSoilLevel}
                 pannable
                 onPanChange={handleTreePan}
+                recenterKey={homeSceneKey}
                 riskLevel="LOW"
                 placedItems={[]}
                 decorationPositions={{}}
@@ -649,6 +658,7 @@ export default function Dashboard() {
                 grassSoilLevel={treeStats.grassSoilLevel}
                 pannable
                 onPanChange={handleTreePan}
+                recenterKey={homeSceneKey}
                 riskLevel={userData.currentRiskLevel}
                 placedItems={placedItems}
                 decorationPositions={decorationPositions}
@@ -678,6 +688,9 @@ export default function Dashboard() {
             ไม่ได้สุ่มไพ่ทิพย์มา {daysSinceLastOracle} วันแล้ว
           </button>
         )}
+
+        {/* [แก้ตามที่ระบุ] ชั้นดินต่อจากขอบล่างของฉาก — เลื่อนลงถึงเห็น (ฉากแรกเหมือนเดิม) */}
+        <div className="dashboard__soil-extension" aria-hidden="true" />
       </div>
 
       {/* ═══ ปุ่มลอยซ้าย: Leaderboard (คงของ V2 เดิม) ═══ */}
@@ -704,13 +717,13 @@ export default function Dashboard() {
       <div className={`dashboard__right-cluster${!viewingPlayer && (showTreeStats || showNotifications) ? ' dashboard__right-cluster--panel-open' : ''}`}>
         {viewingPlayer ? (
           <>
-            {hiddenFriendCardId !== viewingPlayer.id && (
-              <PlayerTreeCard player={viewingPlayer} onClose={() => setHiddenFriendCardId(viewingPlayer.id)} />
+            {friendCardOpen && (
+              <PlayerTreeCard player={viewingPlayer} onClose={() => setShownFriendCardId(null)} />
             )}
             <div className="right-action-buttons">
               <button
                 className="game-icon-btn tree-info-btn dashboard__friend-card-toggle"
-                onClick={() => setHiddenFriendCardId((id) => (id === viewingPlayer.id ? null : viewingPlayer.id))}
+                onClick={() => setShownFriendCardId((id) => (id === viewingPlayer.id ? null : viewingPlayer.id))}
                 title={`ข้อมูลต้นไม้ของ ${viewingPlayer.username}`}
                 aria-label={`ข้อมูลต้นไม้ของ ${viewingPlayer.username}`}
               >

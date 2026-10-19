@@ -163,6 +163,26 @@ export const KNOWLEDGE_SIDE: QuestDef[] = [
     gameKey: 'content-review', energyLevel: 'LOW', requiresQuestIds: ['know-brain-dump'],
   },
   {
+    // [นำกลับมาตามที่ระบุ] กลยุทธ์การรอคอย — วางแผนทบทวนระยะยาวรายเดือน (คนละอย่างกับแคปซูลเวลา
+    // ที่นัดทบทวนเป้าหมายของวันนี้) ใช้ StrategicDelayGame.tsx เดิมจากประวัติ git
+    code: 'know-strategic-delay', icon: '📅', title: 'Strategic Delay', titleTh: 'กลยุทธ์การรอคอย',
+    desc: 'วางแผนทบทวนเรื่องที่อยากจำให้ได้นานเป็นรายเดือน ระบบจัดตารางทบทวน 3 รอบให้',
+    howTo: 'เลือกเรื่องที่อยากจำให้ได้ยาวๆ และระยะเวลาที่อยากจำ (3/6/12 เดือน) — ระบบเว้นระยะทบทวนราว 8% ของช่วงเวลาทั้งหมด ถ้าต้องการจำข้อมูลให้ได้เป็นปี ระยะห่างในการทบทวนควรเป็นแค่ 5-10% ของเวลาทั้งหมด',
+    theory: 'Spacing Effect (Cepeda et al., 2008)',
+    category: 'KNOWLEDGE', controlType: 'GOAL_INPUT', coinReward: 40, expReward: 30, isDaily: true,
+    gameKey: 'strategic-delay', energyLevel: 'LOW',
+  },
+  {
+    // [นำกลับมาตามที่ระบุ] กระจกแห่งความจริง — ตอบความรู้สึกจริงหลังทำเควสของวันนี้
+    // บันทึกผ่าน submitQuestFeedback() ท่อเดียวกับ QuestFeedbackPrompt (badge Mirror of Truth)
+    code: 'know-mirror-of-truth', icon: '🪞', title: 'Mirror of Truth', titleTh: 'กระจกแห่งความจริง',
+    desc: 'ย้อนดูเควสที่ทำวันนี้ แล้วตอบตรงๆ ว่ารู้สึกยังไงหลังทำแต่ละอัน',
+    howTo: 'หลังเรียน/ทำเควสเสร็จ เลือกความรู้สึกจริงของแต่ละเควส (ดี / เฉยๆ / ไม่ค่อยดี) — ไม่มีคำตอบถูกผิด ใช้ดูว่าวิธีเรียนแบบไหนเหมาะกับเรา',
+    theory: 'Metacognition — การสะท้อนคิดหลังเรียน',
+    category: 'KNOWLEDGE', controlType: 'ACTION_BUTTON', coinReward: 20, expReward: 15, isDaily: true,
+    gameKey: 'mirror-of-truth', energyLevel: 'LOW',
+  },
+  {
     code: 'know-guardian-of-rest', icon: '🛡️', title: 'Guardian of Rest', titleTh: 'ผู้พิทักษ์การพักผ่อน',
     desc: 'พักผ่อนให้ครบ 15 นาทีหลังจดจ่อแต่ละรอบ แล้วกดรับรางวัลได้วันละครั้ง — ฝึกหนักเกิน 4-5 ชม./วัน ต้นไม้จะเริ่มไหม้เกรียม',
     howTo: 'บังคับหยุดฝึกเมื่อครบโควตา 4-5 ชั่วโมงของการฝึกหนักต่อวัน หากฝืนทำต่อ ต้นไม้จะเฉา (Burnout) — ทำงานอัตโนมัติจากเวลาสะสม',

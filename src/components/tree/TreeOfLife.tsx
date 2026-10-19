@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo, useRef, useState, useEffect, useLayoutEffect, type PointerEvent as ReactPointerEvent } from 'react'
 import { type PostItData, type MbtiType, type RiskLevel, type PlacedItem, type DecorationPositionMap, type QuestCategory } from '../../types'
-import { DECORATION_EMOJI, defaultDecorationLayout, maxDecorationScale } from '../../config/decorationItems'
+import { DECORATION_EMOJI, DEFAULT_DECORATION_SCALE, defaultDecorationLayout, maxDecorationScale } from '../../config/decorationItems'
 import { ITEM_ICONS } from '../../config/iconAssets'
 import { useIsSmallScreen, usePrefersReducedMotion } from '../../hooks/useMediaQuery'
 import { groundDryness } from '../../config/groundFertility'
@@ -167,6 +167,8 @@ interface TreeOfLifeProps {
   pannable?: boolean
   /** แจ้งตำแหน่งเลื่อน (px, -range…0) ทุกครั้งที่ลาก — Dashboard ใช้เลื่อนวิดีโอพื้นหลังช้ากว่า (parallax) */
   onPanChange?: (pan: number, range: number) => void
+  /** [แก้ตามที่ระบุ] ค่านี้เปลี่ยน → เลื่อนฉากกลับมาให้ต้นไม้อยู่กลางจอ (กลับมาหน้า Home จากหน้าอื่น) */
+  recenterKey?: string | number
   /** โพสอิท (บันทึกความรู้สึกประจำวันจากเช็คอินอารมณ์) ติดบนพุ่มต้นไม้ — positionX/Y เป็น % ของแถบต้นไม้ */
   postIts?: PostItData[]
   onPostItClick?: (postIt: PostItData) => void
@@ -195,6 +197,7 @@ function TreeOfLifeBase({
   daysSinceLastPhysicalQuest = null,
   pannable = false,
   onPanChange,
+  recenterKey,
   postIts = [],
   groundRocks = 0,
   onPostItClick,
@@ -262,7 +265,8 @@ function TreeOfLifeBase({
     if (worldRef.current) worldRef.current.style.transform = `translate3d(${pan}px, 0, 0)`
     onPanChange?.(pan, range)
   }, [onPanChange])
-  const { panRef, handlers: panHandlers } = useHorizontalPan(panRange, applyPan)
+  const { panRef, recenter, handlers: panHandlers } = useHorizontalPan(panRange, applyPan)
+  useEffect(() => { if (recenterKey !== undefined) recenter() }, [recenterKey, recenter])
 
   // [ใหม่] เล่น burst effect ทุกครั้งที่ growthPulse.key เปลี่ยน (เควสสำเร็จ) แล้วเคลียร์เอง
   // อัตโนมัติหลัง 1.8s — ไม่ต้องให้ AppContext เป็นคนจับเวลาเคลียร์ค่าทิ้ง กัน stale closure
@@ -627,7 +631,7 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
 
   const getEffectiveScale = (item: PlacedItem): number => {
     if (resizingId === item.itemId && previewScale !== null) return previewScale
-    return Math.max(MIN_DECORATION_SCALE, decorationPositions[item.itemId]?.scale ?? 1)
+    return Math.max(MIN_DECORATION_SCALE, decorationPositions[item.itemId]?.scale ?? DEFAULT_DECORATION_SCALE)
   }
 
   const clampPct = (v: number) => Math.min(96, Math.max(4, v))
@@ -638,7 +642,7 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
   const stepScale = (item: PlacedItem, factor: number) => {
     if (!onDecorationMove) return
     const pos = resolvedPosition(item)
-    const next = clampScale((decorationPositions[item.itemId]?.scale ?? 1) * factor, item.itemId)
+    const next = clampScale((decorationPositions[item.itemId]?.scale ?? DEFAULT_DECORATION_SCALE) * factor, item.itemId)
     onDecorationMove(item.itemId, pos.xPct, pos.yPct, Math.round(next * 100) / 100)
   }
 
@@ -658,14 +662,91 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
        - กดแล้วลากทันที = ย้ายตำแหน่ง
        - กดค้าง (~0.45 วิ) แล้วลาก = ย่อ/ขยาย (ลากออกจากกลางไอเทม = ใหญ่ขึ้น, ลากเข้า = เล็กลง) ไม่โชว์ตัวเลข %
        - แตะเฉยๆ = โชว์ปุ่ม "เก็บ" (เก็บไอเทมกลับเข้าคลัง)
+       - [แก้ตามที่ระบุ] มือถือ: นิ้วแรกแตะไอเทม + นิ้วที่สองแตะที่ไหนก็ได้ แล้วถ่าง/หุบ = ย่อ/ขยายทันที ไม่ต้องกดค้าง
      สถานะระหว่างกดเก็บใน ref (อ่าน/เขียนเฉพาะใน handler — ไม่อ่านตอน render) */
-  const pressRef = useRef<{ itemId: string; x: number; y: number; timer: number; mode: 'pending' | 'move' | 'resize' } | null>(null)
+  const pressRef = useRef<{ itemId: string; pointerId: number; x: number; y: number; timer: number; mode: 'pending' | 'move' | 'resize' | 'pinch' } | null>(null)
+  /** ถอด listener ของการถ่าง/หุบสองนิ้ว (ติดตั้งตอนนิ้วแรกแตะไอเทม ถอดตอนปล่อย) */
+  const pinchCleanupRef = useRef<(() => void) | null>(null)
+  useEffect(() => () => pinchCleanupRef.current?.(), [])
+
+  /** เฝ้านิ้วที่สอง: ระหว่างที่นิ้วแรกยังแตะไอเทมอยู่ ถ้ามีนิ้วที่สองแตะจอ → เข้าโหมดถ่าง/หุบ
+   *  สเกลใหม่ = สเกลเดิม × (ระยะระหว่างสองนิ้วตอนนี้ / ระยะตอนเริ่ม) */
+  const watchPinch = (item: PlacedItem, firstPointerId: number, x: number, y: number) => {
+    pinchCleanupRef.current?.()
+    const pts = new Map<number, { x: number; y: number }>([[firstPointerId, { x, y }]])
+    const distance = () => {
+      const [a, b] = [...pts.values()]
+      return Math.hypot(a.x - b.x, a.y - b.y) || 1
+    }
+    let startDist = 1
+    let baseScale = 1
+    let latest: number | null = null
+    const onDown = (ev: PointerEvent) => {
+      const press = pressRef.current
+      if (!press || press.mode === 'pinch' || ev.pointerId === press.pointerId || pts.size >= 2) return
+      pts.set(ev.pointerId, { x: ev.clientX, y: ev.clientY })
+      window.clearTimeout(press.timer)
+      press.mode = 'pinch'
+      startDist = distance()
+      baseScale = Math.max(MIN_DECORATION_SCALE, decorationPositions[item.itemId]?.scale ?? DEFAULT_DECORATION_SCALE)
+      latest = baseScale
+      resizeStartRef.current = null
+      setDraggingId(null)
+      setPreviewPos(null)
+      setSelectedId(null)
+      setResizingId(item.itemId)
+      setPreviewScale(baseScale)
+    }
+    const onMove = (ev: PointerEvent) => {
+      if (!pts.has(ev.pointerId)) return
+      pts.set(ev.pointerId, { x: ev.clientX, y: ev.clientY })
+      if (pressRef.current?.mode !== 'pinch' || pts.size < 2) return
+      latest = clampScale(baseScale * (distance() / startDist), item.itemId)
+      setPreviewScale(latest)
+    }
+    const onUp = (ev: PointerEvent) => {
+      if (!pts.has(ev.pointerId)) return
+      pts.delete(ev.pointerId)
+      if (pressRef.current?.mode !== 'pinch') return
+      if (latest !== null && onDecorationMove) {
+        const pos = resolvedPosition(item)
+        onDecorationMove(item.itemId, pos.xPct, pos.yPct, Math.round(latest * 100) / 100)
+      }
+      window.clearTimeout(pressRef.current.timer)
+      pressRef.current = null
+      suppressClickRef.current = true
+      setResizingId(null)
+      setPreviewScale(null)
+      // กลืน click ของนิ้วที่สอง (ไม่ให้ไปเปิดแผงข้อมูลต้นไม้ ฯลฯ)
+      const swallow = (c: MouseEvent) => { c.stopPropagation(); c.preventDefault() }
+      window.addEventListener('click', swallow, true)
+      window.setTimeout(() => window.removeEventListener('click', swallow, true), 400)
+      cleanup()
+    }
+    // ระหว่างสองนิ้วแตะจอ ห้ามเบราว์เซอร์เลื่อน/ซูมหน้า
+    const onTouchMove = (ev: TouchEvent) => { if (ev.touches.length >= 2) ev.preventDefault() }
+    const cleanup = () => {
+      window.removeEventListener('pointerdown', onDown, true)
+      window.removeEventListener('pointermove', onMove, true)
+      window.removeEventListener('pointerup', onUp, true)
+      window.removeEventListener('pointercancel', onUp, true)
+      document.removeEventListener('touchmove', onTouchMove)
+      if (pinchCleanupRef.current === cleanup) pinchCleanupRef.current = null
+    }
+    window.addEventListener('pointerdown', onDown, true)
+    window.addEventListener('pointermove', onMove, true)
+    window.addEventListener('pointerup', onUp, true)
+    window.addEventListener('pointercancel', onUp, true)
+    document.addEventListener('touchmove', onTouchMove, { passive: false })
+    pinchCleanupRef.current = cleanup
+  }
   /** เพิ่งลาก/ย่อขยายเสร็จ → กลืน click ที่เบราว์เซอร์ยิงตามมา ไม่ให้เปิดปุ่ม "เก็บ" */
   const suppressClickRef = useRef(false)
 
   const handlePointerDown = (e: ReactPointerEvent<HTMLSpanElement>, item: PlacedItem) => {
     if (!onDecorationMove) return // ไม่รองรับการลากถ้าผู้เรียกใช้ไม่ได้ผูก handler ไว้
     e.stopPropagation()
+    if (pressRef.current && pressRef.current.pointerId !== e.pointerId) return // นิ้วที่สอง — watchPinch จัดการ
     const el = e.currentTarget
     el.setPointerCapture(e.pointerId)
     if (pressRef.current) window.clearTimeout(pressRef.current.timer)
@@ -676,7 +757,7 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
       const centerX = rect.left + rect.width / 2
       const centerY = rect.top + rect.height / 2
       const startDistance = Math.max(14, Math.hypot(press.x - centerX, press.y - centerY))
-      const baseScale = Math.max(MIN_DECORATION_SCALE, decorationPositions[item.itemId]?.scale ?? 1)
+      const baseScale = Math.max(MIN_DECORATION_SCALE, decorationPositions[item.itemId]?.scale ?? DEFAULT_DECORATION_SCALE)
       resizeStartRef.current = { centerX, centerY, startDistance, baseScale }
       press.mode = 'resize'
       setSelectedId(null)
@@ -684,12 +765,13 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
       setPreviewScale(baseScale)
       try { navigator.vibrate?.(15) } catch { /* ไม่รองรับการสั่น */ }
     }, LONG_PRESS_MS)
-    pressRef.current = { itemId: item.itemId, x: e.clientX, y: e.clientY, timer, mode: 'pending' }
+    pressRef.current = { itemId: item.itemId, pointerId: e.pointerId, x: e.clientX, y: e.clientY, timer, mode: 'pending' }
+    watchPinch(item, e.pointerId, e.clientX, e.clientY)
   }
 
   const handlePointerMove = (e: ReactPointerEvent<HTMLSpanElement>) => {
     const press = pressRef.current
-    if (!press || !containerRef.current) return
+    if (!press || !containerRef.current || press.mode === 'pinch' || e.pointerId !== press.pointerId) return
     if (press.mode === 'pending') {
       if (Math.hypot(e.clientX - press.x, e.clientY - press.y) < MOVE_SLOP_PX) return
       window.clearTimeout(press.timer)
@@ -711,9 +793,10 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
     setPreviewScale(clampScale(start.baseScale * ratio, press.itemId))
   }
 
-  const handlePointerUp = (item: PlacedItem) => {
+  const handlePointerUp = (e: ReactPointerEvent<HTMLSpanElement>, item: PlacedItem) => {
     const press = pressRef.current
-    if (!press) return
+    if (!press || press.mode === 'pinch' || e.pointerId !== press.pointerId) return
+    pinchCleanupRef.current?.()
     window.clearTimeout(press.timer)
     if (press.mode === 'move' && previewPos && onDecorationMove) {
       onDecorationMove(press.itemId, previewPos.xPct, previewPos.yPct)
@@ -759,11 +842,11 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
               key={item.itemId}
               className={`tree-of-life__decoration-item ${isDraggable ? 'tree-of-life__decoration-item--draggable' : ''} ${isDragging ? 'tree-of-life__decoration-item--dragging' : ''}${isResizing ? ' tree-of-life__decoration-item--resizing' : ''}`}
               style={{ left: pos.left, top: pos.top, width: boxSize, height: boxSize }}
-              title={isDraggable ? 'ลากเพื่อย้าย · กดค้างแล้วลากเพื่อย่อ/ขยาย · แตะเพื่อเก็บ' : undefined}
+              title={isDraggable ? 'ลากเพื่อย้าย · กดค้างแล้วลาก หรือถ่าง/หุบสองนิ้ว เพื่อย่อ/ขยาย · แตะเพื่อเก็บ' : undefined}
               onPointerDown={(e) => handlePointerDown(e, item)}
               onPointerMove={handlePointerMove}
-              onPointerUp={() => handlePointerUp(item)}
-              onPointerCancel={() => handlePointerUp(item)}
+              onPointerUp={(e) => handlePointerUp(e, item)}
+              onPointerCancel={(e) => handlePointerUp(e, item)}
               onClick={(e) => handleItemClick(e, item.itemId)}
               onContextMenu={isDraggable ? (e) => e.preventDefault() : undefined}
               onWheel={isDraggable ? (e) => stepScale(item, e.deltaY < 0 ? 1.1 : 1 / 1.1) : undefined}

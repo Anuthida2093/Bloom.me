@@ -32,6 +32,7 @@ import ExchangeCards from './ExchangeCards'
 import SpecialDustTile from './SpecialDustTile'
 import DoubleCardTile from './DoubleCardTile'
 import CategoryFilter from '../shop/CategoryFilter'
+import './ProfileTokens.css'
 import HealthSummary from './HealthSummary'
 
 /*============================================================================*\
@@ -246,7 +247,7 @@ export default function ProfilePage({
           {/* ═══ โซนซ้าย: คลังไอเทม ═══ */}
           <div className="card profile-card--inventory" style={{ padding: 22, maxHeight: 640, overflowY: 'auto' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>{t('profile.inventory')}</div>
-            <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>กดไอเทมเพื่อวางบนต้นไม้ กดซ้ำเพื่อถอด</p>
+            <p className="profile-section-hint">กดไอเทมเพื่อวางบนต้นไม้ กดซ้ำเพื่อถอด</p>
 
             {/* [แก้ตามที่ระบุ] ตัวกรองแบบเดียวกับร้านค้า (จำนวนชิ้น + ปุ่มเลือกหมวด) และอยู่ตลอด แม้ยังไม่มีไอเทม */}
             <CategoryFilter
@@ -498,7 +499,7 @@ export default function ProfilePage({
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>
               {t('profile.journal')}
             </div>
-            <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>ย้อนดูสิ่งที่เคยเขียนไว้ทั้งหมด</p>
+            <p className="profile-section-hint">ย้อนดูสิ่งที่เคยเขียนไว้ทั้งหมด</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button
                 onClick={() => setOpenHistoryFor('ment-reframer-journal')}
@@ -546,7 +547,7 @@ export default function ProfilePage({
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>
               {t('profile.achievements')}
             </div>
-            <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', marginBottom: 16 }}>ปลดล็อกอัตโนมัติเมื่อทำเงื่อนไขสำเร็จ</p>
+            <p className="profile-section-hint">ปลดล็อกอัตโนมัติเมื่อทำเงื่อนไขสำเร็จ</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {BADGE_CATALOG.map((badge) => {
                 const earned = earnedBadges.includes(badge.code)

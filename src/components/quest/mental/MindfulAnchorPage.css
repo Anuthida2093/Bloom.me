@@ -9,11 +9,16 @@
   position: absolute;
   inset: 0;
   z-index: 800;
-  overflow: hidden;
+  /* [แก้ตามที่ระบุ] เดิม overflow:hidden + จัดกึ่งกลาง → จอเตี้ย กรอบ/ปุ่มล่างสุดจมใต้แถบเมนูและเลื่อนไม่ได้
+     ตอนนี้เลื่อนขึ้นลงได้ + เว้นล่างพ้นแถบเมนู (--gpf-safe-bottom) · จัดกึ่งกลางด้วย margin:auto ของลูก
+     (เนื้อหายาวกว่าจอ → ชิดบนแล้วเลื่อนได้ ไม่โดนตัดหัว) */
+  overflow-x: hidden;
+  overflow-y: auto;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 24px 20px;
+  padding: 64px 20px calc(var(--gpf-safe-bottom, 90px) + 12px);
+  box-sizing: border-box;
   --lc-bg-28: #16414A;
   --lc-bg-29: #0C2A33;
   --lc-bg-30: #06171D;
@@ -26,6 +31,12 @@
   --lc-c-33: rgba(127, 231, 217, 0.55);
   --anchor-glow: var(--lc-c-33);
 }
+
+.mindful-anchor > :not(.mindful-anchor__aurora):not(.mindful-anchor__motes):not(.mindful-anchor__close) { margin-block: auto; }
+/* ฉากหลัง/ปุ่มปิดไม่เลื่อนตามเนื้อหา และไม่ทำให้มีพื้นที่เลื่อนเกิน (แสงเรืองขยายเลยขอบ inset -20% + ลอยขึ้นลง) */
+.mindful-anchor > .mindful-anchor__aurora,
+.mindful-anchor > .mindful-anchor__motes,
+.mindful-anchor > .mindful-anchor__close { position: fixed; }
 
 /* ── แสงเรืองใต้น้ำที่เปลี่ยนสีตามเฟสลมหายใจ ── */
 .mindful-anchor__aurora {
@@ -95,8 +106,6 @@
   z-index: 5;
   width: 100%;
   max-width: 460px;
-  max-height: 100%;
-  overflow-y: auto;
   text-align: center;
   padding: 36px 30px 30px;
   border-radius: 28px;
@@ -444,7 +453,7 @@
 
 /* ── จอเล็ก ── */
 @media (max-width: 520px) {
-  .mindful-anchor { padding: 16px 14px; }
+  .mindful-anchor { padding: 60px 14px calc(var(--gpf-safe-bottom, 80px) + 10px); }
   .mindful-anchor__panel { padding: 24px 18px 20px; border-radius: 22px; }
   .mindful-anchor__rhythm-item span { font-size: 22px; }
   .mindful-anchor__stage { gap: 10px; }

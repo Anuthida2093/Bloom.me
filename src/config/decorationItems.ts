@@ -95,9 +95,14 @@ const LEAF_SLOTS: [number, number][] = [
   [50, 24], [36, 31], [64, 31], [43, 40], [57, 40], [29, 42], [71, 42], [50, 34], [40, 22], [60, 22],
 ]
 
-/** สเกลสูงสุดที่ปรับได้ — รูปปั้น/กระถางขยายได้ 2 เท่าของเพดานเดิม (2.5 → 5) ส่วนของแขวน/ลายโพสอิทคงเดิม */
-export function maxDecorationScale(itemId: string): number {
-  return DECORATION_ITEM_META[itemId]?.category === 'statues' ? 5 : 2.5
+/** [แก้ตามที่ระบุ] ขนาดเริ่มต้นของไอเทมที่เพิ่งวาง = 200% (เดิม 100% ดูเล็กเกินไป) */
+export const DEFAULT_DECORATION_SCALE = 2
+
+/** [แก้ตามที่ระบุ] สเกลสูงสุดที่ปรับได้ = 500% ทุกหมวด (เดิมรูปปั้น 5 · ของแขวน/โพสอิท 2.5) */
+// ทุกหมวดเท่ากัน — คงพารามิเตอร์ไว้เผื่อกลับไปแยกเพดานรายหมวดได้โดยไม่ต้องแก้ผู้เรียก
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function maxDecorationScale(_itemId: string): number {
+  return 5
 }
 
 export function defaultDecorationLayout(itemIds: string[]): Record<string, { xPct: number; yPct: number }> {
