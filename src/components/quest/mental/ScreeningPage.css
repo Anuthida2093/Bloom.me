@@ -325,3 +325,23 @@
 }
 .screening__summary-row--s2 .screening__summary-answer { background: rgba(255, 183, 77, 0.3); }
 .screening__summary-row--s3 .screening__summary-answer { background: rgba(239, 83, 80, 0.35); }
+
+/* [แก้ตามที่ระบุ] มาตรวัดความเสี่ยงภาวะซึมเศร้า 0-15 แบ่ง 3 ช่วงตามเกณฑ์ (0-4 / 5-9 / 10-15) */
+.screening__meter { margin: 14px 0 16px; text-align: left; }
+.screening__meter-title { font-size: 13px; color: rgba(232, 237, 247, 0.85); margin-bottom: 8px; }
+.screening__meter-title strong { color: var(--risk-accent); font-size: 15px; }
+.screening__meter-bar { position: relative; display: flex; height: 12px; border-radius: 99px; overflow: visible; }
+.screening__meter-zone { height: 100%; }
+.screening__meter-zone--low { flex: 5; background: #52B788; border-radius: 99px 0 0 99px; }
+.screening__meter-zone--mid { flex: 5; background: #E8A020; }
+.screening__meter-zone--high { flex: 6; background: #EF476F; border-radius: 0 99px 99px 0; }
+.screening__meter-marker {
+  position: absolute; top: 50%; width: 20px; height: 20px; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--fixed-white); border: 3px solid var(--risk-accent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.screening__meter-labels { display: flex; margin-top: 6px; font-size: 11px; color: rgba(232, 237, 247, 0.6); }
+.screening__meter-labels span:nth-child(1) { flex: 5; }
+.screening__meter-labels span:nth-child(2) { flex: 5; text-align: center; }
+.screening__meter-labels span:nth-child(3) { flex: 6; text-align: right; }

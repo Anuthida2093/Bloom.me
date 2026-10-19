@@ -15,6 +15,9 @@ import { BADGE_ICONS } from '../../../config/iconAssets'
 
 const C_1 = '#9B8FD8'
 
+/** ระดับความเสี่ยงภาวะซึมเศร้าแบบสั้น ใช้บนมาตรวัด */
+const RISK_LABEL = { LOW: 'ต่ำ', MODERATE: 'ปานกลาง', HIGH: 'สูง' } as const
+
 /** [แก้ตามที่ระบุ] หัวข้อสั้นของแต่ละข้อ ใช้ในสรุปคำตอบหน้าผลลัพธ์ */
 const SUMMARY_TOPICS: Record<number, string> = {
   1: 'ความสนใจ / ความสุขในสิ่งที่ทำ',
@@ -135,6 +138,22 @@ export default function ScreeningPage({ pending, onFinished, onOpenSafetyNet, on
             <strong>{total}</strong><span>/ 15 คะแนน</span>
           </div>
           <div className="screening__risk-badge">{plan.headline}</div>
+
+          {/* [แก้ตามที่ระบุ] มาตรวัดความเสี่ยงภาวะซึมเศร้า — คะแนนอยู่ช่วงไหน (ต่ำ 0-4 / ปานกลาง 5-9 / สูง 10-15) */}
+          <div className="screening__meter" aria-label={`ความเสี่ยงภาวะซึมเศร้า ${RISK_LABEL[risk]} คะแนน ${total} จาก 15`}>
+            <div className="screening__meter-title">
+              ความเสี่ยงภาวะซึมเศร้า: <strong>{RISK_LABEL[risk]}</strong>
+            </div>
+            <div className="screening__meter-bar">
+              <span className="screening__meter-zone screening__meter-zone--low" />
+              <span className="screening__meter-zone screening__meter-zone--mid" />
+              <span className="screening__meter-zone screening__meter-zone--high" />
+              <span className="screening__meter-marker" style={{ left: `${(total / 15) * 100}%` }} />
+            </div>
+            <div className="screening__meter-labels">
+              <span>ต่ำ</span><span>ปานกลาง</span><span>สูง</span>
+            </div>
+          </div>
 
           <p className="screening__advice">{plan.advice}</p>
 

@@ -39,7 +39,9 @@
      (.dashboard__soil-extension) — เลื่อนแนวนอนยังเป็นการลากฉากของ TreeOfLife เหมือนเดิม */
   overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  /* [แก้ตามที่ระบุ] none (เดิม contain) — ปิดการเด้งเลยขอบ (rubber-band) ของ iPhone: เลื่อนถึงขอบล่างของชั้นดิน
+     แล้วหยุดทันที ไม่ยกดินสูงเกินจนเห็นพื้นหลังด้านล่าง/ด้านบน */
+  overscroll-behavior: none;
   scrollbar-width: none;
 }
 .dashboard__tree-layer::-webkit-scrollbar { display: none; }

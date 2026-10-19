@@ -9,6 +9,15 @@ import App from './App'
 // ธีมสีทำงานจริง ไม่ได้แก้ไขเนื้อหาไฟล์ index.css แต่อย่างใด
 import './index.css'
 
+/* [แก้ตามที่ระบุ] ห้ามซูมทั้งหน้าเว็บด้วยสองนิ้ว/แตะสองครั้ง (iPhone/Android) — ทำให้ปุ่มด้านข้างหลุดขอบจอ
+   meta viewport user-scalable=no ใช้ได้กับ Android แต่ Safari บน iOS ไม่สนใจ จึงกัน gesture ของ Safari ตรงนี้ด้วย
+   (การบีบซูมที่แอปเขียนเอง เช่น แผนที่/ไอเทมบนต้นไม้ ใช้ Pointer Events ไม่โดนผลกระทบ) */
+const blockPageZoom = (e: Event) => e.preventDefault()
+document.addEventListener('gesturestart', blockPageZoom, { passive: false })
+document.addEventListener('gesturechange', blockPageZoom, { passive: false })
+document.addEventListener('gestureend', blockPageZoom, { passive: false })
+document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault() }, { passive: false })
+
 const rootElement = document.getElementById('root')
 if (!rootElement) {
   throw new Error('ไม่พบ element #root ใน index.html ตรวจสอบว่า <div id="root"></div> ยังอยู่')

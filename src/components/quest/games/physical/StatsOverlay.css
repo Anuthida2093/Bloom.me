@@ -66,7 +66,7 @@
 }
 .stats-overlay__fill--trip { background: linear-gradient(90deg, #FFD166, #F4C430); }
 
+/* [แก้ตามที่ระบุ] มือถือใช้แผงแนวตั้งด้านข้างแบบโน้ตบุ๊ก — กว้างเต็มแผง (แผงแคบลงตามจอ) */
 @media (max-width: 520px) {
-  .stats-overlay { width: 100%; flex-direction: row; flex-wrap: wrap; }
-  .stats-overlay__tile { flex: 1 1 120px; }
+  .stats-overlay { width: 100%; }
 }

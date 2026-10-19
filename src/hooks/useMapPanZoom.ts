@@ -38,8 +38,10 @@ function easeInOutCubic(t: number): number {
 
 /** fit = เห็นภาพทั้งใบในกรอบ (contain — ใช้ตอนเดินถึงเป้าแล้ว ให้เห็นเส้นทางครบทั้งเส้น)
  *  ไม่ใส่ = เต็มกรอบ (cover — ตอนกำลังเดิน ไม่เหลือขอบ) */
-export function useMapPanZoom(nativeSize: Size, options: { fit?: boolean; fitInset?: (container: Size) => FitInset } = {}) {
+export function useMapPanZoom(nativeSize: Size, options: { fit?: boolean; fitInset?: (container: Size) => FitInset; portraitZoom?: number } = {}) {
   const fit = options.fit ?? false
+  /** [แก้ตามที่ระบุ] จอแนวตั้ง (มือถือ) ขยายแผนที่เกินจอทั้งสองแกน → ลากเลื่อนขึ้นลงได้แบบแผนที่การเรียนรู้ */
+  const portraitZoom = options.portraitZoom ?? 1
   const fitInsetFn = options.fitInset
   const [containerSize, setContainerSize] = useState<Size>({ width: 0, height: 0 })
   const [pan, setPan] = useState<Point>({ x: 0, y: 0 })
@@ -100,10 +102,10 @@ export function useMapPanZoom(nativeSize: Size, options: { fit?: boolean; fitIns
 
   const getBaseZoom = useCallback((w: number, h: number) => {
     if (w <= 0 || h <= 0 || nativeSize.width <= 0 || nativeSize.height <= 0) return 1
-    if (!fit) return Math.max(w / nativeSize.width, h / nativeSize.height)
+    if (!fit) return Math.max(w / nativeSize.width, h / nativeSize.height) * (h > w ? portraitZoom : 1)
     const iw = Math.max(1, w - inset.left - inset.right), ih = Math.max(1, h - inset.top - inset.bottom)
     return Math.min(iw / nativeSize.width, ih / nativeSize.height)
-  }, [nativeSize, fit, inset])
+  }, [nativeSize, fit, inset, portraitZoom])
 
   // ล็อกการลากให้ติดเป๊ะแค่ขอบภาพ ห้ามลากทะลุ
   const clampPanValue = useCallback((px: number, py: number, z: number) => {

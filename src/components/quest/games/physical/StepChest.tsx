@@ -39,6 +39,8 @@ export function StepChestMarker({ mapDef, onOpen, disabled, ready = true }: { ma
       >
         <span aria-hidden="true">🎁</span>
       </button>
+      {/* [แก้ตามที่ระบุ] ป้ายบอกว่าเส้นชัยมีกล่องสุ่ม */}
+      <span className="step-chest-goal__label" aria-hidden="true">กล่องสุ่ม</span>
     </div>
   )
 }

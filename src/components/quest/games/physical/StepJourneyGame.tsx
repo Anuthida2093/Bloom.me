@@ -149,7 +149,7 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
   const chestPromptRef = useRef<HTMLDivElement | null>(null)
   const showChestPrompt = chest.ready && !chest.popupOpen
   const bottomReserve = useBottomReserve(chestPromptRef, [showChestPrompt])
-  const { containerRef, scale, pan, handlers } = useMapPanZoom(MAP_NATIVE_SIZE, { fit: reachedGoal, fitInset: mapFrameInset(bottomReserve) })
+  const { containerRef, scale, pan, handlers } = useMapPanZoom(MAP_NATIVE_SIZE, { fit: reachedGoal, fitInset: mapFrameInset(bottomReserve), portraitZoom: 1.45 })
 
   useEffect(() => {
     if (journey && activeMapIndex !== visualMapIndex && !isFogging) {
