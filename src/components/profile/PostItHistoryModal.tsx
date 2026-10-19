@@ -96,7 +96,7 @@ export default function PostItHistoryModal({ userId, onTreePostIts, onClose }: P
           </div>
 
           <div className="postit-history__list">
-            {rows.length === 0 && <p className="postit-history__empty">ยังไม่มีโพสอิท — เขียนความรู้สึกตอนเช็คอินอารมณ์รายวันแล้วจะได้โพสอิทติดบนต้นไม้</p>}
+            {rows.length === 0 && <p className="postit-history__empty">ยังไม่มีโพสอิท เขียนความรู้สึกตอนเช็คอินอารมณ์รายวันแล้วจะได้โพสอิทติดบนต้นไม้</p>}
             {rows.length > 0 && filtered.length === 0 && <p className="postit-history__empty">ไม่พบโพสอิทในช่วงนี้</p>}
             {filtered.map((r) => (
               <div key={r.id} className="postit-history__item">

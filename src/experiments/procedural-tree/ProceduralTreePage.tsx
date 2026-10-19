@@ -81,7 +81,7 @@ export default function ProceduralTreePage() {
             style={{ padding: '3px 6px', borderRadius: 6, border: 'none' }}
           >
             {MBTI_TYPES.map((t) => (
-              <option key={t} value={t}>{t} — {MBTI_TREE_THEME[t].treeName}</option>
+              <option key={t} value={t}>{t} - {MBTI_TREE_THEME[t].treeName}</option>
             ))}
           </select>
           <span />

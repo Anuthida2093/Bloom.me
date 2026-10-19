@@ -52,7 +52,7 @@
   top: 100%;
   left: 0;
   right: 0;
-  height: max(55vh, 360px);
+  height: clamp(70px, 12vh, 130px); /* [แก้ตามที่ระบุ] เพิ่มดินแค่นิดเดียว (เดิม max(55vh, 360px)) */
   pointer-events: none;
   background:
     radial-gradient(circle at 18% 22%, rgba(150, 132, 112, .55) 0 3px, transparent 4px) 0 0 / 74px 61px,

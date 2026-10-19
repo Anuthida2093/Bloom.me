@@ -5,6 +5,9 @@ import './MapPathRenderer.css'
 
 /** โหมดช่วยแก้จุดเส้นทาง: เติม ?editPath ท้าย URL → แตะแผนที่แล้วขึ้นพิกัด x,y (%) ของจุดที่แตะ
  *  เอาไปใส่ใน MAP_PATH_POINTS (journeyPathMath.ts) ได้ตรงๆ — ปกติปิดอยู่ ผู้เล่นไม่เห็น */
+/** จำนวนจุดต่อป้อม 1 ป้อม */
+const FORT_EVERY = 5
+
 const EDIT_PATH_MODE = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('editPath')
 
 /** ตัวอักษรบนจุด (Start / เลขจุด) — [แก้ตามที่ระบุ] บางลงและสวยขึ้น: ฟอนต์บาง (300) ขอบเงาน้ำเงินเข้มบางมาก
@@ -66,14 +69,8 @@ export default function MapPathRenderer({ mapDef: mapDefProp, progressPct }: Map
       )}
 
       <svg className="map-path-renderer__svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        <path d={pathD} pathLength={100} className="map-path-renderer__path-bg" />
-        
-        <path
-          d={pathD}
-          pathLength={100}
-          className="map-path-renderer__path-progress"
-          style={{ strokeDasharray: 100, strokeDashoffset: 100 - clampedProgress }}
-        />
+        {/* [แก้ตามที่ระบุ] ไม่แสดงเส้นทางให้เห็น (ยังใช้คำนวณตำแหน่งนกฮูก/จุดตามเดิม) — โหมด ?editPath ยังเห็นเส้นไว้จูนจุด */}
+        {EDIT_PATH_MODE && <path d={pathD} pathLength={100} className="map-path-renderer__path-bg" />}
 
         <defs>
           <radialGradient id="mpr-dot-fill" cx="35%" cy="30%" r="75%">
@@ -95,6 +92,21 @@ export default function MapPathRenderer({ mapDef: mapDefProp, progressPct }: Map
             · จุดที่นกฮูกเพิ่งไปถึง = วงแสงกะพริบขยายออก (จุดสิ้นสุดเป็นหีบสมบัติ — StepChestMarker) */}
         {markerWaypoints(mapDef).map((wp, i) => {
           const reached = i <= lastReached
+          // [แก้ตามที่ระบุ] ทุก 5 จุดเป็นป้อม 1 ป้อม (จุดที่ 5, 10, 15 ...)
+          if ((i + 1) % FORT_EVERY === 0) {
+            return (
+              <g key={i} className={`mpr-fort${reached ? ' mpr-fort--reached' : ''}${i === lastReached ? ' mpr-wp--arrived' : ''}`}>
+                {reached && <circle cx={wp.x} cy={wp.y - 0.6} r="3.4" fill="url(#mpr-dot-glow)" className="mpr-wp__glow" />}
+                <g transform={`translate(${wp.x} ${wp.y})`}>
+                  <line x1="0" y1="-2.2" x2="0" y2="-3.7" className="mpr-fort__pole" />
+                  <path d="M0 -3.7 L1.3 -3.3 L0 -2.9 Z" className="mpr-fort__flag" />
+                  <path d="M-1.7 -2.3 h0.8 v0.6 h0.5 v-0.6 h0.8 v0.6 h0.5 v-0.6 h0.8 v3.2 h-3.4 Z" className="mpr-fort__wall" />
+                  <path d="M-0.45 0.9 v-0.9 a0.45 0.45 0 0 1 0.9 0 v0.9 Z" className="mpr-fort__door" />
+                </g>
+                <text x={wp.x} y={wp.y - 4.2} {...LABEL_PROPS}>{i + 1}</text>
+              </g>
+            )
+          }
           return (
             <g key={i} className={`mpr-wp${reached ? ' mpr-wp--reached' : ''}${i === lastReached ? ' mpr-wp--arrived' : ''}`}>
               {reached && <circle cx={wp.x} cy={wp.y} r="2.2" fill="url(#mpr-dot-glow)" className="mpr-wp__glow" />}

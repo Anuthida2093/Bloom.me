@@ -121,7 +121,7 @@ describe('buildTreeModel', () => {
   })
 })
 
-describe('buildTreeModel — ต้นเฉพาะของผู้ใช้ (userSeed)', () => {
+describe('buildTreeModel ต้นเฉพาะของผู้ใช้ (userSeed)', () => {
   const grown = { ...base, trunkBranchLevel: 60 }
 
   it('ผู้ใช้ต่างกัน สายพันธุ์เดียวกัน → โครงกิ่งไม่ซ้ำกัน แต่คนเดิมได้ต้นเดิมทุกครั้ง', () => {
@@ -146,7 +146,7 @@ describe('buildTreeModel — ต้นเฉพาะของผู้ใช้
   })
 })
 
-describe('buildTreeModel — หน้าตาต้นสน/ไผ่', () => {
+describe('buildTreeModel หน้าตาต้นสน/ไผ่', () => {
   it('สน (ISTJ กรวย / INTJ ไซเปรส): หน้าอยู่กลางพุ่มเข็มด้านหน้า วาดทับใบ', () => {
     for (const mbtiType of ['ISTJ', 'INTJ'] as const) {
       const m = buildTreeModel({ mbtiType, trunkBranchLevel: 60, leafFlowerLevel: 20, userSeed: 'u1' })

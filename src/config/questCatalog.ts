@@ -58,6 +58,8 @@ export interface QuestDef {
    *  อย่าง know-daily-checkin ไม่ต้องใส่ field นี้ ตามที่ comment ใน schema.prisma ระบุไว้เอง) */
   requiresQuestIds?: string[]
   isPassive?: boolean
+  /** [แก้ตามที่ระบุ] ล็อกไว้จนกว่า login streak จะครบจำนวนวันนี้ (เช่น ป่าแห่งสิบปี 21 วัน) */
+  unlockStreakDays?: number
   /** คีย์ของไฟล์เกมใน src/config/questGameRegistry.ts (ไม่ใส่ = ใช้หน้าเควสยืนยันแบบง่าย) */
   gameKey?: string
   /** default = 'LOW' */
@@ -106,8 +108,8 @@ export const KNOWLEDGE_DAILY: QuestDef[] = [
   },
   {
     code: 'know-deep-root', icon: '🌿', title: 'The Deep Root', titleTh: 'หยั่งรากลึก / โหมดจดจ่อ',
-    desc: 'จดจ่อ 90 นาที + พัก 15 นาที = 1 รอบ (วันละไม่เกิน 3 รอบ) — จบรอบแรกปลดล็อกเทกระเป๋าความจำ ครบ 3 รอบรับรางวัลพิเศษ',
-    howTo: 'อ่านหนังสือหรือทำงานแบบ Deep Work 90 นาที ห้ามวอกแวก แล้วพักสมองจริงๆ 15 นาที (หลับตา เดินเล่น ห้ามเล่นมือถือ) นับเป็น 1 รอบ — จบรอบแรก "เทกระเป๋าความจำผ่านเสียง" เล่นได้ทันที และกลับมาเล่นโหมดจดจ่อต่อได้อีกจนครบ 3 รอบของวัน (ครบ 3 รอบไม่กดข้าม ได้รางวัลพิเศษ: การ์ดแลกซื้อหรือเหรียญโบนัส) · โหมดปกติกดข้ามได้หลังจดจ่อครบ 45 นาที แต่ได้รางวัลครึ่งเดียว',
+    desc: 'จดจ่อ 90 นาที + พัก 15 นาที = 1 รอบ (วันละไม่เกิน 3 รอบ) จบรอบแรกปลดล็อกเทกระเป๋าความจำ ครบ 3 รอบรับรางวัลพิเศษ',
+    howTo: 'อ่านหนังสือหรือทำงานแบบ Deep Work 90 นาที ห้ามวอกแวก แล้วพักสมองจริงๆ 15 นาที (หลับตา เดินเล่น ห้ามเล่นมือถือ) นับเป็น 1 รอบ จบรอบแรก "เทกระเป๋าความจำผ่านเสียง" เล่นได้ทันที และกลับมาเล่นโหมดจดจ่อต่อได้อีกจนครบ 3 รอบของวัน (ครบ 3 รอบไม่กดข้าม ได้รางวัลพิเศษ: การ์ดแลกซื้อหรือเหรียญโบนัส) · โหมดปกติกดข้ามได้หลังจดจ่อครบ 45 นาที แต่ได้รางวัลครึ่งเดียว',
     theory: '90/20 Rule · Ultradian Rhythms (Psomas, 2021)',
     // [แก้ตามที่ระบุ — Focus Mode] 1 รอบ (90+15) = ทำสำเร็จ 1 ครั้ง วันละไม่เกิน 3 ครั้ง — backend รองรับ
     // Quest.maxPerDay + QuestLog.sequenceInDay อยู่แล้ว (seed ต้องตั้ง maxPerDay: 3 ให้ deep-root — ดู docs/PROGRESSION_API.md)
@@ -133,7 +135,7 @@ export const KNOWLEDGE_DAILY: QuestDef[] = [
   {
     code: 'know-daily-checkin', icon: '💧', title: 'Daily Learning Check-in', titleTh: 'เช็กอินรายวัน',
     desc: 'ตอบคำถามสั้นๆ 5 ข้อประเมินผลการเรียนรู้ นำคะแนนไปรดน้ำต้นไม้',
-    howTo: 'ให้คะแนน 5 ด้าน: ความชัดเจนของเป้าหมาย, การจดจ่อ, ความพยายามดึงข้อมูล, การพักผ่อนสมอง, ความพึงพอใจในการเติบโต — ตอบครบ 5 ข้อ บัวรดน้ำจะเทน้ำลงลำต้นพร้อมเอฟเฟกต์แสงวิบวับ',
+    howTo: 'ให้คะแนน 5 ด้าน: ความชัดเจนของเป้าหมาย, การจดจ่อ, ความพยายามดึงข้อมูล, การพักผ่อนสมอง, ความพึงพอใจในการเติบโต ตอบครบ 5 ข้อ บัวรดน้ำจะเทน้ำลงลำต้นพร้อมเอฟเฟกต์แสงวิบวับ',
     theory: 'Deliberate Practice · Ultradian Rhythms · Growth Mindset',
     // [แก้บั๊ก] เดิม isLocked + unlockAfterQuestCount: 2 = ทำด่านไหนก็ได้ 2 ด่านแล้วด่านสุดท้ายปลดล็อกเลย
     // (ข้ามด่าน 3-4 ได้) ตอนนี้ต้องผ่านด่านก่อนหน้า (ผสมเกสรข้ามศาสตร์) ตามลำดับเหมือนด่านอื่น
@@ -155,8 +157,8 @@ export const KNOWLEDGE_SIDE: QuestDef[] = [
     // ContentReviewGame.tsx (เลือกวันเดียวทบทวนเป้าหมาย Active Focus ของวันนี้ 1-30 วันข้างหน้า
     // ตรงกับ backend config: minDaysAhead:1, maxDaysAhead:30)
     code: 'know-content-review', icon: '📅', title: 'Time Capsule', titleTh: 'แคปซูลเวลา',
-    desc: 'ปลดล็อกเมื่อทำ "เทกระเป๋าความจำผ่านเสียง" สำเร็จ — ตั้งวัน-เวลากลับมาทบทวน ระบบเตือนเมื่อถึงเวลา',
-    howTo: 'เลือกวันในอนาคต (1-30 วันข้างหน้า) ที่อยากกลับมาทบทวนเป้าหมาย/สิ่งที่ตั้งใจไว้วันนี้อีกครั้ง — ยิ่งเว้นระยะห่างพอดีกับจังหวะที่สมองกำลังจะลืม ยิ่งจำได้แม่นยำและนานขึ้น',
+    desc: 'ปลดล็อกเมื่อทำ "เทกระเป๋าความจำผ่านเสียง" สำเร็จ ตั้งวัน-เวลากลับมาทบทวน ระบบเตือนเมื่อถึงเวลา',
+    howTo: 'เลือกวันในอนาคต (1-30 วันข้างหน้า) ที่อยากกลับมาทบทวนเป้าหมาย/สิ่งที่ตั้งใจไว้วันนี้อีกครั้ง ยิ่งเว้นระยะห่างพอดีกับจังหวะที่สมองกำลังจะลืม ยิ่งจำได้แม่นยำและนานขึ้น',
     theory: 'Spacing Effect (Cepeda et al., 2008)',
     // isDaily: ตั้งแคปซูลใหม่ได้วันละครั้ง (หลังเทกระเป๋าความจำของวันนั้น) — เดิม false = ทำได้ครั้งเดียวตลอดชาติ
     category: 'KNOWLEDGE', controlType: 'CALENDAR', coinReward: 40, expReward: 30, isDaily: true,
@@ -167,26 +169,28 @@ export const KNOWLEDGE_SIDE: QuestDef[] = [
     // ที่นัดทบทวนเป้าหมายของวันนี้) ใช้ StrategicDelayGame.tsx เดิมจากประวัติ git
     code: 'know-strategic-delay', icon: '📅', title: 'Strategic Delay', titleTh: 'กลยุทธ์การรอคอย',
     desc: 'วางแผนทบทวนเรื่องที่อยากจำให้ได้นานเป็นรายเดือน ระบบจัดตารางทบทวน 3 รอบให้',
-    howTo: 'เลือกเรื่องที่อยากจำให้ได้ยาวๆ และระยะเวลาที่อยากจำ (3/6/12 เดือน) — ระบบเว้นระยะทบทวนราว 8% ของช่วงเวลาทั้งหมด ถ้าต้องการจำข้อมูลให้ได้เป็นปี ระยะห่างในการทบทวนควรเป็นแค่ 5-10% ของเวลาทั้งหมด',
+    howTo: 'เลือกเรื่องที่อยากจำให้ได้ยาวๆ และระยะเวลาที่อยากจำ (3/6/12 เดือน) ระบบเว้นระยะทบทวนราว 8% ของช่วงเวลาทั้งหมด ถ้าต้องการจำข้อมูลให้ได้เป็นปี ระยะห่างในการทบทวนควรเป็นแค่ 5-10% ของเวลาทั้งหมด',
     theory: 'Spacing Effect (Cepeda et al., 2008)',
     category: 'KNOWLEDGE', controlType: 'GOAL_INPUT', coinReward: 40, expReward: 30, isDaily: true,
-    gameKey: 'strategic-delay', energyLevel: 'LOW',
+    // [แก้ตามที่ระบุ] ล็อกจนกว่าจะตั้งแคปซูลเวลาวันนี้สำเร็จ
+    gameKey: 'strategic-delay', energyLevel: 'LOW', requiresQuestIds: ['know-content-review'],
   },
   {
     // [นำกลับมาตามที่ระบุ] กระจกแห่งความจริง — ตอบความรู้สึกจริงหลังทำเควสของวันนี้
     // บันทึกผ่าน submitQuestFeedback() ท่อเดียวกับ QuestFeedbackPrompt (badge Mirror of Truth)
     code: 'know-mirror-of-truth', icon: '🪞', title: 'Mirror of Truth', titleTh: 'กระจกแห่งความจริง',
     desc: 'ย้อนดูเควสที่ทำวันนี้ แล้วตอบตรงๆ ว่ารู้สึกยังไงหลังทำแต่ละอัน',
-    howTo: 'หลังเรียน/ทำเควสเสร็จ เลือกความรู้สึกจริงของแต่ละเควส (ดี / เฉยๆ / ไม่ค่อยดี) — ไม่มีคำตอบถูกผิด ใช้ดูว่าวิธีเรียนแบบไหนเหมาะกับเรา',
-    theory: 'Metacognition — การสะท้อนคิดหลังเรียน',
+    howTo: 'หลังเรียน/ทำเควสเสร็จ เลือกความรู้สึกจริงของแต่ละเควส (ดี / เฉยๆ / ไม่ค่อยดี) ไม่มีคำตอบถูกผิด ใช้ดูว่าวิธีเรียนแบบไหนเหมาะกับเรา',
+    theory: 'Metacognition การสะท้อนคิดหลังเรียน',
     category: 'KNOWLEDGE', controlType: 'ACTION_BUTTON', coinReward: 20, expReward: 15, isDaily: true,
-    gameKey: 'mirror-of-truth', energyLevel: 'LOW',
+    // [แก้ตามที่ระบุ] ล็อกจนกว่าจะเช็กอินรายวัน (ด่านสุดท้ายของเส้นทาง) สำเร็จวันนี้
+    gameKey: 'mirror-of-truth', energyLevel: 'LOW', requiresQuestIds: ['know-daily-checkin'],
   },
   {
     code: 'know-guardian-of-rest', icon: '🛡️', title: 'Guardian of Rest', titleTh: 'ผู้พิทักษ์การพักผ่อน',
-    desc: 'พักผ่อนให้ครบ 15 นาทีหลังจดจ่อแต่ละรอบ แล้วกดรับรางวัลได้วันละครั้ง — ฝึกหนักเกิน 4-5 ชม./วัน ต้นไม้จะเริ่มไหม้เกรียม',
-    howTo: 'บังคับหยุดฝึกเมื่อครบโควตา 4-5 ชั่วโมงของการฝึกหนักต่อวัน หากฝืนทำต่อ ต้นไม้จะเฉา (Burnout) — ทำงานอัตโนมัติจากเวลาสะสม',
-    theory: 'Deliberate Practice — ขีดจำกัดการฝึกฝน 4-5 ชม./วัน',
+    desc: 'พักผ่อนให้ครบ 15 นาทีหลังจดจ่อแต่ละรอบ แล้วกดรับรางวัลได้วันละครั้ง ฝึกหนักเกิน 4-5 ชม./วัน ต้นไม้จะเริ่มไหม้เกรียม',
+    howTo: 'บังคับหยุดฝึกเมื่อครบโควตา 4-5 ชั่วโมงของการฝึกหนักต่อวัน หากฝืนทำต่อ ต้นไม้จะเฉา (Burnout) ทำงานอัตโนมัติจากเวลาสะสม',
+    theory: 'Deliberate Practice ขีดจำกัดการฝึกฝน 4-5 ชม./วัน',
     // ปลดล็อกเมื่อจบโหมดจดจ่อรอบแรกของวันนี้ (requiresQuestIds)
     // [แก้ตามที่ระบุ] จ่ายรางวัลเมื่อพักครบ 15 นาทีเต็ม (utils/restLog.ts) — กดรับในหน้าเควส วันละครั้ง
     category: 'KNOWLEDGE', coinReward: 30, expReward: 20, isDaily: true, isPassive: true,
@@ -194,12 +198,12 @@ export const KNOWLEDGE_SIDE: QuestDef[] = [
   },
   {
     code: 'know-ten-year-forest', icon: '🏕️', title: 'Ten-Year Forest', titleTh: 'ป่าแห่งสิบปี',
-    desc: 'ปฏิทิน Streak วันต่อวัน — เข้าแอปต่อเนื่องครบ 21 วัน กดรับรางวัลได้วันละครั้ง',
+    desc: 'ปฏิทิน Streak วันต่อวัน เข้าแอปต่อเนื่องครบ 21 วัน กดรับรางวัลได้วันละครั้ง',
     howTo: 'รักษาความต่อเนื่อง (login streak) ของการฝึกฝน ไม่จำเป็นต้องเยอะ แต่ต้องไม่ขาด',
     theory: 'The 10-Year Rule (Ericsson et al., 1993)',
     // [แก้ตามที่ระบุ] รับรางวัลได้วันละครั้ง (isDaily) เมื่อ streak ต่อเนื่อง ≥ 21 วัน — เดิมไม่มีทางรับรางวัลเลย
     category: 'KNOWLEDGE', coinReward: 20, expReward: 15, isDaily: true, isPassive: true,
-    gameKey: 'ten-year-forest', energyLevel: 'LOW',
+    gameKey: 'ten-year-forest', energyLevel: 'LOW', unlockStreakDays: 21,
   },
 ]
 
@@ -215,7 +219,7 @@ export const PHYSICAL_DAILY: QuestDef[] = [
     desc: 'ออกไปรับแสงแดดอ่อนๆ แล้วถ่ายรูปยืนยันว่าออกไปรับแดดจริง',
     // [แก้รอบนี้ — ข้อ D7] เปลี่ยนจากจับเวลา → ถ่ายรูปยืนยัน (เหมือน phys-hydration-drop)
     howTo: 'ออกไปรับแสงแดดอ่อนๆ หรือยืนใกล้หน้าต่างที่แดดส่องถึงในช่วงเช้า ก่อนเริ่มเรียนหรือทำงาน แล้วถ่ายรูปยืนยันว่าออกไปรับแดดจริง',
-    theory: 'Circadian Rhythm — แสงเช้ากระตุ้น Serotonin และรีเซ็ตนาฬิกาชีวภาพ',
+    theory: 'Circadian Rhythm แสงเช้ากระตุ้น Serotonin และรีเซ็ตนาฬิกาชีวภาพ',
     category: 'HEALTH', controlType: 'PHOTO', coinReward: 35, expReward: 25, isDaily: true,
     gameKey: 'photosynthesis', energyLevel: 'LOW',
   },
@@ -235,8 +239,8 @@ export const PHYSICAL_DAILY: QuestDef[] = [
     // "เล่นซ้ำได้ 10 ครั้ง/วัน" ของ frontend เป็น product decision ที่แยกจากเรื่อง identity sync)
     code: 'phys-hydration-drop', icon: '💧', title: 'Hydration Drop', titleTh: 'น้ำพุหล่อเลี้ยงราก',
     desc: 'ถ่ายรูปแก้วน้ำเต็ม แล้วถ่ายอีกครั้งตอนดื่มหมดแก้ว เพื่อยืนยันว่าดื่มน้ำจริง',
-    howTo: 'ถ่ายรูปแก้วน้ำตอนเต็มแก้ว 1 รูป ดื่มให้หมด แล้วถ่ายรูปแก้วเปล่าอีก 1 รูปเพื่อยืนยัน — เล่นซ้ำได้สูงสุด 10 ครั้ง/วัน ได้รางวัลเท่ากันทุกครั้ง',
-    theory: 'Hydration & Cognitive Performance — ขาดน้ำ 1-2% สมาธิและความจำลดลงชัดเจน',
+    howTo: 'ถ่ายรูปแก้วน้ำตอนเต็มแก้ว 1 รูป ดื่มให้หมด แล้วถ่ายรูปแก้วเปล่าอีก 1 รูปเพื่อยืนยัน เล่นซ้ำได้สูงสุด 10 ครั้ง/วัน ได้รางวัลเท่ากันทุกครั้ง',
+    theory: 'Hydration & Cognitive Performance ขาดน้ำ 1-2% สมาธิและความจำลดลงชัดเจน',
     category: 'HEALTH', controlType: 'PHOTO', coinReward: 25, expReward: 20, isDaily: true,
     gameKey: 'pure-water', energyLevel: 'LOW', maxPerDay: 10, isRepeatable: true,
   },
@@ -256,8 +260,8 @@ export const PHYSICAL_DAILY: QuestDef[] = [
     // แค่ทริปเดียวตลอดชาติ เล่นซ้ำไม่ได้อีกเลยหลังถึงจุดหมายครั้งแรก
     code: 'phys-vitality-steps', icon: '🦶', title: 'Vitality Steps', titleTh: 'ก้าวเพื่อสุขภาพ',
     desc: 'ทริปรายวัน: เลือกแผนที่ 1 ใบ เดินให้ถึงเป้าก้าววันนี้ตาม BMI พาตัวละครไปถึงปลายทาง',
-    howTo: 'เลือกแผนที่ 1 ใบจาก 8 ใบสำหรับวันนี้ แล้วเดินสะสมก้าว (ซิงก์จาก Google Fit/Apple Health/เซนเซอร์ หรือกรอกเอง) ตัวละครเดินตามเส้นทางตามก้าวที่เดินได้ ถึงเป้าแล้วเปิดหีบสมบัติที่เส้นชัย (วันละ 1 ใบ) แล้วรับรางวัลวันนี้ — ตัดรอบเที่ยงคืน ถ้าลืมกดรับ ระบบสรุปรางวัลให้ตอนเปิดแอปครั้งถัดไป — เดินครบเป้าสะสม 21 วันขึ้นไป มีโอกาสได้ไอเทมแลกซื้อของพิเศษ/หายาก',
-    theory: 'Physical Activity Guidelines — เดิน 8,000+ ก้าว/วัน ลดความเสี่ยงโรคหัวใจและเบาหวานชนิดที่ 2 ได้อย่างมีนัยสำคัญ',
+    howTo: 'เลือกแผนที่ 1 ใบจาก 8 ใบสำหรับวันนี้ แล้วเดินสะสมก้าว (ซิงก์จาก Google Fit/Apple Health/เซนเซอร์ หรือกรอกเอง) ตัวละครเดินตามเส้นทางตามก้าวที่เดินได้ ถึงเป้าแล้วเปิดหีบสมบัติที่เส้นชัย (วันละ 1 ใบ) แล้วรับรางวัลวันนี้ ตัดรอบเที่ยงคืน ถ้าลืมกดรับ ระบบสรุปรางวัลให้ตอนเปิดแอปครั้งถัดไป เดินครบเป้าสะสม 21 วันขึ้นไป มีโอกาสได้ไอเทมแลกซื้อของพิเศษ/หายาก',
+    theory: 'Physical Activity Guidelines เดิน 8,000+ ก้าว/วัน ลดความเสี่ยงโรคหัวใจและเบาหวานชนิดที่ 2 ได้อย่างมีนัยสำคัญ',
     category: 'HEALTH', controlType: 'STEP_JOURNEY', coinReward: 60, expReward: 50, isDaily: false,
     gameKey: 'step-journey', energyLevel: 'LOW', maxPerDay: 1, isRepeatable: true,
     // [เพิ่มรอบนี้ — ปรับ layout] แผนที่ต้องเต็มพื้นที่ .game-shell__stage จริงๆ ไม่ใช่การ์ด
@@ -267,8 +271,8 @@ export const PHYSICAL_DAILY: QuestDef[] = [
   {
     code: 'phys-balanced-nutrients', icon: '🍽️', title: 'Balanced Nutrients', titleTh: 'แคลอรี่ตาม BMI',
     desc: 'ถ่ายรูปมื้ออาหาร ให้ระบบช่วยดูแลเป้าหมายแคลอรี่ตามรูปร่างของคุณ',
-    howTo: 'ถ่ายรูปมื้ออาหารก่อนทานทุกมื้อ (ครบ 3 มื้อ/วันถือว่าสำเร็จ) ระบบจะคำนวณเป้าหมายแคลอรี่วันนี้ให้จาก BMI ของคุณ และช่วยตรวจสอบรูปเบื้องต้น — ถึง 18:00 แล้วกินครบเป้าแคลอรี่ของวัน รับรางวัลให้อัตโนมัติ',
-    theory: 'Mifflin-St Jeor Equation (TDEE) ปรับตามเกณฑ์ BMI — ต่ำ/ปกติ/เกิน กำหนดส่วนเกิน/สมดุล/ส่วนขาดของพลังงานที่ต่างกัน',
+    howTo: 'ถ่ายรูปมื้ออาหารก่อนทานทุกมื้อ (ครบ 3 มื้อ/วันถือว่าสำเร็จ) ระบบจะคำนวณเป้าหมายแคลอรี่วันนี้ให้จาก BMI ของคุณ และช่วยตรวจสอบรูปเบื้องต้น ถึง 18:00 แล้วกินครบเป้าแคลอรี่ของวัน รับรางวัลให้อัตโนมัติ',
+    theory: 'Mifflin-St Jeor Equation (TDEE) ปรับตามเกณฑ์ BMI ต่ำ/ปกติ/เกิน กำหนดส่วนเกิน/สมดุล/ส่วนขาดของพลังงานที่ต่างกัน',
     category: 'HEALTH', controlType: 'PHOTO', coinReward: 40, expReward: 30, isDaily: true,
     energyLevel: 'LOW',
     config: {
@@ -315,7 +319,7 @@ export const MENTAL_DAILY: QuestDef[] = [
   {
     code: 'ment-mindful-anchor', icon: '⚓', title: 'The Mindful Anchor', titleTh: 'ทอดสมอใจ',
     desc: 'หายใจตามวงกลมเวทมนตร์จังหวะ 4-7-8 เป็นเวลา 2 นาที',
-    howTo: 'เมื่อต้องการความสงบ หน้าจอจะตัดเข้าสู่กราฟิกวงกลมขยายเข้า-ออก (หรือภาพลมพัดใบไม้) ให้หายใจตามจังหวะ 4-7-8 — เข้า 4 วิ กลั้น 7 วิ ผ่อนออก 8 วิ ต่อเนื่อง 2 นาที',
+    howTo: 'เมื่อต้องการความสงบ หน้าจอจะตัดเข้าสู่กราฟิกวงกลมขยายเข้า-ออก (หรือภาพลมพัดใบไม้) ให้หายใจตามจังหวะ 4-7-8 เข้า 4 วิ กลั้น 7 วิ ผ่อนออก 8 วิ ต่อเนื่อง 2 นาที',
     theory: 'Mindfulness-Based Stress Reduction (Jon Kabat-Zinn, UMass)',
     category: 'EMOTION', controlType: 'BREATHING', coinReward: 30, expReward: 25, isDaily: true,
     energyLevel: 'LOW', isCalming: true,
@@ -326,7 +330,7 @@ export const MENTAL_SIDE: QuestDef[] = [
   {
     code: 'ment-reframer-journal', icon: '📖', title: 'My Diary', titleTh: 'ไดอะรี่ของฉัน',
     desc: 'เขียนระบายความรู้สึก แล้วให้ AI ช่วยปรับมุมมองให้เป็นกลางขึ้น',
-    howTo: 'บันทึกเรื่องราวของคุณในแบบของคุณเอง ทั้งวันที่สดใสและวันที่หม่นหมอง ความสุขและความทุกข์ ทุกเรื่องราวที่คุณเลือกแบ่งปันล้วนมีพลัง ค่อยๆ เรียบเรียงความรู้สึกให้กลายเป็นถ้อยคำ แล้วปล่อยให้หน้ากระดาษโอบรับมันไว้ — ถ้ามีความคิดที่หนักใจ AI จะช่วยชวนมองมุมใหม่ให้ใจเบาลง',
+    howTo: 'บันทึกเรื่องราวของคุณในแบบของคุณเอง ทั้งวันที่สดใสและวันที่หม่นหมอง ความสุขและความทุกข์ ทุกเรื่องราวที่คุณเลือกแบ่งปันล้วนมีพลัง ค่อยๆ เรียบเรียงความรู้สึกให้กลายเป็นถ้อยคำ แล้วปล่อยให้หน้ากระดาษโอบรับมันไว้ ถ้ามีความคิดที่หนักใจ AI จะช่วยชวนมองมุมใหม่ให้ใจเบาลง',
     theory: 'Expressive Writing Therapy (Pennebaker) & Cognitive Restructuring',
     category: 'EMOTION', controlType: 'GOAL_INPUT', coinReward: 40, expReward: 35, isDaily: false,
     energyLevel: 'LOW', isCalming: true,
@@ -335,7 +339,7 @@ export const MENTAL_SIDE: QuestDef[] = [
     code: 'ment-gratitude-shield', icon: '🛡️', title: 'Gratitude', titleTh: 'คำขอบคุณ',
     desc: 'พิมพ์ขอบคุณสิ่งดีๆ 1 เรื่องก่อนนอน ติดต่อกัน 14 วัน ปลดล็อกออร่าต้นไม้',
     howTo: 'วันนี้คุณอยากขอบคุณใคร? อาจเป็นสิ่งดีๆ ที่คุณได้ลงมือทำ หรือใครสักคนที่มอบความใจดีให้คุณ ลองบอกว่าสิ่งนั้นมีความหมายกับหัวใจคุณอย่างไร แล้วเรียบเรียงเป็นถ้อยคำขอบคุณจากใจ ทำต่อเนื่องครบ 14 วันเพื่อปลดล็อกออร่าเรืองแสงรอบต้นไม้',
-    theory: 'Positive Psychology (Seligman) — สร้าง Positive Bias และ Resilience',
+    theory: 'Positive Psychology (Seligman) สร้าง Positive Bias และ Resilience',
     category: 'EMOTION', controlType: 'GOAL_INPUT', coinReward: 35, expReward: 30, isDaily: false,
     energyLevel: 'LOW', isCalming: true,
   },

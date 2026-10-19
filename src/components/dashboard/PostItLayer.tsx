@@ -81,7 +81,7 @@ export default function PostItLayer({ postIts, onOpen, onMove }: PostItLayerProp
             type="button"
             className={`postit-layer__note${dragging ? ' is-dragging' : ''}`}
             title={`${p.content}\n(ลากเพื่อย้าย · แตะเพื่ออ่าน)`}
-            aria-label={`โพสอิท: ${p.content} — แตะเพื่ออ่าน ลากเพื่อย้าย`}
+            aria-label={`โพสอิท: ${p.content} แตะเพื่ออ่าน ลากเพื่อย้าย`}
             onPointerDown={(e) => handlePointerDown(e, p)}
             onPointerMove={handlePointerMove}
             onPointerUp={(e) => handlePointerUp(e, p)}

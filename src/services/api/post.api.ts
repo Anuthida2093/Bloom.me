@@ -7,7 +7,7 @@ import { getCachedMe } from './user.api'
 /** โหมด live: ดึงโพสต์เดียวจากฟีด (backend ยังไม่มี GET /posts/:id) */
 async function fetchFeedPost(postId: string): Promise<PostData> {
   const post = (await getFeedPosts()).find((p) => p.id === postId)
-  if (!post) throw new ApiError(404, 'ไม่พบโพสต์นี้ — อาจถูกลบไปแล้ว')
+  if (!post) throw new ApiError(404, 'ไม่พบโพสต์นี้ อาจถูกลบไปแล้ว')
   return post
 }
 
@@ -162,7 +162,7 @@ export async function toggleLikePost(postId: string): Promise<PostData> {
         return updated
       })
     })
-    if (!updated) throw new ApiError(404, 'ไม่พบโพสต์นี้ — อาจถูกลบไปแล้ว')
+    if (!updated) throw new ApiError(404, 'ไม่พบโพสต์นี้ อาจถูกลบไปแล้ว')
     return updated
   }
   // backend ตอบแค่ { liked, likeCount } — ประกอบกลับเป็นโพสต์เต็มจากฟีด
@@ -186,7 +186,7 @@ export async function toggleRepost(postId: string): Promise<PostData> {
         return updated
       })
     })
-    if (!updated) throw new ApiError(404, 'ไม่พบโพสต์นี้ — อาจถูกลบไปแล้ว')
+    if (!updated) throw new ApiError(404, 'ไม่พบโพสต์นี้ อาจถูกลบไปแล้ว')
     return updated
   }
   return notSupportedYet('การรีโพสต์')
@@ -241,7 +241,7 @@ export async function addComment(input: AddCommentPayload): Promise<PostData> {
         return updated
       })
     })
-    if (!updated) throw new ApiError(404, 'ไม่พบโพสต์นี้ — อาจถูกลบไปแล้ว')
+    if (!updated) throw new ApiError(404, 'ไม่พบโพสต์นี้ อาจถูกลบไปแล้ว')
     return updated
   }
   // backend: body { content } — แล้วดึงโพสต์พร้อมคอมเมนต์ทั้งหมดล่าสุดจากฟีด

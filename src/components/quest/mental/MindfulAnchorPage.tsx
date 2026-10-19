@@ -217,7 +217,7 @@ export default function MindfulAnchorPage({ onComplete, onClose }: MindfulAnchor
             เริ่มทอดสมอ
           </button>
           <p className="mindful-anchor__theory">
-            อ้างอิง Mindfulness-Based Stress Reduction (MBSR) — Jon Kabat-Zinn, University of Massachusetts
+            อ้างอิง Mindfulness-Based Stress Reduction (MBSR), Jon Kabat-Zinn, University of Massachusetts
           </p>
         </div>
       )}
@@ -260,7 +260,7 @@ export default function MindfulAnchorPage({ onComplete, onClose }: MindfulAnchor
           </div>
 
           {autoPaused && (
-            <div className="mindful-anchor__paused">หยุดนับไว้ให้แล้ว — กลับมาที่หน้าต่างนี้เมื่อพร้อมหายใจต่อ</div>
+            <div className="mindful-anchor__paused">หยุดนับไว้ให้แล้ว กลับมาที่หน้าต่างนี้เมื่อพร้อมหายใจต่อ</div>
           )}
 
           {!settings.strictMode && !isForced && (
@@ -280,7 +280,7 @@ export default function MindfulAnchorPage({ onComplete, onClose }: MindfulAnchor
           <h2 className="mindful-anchor__title">สมอลงแล้ว</h2>
           <p className="mindful-anchor__lead">
             {wasSkipped
-              ? 'คุณข้ามตัวจับเวลากลางคัน — ได้รับรางวัลครึ่งเดียว ใบไม้ยังได้รับการฟื้นฟูบ้าง'
+              ? 'คุณข้ามตัวจับเวลากลางคัน ได้รับรางวัลครึ่งเดียว ใบไม้ยังได้รับการฟื้นฟูบ้าง'
               : 'คุณอยู่กับลมหายใจครบ 2 นาที ระบบประสาทพาราซิมพาเทติกเริ่มทำงาน หัวใจเต้นช้าลง ใบไม้บนต้นไม้ของคุณกลับมาอวบอิ่มอีกครั้ง'}
           </p>
           <div className="mindful-anchor__stats">

@@ -31,7 +31,7 @@ export default function RestReminderPopup({ kind, restMinutes, onClose }: RestRe
         </h2>
         <p className="shop-dialog__body">
           {kind === 'rest'
-            ? 'วางหนังสือ หลับตา ยืดเส้น หรือเดินเล่น — ห้ามเล่นมือถือนะ สมองกำลังจัดเก็บสิ่งที่เรียนมา'
+            ? 'วางหนังสือ หลับตา ยืดเส้น หรือเดินเล่น ห้ามเล่นมือถือนะ สมองกำลังจัดเก็บสิ่งที่เรียนมา'
             : 'สมองได้พักฟื้นแล้ว พร้อมกลับมาจดจ่อรอบต่อไป'}
         </p>
         <div className="shop-dialog__actions">

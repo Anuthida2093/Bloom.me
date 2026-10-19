@@ -102,7 +102,7 @@ export default function ContentReviewGame({ finish }: QuestGameProps) {
         {goalSkill ? (
           <p className="qg-hint" style={{ marginTop: 6 }}>🎯 {goalSkill}</p>
         ) : (
-          <p className="qg-hint" style={{ marginTop: 6 }}>ยังไม่ได้ตั้งเป้าหมาย "เพ่งสมาธิ" ของวันนี้ — ทบทวนแบบทั่วไปแทนได้เลย</p>
+          <p className="qg-hint" style={{ marginTop: 6 }}>ยังไม่ได้ตั้งเป้าหมาย "เพ่งสมาธิ" ของวันนี้ ทบทวนแบบทั่วไปแทนได้เลย</p>
         )}
       </div>
 
@@ -144,7 +144,7 @@ export default function ContentReviewGame({ finish }: QuestGameProps) {
           </button>
         )}
         <p className="qg-hint" style={{ marginTop: 6 }}>
-          เลือกได้ตั้งแต่พรุ่งนี้ถึง 30 วันข้างหน้า — ถึงเวลาแล้วระบบจะเด้งป็อปอัพเตือนทันทีที่เข้าแอป
+          เลือกได้ตั้งแต่พรุ่งนี้ถึง 30 วันข้างหน้า ถึงเวลาแล้วระบบจะเด้งป็อปอัพเตือนทันทีที่เข้าแอป
         </p>
       </div>
 

@@ -26,7 +26,7 @@ function HomePreview({ bg, onClose, onApply }: { bg: HomeBackground; onClose: ()
   const { userData, treeStats, placedItems, decorationPositions } = useAppContext()
   const rocks = getVisibleRocks(userData.id, computeCalorieTarget(userData))
   return createPortal(
-    <div className="home-preview" role="dialog" aria-modal="true" aria-label={`ตัวอย่างหน้า Home — ${bg.label}`}>
+    <div className="home-preview" role="dialog" aria-modal="true" aria-label={`ตัวอย่างหน้า Home ${bg.label}`}>
       <video className="home-preview__video" src={bg.src} autoPlay muted loop playsInline aria-hidden="true" />
       {/* ต้นไม้ + พื้นดินของเราจริง (ดูอย่างเดียว ลาก/กดไม่ได้) */}
       <div className="home-preview__tree-layer" aria-hidden="true">
@@ -78,7 +78,7 @@ function Thumb({ bg, active, missing, onPick, onMissing }: {
       className={`home-bg-thumb${active ? ' is-active' : ''}${missing ? ' is-missing' : ''}`}
       onClick={onPick}
       disabled={missing}
-      aria-label={`${bg.label}${active ? ' (ใช้อยู่)' : ''}${missing ? ' — ยังไม่มีไฟล์' : ''}`}
+      aria-label={`${bg.label}${active ? ' (ใช้อยู่)' : ''}${missing ? ' ยังไม่มีไฟล์' : ''}`}
     >
       {!missing && (
         <video

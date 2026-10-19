@@ -60,7 +60,7 @@ export default function ReframerJournalPage({ moodEntry, alreadyCompleted, onCom
       <IntroVideoSequence
         videoSrc="/assets/videos/quest-mental/Reframer-Journal.mp4"
         audioSrc="/assets/sounds/Reframer-Journal.mp3"
-        overlayText="ยินดีต้อนรับสู่ ไดอะรี่ของฉัน — พื้นที่ส่วนตัวที่คุณเล่าได้ทุกเรื่อง ทั้งวันที่ดีและวันที่ร้าย ความสุขและความทุกข์ ทุกถ้อยคำของคุณมีพลังเสมอ"
+        overlayText="ยินดีต้อนรับสู่ ไดอะรี่ของฉัน พื้นที่ส่วนตัวที่คุณเล่าได้ทุกเรื่อง ทั้งวันที่ดีและวันที่ร้าย ความสุขและความทุกข์ ทุกถ้อยคำของคุณมีพลังเสมอ"
         accent={C_1}
         onComplete={() => setShowIntro(false)}
       />

@@ -43,7 +43,7 @@ export default function FriendsListPanel({ onBack, onOpenChat }: FriendsListPane
 
       <div className="story-activity-group-label">เพื่อน ({friendPlayers.length}) · ติดตามกันและกัน</div>
       {friendPlayers.length === 0
-        ? <div className="story-empty-state story-empty-state--compact">ยังไม่มีเพื่อน — ติดตามกันทั้งสองฝ่ายแล้วจะเป็นเพื่อนกัน</div>
+        ? <div className="story-empty-state story-empty-state--compact">ยังไม่มีเพื่อน ติดตามกันทั้งสองฝ่ายแล้วจะเป็นเพื่อนกัน</div>
         : friendPlayers.map((p) => row(p, (
           <>
             <button className="story-follow-btn" onClick={() => onOpenChat(p.id, p.username)}>แชท</button>

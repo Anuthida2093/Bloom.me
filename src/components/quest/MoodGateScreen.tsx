@@ -59,7 +59,7 @@ export default function MoodGateScreen({ title, icon, iconImg, onRequestMoodChec
         </div>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--lb-card-text)', marginBottom: 8 }}>ก่อนเข้า {title}</div>
         <p style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--lb-card-text-sub)', lineHeight: 1.7, marginBottom: 22 }}>
-          ทุกวันต้องเช็คอินอารมณ์ก่อนนะ — ความรู้สึกวันนี้ของคุณคือกุญแจสำคัญที่ทำให้ไพ่ทิพย์และสมุดบันทึกเข้าใจคุณได้ตรงจุด
+          ทุกวันต้องเช็คอินอารมณ์ก่อนนะ ความรู้สึกวันนี้ของคุณคือกุญแจสำคัญที่ทำให้ไพ่ทิพย์และสมุดบันทึกเข้าใจคุณได้ตรงจุด
         </p>
         <button className="lb-btn lb-btn--wide" onClick={onRequestMoodCheckin}>
           <img src={BADGE_ICONS.checkin} className="icon-img" alt="" /> ไปเช็คอินอารมณ์

@@ -345,11 +345,11 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
               )}
             </div>
 
-            {/* [แก้ตามที่ระบุ — 3.4] ตัวเลือกคำพูดติดหัวย้ายขึ้นบนสุด ใต้หัวข้อ "เตาเผาขยะความคิด"
-                (มือถือ) — กล่องพิมพ์ยังอยู่ตำแหน่งเดิมชิดล่าง · จอใหญ่ CSS วางกลุ่มนี้ไว้เหนือกล่องพิมพ์เหมือนเดิม */}
+            {/* [แก้ตามที่ระบุ — 3.4] ตัวเลือกคำพูดติดหัวย้ายขึ้นบนสุด ใต้ป้ายชื่อเควส (มือถือ) — กล่องพิมพ์ยังอยู่
+                ตำแหน่งเดิมชิดล่าง · จอใหญ่ CSS วางกลุ่มนี้ไว้เหนือกล่องพิมพ์เหมือนเดิม
+                [แก้ตามที่ระบุ] ลบป้ายหัวข้อสีเขียวซ้ำออก เหลือป้ายชื่อเควสสีส้มของ QuestSection อันเดียว */}
             {stage === 'write' && (
               <motion.div className="incinerator-frame__top" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
-                <div className="lb-banner incinerator-frame__top-title">เตาเผาขยะความคิด</div>
                 <div className="incinerator-chips-group">
                   <span className="incinerator-chips-label">💡 คำพูดติดในหัวของคุณบ่อยๆ:</span>
                   <div className="incinerator-chips-list">

@@ -74,7 +74,7 @@ export default function StatsOverlay({ todaySteps, dailyStepTarget, stretchStepT
         <span className="stats-overlay__tile-icon" aria-hidden="true">⚖️</span>
         <div className="stats-overlay__tile-body">
           <span className="stats-overlay__tile-label">BMI</span>
-          <span className="stats-overlay__tile-value">{bmi != null && Number.isFinite(bmi) ? bmi.toFixed(1) : '—'}</span>
+          <span className="stats-overlay__tile-value">{bmi != null && Number.isFinite(bmi) ? bmi.toFixed(1) : '-'}</span>
         </div>
       </div>
     </div>

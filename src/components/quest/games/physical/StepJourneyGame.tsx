@@ -35,7 +35,7 @@ import CompletedJourneyMap from './CompletedJourneyMap'
 import CompletedTripView from './CompletedTripView'
 import { useStepChest } from '../../../../hooks/useStepChest'
 import { holdStepSettlement, waitForStepSettlement } from '../../../../services/stepSettlement'
-import { BADGE_ICONS, OWL_AVATAR_ICON } from '../../../../config/iconAssets'
+import { OWL_AVATAR_ICON } from '../../../../config/iconAssets'
 import { getJourneyDaySteps, getTodayJourneySteps, recordJourneySteps, resetStepJourneyDays } from '../../../../utils/stepJourneyDays'
 import { calculateStepReward, getDailyStepGoal, STEP_BONUS_LABEL, classifyStepBmiTier } from '../../../../config/stepGoalByBmi'
 import { formatDistance, stepsToDistanceMeters } from '../../../../utils/strideDistance'
@@ -379,7 +379,7 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
   const syncStatusText = isSyncing
     ? 'กำลังซิงค์…'
     : isCountingMotion
-      ? 'กำลังนับก้าว — เดินได้เลย แผนที่จะขยับเอง'
+      ? 'กำลังนับก้าว เดินได้เลย แผนที่จะขยับเอง'
       : lastSync
         ? `ซิงค์ล่าสุด ${lastSync.at.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} · +${lastSync.added.toLocaleString()} ก้าว`
         : 'ยังไม่ได้ซิงค์ก้าวรอบนี้'
@@ -566,7 +566,7 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
         />
       )}
 
-      {!showSummary && <button className="step-journey-game__close-btn" onClick={exit} title="ปิด" aria-label="ปิด"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>}
+      {/* [แก้ตามที่ระบุ] ลบปุ่มกากบาทของเกมนี้ — ซ้อนกับปุ่มปิดลอยของ GameShell (เหลืออันเดียว) */}
     </div>
   )
 }

@@ -32,7 +32,7 @@ export default function RankUpModal({ open, fromRank, toRank, onClose }: RankUpM
         <h2 id="rank-up-modal-title" className="rank-up-modal__title">ยินดีด้วย!</h2>
         <p className="rank-up-modal__message">
           คุณเลื่อนอันดับจาก{' '}
-          <span className="rank-up-modal__rank rank-up-modal__rank--from">#{fromRank ?? '—'}</span>
+          <span className="rank-up-modal__rank rank-up-modal__rank--from">#{fromRank ?? '-'}</span>
           {' '}เป็น{' '}
           <span className="rank-up-modal__rank rank-up-modal__rank--to">#{toRank}</span>
         </p>

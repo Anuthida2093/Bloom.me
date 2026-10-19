@@ -164,10 +164,10 @@ export default function TenYearForestGame({ exit, finish }: QuestGameProps) {
           <b><img src={streakReady ? BADGE_ICONS.tree : BADGE_ICONS.seed} className="icon-img" alt="" /> {claimedToday ? 'รับรางวัลวันนี้แล้ว' : streakReady ? 'รางวัลป่าแห่งสิบปีพร้อมแล้ว!' : 'เข้าแอปต่อเนื่องให้ครบ 21 วัน'}</b>
           <small>
             {claimedToday
-              ? 'กลับมารับใหม่พรุ่งนี้ — อย่าให้ streak ขาดนะ'
+              ? 'กลับมารับใหม่พรุ่งนี้ อย่าให้ streak ขาดนะ'
               : streakReady
                 ? `ต่อเนื่องมาแล้ว ${userData.streak} วัน รับรางวัลได้วันละครั้ง`
-                : `ตอนนี้ ${userData.streak}/${TEN_YEAR_FOREST_STREAK_DAYS} วัน — ครบแล้วรับรางวัลได้ทุกวัน`}
+                : `ตอนนี้ ${userData.streak}/${TEN_YEAR_FOREST_STREAK_DAYS} วัน ครบแล้วรับรางวัลได้ทุกวัน`}
           </small>
           {!streakReady && (
             <div className="tyf-reward__track" aria-hidden="true">
@@ -249,14 +249,14 @@ export default function TenYearForestGame({ exit, finish }: QuestGameProps) {
             ) : (
               <div className="tyf-day__body">
                 {entry.goals.map((g, i) => (
-                  <div key={`g${i}`} className="tyf-row"><span>🎯</span><span><b>เป้าหมาย:</b> {g.skill}{g.improvement ? ` — ${g.improvement}` : ''}</span></div>
+                  <div key={`g${i}`} className="tyf-row"><span>🎯</span><span><b>เป้าหมาย:</b> {g.skill}{g.improvement ? ` - ${g.improvement}` : ''}</span></div>
                 ))}
                 {entry.notes.map((n, i) => (
                   <div key={`n${i}`} className="tyf-row tyf-row--note">
                     <span>🧠</span>
                     <span>
                       <b>บันทึกความรู้</b> · หมวด {n.category}<br />
-                      หัวข้อ: {n.topics.join(', ') || '—'}<br />
+                      หัวข้อ: {n.topics.join(', ') || '-'}<br />
                       {n.content && <span className="tyf-quote">“{n.content}”</span>}
                       {n.total > 0 && <span className={`tyf-truth${n.recalled < n.total ? ' tyf-truth--warn' : ''}`}>จำได้จริง {n.recalled}/{n.total} หัวข้อ</span>}
                     </span>
@@ -298,7 +298,7 @@ export default function TenYearForestGame({ exit, finish }: QuestGameProps) {
             <div id="tyf-panel-title" className="tyf-day__date">{panel === 'goals' ? '🎯 เป้าหมายของฉัน' : '📅 สิ่งที่จะทบทวน'}</div>
 
             {panel === 'goals' && (goals.length === 0 ? (
-              <p className="qg-hint">ยังไม่มีเป้าหมาย — ตั้งเป้าในเควส "เพ่งสมาธิ / ตั้งเป้าหมาย"</p>
+              <p className="qg-hint">ยังไม่มีเป้าหมาย ตั้งเป้าในเควส "เพ่งสมาธิ / ตั้งเป้าหมาย"</p>
             ) : (
               <div className="tyf-list">
                 {goals.map((g) => {
@@ -319,7 +319,7 @@ export default function TenYearForestGame({ exit, finish }: QuestGameProps) {
                               <span>🎙️</span>
                               <span>
                                 <b>บันทึกเสียง</b> · {formatTime(n.createdAt)} · {Math.round(n.durationSec / 60) || 1} นาที<br />
-                                หัวข้อ: {n.topics.join(', ') || '—'}<br />
+                                หัวข้อ: {n.topics.join(', ') || '-'}<br />
                                 {n.transcript && <span className="tyf-quote">“{n.transcript.length > 240 ? `${n.transcript.slice(0, 240)}…` : n.transcript}”</span>}
                                 {n.topics.length > 0 && (
                                   <span className={`tyf-truth${n.recalledTopics.length < n.topics.length ? ' tyf-truth--warn' : ''}`}>
@@ -341,7 +341,7 @@ export default function TenYearForestGame({ exit, finish }: QuestGameProps) {
             ))}
 
             {panel === 'reviews' && (reviewSets.length === 0 ? (
-              <p className="qg-hint">ยังไม่มีนัดทบทวน — ตั้งได้ในเควส "แคปซูลเวลา"</p>
+              <p className="qg-hint">ยังไม่มีนัดทบทวน ตั้งได้ในเควส "แคปซูลเวลา"</p>
             ) : (
               <div className="tyf-list">
                 {reviewSets.map((set) => {

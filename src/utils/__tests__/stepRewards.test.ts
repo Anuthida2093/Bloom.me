@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { calculateStepReward, classifyStepBmiTier, getDailyStepGoal } from '../../config/stepGoalByBmi'
 import { formatDistance, stepsToDistanceMeters } from '../strideDistance'
 
-describe('เป้าหมายก้าวตาม BMI (เกณฑ์เอเชีย — ตรงกับ backend stepReward.ts)', () => {
+describe('เป้าหมายก้าวตาม BMI (เกณฑ์เอเชีย ตรงกับ backend stepReward.ts)', () => {
   it('แบ่งระดับที่ 18.5 / 23 / 25', () => {
     expect(classifyStepBmiTier(18.4)).toBe('UNDERWEIGHT')
     expect(classifyStepBmiTier(22.9)).toBe('NORMAL')

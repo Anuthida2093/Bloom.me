@@ -31,7 +31,7 @@ export default function CommentsModal({ post, onClose }: { post: PostData; onClo
 
         <div className="story-comments-list">
           {post.comments.length === 0 && (
-            <div className="story-empty-state">ยังไม่มีคอมเมนต์ — เป็นคนแรกเลยสิ!</div>
+            <div className="story-empty-state">ยังไม่มีคอมเมนต์ เป็นคนแรกเลยสิ!</div>
           )}
           {post.comments.map((c) => (
             <button

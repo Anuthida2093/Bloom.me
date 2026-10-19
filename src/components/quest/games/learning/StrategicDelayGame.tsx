@@ -50,7 +50,7 @@ export default function StrategicDelayGame({ finish }: QuestGameProps) {
       <div className="qg-card">
         <div className="qg-title">ตารางทบทวนที่ระบบวางให้</div>
         <p className="qg-hint" style={{ marginBottom: 10 }}>
-          เว้นระยะห่างรอบละ {gapDays} วัน (ราว 8% ของ {horizonMonths} เดือน) — ห่างกว่านี้จะลืม ถี่กว่านี้จะเสียเวลาเปล่า
+          เว้นระยะห่างรอบละ {gapDays} วัน (ราว 8% ของ {horizonMonths} เดือน) ห่างกว่านี้จะลืม ถี่กว่านี้จะเสียเวลาเปล่า
         </p>
         <div className="qg-stat-grid">
           {schedule.map((d, i) => (

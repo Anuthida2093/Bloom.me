@@ -138,7 +138,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       audio.volume = Math.min(1, Math.max(0, settings.sfxVolume / 100))
       audio.play().catch(() => {
         if (import.meta.env.DEV) {
-          console.warn(`[AudioContext] เล่นเสียง "${fileName}" ไม่ได้ — เช็คว่าวางไฟล์ไว้ที่ public/assets/sounds/${fileName} แล้วหรือยัง`)
+          console.warn(`[AudioContext] เล่นเสียง "${fileName}" ไม่ได้ เช็คว่าวางไฟล์ไว้ที่ public/assets/sounds/${fileName} แล้วหรือยัง`)
         }
       })
     } catch {

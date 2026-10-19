@@ -238,7 +238,7 @@ export default function ProfilePage({
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-3xl)', color: 'var(--heading-accent)' }}>{userData.username || 'ผู้ใช้'}</div>
           {/* [แก้ตามที่ระบุ — ข้อ 7] ขยาย MBTI/Lv./เหรียญ ให้เด่นชัดขึ้น (เดิม fs-sm เท่าตัวหนังสือรองทั่วไป) ใช้ --fs-md + ตัวหนา แทนตัวเลขแบนราบเดิม */}
           <p style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--text-sub)', marginTop: 4 }}>
-            {userData.mbtiType ?? '—'} · {t('profile.level')} {userData.level} · <img src={BADGE_ICONS.coins} className="icon-img" style={{ width: 30, height: 30, margin: '-6px 2px -6px 0', verticalAlign: 'middle' }} alt="" /> {userData.coins.toLocaleString()}
+            {userData.mbtiType ?? '-'} · {t('profile.level')} {userData.level} · <img src={BADGE_ICONS.coins} className="icon-img" style={{ width: 30, height: 30, margin: '-6px 2px -6px 0', verticalAlign: 'middle' }} alt="" /> {userData.coins.toLocaleString()}
           </p>
         </div>
 
@@ -263,7 +263,7 @@ export default function ProfilePage({
             {totalInventoryCount === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 'var(--fs-sm)' }}>
                 <img src={BADGE_ICONS.item} alt="" style={{ width: 72, height: 72, objectFit: 'contain', display: 'block', margin: '0 auto 8px', opacity: 0.85 }} />
-                ยังไม่มีไอเทมในคลัง — ไปซื้อจากร้านค้าได้เลย!
+                ยังไม่มีไอเทมในคลัง ไปซื้อจากร้านค้าได้เลย!
               </div>
             ) : (
               <>
@@ -376,7 +376,7 @@ export default function ProfilePage({
 
             {!hasAnyActivity ? (
               <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 'var(--fs-sm)' }}>
-                ยังไม่มีบันทึกกิจกรรมของวันนี้ — ลองไปทำเควสหรือเช็คอินอารมณ์ดูสิ
+                ยังไม่มีบันทึกกิจกรรมของวันนี้ ลองไปทำเควสหรือเช็คอินอารมณ์ดูสิ
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
@@ -405,18 +405,18 @@ export default function ProfilePage({
                 {activeFocusLog && (
                   <div style={{ background: 'var(--n50)', borderRadius: 12, padding: '10px 12px', fontSize: 'var(--fs-sm)' }}>
                     <b>🎯 เป้าหมายการเรียนรู้</b>
-                    <div style={{ marginTop: 2, color: 'var(--text-sub)' }}>{String(activeFocusLog.payload?.skill ?? '—')}</div>
+                    <div style={{ marginTop: 2, color: 'var(--text-sub)' }}>{String(activeFocusLog.payload?.skill ?? '-')}</div>
                   </div>
                 )}
                 {contentReviewLog && (
                   <div style={{ background: 'var(--n50)', borderRadius: 12, padding: '10px 12px', fontSize: 'var(--fs-sm)' }}>
-                    <b>📅 แคปซูลเวลา — นัดทบทวนวันที่</b>
-                    <div style={{ marginTop: 2, color: 'var(--text-sub)' }}>{String(contentReviewLog.payload?.scheduledReviewDate ?? '—')}</div>
+                    <b>📅 แคปซูลเวลา นัดทบทวนวันที่</b>
+                    <div style={{ marginTop: 2, color: 'var(--text-sub)' }}>{String(contentReviewLog.payload?.scheduledReviewDate ?? '-')}</div>
                   </div>
                 )}
                 {waterCount > 0 && (
                   <div style={{ background: 'var(--n50)', borderRadius: 12, padding: '10px 12px', fontSize: 'var(--fs-sm)' }}>
-                    <b><img src={BADGE_ICONS.water} className="icon-img" alt="" /> ดื่มน้ำ</b> — {waterCount} แก้ว
+                    <b><img src={BADGE_ICONS.water} className="icon-img" alt="" /> ดื่มน้ำ</b> - {waterCount} แก้ว
                   </div>
                 )}
                 {journalOfDay && (
@@ -610,7 +610,7 @@ export default function ProfilePage({
 
       <style>{`
         .profile-page button, .profile-page input, .profile-page select { font-family: inherit; }
-        /* [แก้ตามที่ระบุ] การ์ดทุกใบใช้กรอบแบบกระดานจัดอันดับ — ขอบทอง + วงในบาง + พื้นเขียวไล่เฉด
+        /* [แก้ตามที่ระบุ] การ์ดทุกใบใช้กรอบแบบกระดานจัดอันดับ ขอบทอง + วงในบาง + พื้นเขียวไล่เฉด
            (ธีมมืด: เขียวเข้ม) หัวข้อการ์ดสีเดียวกับตัวหนังสือในกรอบ */
         .profile-page .card {
           --pf-bg: var(--leaf-soft);
@@ -632,7 +632,7 @@ export default function ProfilePage({
         /* [แก้ตามที่ระบุ] มือถือ: เรียง รูปร่างของคุณ → คลังไอเทม → กิจกรรมวันนี้ →
            ประวัติการเขียนบันทึก → ความสำเร็จ (จอกว้างยังเป็นกริดหลายคอลัมน์ตามเดิม) */
         @media (max-width: 768px) {
-          /* align-items เดิมของกริด (start) ทำให้การ์ดหดตามเนื้อหา — ยืดเต็มความกว้างเท่ากันทุกใบ
+          /* align-items เดิมของกริด (start) ทำให้การ์ดหดตามเนื้อหา ยืดเต็มความกว้างเท่ากันทุกใบ
              ขนาดเท่าการ์ด "กิจกรรมวันนี้" */
           .profile-grid { display: flex !important; flex-direction: column; align-items: stretch !important; }
           .profile-grid > .card { width: 100%; max-height: none !important; }

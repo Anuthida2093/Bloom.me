@@ -48,7 +48,7 @@ export function removeCustomDomain(userId: string, id: string): LearningDomain[]
 
 /** ชื่อที่แสดงของหมวด/วิชาจาก id (ใช้ใน payload ของ quest log) — ไม่รู้จัก = คืน id เดิม */
 export function domainLabel(id: string | null | undefined): string {
-  if (!id) return '—'
+  if (!id) return '-'
   if (id.startsWith(CUSTOM_PREFIX)) return id.slice(CUSTOM_PREFIX.length)
   return BASE_DOMAINS.find((d) => d.id === id)?.label ?? id
 }

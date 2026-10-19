@@ -59,7 +59,7 @@ export default function TimeCapsuleReminder({ userId, enabled }: { userId: strin
             <span aria-hidden="true">🧠</span><span>หัวข้อที่เคยลืม: {topics.join(', ')}</span>
           </div>
         )}
-        <p className="shop-dialog__hint">ลองนึกทบทวนเนื้อหาเหล่านี้โดยไม่เปิดโน้ตก่อน แล้วค่อยตรวจคำตอบ — การดึงความจำตอนใกล้ลืมช่วยให้จำได้นานขึ้น</p>
+        <p className="shop-dialog__hint">ลองนึกทบทวนเนื้อหาเหล่านี้โดยไม่เปิดโน้ตก่อน แล้วค่อยตรวจคำตอบ การดึงความจำตอนใกล้ลืมช่วยให้จำได้นานขึ้น</p>
         <div className="shop-dialog__actions">
           <button type="button" className="soft-btn soft-btn--ghost" onClick={() => { snoozeTimeCapsules(userId, ids, SNOOZE_MINUTES); setDue([]) }}>
             เตือนอีกใน 1 ชม.

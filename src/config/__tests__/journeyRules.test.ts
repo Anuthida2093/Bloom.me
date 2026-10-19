@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import { calcDailyStepTarget } from '../journeyRules'
 
-describe('calcDailyStepTarget (BMI เกณฑ์เอเชีย 4 ระดับ — ค่าต่ำของช่วง)', () => {
+describe('calcDailyStepTarget (BMI เกณฑ์เอเชีย 4 ระดับ ค่าต่ำของช่วง)', () => {
   it('BMI < 18.5 → 5,000 ก้าว', () => {
     expect(calcDailyStepTarget(18.4)).toBe(5000)
   })
@@ -24,7 +24,7 @@ describe('calcDailyStepTarget (BMI เกณฑ์เอเชีย 4 ระด
     expect(calcDailyStepTarget(30)).toBe(2500)
   })
 
-  it('ตกกลับไประดับปกติ ถ้า BMI เป็นค่าผิดปกติ (NaN — ผู้เล่นยังไม่กรอกส่วนสูง/น้ำหนัก)', () => {
+  it('ตกกลับไประดับปกติ ถ้า BMI เป็นค่าผิดปกติ (NaN ผู้เล่นยังไม่กรอกส่วนสูง/น้ำหนัก)', () => {
     expect(calcDailyStepTarget(NaN)).toBe(8000)
   })
 })

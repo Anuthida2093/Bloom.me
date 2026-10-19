@@ -2,6 +2,7 @@
    RewardBurst.css — ได้รับรางวัล: รูปใหญ่ + จำนวน + แสงจ้าด้านหลัง ไม่มีกรอบ (RewardBurst.tsx)
    ═══════════════════════════════════════════════════════════════ */
 
+/* [แก้ตามที่ระบุ] รูปรางวัลและตัวอักษรเล็กลงเล็กน้อย (~15%) */
 .reward-burst {
   position: fixed; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -50,19 +51,19 @@
   animation: rewardBurstPop 0.55s cubic-bezier(.34, 1.56, .64, 1) both;
 }
 @keyframes rewardBurstPop { from { opacity: 0; transform: scale(0.3) rotate(-10deg); } to { opacity: 1; transform: none; } }
-.reward-burst__img { width: min(180px, 46vw); height: min(180px, 46vw); object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.4)); }
-.reward-burst__items--multi .reward-burst__img { width: min(140px, 34vw); height: min(140px, 34vw); }
-.reward-burst__emoji { font-size: min(140px, 36vw); line-height: 1; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.4)); }
+.reward-burst__img { width: min(150px, 40vw); height: min(150px, 40vw); object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.4)); }
+.reward-burst__items--multi .reward-burst__img { width: min(118px, 30vw); height: min(118px, 30vw); }
+.reward-burst__emoji { font-size: min(118px, 30vw); line-height: 1; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.4)); }
 .reward-burst__amount {
-  font-size: clamp(34px, 9vw, 52px); line-height: 1; letter-spacing: 0.02em;
+  font-size: clamp(28px, 7.5vw, 44px); line-height: 1; letter-spacing: 0.02em;
   color: #fff7d6; -webkit-text-stroke: 2px #8a5a00; paint-order: stroke fill;
   text-shadow: 0 4px 0 #8a5a00, 0 8px 18px rgba(0, 0, 0, 0.45);
 }
-.reward-burst__note { position: relative; z-index: 1; margin: 6px 0 0; max-width: 340px; text-align: center; font-size: 17px; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
+.reward-burst__note { position: relative; z-index: 1; margin: 6px 0 0; max-width: 340px; text-align: center; font-size: 15px; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
 
 .reward-burst__ok {
-  position: relative; z-index: 1; min-width: 180px; padding: 14px 36px; border: none; border-radius: 99px; cursor: pointer;
-  font-family: var(--font-display); font-size: 20px; color: #4A2C0A;
+  position: relative; z-index: 1; min-width: 160px; padding: 12px 32px; border: none; border-radius: 99px; cursor: pointer;
+  font-family: var(--font-display); font-size: 18px; color: #4A2C0A;
   background: linear-gradient(180deg, #ffe08a, #f5b301);
   box-shadow: 0 6px 0 #c98a00, 0 12px 22px rgba(0, 0, 0, 0.3), inset 0 2px 0 rgba(255, 255, 255, 0.75);
   animation: rewardBurstPop 0.45s cubic-bezier(.34, 1.56, .64, 1) 0.35s both;

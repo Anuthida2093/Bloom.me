@@ -36,7 +36,7 @@ export default function ResetPassword() {
     e.preventDefault()
     setErrorMessage(null)
 
-    if (!token) { setErrorMessage('ลิงก์นี้ไม่ถูกต้อง — ไม่พบโทเคนกู้รหัสผ่าน'); return }
+    if (!token) { setErrorMessage('ลิงก์นี้ไม่ถูกต้อง ไม่พบโทเคนกู้รหัสผ่าน'); return }
     const strengthIssue = validatePasswordStrength(newPassword)
     if (strengthIssue) { setErrorMessage(strengthIssue); return }
     if (newPassword !== confirmPassword) { setErrorMessage('รหัสผ่านทั้งสองช่องไม่ตรงกัน'); return }

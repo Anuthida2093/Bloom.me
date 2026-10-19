@@ -436,7 +436,7 @@ export default function SettingsModal({
           <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px dashed var(--border)' }}>
             <div style={{ fontWeight: 800, fontSize: 'var(--fs-sm)', color: 'var(--text-sub)', marginBottom: 10 }}>💻 อุปกรณ์ที่เข้าสู่ระบบ</div>
             <div style={{ padding: 14, borderRadius: 12, background: SETTINGS_SOFT_TINT, fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>
-              เร็วๆ นี้ — ฟีเจอร์นี้ต้องมีระบบ session ฝั่ง backend จริงถึงจะแสดงรายการอุปกรณ์/
+              เร็วๆ นี้ ฟีเจอร์นี้ต้องมีระบบ session ฝั่ง backend จริงถึงจะแสดงรายการอุปกรณ์/
               ตำแหน่งที่ล็อกอินอยู่ได้ถูกต้อง (mock ปัจจุบันมี session เดียวเสมอ)
             </div>
           </div>
@@ -471,7 +471,7 @@ export default function SettingsModal({
           position: relative; font-size: var(--fs-xs); font-weight: 700; margin-top: 2px;
         }
 
-        /* [ใหม่] การ์ดของแต่ละ section — สีสัน ไม่ใช่พื้นขาวโล่งๆ */
+        /* [ใหม่] การ์ดของแต่ละ section สีสัน ไม่ใช่พื้นขาวโล่งๆ */
         .settings-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -519,11 +519,11 @@ export default function SettingsModal({
           .settings-account-grid { grid-template-columns: 1fr; }
         }
 
-        /* [เพิ่มรอบนี้] โซนออกจากระบบ — แยกจากกลุ่มปุ่มตั้งค่าอย่างชัดเจนด้วยเส้นคั่น + ระยะห่าง */
+        /* [เพิ่มรอบนี้] โซนออกจากระบบ แยกจากกลุ่มปุ่มตั้งค่าอย่างชัดเจนด้วยเส้นคั่น + ระยะห่าง */
         .settings-logout-zone {
           margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--border);
         }
-        /* ขนาด/ทรงเดียวกับ .settings-save-btn — ขอบขาวในธีมมืด / ขอบเข้ม (--text) ในธีมสว่าง
+        /* ขนาด/ทรงเดียวกับ .settings-save-btn ขอบขาวในธีมมืด / ขอบเข้ม (--text) ในธีมสว่าง
            (ขอบขาวบนพื้นหน้าสีอ่อนของธีมสว่างจะมองไม่เห็นเลย) */
         .settings-logout-btn {
           width: 100%; min-height: 48px; padding: 14px; border-radius: var(--r-md);
@@ -546,7 +546,7 @@ export default function SettingsModal({
         .settings-logout-confirm__card p { font-size: var(--fs-md); color: var(--text); margin: 12px 0 20px; font-weight: 700; }
         .settings-logout-confirm__actions { display: flex; gap: 10px; }
         .settings-logout-confirm__actions button {
-          /* [แก้บั๊ก — พบระหว่างแก้ข้อ 7] เดิม background: var(--bg-body) — โทเคนนี้ไม่มีอยู่จริง
+          /* [แก้บั๊ก พบระหว่างแก้ข้อ 7] เดิม background: var(--bg-body) โทเคนนี้ไม่มีอยู่จริง
              ในระบบ (ไม่ได้ประกาศไว้ที่ :root เลย) และตรงนี้ไม่มี fallback ด้วย ตกเป็น "transparent"
              (ค่าเริ่มต้นของ background) เสมอ ปุ่ม "ยกเลิก" เลยไม่มีพื้นหลังจริงทั้ง 2 โหมด (บังเอิญ
              ยังอ่านออกเพราะพื้นหลังที่โผล่มาคือ .settings-logout-confirm__card ที่สีเข้ม/อ่อนตรง
@@ -696,7 +696,7 @@ export function Overlay({ children, onClose }: { children: ReactNode; onClose: (
         }}>
         {children}
         <style>{`
-          /* [แก้ตามที่ระบุ — ป็อบอัพต้องขึ้นกลางจอ] จางเข้าอย่างเดียว ไม่ใช้ transform: บรรพบุรุษที่มี
+          /* [แก้ตามที่ระบุ ป็อบอัพต้องขึ้นกลางจอ] จางเข้าอย่างเดียว ไม่ใช้ transform: บรรพบุรุษที่มี
              transform ทำให้ลูกที่เป็น position:fixed (ป็อบอัพยืนยัน/หน้าย่อย) ยึดกับการ์ดนี้แทนจอ
              ป็อบอัพจึงไปโผล่ด้านบนของหน้าให้ต้องเลื่อนขึ้นไปดู และหน้าย่อยไม่คลุมเต็มจอ */
           @keyframes settingsOverlayCardPop {
@@ -876,7 +876,7 @@ function ProfileSettingsForm({ userData, onSave }: { userData: UserData, accent:
       </div>
 
       <label style={labelStyle}>อีเมล</label>
-      <input type="email" name="email" value={formData.email} readOnly style={lockedFieldStyle} title="อีเมลเปลี่ยนไม่ได้ — ใช้เป็นตัวยืนยันตัวตนหลักของบัญชี" />
+      <input type="email" name="email" value={formData.email} readOnly style={lockedFieldStyle} title="อีเมลเปลี่ยนไม่ได้ ใช้เป็นตัวยืนยันตัวตนหลักของบัญชี" />
       <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--n300)', marginTop: -10, marginBottom: 14 }}>อีเมลใช้ยืนยันตัวตนของบัญชี ไม่สามารถแก้ไขได้</p>
 
       <label style={labelStyle}>ชื่อผู้ใช้ (Username)</label>
@@ -943,7 +943,7 @@ function ProfileSettingsForm({ userData, onSave }: { userData: UserData, accent:
       </select>
       {mbtiAlreadySet && (
         <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--n300)', marginTop: -10, marginBottom: 14 }}>
-          MBTI ตั้งได้ครั้งเดียว — ธีมต้นไม้และสถิติที่สะสมไว้ผูกกับ MBTI นี้อยู่แล้ว
+          MBTI ตั้งได้ครั้งเดียว ธีมต้นไม้และสถิติที่สะสมไว้ผูกกับ MBTI นี้อยู่แล้ว
         </p>
       )}
 
@@ -960,7 +960,7 @@ function ProfileSettingsForm({ userData, onSave }: { userData: UserData, accent:
           marginBottom: 14,
         }}
       >
-        <span>{isProfilePrivate ? '🔒 ปิดโปรไฟล์อยู่ — คนอื่นดูโปรไฟล์เราไม่ได้' : '🔓 เปิดโปรไฟล์อยู่ — คนอื่นดูโปรไฟล์เราได้'}</span>
+        <span>{isProfilePrivate ? '🔒 ปิดโปรไฟล์อยู่ คนอื่นดูโปรไฟล์เราไม่ได้' : '🔓 เปิดโปรไฟล์อยู่ คนอื่นดูโปรไฟล์เราได้'}</span>
         <span style={{ width: 44, height: 24, borderRadius: 99, position: 'relative', background: isProfilePrivate ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s' }}>
           <span className="settings-toggle-knob" style={{ position: 'absolute', top: 2, left: isProfilePrivate ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)' }} />
         </span>

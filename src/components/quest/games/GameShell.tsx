@@ -189,7 +189,7 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
           <div className="game-shell__reward-title">เควสสำเร็จแล้ว</div>
           <p className="game-shell__reward-text">
             {awardedSkipped
-              ? 'คุณข้ามตัวจับเวลากลางคัน — ได้รับรางวัลครึ่งเดียว'
+              ? 'คุณข้ามตัวจับเวลากลางคัน ได้รับรางวัลครึ่งเดียว'
               : 'ต้นไม้ของคุณเพิ่งได้รับพลังจากสิ่งที่คุณทำเมื่อครู่'}
           </p>
           <div className="game-shell__reward-cards">

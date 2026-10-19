@@ -228,13 +228,13 @@ export default function QuestGateView({
         .quest-gate-view {
           position: absolute; inset: 0; z-index: 10; overflow: hidden;
         }
-        /* [แก้ตามที่ระบุ — ยกเลิกงานรอบก่อน] เคยเพิ่มวิดีโอพื้นหลัง (Physical-intro.mp4) +
-           overlay มืดทับให้หมวดสุขภาพกาย — ยกเลิกแล้วตามที่ระบุ กลับไปใช้ theme.bg (gradient/
+        /* [แก้ตามที่ระบุ ยกเลิกงานรอบก่อน] เคยเพิ่มวิดีโอพื้นหลัง (Physical-intro.mp4) +
+           overlay มืดทับให้หมวดสุขภาพกาย ยกเลิกแล้วตามที่ระบุ กลับไปใช้ theme.bg (gradient/
            สีทึบ) ตรงๆ เหมือนโครงสร้างเดิมของ QuestGateView ก่อนเพิ่มวิดีโอ (โทนเขียวของหมวด
            สุขภาพกายมาจาก --ae-mist/--ae-deep/--ae-void ใน theme.bg อยู่แล้ว แยกจากโทนม่วง
            ของหมวดสุขภาพจิตอย่างชัดเจน ไม่ต้องเพิ่มรูป/วิดีโอใดๆ อีก) ดาวกระพริบด้านล่างยังคง
            ไว้ตามเดิม (ไม่ได้อยู่ในขอบเขตที่ขอให้ยกเลิกรอบนี้) */
-        /* [ใหม่ — ดาวกระพริบ] อยู่เหนือพื้นหลัง (z-index:2) แต่ใต้ลิสต์เควส (z-index:20) —
+        /* [ใหม่ ดาวกระพริบ] อยู่เหนือพื้นหลัง (z-index:2) แต่ใต้ลิสต์เควส (z-index:20) 
            ใช้โครงเดียวกับ .oracle-page__star (OracleCardsPage.css): จุดเล็กสีขาว กระพริบด้วย
            opacity อย่างเดียว (ไม่แตะ layout/transform หนักๆ กันเปลือง performance) */
         .quest-gate-view__stars { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
@@ -248,14 +248,14 @@ export default function QuestGateView({
           0%, 100% { opacity: 0.2; }
           50% { opacity: 1; }
         }
-        /* [แก้ตามที่ระบุ — ลบลิงก์ "ต้องการความช่วยเหลือด่วน?"] ซ้ำซ้อนกับแถบศูนย์ฉุกเฉิน
+        /* [แก้ตามที่ระบุ ลบลิงก์ "ต้องการความช่วยเหลือด่วน?"] ซ้ำซ้อนกับแถบศูนย์ฉุกเฉิน
            (.quest-gate-view__safety-banner) ที่อยู่ท้ายลิสต์อยู่แล้ว (เบอร์ 1323 เดียวกัน)
-           ตัด element/ปุ่มนี้ออกจาก JSX ทั้งหมดแล้ว (ดูด้านบน) — ลบ CSS ที่ไม่มีใครใช้ทิ้งด้วย
+           ตัด element/ปุ่มนี้ออกจาก JSX ทั้งหมดแล้ว (ดูด้านบน) ลบ CSS ที่ไม่มีใครใช้ทิ้งด้วย
 
-           [แก้ตามที่ระบุ — ข้อ 3] เดิม .quest-gate-view__list ยึด "bottom:0" อย่างเดียว
-           (ไม่มี top) แล้วจำกัดสูงสุดด้วย max-height:72% — พอเนื้อหาสั้นกว่าที่ max-height
+           [แก้ตามที่ระบุ ข้อ 3] เดิม .quest-gate-view__list ยึด "bottom:0" อย่างเดียว
+           (ไม่มี top) แล้วจำกัดสูงสุดด้วย max-height:72% พอเนื้อหาสั้นกว่าที่ max-height
            อนุญาต (เช่น หมวดกายมีแค่ 4 เควส) กล่องจะหด "สูงเท่าเนื้อหา" แล้วลอยขึ้นจากขอบล่าง
-           เหลือพื้นที่ว่างเปล่าด้านบนระหว่างป้ายหัวข้อโซนกับปุ่มเควสตัวแรกเยอะมาก — เปลี่ยนมา
+           เหลือพื้นที่ว่างเปล่าด้านบนระหว่างป้ายหัวข้อโซนกับปุ่มเควสตัวแรกเยอะมาก เปลี่ยนมา
            ยึด "top:95px" ตรงๆ แทน (ค่าเดียวกับระยะเว้น navbar มาตรฐานที่ใช้ทั่วระบบ เช่น
            SettingsModal Overlay/SubModalTemplate) ปุ่มเควสตัวแรกจึงอยู่ห่างจากขอบบนจอ (ใต้
            ป้ายหัวข้อโซนที่ลอยอยู่ top:12px ของ QuestSection.tsx) คงที่เสมอไม่ว่าจะมีกี่เควส
@@ -278,10 +278,10 @@ export default function QuestGateView({
         }
         .quest-gate-view__row:hover:not(:disabled) { transform: translateX(4px); filter: brightness(1.12); }
         .quest-gate-view__row:disabled { cursor: not-allowed; opacity: .55; }
-        /* [แก้ตามที่ระบุ — ตัวเลือก B] เอาวงกลมไล่สี/เงาออก เหลือแค่กล่องขนาดคงที่ 2.5cm ไว้
+        /* [แก้ตามที่ระบุ ตัวเลือก B] เอาวงกลมไล่สี/เงาออก เหลือแค่กล่องขนาดคงที่ 2.5cm ไว้
            จัดตำแหน่งไอคอน ไม่มีพื้นหลัง/ขอบ/เงาอีกต่อไป */
         .quest-gate-view__row-icon {
-          /* [แก้ตามที่ระบุ] รูปเควสหน้าแรกของหมวดกาย/ใจเล็กลงอีกนิด (เคย 2.9cm) — จอเล็กย่อตามความกว้าง */
+          /* [แก้ตามที่ระบุ] รูปเควสหน้าแรกของหมวดกาย/ใจเล็กลงอีกนิด (เคย 2.9cm) จอเล็กย่อตามความกว้าง */
           flex-shrink: 0; width: min(2.4cm, 19vw); height: min(2.4cm, 19vw);
           display: flex; align-items: center; justify-content: center; font-size: 22px;
         }
@@ -305,16 +305,16 @@ export default function QuestGateView({
         }
         .quest-gate-view__row-status--done { background: var(--g500); color: var(--fixed-white); }
         .quest-gate-view__row-status--locked { background: var(--glass-b-60); color: var(--fixed-white); }
-        /* [ใหม่] ต้องเช็คอินอารมณ์ก่อน — ตั้งใจให้หน้าตาต่างจาก lock จริงๆ (กรอบ/ตัวอักษรสีทอง
+        /* [ใหม่] ต้องเช็คอินอารมณ์ก่อน ตั้งใจให้หน้าตาต่างจาก lock จริงๆ (กรอบ/ตัวอักษรสีทอง
            อ่อนบนพื้นกระจกใส ไม่ใช่ป้ายทึบสีเข้ม) เพราะไม่ได้กดไม่ได้ แค่จะพาไปเช็คอินก่อนเท่านั้น */
         .quest-gate-view__row-status--mood { background: var(--glass-w-15); color: var(--fixed-white); border: 1px solid var(--ae-sun); }
-        /* [ใหม่] ป้าย "เล่นซ้ำได้" — โทนเขียวอมฟ้าของ Aether (--ae-glow) แยกจาก done/locked/mood
+        /* [ใหม่] ป้าย "เล่นซ้ำได้" โทนเขียวอมฟ้าของ Aether (--ae-glow) แยกจาก done/locked/mood
            ทั้งหมด เพราะไม่ใช่สถานะเควส แต่เป็นคุณสมบัติของเควสเอง โชว์คู่กับ status chip อื่นได้ */
         .quest-gate-view__row-status--repeat { background: var(--glass-w-15); color: var(--ae-glow); border: 1px solid var(--ae-glow); }
 
         .quest-gate-view__list-spacer { min-height: 56px; flex-shrink: 0; }
 
-        /* [ใหม่ — ข้อ D5] แถบศูนย์ฉุกเฉิน ท้ายลิสต์หมวดสุขภาพจิตเท่านั้น — ตั้งใจให้ "นิ่ง"
+        /* [ใหม่ ข้อ D5] แถบศูนย์ฉุกเฉิน ท้ายลิสต์หมวดสุขภาพจิตเท่านั้น ตั้งใจให้ "นิ่ง"
            ไม่มีแอนิเมชัน สีสงบ (ขาว/เทาอ่อนโปร่งแสง ไม่ใช่โทนม่วง/ชมพูจัดแบบปุ่มเควส) แยกให้
            เห็นชัดว่านี่ไม่ใช่เควส ไม่มี icon แบบวงกลมไล่สี ไม่มี hover เลื่อนซ้าย-ขวา */
         .quest-gate-view__safety-banner {
@@ -325,13 +325,13 @@ export default function QuestGateView({
         }
         .quest-gate-view__safety-banner:hover { background: var(--glass-w-16); }
         .quest-gate-view__safety-banner-icon { flex-shrink: 0; font-size: 24px; line-height: 1; }
-        .quest-gate-view__safety-banner-img { flex-shrink: 0; width: 32px; height: 32px; object-fit: contain; }
+        .quest-gate-view__safety-banner-img { flex-shrink: 0; width: 60px; height: 60px; margin: -8px 0; object-fit: contain; } /* [แก้ตามที่ระบุ] กล่องพยาบาลใหญ่ขึ้น (เดิม 32px) */
         .quest-gate-view__safety-banner-text { display: flex; flex-direction: column; gap: 2px; }
         .quest-gate-view__safety-banner-text strong { font-family: var(--font-display); font-size: var(--fs-sm); }
         .quest-gate-view__safety-banner-text small { font-size: var(--fs-xs); color: var(--glass-w-70); }
 
-        /* ═══ ธีมสว่าง — [แก้ตามที่ระบุ] หน้าเควสสุขภาพกาย/สุขภาพจิตเป็นเขียวอ่อนสีเดียวกับกรอบ
-           กระดานจัดอันดับ (ธีมมืดยังเป็นฉากเข้มแบบเดิมทุกอย่าง — theme.bg/itemBg เดิมไม่แตะ)
+        /* ═══ ธีมสว่าง [แก้ตามที่ระบุ] หน้าเควสสุขภาพกาย/สุขภาพจิตเป็นเขียวอ่อนสีเดียวกับกรอบ
+           กระดานจัดอันดับ (ธีมมืดยังเป็นฉากเข้มแบบเดิมทุกอย่าง theme.bg/itemBg เดิมไม่แตะ)
            พื้นมาจาก inline style (theme.bg) จึงต้อง !important ทับเฉพาะธีมสว่าง ═══ */
         :root:not([data-theme="dark"]) .quest-gate-view {
           background: linear-gradient(180deg, var(--leaf-soft) 0%, var(--g100) 55%, var(--leaf-soft-strong) 100%) !important;
@@ -359,18 +359,18 @@ export default function QuestGateView({
         .quest-gate-view__list::-webkit-scrollbar { width: 4px; }
         .quest-gate-view__list::-webkit-scrollbar-thumb { background: var(--glass-w-30); border-radius: 99px; }
 
-        /* [ใหม่ — ข้อ D2] เดสก์ท็อปขึ้นไป (≥1024px) — ปุ่มเควสจัดกึ่งกลางจอแทนเต็มความกว้าง
+        /* [ใหม่ ข้อ D2] เดสก์ท็อปขึ้นไป (≥1024px) ปุ่มเควสจัดกึ่งกลางจอแทนเต็มความกว้าง
            ใช้ px ตรงๆ (ไม่ใช้หน่วย cm เพราะอิงสมมติฐาน 96dpi ที่จอจริงมักไม่ตรงเป๊ะ) ไม่ใช้กับ
            มือถือ/แท็บเล็ต (ปุ่มยังเต็มความกว้างเหมือนเดิมตามที่ระบุ)
 
-           [แก้ตามที่ระบุ] เดิม max-width: 302px (~8cm) สั้น/เล็กเกินไปไม่สมส่วนกับพื้นที่จอใหญ่ —
+           [แก้ตามที่ระบุ] เดิม max-width: 302px (~8cm) สั้น/เล็กเกินไปไม่สมส่วนกับพื้นที่จอใหญ่ 
            ไอคอนอย่างเดียวก็กิน 2.5cm (~94.5px ที่ 96dpi) ของความกว้างนั้นไปแล้วเกือบ 1 ใน 3
            เหลือพื้นที่ให้หัวข้อ+ป้ายสถานะแคบมาก ขยายเป็น 520px แทน (ใกล้เคียง max-width ของ
            การ์ด/แผงเนื้อหากึ่งกลางจออื่นในแอปที่ใช้ช่วง 420-480px เช่น .oracle-page__reading-view
-           440px, .camera-capture__review-controls 420px — 520px ให้ปุ่มเควสซึ่งเป็นรายการยาว
+           440px, .camera-capture__review-controls 420px 520px ให้ปุ่มเควสซึ่งเป็นรายการยาว
            ทั้งแถวยาวสมส่วนกว่าเล็กน้อยโดยยังไม่กว้างจนรู้สึกโล่งเกินไปบนจอกว้างมากๆ) ใช้ component
            เดียวกันทั้งหมวดสุขภาพจิตและสุขภาพกาย จึงแก้จุดเดียวได้ผลทั้งสองหมวด (ไม่มี override
-           เฉพาะหมวดที่ไหนอีก — ยืนยันด้วย grep ทั้งโปรเจกต์แล้วว่าไม่มีไฟล์อื่นอ้างถึง class นี้) */
+           เฉพาะหมวดที่ไหนอีก ยืนยันด้วย grep ทั้งโปรเจกต์แล้วว่าไม่มีไฟล์อื่นอ้างถึง class นี้) */
         @media (min-width: 1024px) {
           .quest-gate-view__list { align-items: center; }
           .quest-gate-view__row,

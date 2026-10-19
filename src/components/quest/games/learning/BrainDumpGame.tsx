@@ -172,7 +172,7 @@ export default function BrainDumpGame({ finish }: QuestGameProps) {
 
       {step === 'record' && (
         <div className="qg qg-center">
-          <p className="qg-hint">ห้ามเปิดดูเนื้อหานะ — พูดอธิบายออกมาดังๆ เหมือนกำลังสอนใครสักคน</p>
+          <p className="qg-hint">ห้ามเปิดดูเนื้อหานะ พูดอธิบายออกมาดังๆ เหมือนกำลังสอนใครสักคน</p>
           <button
             className="qg-btn"
             style={{ maxWidth: 200, margin: '4px auto', height: 92, borderRadius: 99, fontSize: 34 }}
@@ -182,13 +182,13 @@ export default function BrainDumpGame({ finish }: QuestGameProps) {
             {recording ? '⏹' : '🎙️'}
           </button>
           <span className={`qg-tag${recording ? ' qg-tag--ok' : ''}`}>
-            {recording ? `กำลังฟัง... ${formatDuration(elapsed)}` : elapsed > 0 ? `อัดไว้แล้ว ${formatDuration(elapsed)} — กดไมค์เพื่อพูดต่อ` : 'กดไมค์เพื่อเริ่มพูด'}
+            {recording ? `กำลังฟัง... ${formatDuration(elapsed)}` : elapsed > 0 ? `อัดไว้แล้ว ${formatDuration(elapsed)} กดไมค์เพื่อพูดต่อ` : 'กดไมค์เพื่อเริ่มพูด'}
           </span>
 
           {!supported && (
             <div className="qg-card">
               <p className="qg-hint" style={{ marginBottom: 8 }}>
-                เบราว์เซอร์นี้ยังไม่รองรับการถอดเสียงอัตโนมัติ — พูดออกมาดังๆ ก่อน แล้วพิมพ์สรุปสิ่งที่พูดลงช่องนี้แทน
+                เบราว์เซอร์นี้ยังไม่รองรับการถอดเสียงอัตโนมัติ พูดออกมาดังๆ ก่อน แล้วพิมพ์สรุปสิ่งที่พูดลงช่องนี้แทน
                 (Production Effect ยังทำงานอยู่ เพราะคุณได้พูดออกเสียงจริง)
               </p>
               <textarea className="qg-textarea" value={transcript} onChange={(e) => setTranscript(e.target.value)} placeholder="พิมพ์สิ่งที่เพิ่งพูดออกไป..." />
@@ -204,7 +204,7 @@ export default function BrainDumpGame({ finish }: QuestGameProps) {
 
           {!recording && (
             <button className="qg-btn" disabled={wordCount < MIN_WORDS} onClick={() => setStep('review')}>
-              {wordCount < MIN_WORDS ? `พูดอีกหน่อย (${wordCount}/${MIN_WORDS} คำ)` : 'บันทึกเสร็จ — ดูสิ่งที่พูด'}
+              {wordCount < MIN_WORDS ? `พูดอีกหน่อย (${wordCount}/${MIN_WORDS} คำ)` : 'บันทึกเสร็จ ดูสิ่งที่พูด'}
             </button>
           )}
         </div>
@@ -238,7 +238,7 @@ export default function BrainDumpGame({ finish }: QuestGameProps) {
                 {missed.map((m) => <span key={m} className="qg-chip">{m}</span>)}
               </div>
               <p className="qg-hint" style={{ marginTop: 10 }}>
-                หัวข้อที่นึกไม่ออกจะไปรอในเควสเสริม "แคปซูลเวลา" — นัดวันกลับมาทบทวนในอีก 1-2 วันเพื่อให้จำแน่นขึ้น
+                หัวข้อที่นึกไม่ออกจะไปรอในเควสเสริม "แคปซูลเวลา" นัดวันกลับมาทบทวนในอีก 1-2 วันเพื่อให้จำแน่นขึ้น
               </p>
             </div>
           ) : (

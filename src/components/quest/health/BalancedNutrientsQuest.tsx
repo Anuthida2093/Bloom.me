@@ -186,8 +186,8 @@ export default function BalancedNutrientsQuest({ onComplete, onClose }: Balanced
         setVerifying(false)
         setAnalysisError(
           analysis.foodDescription
-            ? `ไม่พบอาหารในรูป (AI เห็นว่า: ${analysis.foodDescription}) — ลองถ่ายรูปมื้ออาหารใหม่อีกครั้ง`
-            : 'ไม่พบอาหารในรูป — ลองถ่ายรูปมื้ออาหารใหม่อีกครั้ง',
+            ? `ไม่พบอาหารในรูป (AI เห็นว่า: ${analysis.foodDescription}) ลองถ่ายรูปมื้ออาหารใหม่อีกครั้ง`
+            : 'ไม่พบอาหารในรูป ลองถ่ายรูปมื้ออาหารใหม่อีกครั้ง',
         )
         return
       }
@@ -203,7 +203,7 @@ export default function BalancedNutrientsQuest({ onComplete, onClose }: Balanced
         },
       ])
       setVerifying(false)
-      setToast(`${flavorText} — AI เห็นว่า: ${analysis.foodDescription} (~${analysis.estimatedCalories.toLocaleString()} kcal)`)
+      setToast(`${flavorText} AI เห็นว่า: ${analysis.foodDescription} (~${analysis.estimatedCalories.toLocaleString()} kcal)`)
       playSfx('SPARKLE_CHIME', sfxOpts)
       window.setTimeout(() => setToast(null), 3200)
     } catch (err) {
@@ -221,7 +221,7 @@ export default function BalancedNutrientsQuest({ onComplete, onClose }: Balanced
       ...prev,
       { id: `meal-${Date.now()}`, photo, approvedAt: new Date().toISOString(), calories: food.calories, description: food.name, items: food.items },
     ])
-    setToast(`${flavorText} — ${food.name} (~${food.calories.toLocaleString()} kcal)`)
+    setToast(`${flavorText} - ${food.name} (~${food.calories.toLocaleString()} kcal)`)
     playSfx('SPARKLE_CHIME', sfxOpts)
     window.setTimeout(() => setToast(null), 3200)
   }
@@ -292,11 +292,11 @@ export default function BalancedNutrientsQuest({ onComplete, onClose }: Balanced
           )
         ) : (
           <div className="balanced-nutrients__calorie-missing">
-            ยังคำนวณไม่ได้ — กรุณากรอกส่วนสูง/น้ำหนัก ให้ครบในหน้าโปรไฟล์ก่อน
+            ยังคำนวณไม่ได้ กรุณากรอกส่วนสูง/น้ำหนัก ให้ครบในหน้าโปรไฟล์ก่อน
           </div>
         )}
         <div className="balanced-nutrients__calorie-note">
-          ประมาณจากสูตร Mifflin-St Jeor ปรับตามเกณฑ์ BMI ของคุณ (ยังไม่รวมระดับกิจกรรมจริง — ดูสรุปท้าย)
+          ประมาณจากสูตร Mifflin-St Jeor ปรับตามเกณฑ์ BMI ของคุณ (ยังไม่รวมระดับกิจกรรมจริง ดูสรุปท้าย)
         </div>
 
         {/* [แก้ตามที่ระบุ] กรอบรูปไม่แสดงรูปที่ถ่าย — ตัวกรอบคือปุ่มถ่ายภาพ แตะแล้วไปหน้ากล้องทันที

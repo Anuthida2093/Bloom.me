@@ -49,7 +49,7 @@ export default function StoryFeed({ onCompose }: { onCompose: () => void }) {
         {isLoadingPosts && <div className="story-empty-state">กำลังโหลดฟีด...</div>}
 
         {!isLoadingPosts && posts.length === 0 && (
-          <div className="story-empty-state">ยังไม่มีสตอรี่ในฟีด — เป็นคนแรกที่โพสต์เลยสิ!</div>
+          <div className="story-empty-state">ยังไม่มีสตอรี่ในฟีด เป็นคนแรกที่โพสต์เลยสิ!</div>
         )}
 
         {orderedPosts.map((post) => <PostCard key={post.id} post={post} />)}

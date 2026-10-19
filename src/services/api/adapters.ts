@@ -23,7 +23,7 @@ export const MAX_PAGE_SIZE = 100
 
 /** ฟีเจอร์ที่หน้าเว็บมีแต่ backend ยังไม่มี endpoint — โยน error ภาษาไทยที่ชัดเจนแทนการยิงไปเจอ 404 */
 export function notSupportedYet(feature: string): never {
-  throw new ApiError(501, `${feature} ยังไม่รองรับบนเซิร์ฟเวอร์ — รอ backend เพิ่ม endpoint`)
+  throw new ApiError(501, `${feature} ยังไม่รองรับบนเซิร์ฟเวอร์ รอ backend เพิ่ม endpoint`)
 }
 
 /* ── field ที่ backend ยังไม่มี (waterDrops) + ค่าสำรองของ gender/isProfilePrivate: เก็บในเครื่อง ──

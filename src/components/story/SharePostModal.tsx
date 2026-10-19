@@ -35,7 +35,7 @@ export default function SharePostModal({ post, onClose }: { post: PostData; onCl
         <div className="story-modal-card__title">ส่งให้เพื่อน</div>
         <PostPreviewMini post={post} />
         {friendPlayers.length === 0 ? (
-          <div className="story-empty-state">ยังไม่มีเพื่อน — เพื่อนคือคนที่ติดตามกันทั้งสองฝ่าย ลองติดตามคนที่ติดตามคุณอยู่ดูสิ</div>
+          <div className="story-empty-state">ยังไม่มีเพื่อน เพื่อนคือคนที่ติดตามกันทั้งสองฝ่าย ลองติดตามคนที่ติดตามคุณอยู่ดูสิ</div>
         ) : (
           <>
             <input

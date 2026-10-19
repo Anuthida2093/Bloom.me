@@ -15,6 +15,15 @@ import { BADGE_ICONS } from '../../../config/iconAssets'
 
 const C_1 = '#9B8FD8'
 
+/** [แก้ตามที่ระบุ] หัวข้อสั้นของแต่ละข้อ ใช้ในสรุปคำตอบหน้าผลลัพธ์ */
+const SUMMARY_TOPICS: Record<number, string> = {
+  1: 'ความสนใจ / ความสุขในสิ่งที่ทำ',
+  2: 'อารมณ์เศร้า หดหู่',
+  3: 'การนอนหลับ',
+  4: 'ความเหนื่อยล้า',
+  5: 'มุมมองต่อตัวเอง',
+}
+
 /*============================================================================*\
   ScreeningPage — แบบคัดกรองภาวะซึมเศร้า 5 ข้อ  [ไฟล์ใหม่]
   ────────────────────────────────────────────────────────────────────────────
@@ -128,6 +137,22 @@ export default function ScreeningPage({ pending, onFinished, onOpenSafetyNet, on
           <div className="screening__risk-badge">{plan.headline}</div>
 
           <p className="screening__advice">{plan.advice}</p>
+
+          {/* [แก้ตามที่ระบุ] สรุปคำตอบทั้ง 5 ข้อ */}
+          <div className="screening__summary">
+            <div className="screening__summary-title">สรุปคำตอบของคุณ</div>
+            <ul>
+              {SCREENING_QUESTIONS.map((q) => {
+                const score = answers.find((a) => a.question === q.no)?.score ?? 0
+                return (
+                  <li key={q.no} className={`screening__summary-row screening__summary-row--s${score}`}>
+                    <span className="screening__summary-topic">{q.no}. {SUMMARY_TOPICS[q.no]}</span>
+                    <span className="screening__summary-answer">{SCORE_CHOICES.find((c) => c.score === score)?.label}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
 
           <div className="screening__tree-status">
             <span>สถานะต้นไม้ของคุณตอนนี้</span>

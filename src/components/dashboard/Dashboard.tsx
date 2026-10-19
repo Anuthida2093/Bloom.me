@@ -461,6 +461,11 @@ export default function Dashboard() {
   const expIntoLevel = userData.exp % EXP_PER_LEVEL
   // กลับมาเห็นหน้า Home (ไม่มีหน้าเควส/ป็อปอัปบัง) หลังได้หยดน้ำใหม่ → บัวรดน้ำครั้งเดียว แล้วล้างธง
   const homeVisible = !anyModalOpen && !introPhase && !viewingPlayer && isLoggedIn
+  /** [แก้ตามที่ระบุ] โหมด "ดูต้นไม้ของฉัน" — เหลือแค่ต้นไม้ + พื้นดิน + พื้นหลัง และปุ่มกลับมุมซ้ายบน
+   *  (ไม่มี HUD / ตารางจัดอันดับ / ปุ่มลอย / ActionMenuBar) */
+  const [treeOnlyView, setTreeOnlyView] = useState(false)
+  /** ซ่อน UI ทั้งหมดของหน้า Home ตอนดูต้นไม้เพื่อน หรือโหมดดูต้นไม้ของฉัน */
+  const hideHomeChrome = !!viewingPlayer || treeOnlyView
   useEffect(() => {
     if (!homeVisible) return
     const id = window.setTimeout(() => { if (takeNewWaterDrop(userData.id)) setWateringKey((k) => k + 1) }, 400)
@@ -583,7 +588,7 @@ export default function Dashboard() {
       )}
 
       {/* ═══ HUD แคปซูลกลางจอ ชิดขอบบน (แบบ V1) ═══ */}
-      {!viewingPlayer && (isLoggedIn || isGuest) && (
+      {!hideHomeChrome && (isLoggedIn || isGuest) && (
         <div className="game-top-hud" ref={hudRef}>
           <div className="hud-pill hud-pill--level">
             {/* รูปเลเวล = Seed.png (EXP.png ใช้กับแถบ EXP ข้างๆ) */}
@@ -617,7 +622,14 @@ export default function Dashboard() {
       {/* [แก้ตามที่ระบุ] แสงแดด (ธีมสว่าง) / ฉากกลางคืน (ธีมมืด) / ฝนตกตามสภาพอากาศจริง */}
       <HomeAmbience hidden={anyModalOpen} />
 
-      {!viewingPlayer && showOverCalorie && <OverCalorieNotice streakDays={overCalorieStreak} />}
+      {!hideHomeChrome && showOverCalorie && <OverCalorieNotice streakDays={overCalorieStreak} />}
+
+      {/* [แก้ตามที่ระบุ] โหมดดูต้นไม้ของฉัน — ปุ่มกลับมุมซ้ายบน (แบบเดียวกับตอนดูต้นไม้เพื่อน) */}
+      {treeOnlyView && !viewingPlayer && (
+        <button className="dashboard__back-btn lb-banner" onClick={() => setTreeOnlyView(false)} aria-label="กลับ" title="กลับ">
+          <img src={BADGE_ICONS.back} className="icon-img" alt="" />
+        </button>
+      )}
 
       <div ref={treeLayerRef} className="dashboard__tree-layer">
         {viewingPlayer && viewingTreeStats ? (
@@ -678,12 +690,12 @@ export default function Dashboard() {
 
         {/* แอนิเมชันบัวรดน้ำ — เล่นครั้งเดียวเมื่อกลับมาหน้า Home หลังได้หยดน้ำใหม่ หรือหลังกดรดน้ำในเช็คอิน
             (wateringKey — ดู homeVisible effect ด้านบน) ไม่โชว์ตอนดูต้นไม้ของคนอื่น */}
-        {!viewingPlayer && <WateringCanFx waterPulseKey={wateringKey} />}
+        {!hideHomeChrome && <WateringCanFx waterPulseKey={wateringKey} />}
 
         {/* [แก้ตามที่ระบุ] โพสอิทลอยบนจอ — ขึ้นกลางต้นไม้ ลากไปวางตรงไหนก็ได้ (ดู PostItLayer.tsx) */}
-        {!viewingPlayer && <PostItLayer postIts={postIts} onOpen={setOpenPostIt} onMove={movePostIt} />}
+        {!hideHomeChrome && <PostItLayer postIts={postIts} onOpen={setOpenPostIt} onMove={movePostIt} />}
 
-        {!viewingPlayer && daysSinceLastOracle !== null && daysSinceLastOracle >= 2 && (
+        {!hideHomeChrome && daysSinceLastOracle !== null && daysSinceLastOracle >= 2 && (
           <button className="dashboard__oracle-nudge" onClick={handleOpenOracleFromTooltip}>
             ไม่ได้สุ่มไพ่ทิพย์มา {daysSinceLastOracle} วันแล้ว
           </button>
@@ -694,7 +706,7 @@ export default function Dashboard() {
       </div>
 
       {/* ═══ ปุ่มลอยซ้าย: Leaderboard (คงของ V2 เดิม) ═══ */}
-      {!viewingPlayer && (
+      {!hideHomeChrome && (
         <div className="dashboard__panel dashboard__panel--left">
           <LeaderboardPanel
             collapsed={leaderboardCollapsed}
@@ -714,6 +726,7 @@ export default function Dashboard() {
       {/* ═══ ปุ่มลอยขวา: Tree Stats / Mood / Sound (แบบ V1) — หรือการ์ดข้อมูลต้นไม้เพื่อนตอนดูคนอื่น ═══ */}
       {/* [แก้ตามที่ระบุ] เปิดแผงข้อมูลต้นไม้/แจ้งเตือน → ยกทั้งคลัสเตอร์ขึ้นเหนือ HUD ให้แผงทับแถบคะแนนด้านบน
           (แบบเดียวกับแผงข้อมูล MBTI) — แผงเป็น position:fixed ในคลัสเตอร์ z-index 60 จึงเคยอยู่ใต้ HUD (90) */}
+      {!treeOnlyView && (
       <div className={`dashboard__right-cluster${!viewingPlayer && (showTreeStats || showNotifications) ? ' dashboard__right-cluster--panel-open' : ''}`}>
         {viewingPlayer ? (
           <>
@@ -742,6 +755,7 @@ export default function Dashboard() {
                   daysSinceLastMentalQuest={daysSinceLastQuestByCategory.EMOTION}
                   daysSinceLastPhysicalQuest={daysSinceLastQuestByCategory.HEALTH}
                   onClose={() => setShowTreeStats(false)}
+                  onViewMyTree={() => { setShowTreeStats(false); setShowNotifications(false); setTreeOnlyView(true) }}
                 />
               </div>
             )}
@@ -805,11 +819,12 @@ export default function Dashboard() {
           </>
         )}
       </div>
+      )}
 
       {/* ═══ ปุ่มลอยมุมขวาล่างจอ: แชร์ + เพื่อน ═══
           [แก้ข้อ B] ปุ่มเพื่อนเปิดหน้า FriendsPage จริงแล้ว (เดิมเป็นแค่ placeholder
           setInfoAlert "เร็วๆ นี้") */}
-      {!viewingPlayer && (
+      {!hideHomeChrome && (
         <div className="dashboard__corner-actions dashboard__corner-actions--right">
           <button className="game-icon-btn" onClick={handleShare} title="แชร์">
             <img src={BADGE_ICONS.share} className="icon-img" alt="" />
@@ -825,7 +840,7 @@ export default function Dashboard() {
       )}
 
       {/* [แก้ตามที่ระบุ] เปิดสตอรี่แล้วไม่ต้องมีแถบเมนูล่างทับ — หน้าสตอรี่มีปุ่มกากบาทปิดอยู่แล้ว */}
-      {!viewingPlayer && !modals.story && (
+      {!hideHomeChrome && !modals.story && (
       <ActionMenuBar
         active={activeNavKey}
         activeQuestCount={completedQuestCount}

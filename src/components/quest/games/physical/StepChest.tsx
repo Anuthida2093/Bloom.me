@@ -35,7 +35,7 @@ export function StepChestMarker({ mapDef, onOpen, disabled, ready = true }: { ma
         onClick={ready ? onOpen : undefined}
         onPointerDown={(e) => { if (ready) e.stopPropagation() }}
         disabled={disabled || !ready}
-        aria-label={ready ? 'เปิดหีบสมบัติ' : 'หีบสมบัติที่เส้นชัย — เดินให้ถึงเป้าเพื่อเปิด'}
+        aria-label={ready ? 'เปิดหีบสมบัติ' : 'หีบสมบัติที่เส้นชัย เดินให้ถึงเป้าเพื่อเปิด'}
       >
         <span aria-hidden="true">🎁</span>
       </button>
@@ -47,8 +47,8 @@ const SCROLL_VIEW: Record<Exclude<StepChestReward['kind'], 'EXCHANGE_CARD'>, { i
   BONUS_COINS: { icon: BADGE_ICONS.coins, title: (n) => `เหรียญโบนัส +${n}`, text: 'เข้ากระเป๋าเรียบร้อยแล้ว' },
   WATER_DROPS: { icon: BADGE_ICONS.water, title: (n) => `หยดน้ำ +${n}`, text: 'เอาไปรดน้ำต้นไม้ที่หน้าแรกได้เลย' },
   BONUS_EXP: { icon: BADGE_ICONS.exp, title: (n) => `EXP โบนัส +${n}`, text: 'ต้นไม้ของคุณเติบโตขึ้นอีกนิดแล้ว' },
-  SPECIAL_DUST: { icon: SPECIAL_DUST_ICON, title: (n) => `ผงพิเศษ +${n}`, text: 'เก็บไว้ในคลังไอเทมแล้ว — กด "ใช้" เพื่อโปรยผงวิบวับใส่ต้นไม้ที่หน้าแรก' },
-  DOUBLE_CARD: { icon: DOUBLE_CARD_ICON, title: (n) => `การ์ดคูณสอง +${n}`, text: `เก็บไว้ในคลังไอเทมแล้ว — กด "ใช้" เมื่อพร้อม รางวัลเควสทุกเควส ×2 นาน ${DOUBLE_CARD_HOURS} ชั่วโมง` },
+  SPECIAL_DUST: { icon: SPECIAL_DUST_ICON, title: (n) => `ผงพิเศษ +${n}`, text: 'เก็บไว้ในคลังไอเทมแล้ว กด "ใช้" เพื่อโปรยผงวิบวับใส่ต้นไม้ที่หน้าแรก' },
+  DOUBLE_CARD: { icon: DOUBLE_CARD_ICON, title: (n) => `การ์ดคูณสอง +${n}`, text: `เก็บไว้ในคลังไอเทมแล้ว กด "ใช้" เมื่อพร้อม รางวัลเควสทุกเควส ×2 นาน ${DOUBLE_CARD_HOURS} ชั่วโมง` },
 }
 
 interface StepChestPopupProps {

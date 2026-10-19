@@ -302,32 +302,32 @@ export async function startDeviceMotionTracking(onStepCountChange: (steps: numbe
 export function describeStepSyncError(err: unknown): string {
   const code = err instanceof Error ? err.message : ''
   if (code === 'GOOGLE_FIT_NOT_CONFIGURED') {
-    return 'ยังไม่ได้ตั้งค่า Google Fit (ต้องมี OAuth client ID) — สลับไปกรอกจำนวนก้าวเองแทน'
+    return 'ยังไม่ได้ตั้งค่า Google Fit (ต้องมี OAuth client ID) สลับไปกรอกจำนวนก้าวเองแทน'
   }
   if (code === 'POPUP_BLOCKED') {
-    return 'เบราว์เซอร์บล็อกป๊อปอัพเชื่อมต่อ Google Fit — อนุญาตป๊อปอัพสำหรับเว็บนี้แล้วลองใหม่'
+    return 'เบราว์เซอร์บล็อกป๊อปอัพเชื่อมต่อ Google Fit อนุญาตป๊อปอัพสำหรับเว็บนี้แล้วลองใหม่'
   }
   if (code === 'POPUP_CLOSED') {
-    return 'หน้าต่างเชื่อมต่อ Google Fit ถูกปิดก่อนอนุญาตสิทธิ์ — ลองกดซิงค์อีกครั้ง'
+    return 'หน้าต่างเชื่อมต่อ Google Fit ถูกปิดก่อนอนุญาตสิทธิ์ ลองกดซิงค์อีกครั้ง'
   }
   if (code === 'OAUTH_STATE_MISMATCH') {
-    return 'เชื่อมต่อ Google Fit ไม่สำเร็จ — ลองกดซิงค์อีกครั้ง'
+    return 'เชื่อมต่อ Google Fit ไม่สำเร็จ ลองกดซิงค์อีกครั้ง'
   }
   if (code === 'DEVICE_MOTION_NOT_SUPPORTED') {
-    return 'อุปกรณ์นี้ไม่รองรับการนับก้าวจากเซ็นเซอร์ — กรอกจำนวนก้าวเองแทน'
+    return 'อุปกรณ์นี้ไม่รองรับการนับก้าวจากเซ็นเซอร์ กรอกจำนวนก้าวเองแทน'
   }
   if (code === 'DEVICE_MOTION_PERMISSION_DENIED') {
-    return 'ไม่ได้รับอนุญาตให้ใช้เซ็นเซอร์เครื่อง — กรอกจำนวนก้าวเองแทน'
+    return 'ไม่ได้รับอนุญาตให้ใช้เซ็นเซอร์เครื่อง กรอกจำนวนก้าวเองแทน'
   }
   if (code.startsWith('GOOGLE_FIT_HTTP_')) {
-    return 'ดึงข้อมูลจาก Google Fit ไม่สำเร็จ — สลับไปกรอกจำนวนก้าวเองแทน'
+    return 'ดึงข้อมูลจาก Google Fit ไม่สำเร็จ สลับไปกรอกจำนวนก้าวเองแทน'
   }
   // [เพิ่มรอบนี้ — เฟส 3 Capacitor] error code จาก useStepTracker.ts (native health API)
   if (code === 'NATIVE_HEALTH_PERMISSION_DENIED') {
-    return 'ไม่ได้รับอนุญาตให้อ่านข้อมูลก้าวเดินจาก Health Connect/HealthKit — สลับไปแหล่งอื่นแทน'
+    return 'ไม่ได้รับอนุญาตให้อ่านข้อมูลก้าวเดินจาก Health Connect/HealthKit สลับไปแหล่งอื่นแทน'
   }
   if (code === 'NATIVE_HEALTH_QUERY_FAILED' || code === 'NATIVE_HEALTH_UNPARSEABLE_RESULT') {
-    return 'ดึงข้อมูลก้าวเดินจาก Health Connect/HealthKit ไม่สำเร็จ — สลับไปแหล่งอื่นแทน'
+    return 'ดึงข้อมูลก้าวเดินจาก Health Connect/HealthKit ไม่สำเร็จ สลับไปแหล่งอื่นแทน'
   }
-  return 'เชื่อมต่อแหล่งข้อมูลก้าวเดินไม่สำเร็จ — กรอกจำนวนก้าวเองแทน'
+  return 'เชื่อมต่อแหล่งข้อมูลก้าวเดินไม่สำเร็จ กรอกจำนวนก้าวเองแทน'
 }
