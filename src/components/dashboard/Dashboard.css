@@ -43,10 +43,7 @@
   scrollbar-width: none;
 }
 .dashboard__tree-layer::-webkit-scrollbar { display: none; }
-/* พื้นหลังอยู่นอกชั้นที่เลื่อน → ขยับขึ้นตามระยะเลื่อน (Dashboard.tsx ตั้ง --home-scroll-y)
-   ใช้ property translate แยกจาก transform (วิดีโอใช้ transform ทำ parallax แนวนอนอยู่แล้ว) */
-.dashboard__bg-video,
-.dashboard__bg-still { translate: 0 calc(var(--home-scroll-y, 0px) * -1); }
+/* [แก้ตามที่ระบุ] พื้นหลังวิดีโอ/ภาพนิ่งอยู่กับที่ ไม่ขยับตามการเลื่อน (เลื่อนเฉพาะฉากต้นไม้ + ชั้นดิน) */
 
 /* ชั้นดินต่อจากขอบล่างของฉาก — สีต่อจากดินล่างสุดที่ drawGround วาด (#43301c) แล้วเข้มลงตามความลึก
    + ริ้วชั้นดิน + กรวดเล็ก (ลวดลายซ้ำด้วย gradient ล้วน ไม่ต้องโหลดรูป) */

@@ -470,17 +470,10 @@ export default function Dashboard() {
      ไปหน้าอื่น/ดูต้นไม้เพื่อน แล้วกลับมา → ฉากแรกเสมอ: เลื่อนกลับบนสุด + ต้นไม้กึ่งกลางจอ (homeSceneKey) */
   const treeLayerRef = useRef<HTMLDivElement | null>(null)
   const homeSceneKey = `${homeVisible ? 'home' : 'away'}-${viewingPlayer?.id ?? 'me'}`
-  /** พื้นหลัง (วิดีโอ/ภาพนิ่ง) อยู่นอกชั้นที่เลื่อน — ขยับตามด้วยตัวแปร CSS (ไม่ re-render ทุกเฟรมที่เลื่อน) */
-  const syncHomeScroll = useCallback(() => {
-    const el = treeLayerRef.current
-    el?.parentElement?.style.setProperty('--home-scroll-y', `${el.scrollTop}px`)
-  }, [])
+  /* [แก้ตามที่ระบุ] พื้นหลังวิดีโอ/ภาพนิ่งอยู่กับที่ ไม่ขยับตามการเลื่อน — เลื่อนเฉพาะฉากต้นไม้ + ชั้นดิน */
   useEffect(() => {
-    const el = treeLayerRef.current
-    if (!el) return
-    el.scrollTop = 0
-    syncHomeScroll()
-  }, [homeSceneKey, syncHomeScroll])
+    if (treeLayerRef.current) treeLayerRef.current.scrollTop = 0
+  }, [homeSceneKey])
   // เปิดแอป/กลับมาที่แอป → ปิดรอบเควสก้าวของวันก่อนหน้าที่ยังไม่ได้รับ (ตัดรอบเที่ยงคืนเวลาไทย)
   useStepSettlement(isLoggedIn && !introPhase)
   // เควสแคลอรี่: 18:00 แล้วกินครบเป้า → นับสำเร็จให้อัตโนมัติ + หน้าจอรับรางวัล
@@ -626,7 +619,7 @@ export default function Dashboard() {
 
       {!viewingPlayer && showOverCalorie && <OverCalorieNotice streakDays={overCalorieStreak} />}
 
-      <div ref={treeLayerRef} className="dashboard__tree-layer" onScroll={syncHomeScroll}>
+      <div ref={treeLayerRef} className="dashboard__tree-layer">
         {viewingPlayer && viewingTreeStats ? (
           <>
             {/* [แก้ตามที่ระบุ] ปุ่มกลับบ้านเหลือแค่ไอคอน Return — ข้อความ "กลับบ้าน" ชนป้ายชื่อต้นไม้เพื่อนบนจอเล็ก */}

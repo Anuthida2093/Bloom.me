@@ -9,6 +9,9 @@ import DailyCheckinGame from '../components/quest/games/learning/DailyCheckinGam
 import ContentReviewGame from '../components/quest/games/learning/ContentReviewGame'
 import GuardianOfRestGame from '../components/quest/games/learning/GuardianOfRestGame'
 import TenYearForestGame from '../components/quest/games/learning/TenYearForestGame'
+// [นำกลับมาตามที่ระบุ] เควสเสริม กลยุทธ์การรอคอย / กระจกแห่งความจริง
+import StrategicDelayGame from '../components/quest/games/learning/StrategicDelayGame'
+import MirrorOfTruthGame from '../components/quest/games/learning/MirrorOfTruthGame'
 
 import PhotosynthesisGame from '../components/quest/games/physical/PhotosynthesisGame'
 import GreenVisionGame from '../components/quest/games/physical/GreenVisionGame'
@@ -66,6 +69,8 @@ export const QUEST_GAME_REGISTRY: Record<string, ComponentType<QuestGameProps>> 
   'content-review': ContentReviewGame,
   'guardian-of-rest': GuardianOfRestGame,
   'ten-year-forest': TenYearForestGame,
+  'strategic-delay': StrategicDelayGame,
+  'mirror-of-truth': MirrorOfTruthGame,
 
   // หมวดสุขภาพกาย
   photosynthesis: PhotosynthesisGame,
