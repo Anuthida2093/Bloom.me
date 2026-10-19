@@ -26,6 +26,10 @@ interface QuestGateViewProps {
   onSelectQuest: (quest: QuestDef) => void
   /** เฉพาะหมวดสุขภาพจิต — ทางลัดไปกล่องความช่วยเหลือฉุกเฉิน (คงการเข้าถึงไว้ ไม่ตัดทิ้ง) */
   onOpenSafetyNet?: () => void
+  /** [แก้ตามที่ระบุ] เฉพาะหมวดสุขภาพจิต — เปิดแบบประเมินสุขภาพใจ 5 ข้อ (ScreeningPage) เองได้ทุกเมื่อ */
+  onOpenScreening?: () => void
+  /** วันที่ทำแบบประเมินครั้งล่าสุด (ISO) — null = ยังไม่เคยทำ */
+  lastScreeningAt?: string | null
   /** [ใหม่] true = เควสนี้ต้องเช็คอินอารมณ์ของวันนี้ก่อน (ดู MOOD_GATED_QUEST_CODES ใน
    * questCatalog.ts) แต่ยังไม่มี todaysMoodEntry — เดิมกดเข้าไปแล้วเจอ MoodGateScreen เงียบๆ
    * โดยไม่มีสัญลักษณ์อะไรบอกล่วงหน้าที่เมนูนี้เลย ดูเหมือนเควสพัง จึงเพิ่ม badge/tooltip บอก
@@ -64,7 +68,7 @@ const THEME = {
  */
 export default function QuestGateView({
   category, quests, isCompleted, isLocked, getTodayCompletionCount = () => 0, onSelectQuest, onOpenSafetyNet,
-  needsMoodCheckin = () => false,
+  onOpenScreening, lastScreeningAt = null, needsMoodCheckin = () => false,
 }: QuestGateViewProps) {
   const theme = THEME[category]
   const { userData } = useAppContext()
@@ -183,6 +187,27 @@ export default function QuestGateView({
             SafetyNetPage เต็มรูปแบบ (ช่องทางอื่นๆ + disclaimer) ถ้ามี onOpenSafetyNet ส่งมา
             [ต้องให้เจ้าของโปรเจกต์ตรวจสอบ] ควรยืนยันว่าเบอร์ 1323 ยังเป็นเบอร์ปัจจุบันจริง
             ก่อนขึ้นโปรดักชัน — ไม่ได้แต่งเบอร์ขึ้นเอง ใช้ค่าที่มีอยู่แล้วในระบบ */}
+        {/* [แก้ตามที่ระบุ] แบบประเมินสุขภาพใจ 5 ข้อ — เดิมเด้งเองเฉพาะตอนอารมณ์ลบติดกัน 3 วัน/ครบรอบ 30 วัน
+            ผู้ใช้จึงไม่เคยเห็น ตอนนี้กดทำเองได้ที่นี่ (เหนือสายด่วน) + บอกวันที่ทำล่าสุด */}
+        {category === 'mental' && onOpenScreening && (
+          <button
+            type="button"
+            className="quest-gate-view__safety-banner quest-gate-view__screening-banner"
+            onClick={onOpenScreening}
+            title="แบบประเมินสุขภาพใจ 5 ข้อ"
+          >
+            <img src={BADGE_ICONS.medicalBox} alt="" className="quest-gate-view__safety-banner-img" />
+            <span className="quest-gate-view__safety-banner-text">
+              <strong>แบบประเมินสุขภาพใจ 5 ข้อ</strong>
+              <small>
+                {lastScreeningAt
+                  ? `ทำล่าสุด ${new Date(lastScreeningAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })} · กดเพื่อทำอีกครั้ง`
+                  : 'ยังไม่เคยทำ · ใช้เวลาประมาณ 1 นาที'}
+              </small>
+            </span>
+          </button>
+        )}
+
         {category === 'mental' && (
           <button
             type="button"
@@ -300,6 +325,7 @@ export default function QuestGateView({
         }
         .quest-gate-view__safety-banner:hover { background: var(--glass-w-16); }
         .quest-gate-view__safety-banner-icon { flex-shrink: 0; font-size: 24px; line-height: 1; }
+        .quest-gate-view__safety-banner-img { flex-shrink: 0; width: 32px; height: 32px; object-fit: contain; }
         .quest-gate-view__safety-banner-text { display: flex; flex-direction: column; gap: 2px; }
         .quest-gate-view__safety-banner-text strong { font-family: var(--font-display); font-size: var(--fs-sm); }
         .quest-gate-view__safety-banner-text small { font-size: var(--fs-xs); color: var(--glass-w-70); }

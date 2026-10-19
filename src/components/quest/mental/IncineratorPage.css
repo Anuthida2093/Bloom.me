@@ -541,3 +541,17 @@
   .incinerator-frame__affirmation-banner { bottom: auto; top: 20%; }
   .incinerator-frame .incinerator-popup.quest-done-card { top: -14vh; }
 }
+
+/* [แก้ตามที่ระบุ — iPad] ตัวเลือกคำพูดติดหัว: เล็กลง + ย้ายขึ้นไปด้านบน "ใต้ป้ายชื่อเควส" (ไม่ซ้อนกัน)
+   จอแตะขนาดแท็บเล็ต (กว้างกว่า 768px, จอสัมผัส) — โน้ตบุ๊ก (เมาส์) ยังอยู่เหนือกล่องพิมพ์ตามเดิม */
+@media (min-width: 769px) and (pointer: coarse) {
+  .incinerator-frame__top {
+    bottom: auto;
+    top: 64px;            /* ใต้ป้ายชื่อเควส (top 14px สูง ~36px) และแนวเดียวกับใต้ปุ่มปิด */
+    width: min(560px, calc(100% - 120px));
+  }
+  .incinerator-frame .incinerator-chips-group { padding: 8px 12px; gap: 5px; border-radius: 14px; }
+  .incinerator-frame .incinerator-chips-label { font-size: 11.5px; }
+  .incinerator-chips-list { gap: 6px; }
+  .incinerator-frame .incinerator-chip { font-size: 12px; padding: 4px 10px; }
+}

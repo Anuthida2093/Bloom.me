@@ -3,7 +3,8 @@ export interface MapDef {
   order: number
   name: string
   artAsset: string
-  waypoints: { x: number; y: number }[]
+  /** จุดบนเส้นทางตามลำดับ — via: true = จุดดัดความโค้งให้ตรงถนน (ไม่แสดงเป็นจุดหมายเลขบนแผนที่) */
+  waypoints: { x: number; y: number; via?: boolean }[]
   entryPct: { x: number; y: number }
   exitPct: { x: number; y: number }
 }

@@ -13,7 +13,7 @@ import { MAP_PATH_POINTS, buildJourneyPathD, type MapPathPoints } from '../../co
   ร่างที่ปักไว้จำในเครื่อง (localStorage) แยกตามแผนที่ ปิดหน้าแล้วกลับมาทำต่อได้
 \*============================================================================*/
 
-type Pt = { x: number; y: number }
+type Pt = { x: number; y: number; via?: boolean }
 const DRAFT_KEY = (id: string) => `bloom.dev.waypoints.${id}`
 const round1 = (v: number) => Math.round(v * 10) / 10
 
@@ -30,13 +30,14 @@ function toCode(id: string, name: string, pts: Pt[]): string {
   if (pts.length < 2) return '// ต้องมีอย่างน้อย 2 จุด (Start + End)'
   const [start, ...rest] = pts
   const end = rest.pop() as Pt
-  const fmt = (p: Pt) => `{ x: ${round1(p.x)}, y: ${round1(p.y)} }`
+  const fmt = (p: Pt) => `{ x: ${round1(p.x)}, y: ${round1(p.y)}${p.via ? ', via: true' : ''} }`
+  let n = 0
   return [
     `  // ── ${name} ──`,
     `  '${id}': {`,
     `    start: ${fmt(start)},`,
     `    points: [`,
-    ...rest.map((p, i) => `      ${fmt(p)}, // ${i + 1}`),
+    ...rest.map((p) => (p.via ? `      ${fmt(p)},` : `      ${fmt(p)}, // ${++n}`)),
     `    ],`,
     `    end: ${fmt(end)},`,
     `  },`,

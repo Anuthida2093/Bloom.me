@@ -12,6 +12,7 @@
   transform: translateY(-50%);
   width: min(320px, calc(100vw - 32px));
   max-height: calc(100vh - 190px);
+  max-height: calc(100dvh - 190px);
   overflow-y: auto;
   animation: treeMbtiPanelInRight .32s cubic-bezier(.22,1,.36,1) both;
 }
@@ -31,6 +32,7 @@
     left: 16px;
     width: auto;
     max-height: 50vh;
+    max-height: 50dvh;
     transform: none;
     animation-name: treeMbtiPanelInBottom;
   }
@@ -55,6 +57,7 @@
     right: 84px;
     transform: none;
     max-height: calc(100vh - 190px);
+    max-height: calc(100dvh - 190px);
     animation-name: treeMbtiPanelInSide;
   }
   @keyframes treeMbtiPanelInSide {
@@ -65,6 +68,11 @@
 
 /* ═══ [แก้ตามที่ระบุ] แผงข้อมูล MBTI — กรอบ/ขอบแบบกระดานจัดอันดับ (พื้นเขียวไล่เฉด ขอบทอง ป้ายหัว) ═══ */
 .tree-mbti-panel { overflow: visible; padding-top: 18px; }
+/* [แก้ตามที่ระบุ] กรอบข้อมูล MBTI ต้องเห็นขอบล่างเสมอ + เลื่อนอ่านได้ (มือถือ/iPad) — เดิมกล่องนอกจำกัดความสูง
+   แต่ overflow:visible กรอบจึงล้นลงไปใต้แถบเมนูจนไม่เห็นขอบล่าง ตอนนี้บีบกรอบให้พอดีความสูงของกล่องนอก
+   แล้วเลื่อนเฉพาะเนื้อหาในกรอบ */
+.tree-mbti-panel { display: flex; flex-direction: column; box-sizing: border-box; }
+.tree-mbti-panel .info-popup { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .tree-mbti-panel .info-popup {
   padding: 0;
   border-radius: 20px;
@@ -79,8 +87,10 @@
   padding: 30px 18px 18px;
   color: var(--lb-card-text);
   font-family: var(--font-display);
-  max-height: calc(100vh - 230px);
+  flex: 1 1 auto; min-height: 0;
   overflow-y: auto; scrollbar-width: none;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .tree-mbti-panel .info-popup__inner::-webkit-scrollbar { display: none; }
 .tree-mbti-panel .info-popup__inner :is(div, p, span) { color: var(--lb-card-text) !important; font-family: var(--font-display) !important; }

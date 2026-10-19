@@ -3,6 +3,7 @@ import { useLockBodyScroll } from '../../hooks/useLockBodyScroll'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { usePosts } from '../../context/PostContext'
 import { useUser } from '../../context/UserContext'
+import { useSavedPostIds } from '../../utils/savedPosts'
 import { useSocial } from '../../context/SocialContext'
 import type { LeaderboardPlayer } from '../../config/leaderboardData'
 import StoryHeader from './StoryHeader'
@@ -91,6 +92,12 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
     [posts, userData.id],
   )
   const likedPosts = useMemo(() => posts.filter((p) => p.likedByMe), [posts])
+  // [ใหม่ตามที่ระบุ] โพสต์ที่กดบันทึก (บุ๊กมาร์กขวาของโพสต์) — เรียงตามที่บันทึกล่าสุดก่อน
+  const savedIds = useSavedPostIds(userData.id)
+  const savedPosts = useMemo(
+    () => savedIds.map((id) => posts.find((p) => p.id === id)).filter((p): p is (typeof posts)[number] => !!p),
+    [savedIds, posts],
+  )
 
   // เหตุผลเดียวกับ handleClose ด้านบน — นำทางผ่าน sidebar จริงๆ ก็ถือว่าผู้ใช้ตั้งใจออกจาก
   // โหมด "ดูโปรไฟล์คนอื่น" แล้วเช่นกัน ต้อง clear ก่อนเปลี่ยน view ทุกครั้ง
@@ -162,6 +169,9 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
             )}
             {view === 'likedPosts' && (
               <PostListPage title="ที่ถูกใจ" posts={likedPosts} emptyMessage="ยังไม่ได้กดถูกใจโพสต์ไหนเลย" onBack={backToFeed} />
+            )}
+            {view === 'savedPosts' && (
+              <PostListPage title="บันทึก" posts={savedPosts} emptyMessage="ยังไม่ได้บันทึกโพสต์ไหนเลย — กดไอคอนบุ๊กมาร์กขวาของโพสต์เพื่อเก็บไว้ดูทีหลัง" onBack={backToFeed} />
             )}
           </>
         )}

@@ -320,7 +320,10 @@
   gap: 12px;
   width: 100%;
   margin-top: 18px;
+  /* เลื่อนหาปุ่มอัตโนมัติ (scrollIntoView) ให้หยุดเหนือแถบเมนูล่าง ไม่ใช่ชิดขอบจอ */
+  scroll-margin-bottom: calc(var(--gpf-safe-bottom, 90px) + 24px);
 }
+.oracle-card__actions .lb-btn { white-space: nowrap; padding-left: 10px; padding-right: 10px; }
 
 .oracle-btn {
   flex: 1;

@@ -402,14 +402,17 @@ export default function BalancedNutrientsQuest({ onComplete, onClose }: Balanced
 
       <AnimatePresence>
         {toast && (
-          <motion.div
-            className="balanced-nutrients__toast"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            🌿 {toast}
-          </motion.div>
+          <div className="balanced-nutrients__toast-wrap" key="toast">
+            <motion.div
+              className="balanced-nutrients__toast"
+              role="status"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              {toast}
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

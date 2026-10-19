@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import type { MoodEntryData } from '../../../types'
 import { requestHomeWatering } from '../../../utils/waterPrompt'
 import { ORACLE_CARDS, selectOracleCards, type OracleCard } from './oracleCardData'
@@ -50,6 +50,15 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
     stopSfx('KEYPRESS')
     onClose()
   })
+
+  /* [แก้ตามที่ระบุ] ข้อความไพ่พิมพ์จบ → ปุ่ม "ข้าม/ทำภารกิจ" เพิ่งโผล่ที่ท้ายป็อปอัพ มักอยู่ใต้แถบเมนูล่างบนมือถือ
+     (ผู้ใช้เลื่อนลงแล้วยังกดไม่ได้) — เลื่อนให้ปุ่มขึ้นมาอยู่เหนือแถบเมนูเองทันที (scroll-margin-bottom ใน CSS) */
+  const actionsRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (stage !== 'reading' || !isTypewriterDone) return
+    const t = window.setTimeout(() => actionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 120)
+    return () => window.clearTimeout(t)
+  }, [stage, isTypewriterDone])
 
   useEffect(() => {
     if (stage === 'reading') {
@@ -200,7 +209,7 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
               </div>
 
               {isTypewriterDone && (
-                <div className="oracle-card__actions">
+                <div ref={actionsRef} className="oracle-card__actions">
                   <button className="lb-btn lb-btn--ghost" style={{ flex: 1 }} onClick={handleSkip}>
                     ข้ามภารกิจ
                   </button>

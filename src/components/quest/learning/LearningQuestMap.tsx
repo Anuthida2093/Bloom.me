@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useLayoutEffect, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent } from 'react'
 import { isQuestFullyDoneToday, type QuestDef } from '../../../config/questCatalog'
-import { QUEST_ICONS } from '../../../config/iconAssets'
+import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
 import OwlAvatar from '../OwlAvatar'
 import { useAppContext } from '../../../context/AppContext'
 import { playSfx } from '../../../utils/audioPlayer'
@@ -281,6 +281,8 @@ function getZoomBounds(viewportW: number, viewportH: number): { min: number; max
   return { min, max: min * MAX_ZOOM_MULTIPLIER }
 }
 
+const SIDE_OPEN_KEY = 'bloom.learningMap.sideOpen'
+
 function clampNum(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
@@ -291,12 +293,15 @@ function clampPanValue(
   panY: number,
   zoom: number,
   viewportW: number,
-  viewportH: number
+  viewportH: number,
+  /** [แก้ตามที่ระบุ] ส่วนที่แถบเมนูล่างบังขอบล่างของแผนที่ (px) — ลากเลยขอบล่างได้อีกเท่านี้
+   *  เลื่อนลงสุดแล้วขอบล่างของแผนที่ขึ้นมาอยู่เหนือแถบเมนูพอดี */
+  bottomExtra = 0
 ): { x: number; y: number } {
   const scaledW = VIDEO_NATIVE_WIDTH * zoom
   const scaledH = VIDEO_NATIVE_HEIGHT * zoom
   const minPanX = Math.min(0, viewportW - scaledW)
-  const minPanY = Math.min(0, viewportH - scaledH)
+  const minPanY = Math.min(0, viewportH - scaledH - bottomExtra)
   return { x: clampNum(panX, minPanX, 0), y: clampNum(panY, minPanY, 0) }
 }
 
@@ -337,13 +342,14 @@ function computeFocusPan(
   rawY: number,
   zoom: number,
   viewportW: number,
-  viewportH: number
+  viewportH: number,
+  bottomExtra = 0
 ): { x: number; y: number } {
   const targetWorldX = (rawX / 100) * VIDEO_NATIVE_WIDTH
   const targetWorldY = (rawY / 100) * VIDEO_NATIVE_HEIGHT
   const panX = viewportW / 2 - targetWorldX * zoom
   const panY = viewportH / 2 - targetWorldY * zoom
-  return clampPanValue(panX, panY, zoom, viewportW, viewportH)
+  return clampPanValue(panX, panY, zoom, viewportW, viewportH, bottomExtra)
 }
 
 export default function LearningQuestMap({
@@ -367,6 +373,15 @@ export default function LearningQuestMap({
     return () => window.clearTimeout(id)
   }, [])
   const containerRef = useRef<HTMLDivElement | null>(null)
+  /** [แก้ตามที่ระบุ] แถบเควสเสริมเปิด/ปิดได้แบบแถบข้อมูลของแผนที่ก้าวเพื่อสุขภาพ — ปุ่มรูปเควสการเรียนรู้
+   *  ใต้ปุ่มกากบาท · ค่าเริ่มต้น = ปิด · จำค่าไว้ในเครื่อง */
+  const [sideOpen, setSideOpen] = useState(() => {
+    try { return localStorage.getItem(SIDE_OPEN_KEY) === '1' } catch { return false }
+  })
+  const toggleSide = () => setSideOpen((open) => {
+    try { localStorage.setItem(SIDE_OPEN_KEY, open ? '0' : '1') } catch { /* storage ปิดอยู่ */ }
+    return !open
+  })
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
 
   /*==========================================================================*\
@@ -383,6 +398,15 @@ export default function LearningQuestMap({
   const panYRef = useRef(pan.y)
   const containerSizeRef = useRef(containerSize)
   useEffect(() => { containerSizeRef.current = containerSize }, [containerSize])
+  /** ส่วนที่ ActionMenuBar ลอยทับขอบล่างของแผนที่ (px) — วัดใหม่ทุกครั้งที่ขนาดแผนที่เปลี่ยน */
+  const barOverlapRef = useRef(0)
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || containerSize.height <= 0) return
+    const nav = document.querySelector('.action-menu-container')?.getBoundingClientRect()
+    const box = el.getBoundingClientRect()
+    barOverlapRef.current = nav && nav.height > 0 ? Math.max(0, Math.round(box.bottom - nav.top + 8)) : 0
+  }, [containerSize])
   const didInitZoomRef = useRef(false)
   const rafIdRef = useRef<number | null>(null)
 
@@ -468,7 +492,7 @@ export default function LearningQuestMap({
 
     cameraTweenCancelRef.current?.()
     const from = { zoom: zoomRef.current, x: panXRef.current, y: panYRef.current }
-    const to = computeFocusPan(rawX, rawY, targetZoom, width, height)
+    const to = computeFocusPan(rawX, rawY, targetZoom, width, height, barOverlapRef.current)
     // [หมายเหตุ react-hooks/purity] startCameraFocus ถูกเรียกจาก event handler/effect เท่านั้น
     // (ไม่เคยถูกเรียกระหว่าง render จริง) เหมือน useCountdown.ts ที่ใช้ performance.now() แบบ
     // เดียวกันนี้อยู่แล้ว แต่ตัว linter วิเคราะห์ตามตำแหน่งซินแทกซ์ในบอดี้ component ไม่รู้จังหวะ
@@ -552,7 +576,7 @@ export default function LearningQuestMap({
     }
 
     const newZoom = clampNum(zoomRef.current, newMinZoom, newMaxZoom)
-    const newPan = clampPanValue(panXRef.current, panYRef.current, newZoom, width, height)
+    const newPan = clampPanValue(panXRef.current, panYRef.current, newZoom, width, height, barOverlapRef.current)
     zoomRef.current = newZoom
     panXRef.current = newPan.x
     panYRef.current = newPan.y
@@ -592,7 +616,7 @@ export default function LearningQuestMap({
       const ratio = newZoom / zoomRef.current
       const newPanX = anchorX - (anchorX - panXRef.current) * ratio
       const newPanY = anchorY - (anchorY - panYRef.current) * ratio
-      const clamped = clampPanValue(newPanX, newPanY, newZoom, width, height)
+      const clamped = clampPanValue(newPanX, newPanY, newZoom, width, height, barOverlapRef.current)
       zoomRef.current = newZoom
       panXRef.current = clamped.x
       panYRef.current = clamped.y
@@ -660,7 +684,7 @@ export default function LearningQuestMap({
       panLastRef.current = { x: e.clientX, y: e.clientY }
       const dx = dxVisual / scale
       const dy = dyVisual / scale
-      const clamped = clampPanValue(panXRef.current + dx, panYRef.current + dy, zoomRef.current, width, height)
+      const clamped = clampPanValue(panXRef.current + dx, panYRef.current + dy, zoomRef.current, width, height, barOverlapRef.current)
       panXRef.current = clamped.x
       panYRef.current = clamped.y
       scheduleFlush()
@@ -688,7 +712,7 @@ export default function LearningQuestMap({
       const shiftedY = panYRef.current + (midY - last.midY)
       const newPanX = midX - (midX - shiftedX) * ratio
       const newPanY = midY - (midY - shiftedY) * ratio
-      const clamped = clampPanValue(newPanX, newPanY, newZoom, width, height)
+      const clamped = clampPanValue(newPanX, newPanY, newZoom, width, height, barOverlapRef.current)
 
       zoomRef.current = newZoom
       panXRef.current = clamped.x
@@ -898,9 +922,30 @@ export default function LearningQuestMap({
           อยู่นอกเลเยอร์ pan/zoom (ติดจอ ไม่เลื่อน/ซูมตามแผนที่) · จอแคบย่อเป็นแถบเปิด/ปิดได้
           เควสที่ยังล็อกกดได้ — QuestSection แจ้งเหตุผลที่ยังเล่นไม่ได้ (เดิม disabled กดแล้วเงียบ) */}
       {sideQuests.length > 0 && (
-        <aside className="learning-quest-map__sidebar" aria-label="เควสเสริม">
+        <button
+          type="button"
+          className="learning-quest-map__side-toggle"
+          onClick={toggleSide}
+          onPointerDown={(e) => e.stopPropagation()}
+          aria-expanded={sideOpen}
+          aria-controls="learning-side-quests"
+          aria-label={sideOpen ? 'ซ่อนเควสเสริม' : 'แสดงเควสเสริม'}
+          title={sideOpen ? 'ซ่อนเควสเสริม' : 'แสดงเควสเสริม'}
+        >
+          <img src={BADGE_ICONS.learningTab} alt="" className="learning-quest-map__side-toggle-img" />
+        </button>
+      )}
+      {sideQuests.length > 0 && (
+        <aside
+          id="learning-side-quests"
+          className={`learning-quest-map__sidebar${sideOpen ? ' learning-quest-map__sidebar--open' : ''}`}
+          aria-label="เควสเสริม"
+          aria-hidden={!sideOpen}
+          inert={!sideOpen}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <div className="learning-quest-map__sidebar-head">
-            <span aria-hidden="true">📋</span>
+            <img src={BADGE_ICONS.learningTab} alt="" className="learning-quest-map__sidebar-head-img" />
             <span>เควสเสริม</span>
           </div>
           <div className="learning-quest-map__sidebar-list">
@@ -1116,9 +1161,26 @@ export default function LearningQuestMap({
 
         /* แถบข้างเควสเสริม — กระจกฝ้าชิดขวา ไม่บังเส้นทางด่านหลัก (โหนดอยู่ช่วงกลาง-ซ้ายของภาพ)
            เว้นล่างด้วย --gpf-safe-bottom ไม่ให้ ActionMenuBar บัง */
+        /* [แก้ตามที่ระบุ] ปุ่มเปิด/ปิดเควสเสริม — แบบเดียวกับปุ่มนกฮูกของแผนที่ก้าวเพื่อสุขภาพ (ใต้ปุ่มกากบาท) */
+        .learning-quest-map__side-toggle {
+          position: absolute; top: 62px; right: 8px; z-index: 21;
+          width: 52px; height: 52px; padding: 0;
+          display: flex; align-items: center; justify-content: center;
+          border-radius: 99px; overflow: hidden; cursor: pointer;
+          border: 2px solid var(--lb-gold-edge, rgba(255, 255, 255, 0.4));
+          background: var(--lb-card-bg, rgba(10, 22, 16, 0.6));
+          box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+        }
+        .learning-quest-map__side-toggle:hover { filter: brightness(1.05); }
+        .learning-quest-map__side-toggle[aria-expanded="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--coin) 60%, transparent); }
+        .learning-quest-map__side-toggle-img { width: 44px; height: 44px; object-fit: contain; pointer-events: none; }
+        .learning-quest-map__sidebar-head-img { width: 26px; height: 26px; object-fit: contain; }
+        /* แถบเควสเสริมอยู่ใต้ปุ่ม — เลื่อนเข้า-ออกจากขอบขวาแบบกระดานจัดอันดับ */
         .learning-quest-map__sidebar {
-          position: absolute; top: 72px; right: 12px; z-index: 20;
-          width: 236px; max-height: calc(100% - 72px - var(--gpf-safe-bottom, 0px) - 16px);
+          position: absolute; top: 124px; right: 12px; z-index: 20;
+          width: 236px; max-height: calc(100% - 124px - var(--gpf-safe-bottom, 0px) - 16px);
+          transform: translateX(calc(100% + 24px)); opacity: 0; visibility: hidden;
+          transition: transform .32s cubic-bezier(.2, .8, .2, 1), opacity .22s ease, visibility 0s linear .32s;
           display: flex; flex-direction: column; overflow: hidden;
           border-radius: 20px;
           background: rgba(12, 32, 22, 0.55);
@@ -1126,6 +1188,10 @@ export default function LearningQuestMap({
           border: 1.5px solid rgba(255, 255, 255, 0.22);
           box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
           font-family: var(--font-display); color: var(--fixed-white);
+        }
+        .learning-quest-map__sidebar--open {
+          transform: none; opacity: 1; visibility: visible;
+          transition: transform .32s cubic-bezier(.2, .8, .2, 1), opacity .22s ease, visibility 0s;
         }
         .learning-quest-map__sidebar-head {
           display: flex; align-items: center; gap: 8px; width: 100%;
@@ -1153,10 +1219,11 @@ export default function LearningQuestMap({
           background: rgba(0, 0, 0, 0.08);
         }
         .learning-quest-map__side-item.is-done .learning-quest-map__side-status { background: var(--g500); color: #fff; }
-        /* [แก้ตามที่ระบุ] จอแคบ: แสดงรายการเควสเสริมเต็มแบบเดียวกับโน้ตบุ๊ก (เดิมย่อเป็นแถบหัวกดเปิด)
-           แค่ย่อขนาดแถบ/การ์ดลงให้พอดีจอ — กดหัวแถบไม่มีผลเหมือนบนโน้ตบุ๊ก */
+        /* จอแคบ: ย่อขนาดปุ่ม/แถบ/การ์ดลงให้พอดีจอ (เปิด/ปิดด้วยปุ่มรูปเควสการเรียนรู้เหมือนทุกขนาดจอ) */
         @media (max-width: 720px) {
-          .learning-quest-map__sidebar { top: 64px; right: 8px; width: min(190px, calc(100% - 16px)); border-radius: 16px; }
+          .learning-quest-map__side-toggle { top: 56px; right: 6px; width: 48px; height: 48px; }
+          .learning-quest-map__side-toggle-img { width: 40px; height: 40px; }
+          .learning-quest-map__sidebar { top: 112px; right: 8px; width: min(190px, calc(100% - 16px)); border-radius: 16px; max-height: calc(100% - 112px - var(--gpf-safe-bottom, 0px) - 12px); }
           .learning-quest-map__sidebar-head { padding: 9px 12px; font-size: 14px; }
           .learning-quest-map__sidebar-list { gap: 6px; padding: 0 8px 10px; }
           .learning-quest-map__side-item { min-height: 44px; font-size: 12.5px; gap: 6px; padding: 4px 8px 4px 4px; }
@@ -1168,7 +1235,8 @@ export default function LearningQuestMap({
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .learning-quest-map__node-badge, .learning-quest-map__node-wrap, .learning-quest-map__owl { animation: none; transition: none; }
+          .learning-quest-map__node-badge, .learning-quest-map__node-wrap, .learning-quest-map__owl,
+          .learning-quest-map__sidebar, .learning-quest-map__sidebar--open { animation: none; transition: none; }
         }
       `}</style>
     </div>

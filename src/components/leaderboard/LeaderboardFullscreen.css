@@ -1,0 +1,120 @@
+/* LeaderboardFullscreen — ตารางจัดอันดับเต็มจอ (กดชื่อตัวเองในกระดานจัดอันดับหน้า Home)
+   หน้าตากรอบเดียวกับกระดานจัดอันดับ (.lb-frame / .lb-frame__sheet ใน leaderboardRow.css)
+   อยู่ใต้ ActionMenuBar (z-index 1000) เหมือน modal อื่นของแอป → เว้นล่างด้วย --gpf-safe-bottom */
+.lb-full {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 26px 12px var(--gpf-safe-bottom, 90px);
+  background: var(--bg-modal);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  box-sizing: border-box;
+}
+.lb-full__box.lb-frame {
+  width: 100%;
+  max-width: 720px;
+  min-height: 0;
+  margin-top: 12px;
+  padding: 26px 8px 8px;
+}
+.lb-full__close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.lb-full__close img { width: 36px; height: 36px; object-fit: contain; display: block; }
+
+.lb-full__sheet { flex: 1; min-height: 0; }
+.lb-full__tabs { flex-shrink: 0; gap: 4px; padding: 6px; }
+.lb-full__tab {
+  gap: 4px;
+  min-height: 40px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.lb-full__tab .icon-img { width: 24px; height: 24px; object-fit: contain; }
+
+.lb-full__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lb-full__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 12px 6px 6px;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.lb-full__row:hover { background: color-mix(in srgb, var(--g700) 8%, transparent); }
+.lb-full__row--top1 { background: rgba(244, 196, 48, .12); }
+.lb-full__row--top2 { background: rgba(180, 180, 180, .12); }
+.lb-full__row--top3 { background: rgba(244, 132, 95, .12); }
+/* แถวของเรา = สีฟ้า ให้รู้ทันทีว่าเป็นเรา */
+.lb-full__row--me,
+.lb-full__row--me:hover {
+  background: color-mix(in srgb, var(--blue) 26%, transparent);
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 30%, transparent);
+  cursor: default;
+}
+.lb-full__row--me .lb-full__name,
+.lb-full__row--me .lb-full__score { color: color-mix(in srgb, var(--blue) 55%, var(--text)); }
+
+.lb-full__rank {
+  width: 32px;
+  flex-shrink: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--text-sub);
+}
+.lb-full__rank img { width: 28px; height: 28px; object-fit: contain; display: block; margin: 0 auto; }
+.lb-full__who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.lb-full__name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lb-full__mbti { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+.lb-full__score {
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--lb-score, var(--g700));
+}
+
+@media (max-width: 480px) {
+  .lb-full { padding: 22px 8px var(--gpf-safe-bottom, 80px); }
+  .lb-full__tab span { display: none; }
+  .lb-full__row { gap: 8px; padding: 5px 10px 5px 4px; }
+  .lb-full__name { font-size: 14px; }
+}

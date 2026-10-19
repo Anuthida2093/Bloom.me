@@ -17,7 +17,7 @@ export default function ContentSettingsPage({ onBack }: { onBack: () => void }) 
     <div className="story-subpage">
       <div className="story-subpage__head">
         <button className="story-subpage__back" onClick={onBack} title="กลับ" aria-label="กลับ"><img src={BADGE_ICONS.back} className="icon-img" alt="" /></button>
-        <span className="story-subpage__title">การตั้งค่าเนื้อหา</span>
+        <span className="story-subpage__title">การตั้งค่า</span>
       </div>
 
       <div className="story-toggle-row">

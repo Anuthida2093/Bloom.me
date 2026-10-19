@@ -82,6 +82,22 @@ export function useMapPanZoom(nativeSize: Size, options: { fit?: boolean; fitIns
     [rawInset.top, rawInset.right, rawInset.bottom, rawInset.left],
   )
 
+  /* [แก้ตามที่ระบุ] แถบเมนูล่าง (ActionMenuBar) ลอยทับขอบล่างของกรอบแผนที่ — โหมดเต็มกรอบ (cover) จึงให้
+     ลากเลยขอบล่างของภาพได้อีกเท่าส่วนที่แถบบัง (วัดจริงทุกครั้งที่กรอบเปลี่ยนขนาด) เลื่อนลงสุดแล้ว
+     ขอบล่างของแผนที่ (จุด Start) ขึ้นมาอยู่เหนือแถบพอดี */
+  const [barOverlap, setBarOverlap] = useState(0)
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || containerSize.height === 0) return
+    const measure = () => {
+      const nav = document.querySelector('.action-menu-container')?.getBoundingClientRect()
+      const box = el.getBoundingClientRect()
+      setBarOverlap(nav && nav.height > 0 ? Math.max(0, Math.round(box.bottom - nav.top + 8)) : 0)
+    }
+    const t = window.setTimeout(measure, 0)
+    return () => window.clearTimeout(t)
+  }, [containerSize])
+
   const getBaseZoom = useCallback((w: number, h: number) => {
     if (w <= 0 || h <= 0 || nativeSize.width <= 0 || nativeSize.height <= 0) return 1
     if (!fit) return Math.max(w / nativeSize.width, h / nativeSize.height)
@@ -97,15 +113,16 @@ export function useMapPanZoom(nativeSize: Size, options: { fit?: boolean; fitIns
     const vh = containerSize.height
 
     const minX = Math.min(0, vw - scaledW)
-    const minY = Math.min(0, vh - scaledH)
+    const minY = Math.min(0, vh - scaledH - barOverlap)
 
     // ภาพเล็กกว่าพื้นที่ (โหมด fit) → จัดกึ่งกลางในพื้นที่หลังเว้นขอบ (inset) ไม่ลากออกนอก
     const iw = vw - inset.left - inset.right, ih = vh - inset.top - inset.bottom
     return {
       x: scaledW <= iw ? inset.left + (iw - scaledW) / 2 : scaledW <= vw ? (vw - scaledW) / 2 : Math.min(0, Math.max(minX, px)),
-      y: scaledH <= ih ? inset.top + (ih - scaledH) / 2 : scaledH <= vh ? (vh - scaledH) / 2 : Math.min(0, Math.max(minY, py)),
+      // ภาพสูงเท่ากรอบพอดี (cover บนจอแนวตั้ง) ยังเลื่อนลงได้เท่าส่วนที่แถบเมนูบัง (minY)
+      y: scaledH <= ih ? inset.top + (ih - scaledH) / 2 : scaledH < vh - 0.5 ? (vh - scaledH) / 2 : Math.min(0, Math.max(minY, py)),
     }
-  }, [containerSize, nativeSize, inset])
+  }, [containerSize, nativeSize, inset, barOverlap])
 
   const scheduleFlush = useCallback(() => {
     if (rafIdRef.current != null) return
@@ -126,7 +143,7 @@ export function useMapPanZoom(nativeSize: Size, options: { fit?: boolean; fitIns
     
     const initX = (containerSize.width - scaledW) / 2
     // เริ่มต้นที่ด้านล่างสุดของภาพ (จุดเริ่มเส้นทาง) · โหมด fit จัดกึ่งกลางในพื้นที่หลังเว้นขอบ
-    const initY = containerSize.height - scaledH
+    const initY = containerSize.height - scaledH - barOverlap
 
     scaleRef.current = bZ
     panRef.current = fit ? clampPanValue(initX, 0, bZ) : { x: initX, y: initY }
@@ -134,7 +151,7 @@ export function useMapPanZoom(nativeSize: Size, options: { fit?: boolean; fitIns
     // ใช้ Timeout เพื่อป้องกัน Error: set-state-in-effect
     const timer = setTimeout(() => scheduleFlush(), 0)
     return () => clearTimeout(timer)
-  }, [containerSize, nativeSize, getBaseZoom, scheduleFlush, fit, clampPanValue])
+  }, [containerSize, nativeSize, getBaseZoom, scheduleFlush, fit, clampPanValue, barOverlap])
 
   // ระบบแอนิเมชันสำหรับซูมและเลื่อนกล้อง
   const startFocus = useCallback((targetXPct: number, targetYPct: number, targetZoom: number) => {

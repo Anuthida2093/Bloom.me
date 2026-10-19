@@ -97,3 +97,8 @@
 .double-tile__confirm { display: flex; flex-direction: column; gap: 2px; width: 100%; font-size: 11px; color: #6B3A0B; }
 .double-tile__confirm-row { display: flex; flex-direction: column; gap: 0; }
 .double-tile__error { font-size: 11px; color: #B42318; }
+
+/* [แก้ตามที่ระบุ] คำอธิบายใต้หัวข้อในหน้าโปรไฟล์ (คลังไอเทม / ประวัติการเขียนบันทึก / เหรียญรางวัล)
+   ธีมมืด: เดิม --text-muted (เทาเข้ม) อ่านยากบนพื้นเขียวเข้ม → สีขาว */
+.profile-section-hint { font-size: var(--fs-sm); color: var(--text-muted); margin-bottom: 16px; }
+[data-theme="dark"] .profile-section-hint { color: var(--fixed-white); }

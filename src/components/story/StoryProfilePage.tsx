@@ -70,7 +70,8 @@ export default function StoryProfilePage({ onBack, onEditProfile, onViewTree }: 
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
+      {/* [แก้ตามที่ระบุ] 3 ปุ่มอยู่บรรทัดเดียวเสมอ (ไม่ตัดขึ้นบรรทัดใหม่) — จอแคบปุ่ม/ตัวอักษรย่อตามความกว้างจอ */}
+      <div className="story-profile__actions">
         <button className="lb-btn" onClick={onEditProfile}>แก้ไขโปรไฟล์</button>
         <button className="lb-btn lb-btn--ghost" onClick={handleShareProfile}>แชร์โปรไฟล์</button>
         <button className="lb-btn lb-btn--ghost" onClick={onViewTree}><img src={BADGE_ICONS.tree} className="icon-img" alt="" /> ดูต้นไม้</button>

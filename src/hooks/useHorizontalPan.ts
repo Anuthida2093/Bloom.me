@@ -95,8 +95,16 @@ export function useHorizontalPan(range: number, apply: (pan: number, range: numb
     e.preventDefault()
   }, [])
 
+  /** กลับมากึ่งกลางฉาก (ต้นไม้อยู่กลางจอ) — หน้า Home เรียกทุกครั้งที่กลับมาจากหน้าอื่น */
+  const recenter = useCallback(() => {
+    dragRef.current = null
+    panRef.current = -rangeRef.current / 2
+    applyNow()
+  }, [applyNow])
+
   return {
     panRef,
+    recenter,
     handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp, onClickCapture },
   }
 }

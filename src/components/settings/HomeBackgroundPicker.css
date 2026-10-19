@@ -1,6 +1,8 @@
 /* ── ตั้งรูปพื้นหลังหน้า Home (HomeBackgroundPicker.tsx) ── */
 .home-bg-open { width: 100%; }
 .home-bg-open small { opacity: 0.7; }
+/* [แก้ตามที่ระบุ] ธีมมืด: ปุ่ม "ตั้งค่าพื้นหลัง" พื้นสีอ่อน แต่ตัวอักษรเป็นสีอ่อนตามธีม (--text) จึงมองไม่เห็น → ตัวอักษรดำ */
+[data-theme="dark"] .home-bg-open { color: var(--fixed-black, #111); }
 
 .home-bg-picker, .home-bg-actions {
   position: fixed; inset: 0; z-index: 2700;

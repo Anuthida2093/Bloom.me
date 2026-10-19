@@ -5,6 +5,7 @@ import { RANK_CATEGORIES, type LeaderboardPlayer, type RankCategory } from '../.
 import { useLeaderboard } from '../../hooks/useLeaderboard';
 import { BADGE_ICONS, RANK_CATEGORY_ICONS } from '../../config/iconAssets';
 import './leaderboardRow.css';
+import LeaderboardFullscreen from './LeaderboardFullscreen';
 import { useLanguage } from '../../context/LanguageContext';
 
 const C_3 = 'rgba(244,196,48,.12)'
@@ -51,6 +52,8 @@ export default function LeaderboardPanel({
 }: LeaderboardPanelProps) {
   const [cat, setCat] = useState<RankCategory>('level');
   const { t } = useLanguage();
+  /** [แก้ตามที่ระบุ] กดแถบชื่อตัวเอง → ตารางจัดอันดับเต็มจอ */
+  const [fullOpen, setFullOpen] = useState(false);
 
   // รายชื่อจาก backend จริง (GET /users/leaderboard) ในโหมด live / รายชื่อจำลองในโหมด mock
   const players = useLeaderboard(cat);
@@ -198,7 +201,14 @@ export default function LeaderboardPanel({
         </div>
 
         {/* ป้ายชื่อด้านล่าง: อันดับของฉัน */}
-        <div className="lb-frame__plate" style={{ borderColor: myTheme.accent + '88' }}>
+        <button
+          type="button"
+          className="lb-frame__plate lb-frame__plate--button"
+          style={{ borderColor: myTheme.accent + '88' }}
+          onClick={() => setFullOpen(true)}
+          title="ดูตารางจัดอันดับทั้งหมด"
+          aria-label="ดูตารางจัดอันดับทั้งหมด"
+        >
           <span style={{ fontSize: 12, width: 22, textAlign: 'center', color: myTheme.accent, fontWeight: 800, flexShrink: 0 }}>
             #{myRankForCurrentCat}
           </span>
@@ -225,8 +235,25 @@ export default function LeaderboardPanel({
           </div>
 
           <span style={{ fontSize: 11, color: myTheme.accent, fontWeight: 800, flexShrink: 0 }}>{t('lb.me')}</span>
-        </div>
+        </button>
       </div>
+
+      {fullOpen && (
+        <LeaderboardFullscreen
+          initialCategory={cat}
+          me={{
+            id: '__me__',
+            username: myName || t('lb.you'),
+            mbtiType: myMbti,
+            level: myLevel,
+            knowledgeStack: myKnowledgeStack,
+            healthStack: myHealthStack,
+            emotionStack: myEmotionStack,
+          }}
+          onClose={() => setFullOpen(false)}
+          onPlayerClick={(p) => { setFullOpen(false); onPlayerClick(p); }}
+        />
+      )}
     </div>
   );
 }

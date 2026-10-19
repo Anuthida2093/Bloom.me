@@ -35,6 +35,34 @@
   position: fixed;
   inset: 0;
   z-index: 1;
+  /* [แก้ตามที่ระบุ] เลื่อนขึ้นลงได้: ฉากแรก = จอเดิมพอดี (ลูก position:absolute inset:0) + ชั้นดินต่อด้านล่าง
+     (.dashboard__soil-extension) — เลื่อนแนวนอนยังเป็นการลากฉากของ TreeOfLife เหมือนเดิม */
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.dashboard__tree-layer::-webkit-scrollbar { display: none; }
+/* พื้นหลังอยู่นอกชั้นที่เลื่อน → ขยับขึ้นตามระยะเลื่อน (Dashboard.tsx ตั้ง --home-scroll-y)
+   ใช้ property translate แยกจาก transform (วิดีโอใช้ transform ทำ parallax แนวนอนอยู่แล้ว) */
+.dashboard__bg-video,
+.dashboard__bg-still { translate: 0 calc(var(--home-scroll-y, 0px) * -1); }
+
+/* ชั้นดินต่อจากขอบล่างของฉาก — สีต่อจากดินล่างสุดที่ drawGround วาด (#43301c) แล้วเข้มลงตามความลึก
+   + ริ้วชั้นดิน + กรวดเล็ก (ลวดลายซ้ำด้วย gradient ล้วน ไม่ต้องโหลดรูป) */
+.dashboard__soil-extension {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: max(55vh, 360px);
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(150, 132, 112, .55) 0 3px, transparent 4px) 0 0 / 74px 61px,
+    radial-gradient(circle at 63% 71%, rgba(120, 104, 88, .5) 0 4px, transparent 5px) 0 0 / 97px 83px,
+    radial-gradient(ellipse 6px 4px at 40% 45%, rgba(176, 156, 130, .4) 0 100%, transparent 100%) 0 0 / 53px 47px,
+    repeating-linear-gradient(178deg, transparent 0 46px, rgba(255, 225, 180, .08) 46px 48px),
+    linear-gradient(180deg, #43301c 0%, #3a2917 45%, #2a1d10 100%);
 }
 
 /* [เพิ่มรอบนี้ — เควส "แคลอรี่ตาม BMI"] แอนิเมชันบัวรดน้ำบินเข้ามาที่โคนต้นไม้ (ดู
@@ -324,6 +352,24 @@
 .dashboard__right-cluster .dashboard__panel--right {
   position: static;
   top: auto; right: auto;
+  /* [แก้ตามที่ระบุ — iPad เลื่อนแผงแจ้งเตือน/ข้อมูลต้นไม้ไม่ได้] เดิมตัวที่เลื่อนคือกล่องนี้ซึ่งตั้ง
+     pointer-events:none (สืบมาจาก .dashboard__panel) — Safari บน iPad ไม่ยอมเลื่อนกล่องแบบนี้ด้วยนิ้ว
+     และกรอบด้านในโดนตัดท้ายจนไม่เห็นขอบล่าง ตอนนี้: กล่องรับนิ้ว + ไม่เลื่อนเอง แต่บีบกรอบให้พอดีความสูง
+     แล้วให้ "เนื้อหาในกรอบ" (.tree-of-life__tooltip-sheet) เลื่อนแทน — ขอบกรอบ/ป้ายหัวข้อ/ขอบล่างอยู่ครบเสมอ */
+  pointer-events: auto;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 190px);
+  max-height: calc(100dvh - 190px);
+}
+.dashboard__right-cluster .dashboard__panel--right > .tree-info-panel { flex: 0 1 auto; min-height: 0; }
+.dashboard__right-cluster .dashboard__panel--right > .tree-info-panel .tree-of-life__tooltip-sheet {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .right-action-buttons {

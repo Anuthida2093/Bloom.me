@@ -406,11 +406,9 @@ ${lockReason}` }); return }
         /* [อัปเดต 2026-10-18 — รูปชุดใหม่] Learning/Physical/Mental Quests.png ใหม่เนื้อรูปเต็มไฟล์ ~91-95%
            (เดิม 798x434 เนื้อรูปแค่ ~35-40% จึงเคยขยายกล่องเป็น ~100-120px แล้วหักขอบด้วย margin ติดลบ) —
            ตอนนี้กล่อง ~44px พอ ใช้ขนาดเดียวกันทุกรูป (รวมรูปของเควสที่เปิดอยู่) margin ติดลบเล็กน้อยไม่ให้ป้ายสูงตาม */
-        .quest-section-title-pill > span { display: inline-flex; align-items: center; gap: 8px; }
-        .quest-section-title-pill .icon-img { vertical-align: middle; flex-shrink: 0; width: 44px; height: 44px; margin: -10px 0; }
-        @media (max-width: 768px) {
-          .quest-section-title-pill .icon-img { width: 38px; height: 38px; margin: -9px 0; }
-        }
+        /* [แก้ตามที่ระบุ] รูปเล็กลงให้อยู่ในกรอบป้ายข้อความ (เดิม 44px ล้นขอบบน-ล่างของป้าย) — สูงตามตัวหนังสือ */
+        .quest-section-title-pill > span { display: inline-flex; align-items: center; gap: 6px; }
+        .quest-section-title-pill .icon-img { vertical-align: middle; flex-shrink: 0; width: 1.6em; height: 1.6em; margin: -2px 0; object-fit: contain; }
 
         /* [แก้] ปุ่มปิด — แยกจากป้ายชื่อโซน คงตำแหน่งมุมขวาบนเดิมไว้ นี่คือปุ่มปิดเดียวของ
            ทั้งระบบเควส (GameplayFrame.tsx เอา toolbar ปุ่มปิดซ้ำออกไปแล้ว) มาตรฐาน

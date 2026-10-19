@@ -142,7 +142,9 @@
      กล่องนอก ซึ่งจะโชว์พื้นหลังผิดสีที่ขอบล่างแทน เพราะพื้นหลังจริงอยู่ที่ .game-shell เท่านั้น
      — .game-shell__body โปร่งใส ไม่มีสีพื้นหลังของตัวเอง เพิ่ม padding ตรงนี้จึงยังเห็นพื้นหลัง
      ไล่สีเขียวเข้มเดิมถูกต้อง ไม่เกิดบั๊กแถบขาวแบบที่เคยเจอกับ .quest-section-root) */
-  padding: 16px 18px calc(var(--gpf-safe-bottom, 100px) + 24px);
+  /* [แก้ตามที่ระบุ] เลื่อนลงได้อีก (เช่น น้ำพุหล่อเลี้ยงราก) — เผื่อระยะท้ายเพิ่มจาก +24px เป็น +64px
+     ให้ปุ่ม/รูปที่ถ่ายแล้วท้ายเนื้อหาขึ้นมาพ้นแถบเมนูและปุ่มวงกลม "เควส" ที่ยื่นขึ้นจากแถบได้สบาย */
+  padding: 16px 18px calc(var(--gpf-safe-bottom, 100px) + 64px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -331,7 +333,7 @@
 
 @media (max-width: 520px) {
   .game-shell__header { padding: 14px 14px 10px 54px; }
-  .game-shell__body { padding: 14px 14px calc(var(--gpf-safe-bottom, 80px) + 20px); }
+  .game-shell__body { padding: 14px 14px calc(var(--gpf-safe-bottom, 80px) + 56px); }
   .game-shell__title { font-size: 16px; }
   .game-shell__pill-header { max-width: calc(100% - 100px); padding: 7px 14px; }
   .game-shell__pill-title { font-size: 14px; }
