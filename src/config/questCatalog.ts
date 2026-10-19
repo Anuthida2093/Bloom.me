@@ -203,7 +203,8 @@ export const KNOWLEDGE_SIDE: QuestDef[] = [
     theory: 'The 10-Year Rule (Ericsson et al., 1993)',
     // [แก้ตามที่ระบุ] รับรางวัลได้วันละครั้ง (isDaily) เมื่อ streak ต่อเนื่อง ≥ 21 วัน — เดิมไม่มีทางรับรางวัลเลย
     category: 'KNOWLEDGE', coinReward: 20, expReward: 15, isDaily: true, isPassive: true,
-    gameKey: 'ten-year-forest', energyLevel: 'LOW', unlockStreakDays: 21,
+    // [แก้ตามที่ระบุ] ไม่ล็อก — เปิดดูปฏิทิน streak ได้เสมอ (รางวัลยังรับได้เมื่อครบ 21 วัน ดู TenYearForestGame)
+    gameKey: 'ten-year-forest', energyLevel: 'LOW',
   },
 ]
 

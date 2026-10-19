@@ -165,7 +165,13 @@
 .lb-frame__list {
   padding: 4px;
   overflow-y: auto;
+  /* [แก้ตามที่ระบุ] เลื่อนขึ้นลงดูรายชื่อได้ (ไม่แสดงแถบเลื่อน — .no-scroll) — ใช้ dvh (ความสูงจอที่เห็นจริงบนมือถือ)
+     และหักแถบเมนูล่าง ไม่ให้รายชื่อล่างสุดไปจมใต้แถบเมนูจนเลื่อนไม่ถึง */
   max-height: calc(100vh - 260px);
+  max-height: max(160px, calc(100dvh - 200px - var(--gpf-safe-bottom, 100px)));
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ป้ายชื่อ "อันดับของฉัน" แถบล่าง */

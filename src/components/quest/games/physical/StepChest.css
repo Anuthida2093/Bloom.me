@@ -146,3 +146,14 @@
   .step-chest-marker, .step-chest-loading, .step-chest-burst, .step-chest-card, .chest-scroll, .step-chest-overlay { animation: none; }
   .chest-scroll__paper { animation: none; grid-template-rows: 1fr; }
 }
+
+/* [แก้ตามที่ระบุ] ป้าย "กล่องสุ่ม" ใต้กล่องที่เส้นชัย */
+.step-chest-goal__label {
+  position: absolute; z-index: 1; left: 0; top: 0;
+  transform: translate(-50%, -96px);
+  padding: 3px 12px; border-radius: 99px; white-space: nowrap;
+  font-family: var(--font-display); font-size: 16px; color: #4A2C0A;
+  background: #fff7d6; border: 2px solid #f5b301;
+  box-shadow: 0 2px 0 #c98a00;
+  pointer-events: none;
+}
