@@ -1,4 +1,3 @@
-import { toGroundVariant } from '../../../config/treeAssets'
 import { seededRandom } from '../../../utils/seededRandom'
 import { shade, type LeafShape, type TreeModel } from './buildTreeModel'
 import { pointOnBranch, type Vec3 } from './generateTree'
@@ -278,7 +277,7 @@ export function buildMeadow(
 ): Meadow {
   // ผู้ใช้ใหม่ (ยังไม่มีคะแนนสุขภาพกาย): พื้นเขียวเรียบอย่างเดียว ไม่มีใบหญ้า/ดอกไม้ — ทำเควสสุขภาพแล้วค่อยงอก
   if (bare) return { back: { blades: [], flowers: [] }, front: { blades: [], flowers: [] } }
-  const step = toGroundVariant(grassSoilLevel)
+  // [แก้ตามที่ระบุ: พื้นดิน/หญ้ามี 100 เลเวล] ความหนาแน่น/ความสูงหญ้า/ดอกเดซี่ไล่ต่อเนื่องทุกเลเวล 1-100 (เควสสุขภาพ)
   const level = Math.max(0, Math.min(100, grassSoilLevel))
   const dry = Math.max(0, Math.min(1, dryness))
   const pal = groundPalette(dry)
@@ -290,8 +289,8 @@ export function buildMeadow(
 
   const inPlot = (): [number, number, number] => visiblePlotPoint(p, width, rand)
 
-  const lush = 0.6 + (level / 100) * 0.4
-  const bladeBase = Math.max(height * 0.022, p.ry * 0.55) * (0.85 + step * 0.08) * (1 - dry * 0.45)
+  const lush = 0.5 + (level / 100) * 0.5
+  const bladeBase = Math.max(height * 0.022, p.ry * 0.55) * (0.9 + (level / 100) * 0.2) * (1 - dry * 0.45)
   // พื้นที่แปลงที่เห็นในจอ ≈ ความกว้างจอ × ความสูงเฉลี่ยของแปลง
   const visibleArea = width * p.ry * 1.7
   // เพดานต่อ "หนึ่งจอ" — ฉากกว้างกว่าจอกี่เท่าก็ได้หญ้าเพิ่มตามนั้น (วาดทีละเฟรมเฉพาะส่วนที่อยู่ในจอ)

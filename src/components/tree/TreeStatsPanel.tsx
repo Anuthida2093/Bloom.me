@@ -3,12 +3,12 @@ import {
   DEFAULT_USER_DATA,
   DEFAULT_TREE_STATS,
   EXP_PER_LEVEL,
-  STACK_PER_VISUAL_LEVEL,
   type UserData,
   type TreeStats,
   type MbtiType,
 } from '../../types'
 import TreeInfoPanel from './TreeInfoPanel'
+import { visualLevelPct } from '../../utils/progression'
 import { useLanguage } from '../../context/LanguageContext'
 import { BADGE_ICONS, QUEST_TAB_ICONS } from '../../config/iconAssets'
 
@@ -23,15 +23,15 @@ interface TreeStatsPanelProps {
   /** วันที่ไม่ได้ทำเควสหมวดจิตใจ/สุขภาพกาย — ใช้แสดงคำเตือนใบเหี่ยว/ดินแห้ง */
   daysSinceLastMentalQuest?: number | null
   daysSinceLastPhysicalQuest?: number | null
+  daysSinceLastKnowledgeQuest?: number | null
   onClose?: () => void
   /** [แก้ตามที่ระบุ] ปุ่ม "ดูต้นไม้ของฉัน" — ซ่อนทุกอย่างบนหน้า Home เหลือต้นไม้ + พื้นดิน + พื้นหลัง */
   onViewMyTree?: () => void
 }
 
-// สเกล stack (คะแนนสะสมดิบ) ให้เป็นเปอร์เซ็นต์แสดงผล 0-100 — เหมือนที่ HeroSection.tsx ใช้
-// (STACK_PER_VISUAL_LEVEL = 50 คะแนนต่อ 1 level ภาพ, แคปแถบที่ 5 level แรก) เป็นการแปลงค่า
-// เพื่อ "แสดงผล" ฝั่ง frontend เท่านั้น ไม่ได้แก้ไขค่าที่ backend เก็บจริง
-const toBarPct = (stack: number): number => Math.min(100, (stack / (STACK_PER_VISUAL_LEVEL * 5)) * 100)
+// [แก้ตามที่ระบุ: 100 เลเวล] แถบ % = ความคืบหน้าสู่เลเวล 100 ของส่วนนั้น (เดิมแคปที่ 5 เลเวลแรก)
+// เป็นการแปลงค่าเพื่อ "แสดงผล" ฝั่ง frontend เท่านั้น ไม่ได้แก้ไขค่าที่ backend เก็บจริง
+const toBarPct = visualLevelPct
 
 export default function TreeStatsPanel({
   userData = DEFAULT_USER_DATA,
@@ -39,6 +39,7 @@ export default function TreeStatsPanel({
   onOpenMoodCheckin = () => {},
   daysSinceLastMentalQuest = null,
   daysSinceLastPhysicalQuest = null,
+  daysSinceLastKnowledgeQuest = null,
   onClose = () => {},
   onViewMyTree,
 }: TreeStatsPanelProps) {
@@ -74,6 +75,7 @@ export default function TreeStatsPanel({
       riskLevel={userData.currentRiskLevel}
       daysSinceLastMentalQuest={daysSinceLastMentalQuest}
       daysSinceLastPhysicalQuest={daysSinceLastPhysicalQuest}
+      daysSinceLastKnowledgeQuest={daysSinceLastKnowledgeQuest}
       onClose={onClose}
     >
       <div className="tree-stats-panel" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

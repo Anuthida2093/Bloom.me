@@ -5,6 +5,7 @@ import { useUser } from '../../context/UserContext'
 import { usePosts } from '../../context/PostContext'
 import { BADGE_ICONS } from '../../config/iconAssets'
 import { lastMessageAt, useChatThreads } from '../../utils/chatStore'
+import { WaterStreakChip } from '../friends/FriendWater'
 
 /*============================================================================*\
   ChatListPage — [ใหม่ตามที่ระบุ] เมนู "แชท" (ต่อจาก "เพื่อน") แสดงแทนที่หน้าฟีด
@@ -66,6 +67,8 @@ export default function ChatListPage({ onBack, onOpenChat }: ChatListPageProps) 
               <span className="story-chat-list__name">{t.friendName}</span>
               <span className="story-chat-list__preview">{preview(t.friendId)}</span>
             </span>
+            {/* [ใหม่ตามที่ระบุ] เพื่อนที่เราเคยรดน้ำให้ — หยดน้ำ (สีตามสถานะ) + จำนวนวัน / กู้คืนหยดน้ำ */}
+            <WaterStreakChip friendId={t.friendId} />
             <span className="story-chat-list__time">{timeShort(lastMessageAt(t))}</span>
           </button>
         ))}

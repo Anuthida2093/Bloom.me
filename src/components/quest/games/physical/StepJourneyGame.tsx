@@ -25,6 +25,7 @@ import { MAP_NATIVE_SIZE } from './journeyPathMath'
 import MapPathRenderer from './MapPathRenderer'
 import CatCompanion from './CatCompanion'
 import WeatherEffectLayer from './WeatherEffectLayer'
+import MapScenery, { MapAmbience } from './MapScenery'
 import StatsOverlay from './StatsOverlay'
 import MapFogTransition from './MapFogTransition'
 import DestinationPicker from './DestinationPicker'
@@ -419,12 +420,15 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
         {visualMapDef && (
           <div className="sjg-map-layer">
             <MapPathRenderer mapDef={visualMapDef} progressPct={localProgressPct} />
+            {/* [แก้ตามที่ระบุ] ต้นไม้/หญ้าโยกไหว (ใต้แมว/หีบ) + ผีเสื้อ ใบไม้ปลิว เงาเมฆ (ชั้นบนสุด) */}
+            <MapScenery mapId={visualMapDef.id} />
             <CatCompanion mapDef={visualMapDef} progressPct={localProgressPct} />
             {/* [แก้ตามที่ระบุ] หีบที่เส้นชัยเห็นตลอดทาง (มีแสงเรืองด้านหลัง) — กดเปิดได้เมื่อถึงเป้า · เปิดแล้วหายไป */}
             {chest.loaded && !chest.opened && (
               <StepChestMarker mapDef={visualMapDef} ready={chest.ready} onOpen={() => { void chest.open() }} disabled={chest.popupOpen} />
             )}
             <WeatherEffectLayer weather={weather} />
+            <MapAmbience mapId={visualMapDef.id} />
           </div>
         )}
       </div>

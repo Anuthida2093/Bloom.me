@@ -298,15 +298,47 @@ enum JourneyStatus {
   placeholder รอ balance จริงเช่นกัน) `FAILED` ไม่เรียก `finish()` เลย จึงไม่ได้รางวัลอะไร
 ---
 
-## 10) ความอุดมสมบูรณ์ของดิน → ต้นไม้โตช้าลง (`src/config/groundFertility.ts`)
+## 10) ทั้ง 3 ด้านมีผลต่อกันเล็กน้อย (`src/config/crossGrowth.ts`, `src/config/groundFertility.ts`)
 
-ไม่ได้ทำเควสหมวดสุขภาพกาย (HEALTH) ติดต่อกันหลายวัน → หญ้าใต้ต้นไม้เหี่ยว → แห้ง → ดินร้าง
-และ **เควสหมวดความรู้ (KNOWLEDGE) ได้ `knowledgeStack` น้อยลง** (ลำต้นโตช้าลง)
+ขาดเควสหมวดหนึ่ง → อีกหมวดได้ stack (การโตของต้นไม้) น้อยลงเล็กน้อย เป็นวง กันไม่ให้ทำด้านเดียวจนขาดสมดุล
 
-- `days` = จำนวนวันเต็มตั้งแต่ log HEALTH ที่ `COMPLETED` ล่าสุด (ยังไม่เคยทำเลย = ไม่ลดโทษ)
-- `dryness = clamp((days - 3) / (14 - 3), 0, 1)`
-- stack ที่ได้จากเควสความรู้ = `round(expReward × (1 - 0.5 × dryness))` (ดินร้างเต็มที่ได้ครึ่งเดียว)
+| หมวดที่ได้คะแนนลดลง | ขาดเควสหมวดนี้ |
+|---|---|
+| KNOWLEDGE (`knowledgeStack` ลำต้น) | HEALTH (ดินแห้ง) |
+| EMOTION (`emotionStack` ใบ/ดอก) | KNOWLEDGE |
+| HEALTH (`healthStack` พื้นดิน/หญ้า) | EMOTION |
+
+- `days` = จำนวนวันเต็มตั้งแต่ log ของหมวดต้นทางที่ `COMPLETED` ล่าสุด (ยังไม่เคยทำเลย = ไม่ลด)
+- `days ≤ 4` → ไม่ลด · `5–9` → ลด 5% · `≥ 10` → ลด 10% (สูงสุด — เกณฑ์เดียวกับ State Axis บทที่ 2)
+- stack ที่ได้ = `round(expReward × (1 - penalty))` — EXP/เหรียญได้เต็มเสมอ ไม่หัก stack ที่สะสมไว้แล้ว
+- ภาพหญ้า: `dryness = clamp((days - 4) / (10 - 4), 0, 1)` (เดิม `(days - 3) / (14 - 3)` และลดคะแนนได้ถึง 50%)
+- **มีผลเฉพาะโหมดจริงจัง** (`settings.strictMode = true` — ตั้งค่า → โหมดความเข้มงวด) โหมดปกติได้ stack เต็มเสมอ
+  และต้นไม้ไม่เหี่ยว · ตอนนี้ค่าโหมดเก็บแค่ในเครื่อง (localStorage `bloom:settings`) — backend ต้องเพิ่ม
+  `users.strictMode Boolean @default(false)` (หรือรับค่าใน body ของ `/quest-logs/complete`) ถึงจะคำนวณได้ถูก
 
 **สิ่งที่ backend ต้องทำ:** คำนวณแบบเดียวกันใน `/quest-logs/complete` (ตอนนี้ทำแค่ฝั่ง mock ใน `quest.api.ts`)
 และเพิ่มคอลัมน์ `quest_logs.stackAwarded Int?` เก็บคะแนนที่ให้ไปจริง — ตอนยกเลิกเควสต้องหักคืนเท่าค่านี้
 ไม่ใช่ `expReward` เต็ม (ไม่งั้นคะแนนจะติดลบ/เพี้ยนถ้าทำตอนดินแห้งแล้วยกเลิกตอนดินสด)
+
+---
+
+## 11) รดน้ำต้นไม้ให้เพื่อน (คล้าย "เติมไฟ") (`src/utils/friendWater.ts`, `src/services/api/friendWater.api.ts`)
+
+หน้าดูต้นไม้เพื่อน → ปุ่มหยดน้ำ → บัวรดน้ำ → รดน้ำให้เพื่อน **วันละ 1 ครั้งต่อเพื่อน 1 คน** (วันตามปฏิทินไทย)
+เฉพาะ "เพื่อน" (ติดตามกันทั้งสองฝ่าย) · ไม่มีผลกับต้นไม้/คะแนนของใคร (กิจกรรมผูกมิตรอย่างเดียว)
+
+- วันหนึ่ง **นับ** เมื่อทั้งสองฝ่ายรดให้กันในวันนั้น (วันครบคู่)
+- สถานะ (ตัดรอบเที่ยงคืนเวลาไทย เทียบวันครบคู่ล่าสุดกับวันนี้):
+  `full` วันนี้ครบคู่ · `half` วันนี้เรารดแล้ว รอเพื่อน · `grey` เมื่อวานครบ วันนี้ยังไม่รด
+  · `broken` พลาดไป 1 วัน (ดับ แต่กู้คืนได้ภายในวันนี้ — รดครบคู่วันนี้ = กู้คืน นับต่อ)
+  · `dead` พลาดครบ 2 วัน (จำนวนวันเป็น 0 เริ่มใหม่) · `none` ยังไม่เคยรดให้กัน
+- ครบทุก 100 วัน (100, 200, …) ของสายเดียวกัน → **ทั้งสองคน** สุ่มการ์ดแลกซื้อคนละ 1 ใบ (ไม่ต้องปลดล็อกระบบการ์ดก่อน)
+
+**ตารางที่เสนอ:** `friend_waterings (id, fromUserId, toUserId, waterDate @db.Date, createdAt)` unique `(fromUserId, toUserId, waterDate)`
+และ `friend_water_rewards (userA, userB, streakStartDate, milestone)` unique ทั้ง 4 คอลัมน์ (กันให้รางวัลซ้ำ)
+
+**Endpoint ที่หน้าเว็บเรียก:**
+- `GET /friends/:friendId/water` → `FriendWaterSummary` (`streak, status, wateredToday, friendWateredToday, myTotal, theirTotal, streakStartedOn, daysToNextReward`)
+- `POST /friends/:friendId/water` → `{ summary, rewardCardItemCode }` · รดซ้ำในวันเดียวกัน = `409 ALREADY_WATERED` · ไม่ใช่เพื่อน = `403`
+
+โหมด mock: เพื่อนเป็นผู้ใช้จำลอง จึงจำลองให้เพื่อน "รดกลับ" ~80% ของวัน (คงที่ต่อเพื่อน+วัน) เพื่อทดสอบสีฟ้า/เทา/ดับและรางวัลได้

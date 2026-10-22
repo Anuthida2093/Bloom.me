@@ -111,36 +111,27 @@ export function getGroundImagePath(variant: 1 | 2 | 3): string {
 }
 
 /*============================================================================*\
-  toTrunkVisualLevel — [เขียนใหม่ตามที่ระบุรอบนี้] แทนที่ toVisualLevel เดิมสำหรับ "ลำต้น
-  โดยเฉพาะ" ด้วยตาราง fix ตามที่ระบุเป๊ะ (ไม่ใช่สูตร progressive แบบเดิมอีกต่อไป)
-
-  [หมายเหตุ — ความต่างจากโค้ดตัวอย่างที่ระบุมา] สเปกที่ให้มารับ `knowledgeStack` ดิบแล้ว
-  คำนวณ gameLevel เองข้างในฟังก์ชัน (`Math.max(1, Math.floor(knowledgeStack /
-  STACK_PER_VISUAL_LEVEL) + 1)`) แต่สูตรนี้ "คำนวณอยู่แล้ว" ที่ UserContext.tsx (บรรทัด
-  `trunkBranchLevel: Math.max(1, Math.floor(userData.knowledgeStack / STACK_PER_VISUAL_LEVEL)
-  + 1)`) แล้วส่ง gameLevel ที่คำนวณเสร็จนี้ลงมาเป็น prop `trunkBranchLevel` ให้ TreeOfLife.tsx
-  ตรงๆ อยู่แล้ว — ให้ฟังก์ชันนี้รับ "gameLevel ที่คำนวณเสร็จแล้ว" แทนที่จะรับ knowledgeStack
-  ดิบมาคำนวณซ้ำอีกรอบ (กันมี 2 จุดคำนวณสูตรเดียวกันซ้ำซ้อนกันในระบบ) ผลลัพธ์ที่ได้ตรงกับ
-  ตัวอย่างที่ระบุมาทุกกรณี เพราะ trunkBranchLevel ที่ TreeOfLife.tsx ได้รับมาคือ gameLevel
-  ตัวเดียวกันเป๊ะอยู่แล้ว — ตารางเทียบเลเวลด้านล่างตรงตามที่ระบุ 100%:
-    เกมเลเวล 1-10    → trunk lv1 (ไม่มีใบเลย)
-    เกมเลเวล 11-20   → trunk lv2 (ไม่มีใบเลย)
-    เกมเลเวล 21-40   → trunk lv3 (เริ่มมีใบ)
-    เกมเลเวล 41-60   → trunk lv4
-    เกมเลเวล 61-80   → trunk lv5
-    เกมเลเวล 81-100  → trunk lv6
-    เกมเลเวล 101-120 → trunk lv7
-    เกมเลเวล 121+    → trunk lv8 (สูงสุด ไม่มีเพดานบนของเกมเลเวลอีกต่อไป ค้างที่ lv8)
+  toTrunkVisualLevel — [แก้ตามที่ระบุ: ลำต้นมี 100 เลเวล] แปลงเลเวลลำต้น 1-100 (knowledgeStack)
+  เป็น "ขั้นโครงสร้าง" 1-8 (จำนวนชั้นกิ่ง / ต้นกล้า-ต้นไม้ / ก้อนพุ่ม) — ภายในแต่ละขั้น ความสูง
+  ความหนาลำต้น และความแน่นพุ่มยังโตต่อเนื่องทุกเลเวล (trunkStageProgress) ต้นไม้จึงเปลี่ยนทุกเลเวลจนถึง 100
+    เลเวล 1-2 → ขั้น 1 · 3-5 → 2 (ต้นกล้า) · 6-10 → 3 · 11-20 → 4 · 21-35 → 5
+    36-55 → 6 · 56-80 → 7 · 81-100 → 8 (โตเต็มที่)
 \*============================================================================*/
+const TRUNK_STAGE_START = [1, 3, 6, 11, 21, 36, 56, 81]
+const TRUNK_MAX_LEVEL = 100
+
 export function toTrunkVisualLevel(gameLevel: number): number {
-  if (gameLevel <= 10) return 1
-  if (gameLevel <= 20) return 2
-  if (gameLevel <= 40) return 3
-  if (gameLevel <= 60) return 4
-  if (gameLevel <= 80) return 5
-  if (gameLevel <= 100) return 6
-  if (gameLevel <= 120) return 7
-  return 8
+  let stage = 1
+  for (let i = 0; i < TRUNK_STAGE_START.length; i++) if (gameLevel >= TRUNK_STAGE_START[i]) stage = i + 1
+  return stage
+}
+
+/** ความคืบหน้าภายในขั้นปัจจุบัน 0-1 (เลเวลแรกของขั้น = 0 → ก่อนขึ้นขั้นถัดไป/เลเวล 100 เกือบ 1) */
+export function trunkStageProgress(gameLevel: number): number {
+  const stage = toTrunkVisualLevel(gameLevel)
+  const from = TRUNK_STAGE_START[stage - 1]
+  const to = TRUNK_STAGE_START[stage] ?? TRUNK_MAX_LEVEL
+  return Math.max(0, Math.min(1, (Math.min(gameLevel, TRUNK_MAX_LEVEL) - from) / (to - from)))
 }
 
 /*============================================================================*\

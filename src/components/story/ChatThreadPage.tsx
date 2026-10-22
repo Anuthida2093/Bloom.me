@@ -6,6 +6,7 @@ import { BADGE_ICONS } from '../../config/iconAssets'
 import { sendChatMessage, useChatThreads } from '../../utils/chatStore'
 import PostPreviewMini from './PostPreviewMini'
 import { ShareIcon } from './storyIcons'
+import { WaterStreakBadge } from '../friends/FriendWater'
 
 /*============================================================================*\
   ChatThreadPage — [ใหม่ตามที่ระบุ] ห้องแชทกับเพื่อน 1 คน (แสดงแทนที่หน้าฟีด)
@@ -16,9 +17,11 @@ interface ChatThreadPageProps {
   friendName: string
   onBack: () => void
   onOpenPost: (postId: string) => void
+  /** ปุ่ม "รดน้ำต้นไม้" ในแผงหยดน้ำ → ไปหน้าดูต้นไม้ของเพื่อนคนนี้ */
+  onViewTree: (friendId: string) => void
 }
 
-export default function ChatThreadPage({ friendId, friendName, onBack, onOpenPost }: ChatThreadPageProps) {
+export default function ChatThreadPage({ friendId, friendName, onBack, onOpenPost, onViewTree }: ChatThreadPageProps) {
   const { userData } = useUser()
   const { posts } = usePosts()
   const { isFriend, requestViewProfile } = useSocial()
@@ -44,6 +47,8 @@ export default function ChatThreadPage({ friendId, friendName, onBack, onOpenPos
           <div className="story-avatar story-avatar--sm">{friendName.trim().charAt(0).toUpperCase()}</div>
           <span className="story-chat__name">{friendName}</span>
         </button>
+        {/* [ใหม่ตามที่ระบุ] หยดน้ำ + จำนวนวันที่รดน้ำให้กัน ข้างชื่อ — แตะดูสถานะ + ปุ่มรดน้ำต้นไม้/กู้คืน */}
+        {canChat && <WaterStreakBadge friendId={friendId} friendName={friendName} onWater={() => onViewTree(friendId)} />}
       </div>
 
       <div className="story-chat__messages">

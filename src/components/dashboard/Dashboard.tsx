@@ -8,6 +8,10 @@ import PlayerTreeCard from '../leaderboard/PlayerTreeCard'
 import TreeStatsPanel from '../tree/TreeStatsPanel'
 import NotificationPanel from './NotificationPanel'
 import WateringCanFx from './WateringCanFx'
+import { AddFriendButton, FriendWaterCan, RecoverWaterPopup, WaterDropButton } from '../friends/FriendWater'
+import { useFriendWater } from '../../hooks/useFriendWater'
+import { useSocial } from '../../context/SocialContext'
+import { exchangeCardLabel } from '../../config/exchangeItems'
 import MedicalBoxAlert from './MedicalBoxAlert'
 import RankUpModal from './RankUpModal'
 import ActionMenuBar from '../layout/ActionMenuBar'
@@ -119,6 +123,17 @@ export default function Dashboard() {
    *  กดปุ่มต้นไม้/แตะต้นไม้ถึงจะเปิด — เก็บ id เพื่อนที่เปิดการ์ดอยู่ (ดูคนใหม่ = เริ่มแบบปิด) */
   const [shownFriendCardId, setShownFriendCardId] = useState<string | null>(null)
   const friendCardOpen = !!viewingPlayer && shownFriendCardId === viewingPlayer.id
+  /* [ใหม่ตามที่ระบุ] รดน้ำต้นไม้ให้เพื่อน (วันละครั้ง คล้ายเติมไฟ — utils/friendWater.ts)
+     ปุ่มหยดน้ำใต้ปุ่มข้อมูลต้นไม้ → บัวรดน้ำขึ้นเหนือต้นไม้ → แตะบัว = รดน้ำ → หยดน้ำที่ปุ่มกระเซ็นเป็นสีฟ้า
+     waterCanFor = id เพื่อนที่เปิดบัวอยู่ (ดูคนใหม่ = บัวปิดเอง) */
+  const { isFriend, followStatus, toggleFollow } = useSocial()
+  const friendWater = useFriendWater(viewingPlayer?.id ?? null)
+  const [waterCanFor, setWaterCanFor] = useState<string | null>(null)
+  /** ป็อบอัพกู้คืนหยดน้ำ (id เพื่อน) — หยดน้ำดับแต่ยังกู้คืนได้วันนี้ */
+  const [recoverFor, setRecoverFor] = useState<string | null>(null)
+  /** เปลี่ยนค่า = เอฟเฟกต์ประกายฟ้า + หยดน้ำเด้ง (รดครบทั้งคู่) */
+  const [waterCelebrateKey, setWaterCelebrateKey] = useState(0)
+  const waterResultRef = useRef<{ full: boolean; reward: { code: string; streak: number } | null }>({ full: false, reward: null })
   /* [แก้ตามที่ระบุ] การ์ดข้อมูลต้นไม้เพื่อนปิดเองเมื่อแตะที่อื่นบนหน้าจอ (ไม่ต้องกดกากบาท) —
      ยกเว้นแตะในการ์ดเอง หรือปุ่มต้นไม้ที่ใช้เปิด/ปิดการ์ด */
   useEffect(() => {
@@ -224,6 +239,62 @@ export default function Dashboard() {
   /** ข้อความแจ้งผลปุ่มแชร์ (เช่น copy link fallback ตอนเบราว์เซอร์ไม่รองรับ navigator.share) */
   const [infoAlert, setInfoAlert] = useState<string | null>(null)
 
+  /** กดปุ่มหยดน้ำ: วันนี้รดแล้ว = แจ้งเฉยๆ · ดับ (กู้คืนได้) = ป็อบอัพกู้คืน · ไม่งั้นเปิด/ปิดบัวรดน้ำ */
+  const handleFriendWaterButton = () => {
+    if (!viewingPlayer) return
+    const s = friendWater.summary
+    if (s?.wateredToday) {
+      setInfoAlert(s.friendWateredToday
+        ? 'วันนี้รดน้ำให้กันครบแล้ว พรุ่งนี้มารดใหม่นะ 💧'
+        : `วันนี้คุณรดน้ำให้ ${viewingPlayer.username} แล้ว รอเพื่อนรดกลับก่อนเที่ยงคืนนะ 💧`)
+      return
+    }
+    if (s?.status === 'broken') { setRecoverFor(viewingPlayer.id); return }
+    setWaterCanFor((id) => (id === viewingPlayer.id ? null : viewingPlayer.id))
+  }
+  /** กู้คืน = รดน้ำตามปกติของวันนี้ (เปิดบัวรดน้ำ) */
+  const handleRecoverWater = () => {
+    if (!viewingPlayer) return
+    setRecoverFor(null)
+    setWaterCanFor(viewingPlayer.id)
+  }
+  /** ยังไม่เป็นเพื่อน → ติดตาม (เป็นเพื่อนเมื่อเขาติดตามกลับ) */
+  const handleAddFriend = () => {
+    if (!viewingPlayer) return
+    const st = followStatus(viewingPlayer.id)
+    if (st === 'following') {
+      setInfoAlert(`ส่งคำขอถึง ${viewingPlayer.username} แล้ว รอเขาติดตามกลับก็จะเป็นเพื่อนกัน แล้วรดน้ำให้กันได้`)
+      return
+    }
+    toggleFollow(viewingPlayer.id)
+    setInfoAlert(st === 'followsYou'
+      ? `เป็นเพื่อนกับ ${viewingPlayer.username} แล้ว! รดน้ำต้นไม้ให้กันได้เลย 💧`
+      : `ส่งคำขอเป็นเพื่อนถึง ${viewingPlayer.username} แล้ว รอเขาติดตามกลับนะ`)
+  }
+  const handleFriendPour = async (): Promise<boolean> => {
+    try {
+      const result = await friendWater.water()
+      waterResultRef.current = {
+        full: result.summary.status === 'full',
+        reward: result.rewardCardItemCode ? { code: result.rewardCardItemCode, streak: result.summary.streak } : null,
+      }
+      return true
+    } catch (err) {
+      setInfoAlert(err instanceof Error && err.message ? err.message : 'รดน้ำไม่สำเร็จ ลองใหม่อีกครั้งนะ')
+      return false
+    }
+  }
+  const handleFriendPourDone = (poured: boolean) => {
+    setWaterCanFor(null)
+    if (!poured) return
+    const { full, reward } = waterResultRef.current
+    waterResultRef.current = { full: false, reward: null }
+    if (full) setWaterCelebrateKey((k) => k + 1)
+    if (reward) {
+      setInfoAlert(`รดน้ำให้กันครบ ${reward.streak} วัน! ได้รับ${exchangeCardLabel(reward.code)} 1 ใบ (เพื่อนก็ได้สุ่มการ์ดด้วยนะ)`)
+    }
+  }
+
   const videoRef = useRef<HTMLVideoElement | null>(null)
   // [แก้ตามที่ระบุ] วิดีโอพื้นหลังเลือกได้ในการตั้งค่า (เดิมชี้ไฟล์ hero-waterfall.mp4 ที่ถูกลบไปแล้ว → พื้นหลังไม่ขึ้น)
   const bgSrc = homeBackgroundSrc(settings.homeBackground)
@@ -277,6 +348,8 @@ export default function Dashboard() {
     return {
       EMOTION: toDays(latestByCategory.EMOTION),
       HEALTH: toDays(latestByCategory.HEALTH),
+      // [แก้ตามที่ระบุ] ลำต้น/กิ่งเหี่ยวตามจำนวนวันที่ไม่ได้ทำเควสการเรียนรู้ (เกณฑ์ 5/10 วันเดียวกับส่วนอื่น)
+      KNOWLEDGE: toDays(latestByCategory.KNOWLEDGE),
     }
   }, [questLogs])
 
@@ -683,6 +756,7 @@ export default function Dashboard() {
                 daysSinceLastOracle={daysSinceLastOracle}
                 daysSinceLastMentalQuest={daysSinceLastQuestByCategory.EMOTION}
                 daysSinceLastPhysicalQuest={daysSinceLastQuestByCategory.HEALTH}
+                daysSinceLastKnowledgeQuest={daysSinceLastQuestByCategory.KNOWLEDGE}
               />
             </ErrorBoundary>
           </div>
@@ -691,6 +765,19 @@ export default function Dashboard() {
         {/* แอนิเมชันบัวรดน้ำ — เล่นครั้งเดียวเมื่อกลับมาหน้า Home หลังได้หยดน้ำใหม่ หรือหลังกดรดน้ำในเช็คอิน
             (wateringKey — ดู homeVisible effect ด้านบน) ไม่โชว์ตอนดูต้นไม้ของคนอื่น */}
         {!hideHomeChrome && <WateringCanFx waterPulseKey={wateringKey} />}
+        {/* [ใหม่ตามที่ระบุ] บัวรดน้ำเหนือต้นไม้เพื่อน — แตะบัว = รดน้ำให้เพื่อน (วันละครั้ง) */}
+        {viewingPlayer && (
+          <FriendWaterCan open={waterCanFor === viewingPlayer.id} onPour={handleFriendPour} onDone={handleFriendPourDone} />
+        )}
+        {viewingPlayer && (
+          <RecoverWaterPopup
+            open={recoverFor === viewingPlayer.id}
+            friendName={viewingPlayer.username}
+            streak={friendWater.summary?.streak ?? 0}
+            onRecover={handleRecoverWater}
+            onClose={() => setRecoverFor(null)}
+          />
+        )}
 
         {/* [แก้ตามที่ระบุ] โพสอิทลอยบนจอ — ขึ้นกลางต้นไม้ ลากไปวางตรงไหนก็ได้ (ดู PostItLayer.tsx) */}
         {!hideHomeChrome && <PostItLayer postIts={postIts} onOpen={setOpenPostIt} onMove={movePostIt} />}
@@ -742,6 +829,21 @@ export default function Dashboard() {
               >
                 <img src={BADGE_ICONS.tree} className="icon-img" alt="" />
               </button>
+              {/* [ใหม่ตามที่ระบุ] เพื่อน → ปุ่มหยดน้ำ + จำนวนวันที่รดน้ำให้กัน · ยังไม่เป็นเพื่อน → ปุ่มเพิ่มเพื่อน */}
+              {isFriend(viewingPlayer.id) ? (
+                <WaterDropButton
+                  summary={friendWater.summary}
+                  friendName={viewingPlayer.username}
+                  onClick={handleFriendWaterButton}
+                  celebrateKey={waterCelebrateKey}
+                />
+              ) : (
+                <AddFriendButton
+                  requested={followStatus(viewingPlayer.id) === 'following'}
+                  friendName={viewingPlayer.username}
+                  onClick={handleAddFriend}
+                />
+              )}
             </div>
           </>
         ) : (
@@ -754,6 +856,7 @@ export default function Dashboard() {
                   onOpenMoodCheckin={() => { setShowTreeStats(false); openModal('moodCheckin') }}
                   daysSinceLastMentalQuest={daysSinceLastQuestByCategory.EMOTION}
                   daysSinceLastPhysicalQuest={daysSinceLastQuestByCategory.HEALTH}
+                  daysSinceLastKnowledgeQuest={daysSinceLastQuestByCategory.KNOWLEDGE}
                   onClose={() => setShowTreeStats(false)}
                   onViewMyTree={() => { setShowTreeStats(false); setShowNotifications(false); setTreeOnlyView(true) }}
                 />

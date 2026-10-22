@@ -60,6 +60,8 @@
   z-index: 2;
   animation: none;
 }
+/* ลำต้น/กิ่งค่อยๆ แห้งซีด/ฟื้น (เควสการเรียนรู้) ไม่ตัดภาพ */
+.tree-of-life__canvas--branches { transition: filter 3s ease; }
 .tree-of-life__canvas--foliage {
   z-index: 3;
   filter: drop-shadow(0 3px 4px var(--glass-b-15));
@@ -494,8 +496,14 @@
   user-select: none;
 }
 .tree-of-life__decoration-emoji {
-  font-size: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   line-height: 1;
+  pointer-events: none;
+  user-select: none;
 }
 
 .tree-of-life__hotline-badge {
@@ -551,8 +559,14 @@
   user-select: none;
 }
 .tree-of-life__decoration-emoji {
-  font-size: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   line-height: 1;
+  pointer-events: none;
+  user-select: none;
 }
 
 .tree-of-life__hotline-badge {
@@ -578,8 +592,14 @@
   user-select: none;
 }
 .tree-of-life__decoration-emoji {
-  font-size: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   line-height: 1;
+  pointer-events: none;
+  user-select: none;
 }
 
 .tree-of-life__hotline-badge {

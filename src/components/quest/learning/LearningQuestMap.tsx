@@ -378,10 +378,11 @@ export default function LearningQuestMap({
   const [sideOpen, setSideOpen] = useState(() => {
     try { return localStorage.getItem(SIDE_OPEN_KEY) === '1' } catch { return false }
   })
-  const toggleSide = () => setSideOpen((open) => {
-    try { localStorage.setItem(SIDE_OPEN_KEY, open ? '0' : '1') } catch { /* storage ปิดอยู่ */ }
-    return !open
-  })
+  const toggleSide = () => {
+    const next = !sideOpen
+    setSideOpen(next)
+    try { localStorage.setItem(SIDE_OPEN_KEY, next ? '1' : '0') } catch { /* storage ปิดอยู่ */ }
+  }
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
 
   /*==========================================================================*\
@@ -640,6 +641,9 @@ export default function LearningQuestMap({
     // เท่านั้น ตอนแตะเฉยๆ (ปล่อยมือโดยไม่เกิน threshold) จะไม่มี capture เลย ปล่อยให้เบราว์เซอร์
     // จัดการ click ปกติทั้งหมด
     hasCapturedPointerRef.current = false
+    // นิ้วแรกของท่าทางใหม่ = นิ้วเก่าทั้งหมดปล่อยไปแล้ว (เช่น ปล่อยบนโมดัลเควสที่เปิดทับ pointerup จึงไม่มาถึงนี่)
+    // ล้างค้างทิ้ง ไม่ให้แตะครั้งถัดไปถูกนับเป็นบีบซูม 2 นิ้ว
+    if (e.isPrimary) pointersRef.current.clear()
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
     if (pointersRef.current.size === 1) {
@@ -723,7 +727,10 @@ export default function LearningQuestMap({
   }
 
   const handlePointerUpOrCancel = (e: ReactPointerEvent<HTMLDivElement>) => {
-    pointersRef.current.delete(e.pointerId)
+    // [แก้บั๊ก — ปุ่มเควสเสริมต้องกดหลายที] ปุ่ม/แถบเควสเสริมกัน pointerdown ไว้ แต่ pointerup ยัง bubble
+    // มาถึงนี่ — เดิมเช็ค dragMovedRef ค้างจากการลากแผนที่ครั้งก่อน → ตั้ง suppressNextClick กลืน click ของปุ่มทิ้ง
+    // ตอนนี้สนใจเฉพาะนิ้ว/เมาส์ที่เริ่มกดบนแผนที่จริงเท่านั้น
+    if (!pointersRef.current.delete(e.pointerId)) return
     try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* noop */ }
 
     if (pointersRef.current.size === 0) {

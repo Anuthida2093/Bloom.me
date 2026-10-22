@@ -25,6 +25,8 @@
 
 /* ── สถานะโหลด/เลือกจุดหมาย (หน้า Destination Picker) ── */
 .step-journey-game--center {
+  /* หน้าเลือกแผนที่/ข้อความ ไม่ใช่แผนที่ลากได้ — ให้นิ้วเลื่อนขึ้นลงได้ (ดู .destination-picker) */
+  touch-action: pan-x pan-y;
   display: flex;
   flex-direction: column;
   align-items: center;

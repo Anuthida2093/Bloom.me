@@ -1,5 +1,5 @@
 import { MBTI_TREE_THEME, type MbtiType } from '../../../types'
-import { MBTI_SHAPE_MAP, getLeafDensityRange, toTrunkVisualLevel, type TreeShape } from '../../../config/treeAssets'
+import { MBTI_SHAPE_MAP, toTrunkVisualLevel, trunkStageProgress, type TreeShape } from '../../../config/treeAssets'
 import { seededRandom } from '../../../utils/seededRandom'
 import { generateTree, pointOnBranch, type BranchSegment, type TreeParams, type Vec3 } from './generateTree'
 import { shade } from './color'
@@ -41,6 +41,20 @@ const RADIUS_BY_VISUAL_LEVEL = [0.3, 0.4, 0.52, 0.62, 0.72, 0.82, 0.92, 1]
 const FILL_BY_VISUAL_LEVEL = [0, 0, 0.55, 0.7, 0.85, 0.92, 1, 1]
 /** ขั้นภาพที่ยังเป็นต้นกล้า (ใบเรียงเป็นระเบียบตามกิ่ง ไม่มีพุ่ม) */
 const SEEDLING_MAX_LEVEL = 2
+/** ใบต่อจุดบนกิ่ง [min, max] — คูณด้วยความแน่นของใบตามเลเวลจิตใจ (leafFill) */
+const LEAF_DENSITY: [number, number] = [3, 6]
+
+/** [แก้ตามที่ระบุ: 100 เลเวล] ค่าของขั้นนี้ไล่ต่อเนื่องไปหาค่าของขั้นถัดไปตามความคืบหน้าในขั้น
+ *  → ความสูง/ความหนา/ความแน่นพุ่มเปลี่ยนทุกเลเวล ไม่ใช่กระโดดทีละ 8 ขั้น */
+function stageValue(table: number[], stage: number, progress: number): number {
+  const a = table[stage - 1], b = table[Math.min(table.length - 1, stage)]
+  return a + (b - a) * progress
+}
+
+/** [แก้ตามที่ระบุ: ใบมี 100 เลเวล ผูกกับเควสจิตใจเท่านั้น] ความแน่นของใบ 45% (เลเวล 1) → 100% (เลเวล 100) */
+export function leafFillOf(leafFlowerLevel: number): number {
+  return 0.45 + 0.55 * clamp01((leafFlowerLevel - 1) / 99)
+}
 
 /** รูปทรงต่อกลุ่ม MBTI — NT ตั้งตรงสูงโปร่ง, NF แผ่กิ่งอ่อนช้อย, SJ ทรงโดมกลม, SP กว้างแผ่ออก */
 const SHAPE_PARAMS: Record<TreeShape, Partial<TreeParams>> = {
@@ -161,7 +175,7 @@ export interface TreeModel {
   trunkColor: string
   /** 0-1 สัดส่วนความสูงต้นเทียบกับต้นโตเต็มที่ (ผู้วาดใช้ย่อ/ขยายในกล่อง) */
   growth: number
-  /** trunk visual level 1-8 (ตรงกับระบบเดิม ใช้แสดงใน tooltip) */
+  /** ขั้นโครงสร้างลำต้น 1-8 (จากเลเวลลำต้น 1-100 — ดู toTrunkVisualLevel) */
   visualLevel: number
   /** ชั้นของกิ่งปลายสุดที่แสดง */
   tipDepth: number
@@ -217,7 +231,7 @@ export interface TreeProgress {
   mbtiType: MbtiType | null | undefined
   /** เกมเลเวลจาก knowledgeStack — คุมขนาด/ชั้นกิ่ง/ใบ */
   trunkBranchLevel: number
-  /** เลเวลหมวดจิตใจ — คุมจำนวนดอก */
+  /** เลเวลหมวดจิตใจ 1-100 — คุมความแน่น/ขนาดใบ และจำนวนดอก */
   leafFlowerLevel: number
   /** จอเล็ก → ใบ/ดอกน้อยลง (ประหยัดงานวาด) */
   compact?: boolean
@@ -259,12 +273,13 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
   // ไม่มี userSeed → key เดิมเป๊ะ (ต้นมาตรฐานของ MBTI) · มี → ต้นเฉพาะของผู้ใช้คนนั้น
   const key = userSeed ? `${mbtiKey}-${userSeed}` : mbtiKey
   const face = faceFor(key)
-  // ใบ (หมวดจิตใจ): ความหนาแน่นของพุ่มตามเลเวลจิตใจ 60% → 100% (ลำต้น/กิ่งยังโตตามหมวดการเรียนรู้)
-  const emotionFill = 0.6 + 0.4 * clamp01((leafFlowerLevel - 1) / 14)
+  // ใบ (หมวดจิตใจ): ความหนาแน่นของพุ่มตามเลเวลจิตใจ 1-100 (ลำต้น/กิ่งโตตามหมวดการเรียนรู้)
+  const emotionFill = leafFillOf(leafFlowerLevel)
   const shape: TreeShape = (mbtiType && MBTI_SHAPE_MAP[mbtiType]) || 3
   const traits = traitsOf(mbtiType)
   const theme = MBTI_TREE_THEME[mbtiType ?? 'INFP'] ?? MBTI_TREE_THEME.INFP
   const visualLevel = toTrunkVisualLevel(trunkBranchLevel)
+  const stageProgress = trunkStageProgress(trunkBranchLevel)
   // [แก้ตามที่ระบุ] เรียนรู้มาก (เลเวลลำต้นสูง) → ลำต้นอวบขึ้นต่อเนื่องทุกเลเวล ไม่ใช่แค่ตามขั้นภาพ 8 ขั้น
   // เลเวล ≤10 เท่าเดิม → เลเวล 100 ลำต้นหนาขึ้น ~55% (กิ่งหลักหนาขึ้นครึ่งหนึ่งของนั้น)
   const girth = 1 + 0.55 * Math.min(1, Math.max(0, (trunkBranchLevel - 10) / 90))
@@ -279,7 +294,7 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
   const seed = Math.floor(seededRandom(`tree-${key}`)() * 1e9)
   const baseParams = { ...typeParams(shape, traits), ...species.params }
   const full = generateTree({ seed, maxDepth: FULL_DEPTH, ...(userSeed ? userVariation(baseParams, userSeed) : baseParams) })
-  const rScale = RADIUS_BY_VISUAL_LEVEL[visualLevel - 1]
+  const rScale = stageValue(RADIUS_BY_VISUAL_LEVEL, visualLevel, stageProgress)
   const branches = full.branches
     .filter((b) => b.depth <= shownDepth)
     .map((b) => ({ ...b, radiusStart: b.radiusStart * rScale, radiusEnd: b.radiusEnd * rScale }))
@@ -302,7 +317,8 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
   const center: Vec3 = [crown.cx, crown.cy, leafBranches.length ? average(leafBranches.map((b) => b.end))[2] : 0]
   const widthOf = () => style.width[0] + rand() * (style.width[1] - style.width[0])
   const flowerColors = species.flowers?.colors ?? theme.flowers
-  const formInput: FormInput = { species, level: visualLevel, rand, leafLength: 0.5 * leafSize, widthOf, compact }
+  // สน/ปาล์ม/ไผ่: ใบ/ใบเข็มยาวขึ้นตามเลเวลจิตใจ (เลเวลต่ำใบยังสั้น) — โครงต้นยังโตตามหมวดการเรียนรู้
+  const formInput: FormInput = { species, level: visualLevel, rand, leafLength: 0.5 * leafSize * (0.8 + 0.25 * emotionFill), widthOf, compact }
 
   // ── สายพันธุ์โครงพิเศษ (สน/ปาล์ม/ไผ่): สร้างทั้งต้นใน speciesForms + ดอกป่ารอบโคน (หมวดจิตใจ) ──
   if (species.form === 'column' || species.form === 'cone' || species.form === 'palm' || species.form === 'bamboo') {
@@ -319,7 +335,7 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
       })
     }
     // จุดเด่นประจำกลุ่มของต้นโครงพิเศษ: ประกาย (NT ไซเปรส) / ผลกลม (SJ สนสปรูซ — ปาล์มมีมะพร้าวของตัวเองแล้ว)
-    const specialFill = FILL_BY_VISUAL_LEVEL[visualLevel - 1]
+    const specialFill = stageValue(FILL_BY_VISUAL_LEVEL, visualLevel, stageProgress)
     const c = out.crown
     const specialOuter = out.leaves.filter((l) => ((l.position[0] - c.cx) / c.rx) ** 2 + ((l.position[1] - c.cy) / c.ry) ** 2 > 0.35)
     const formFruits = [...out.fruits]
@@ -337,13 +353,14 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
     const formSparkles = visualLevel >= 3 ? makeSparkles(species, specialOuter, leafFlowerLevel, specialFill, rand) : []
     return assembleModel({
       ...out, fruits: formFruits, sparkles: formSparkles, flowers: wild, species, leafShape, visualLevel,
-      tipDepth: 1, girth, face: { ...face, anchor: specialFaceAnchor(species.form, out) },
+      tipDepth: 1, girth, stageProgress, face: { ...face, anchor: specialFaceAnchor(species.form, out) },
     })
   }
 
   if (seedling) {
     // ── ต้นกล้า: ใบเรียงตามข้อกิ่ง — J ออกเป็นคู่ตรงข้าม / P ออกสลับข้าง, T ใบชี้ขึ้น / F ใบแผ่ออก ──
-    const L = 1.0 * leafSize * (traits.intuitive ? 1.08 : 1)
+    // ใบต้นกล้าใหญ่ขึ้นตามเลเวลจิตใจ (ใบเลเวลต่ำยังเล็ก)
+    const L = 1.0 * leafSize * (traits.intuitive ? 1.08 : 1) * (0.8 + 0.25 * emotionFill)
     const spreadAngle = traits.feeling ? 1.05 : 0.8
     const nodes = traits.outgoing ? [0.42, 0.63, 0.84] : [0.5, 0.78]
     const fresh = (i: number, dl = 0) =>
@@ -390,8 +407,8 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
     }
   } else if (leafBranches.length) {
     // ── ต้นไม้: ใบผลิตามกิ่งในวงรีทรงพุ่ม + ขอบโดม + ก้อนพุ่ม — ความแน่นตามขั้น ──
-    const fill = FILL_BY_VISUAL_LEVEL[visualLevel - 1]
-    const density = getLeafDensityRange(trunkBranchLevel) ?? [2, 4]
+    const fill = stageValue(FILL_BY_VISUAL_LEVEL, visualLevel, stageProgress)
+    const density = LEAF_DENSITY
     const cap = compact ? 3500 : 8000
     const wanted = Math.round((density[0] + density[1]) * 1.6 * fill)
     const perBranch = Math.max(3, Math.round(Math.min(wanted, Math.floor(cap / leafBranches.length)) * leafDensity * emotionFill))
@@ -588,6 +605,7 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
 
   return assembleModel({
     branches, leaves, clumps, fruits, flowers, flutterable, crown, species, leafShape, visualLevel, tipDepth: shownDepth, girth, face, sparkles,
+    stageProgress,
   })
 }
 
@@ -612,6 +630,8 @@ function makeSparkles(species: Species, outer: TreeLeaf[], leafFlowerLevel: numb
 function assembleModel(p: {
   /** ตัวคูณความอวบลำต้น (depth 0) — กิ่งหลัก (depth 1) ได้ครึ่งหนึ่งของส่วนที่เพิ่ม */
   girth?: number
+  /** ความคืบหน้าในขั้นภาพปัจจุบัน 0-1 — ความสูงไล่ต่อเนื่องทุกเลเวล */
+  stageProgress?: number
   branches: BranchSegment[]
   leaves: TreeLeaf[]
   clumps: TreeClump[]
@@ -663,7 +683,7 @@ function assembleModel(p: {
     // เปลือกธรรมดาใช้น้ำตาลอ่อนเดียวกันทุกต้น / เปลือกเฉพาะ (เบิร์ช/ปาล์ม/ไผ่) คงสีสายพันธุ์
     // ไซเปรส (column) คงลำต้นน้ำตาลเข้มตามภาพอ้างอิง
     trunkColor: (p.species.bark ?? 'plain') === 'plain' && p.species.form !== 'column' ? TRUNK_COLOR : p.species.trunkColor,
-    growth: GROWTH_BY_VISUAL_LEVEL[p.visualLevel - 1],
+    growth: stageValue(GROWTH_BY_VISUAL_LEVEL, p.visualLevel, p.stageProgress ?? 0),
     visualLevel: p.visualLevel,
     tipDepth: p.tipDepth,
     crown: p.crown,
