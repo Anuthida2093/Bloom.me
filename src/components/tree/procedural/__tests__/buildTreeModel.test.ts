@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { buildTreeModel } from '../buildTreeModel'
+import { fitTree } from '../drawTree2D'
+import { MBTI_SHAPE_MAP } from '../../../../config/treeAssets'
+import type { MbtiType } from '../../../../types'
 
 const base = { mbtiType: 'INFJ' as const, leafFlowerLevel: 50 }
 
@@ -156,6 +159,30 @@ describe('buildTreeModel ต้นเฉพาะของผู้ใช้ (us
     expect(mine.trunkColor).toBe(plain.trunkColor)
     expect(mine.speciesName).toBe(plain.speciesName)
     expect(mine.leafShape).toBe(plain.leafShape)
+  })
+
+  it('แต่ละคนแตกกิ่ง/จำนวนกิ่ง/ดอกไม่เท่ากัน', () => {
+    const users = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6']
+    const models = users.map((userSeed) => buildTreeModel({ ...grown, trunkBranchLevel: 100, leafFlowerLevel: 100, userSeed }))
+    expect(new Set(models.map((m) => m.branches.length)).size).toBeGreaterThan(3)
+    expect(new Set(models.map((m) => m.flowers.length)).size).toBeGreaterThan(2)
+  })
+
+  it('ต้นสนของแต่ละคนสีต่างกันเล็กน้อย', () => {
+    const pine = (userSeed: string) => buildTreeModel({ mbtiType: 'ISTJ', trunkBranchLevel: 60, leafFlowerLevel: 50, userSeed }).clumps[0].color
+    expect(pine('user-a')).not.toBe(pine('user-b'))
+  })
+
+  it('ต้นโตเต็มที่ของทุกคนไม่ล้นขอบกล่อง (เผื่อแอนิเมชันเด้ง 1.06)', () => {
+    const W = 390, H = 700
+    for (const mbtiType of Object.keys(MBTI_SHAPE_MAP) as MbtiType[]) {
+      for (const userSeed of ['u1', 'u2', 'u3', null]) {
+        const m = buildTreeModel({ mbtiType, trunkBranchLevel: 100, leafFlowerLevel: 100, userSeed })
+        const f = fitTree(m, W, H)
+        expect(m.bounds.maxY * f.scale * 1.06).toBeLessThanOrEqual(f.baseY)
+        expect(Math.max(-m.bounds.minX, m.bounds.maxX) * f.scale * 1.06).toBeLessThanOrEqual(W / 2)
+      }
+    }
   })
 
   it('ใบผูกกับเลเวลจิตใจ: เลเวลจิตใจสูงพุ่มแน่นกว่า', () => {

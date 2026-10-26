@@ -18,7 +18,8 @@ import type { TreeParams } from './generateTree'
 \*============================================================================*/
 
 export type TreeForm = 'broadleaf' | 'weeping' | 'column' | 'cone' | 'palm' | 'bamboo'
-export type BarkStyle = 'plain' | 'birch' | 'palm' | 'bamboo'
+/** lenticel / ridged / segmented = ลายเปลือกของโครงต้นจากข้อมูล (speciesSkeleton.ts) */
+export type BarkStyle = 'plain' | 'birch' | 'palm' | 'bamboo' | 'lenticel' | 'ridged' | 'segmented'
 /** รูปทรงใบ — ผู้วาด (drawTree2D getLeafPath) มีเส้นรูปใบของแต่ละแบบ */
 export type LeafShape = 'lance' | 'petal' | 'oval' | 'broad' | 'maple' | 'needle' | 'fan' | 'oak' | 'blade'
 

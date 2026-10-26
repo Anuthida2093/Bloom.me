@@ -70,6 +70,9 @@ import DoubleRewardChip from './DoubleRewardChip'
 import { useStepSettlement } from '../../hooks/useStepSettlement'
 import { useVideoStallGuard } from '../../hooks/useVideoStallGuard'
 import { homeBackgroundSrc } from '../../config/homeBackgrounds'
+import { homeSceneById, effectiveHomeBackground } from '../../config/homeScenes'
+import HomeSceneRenderer from '../scenery/homeScenes/HomeSceneRenderer'
+import { useHomeWeather } from '../../hooks/useHomeWeather'
 import { computeCalorieTarget, getOverCalorieStreak, getVisibleRocks, MEALS_CHANGED_EVENT, OVER_CALORIE_STREAK_DAYS } from '../../utils/nutrition'
 import { posterOf } from '../../utils/videoPoster'
 const TreeSummaryModal = lazy(() => import('../tree/TreeSummaryModal'))
@@ -199,7 +202,11 @@ export default function Dashboard() {
      ล่วงหน้าตอนหน้า Home ว่าง — กดเปิดครั้งแรกจะขึ้นทันทีพร้อมกันทั้งหน้า ไม่มีช่วงจอว่าง
      (Suspense fallback) ระหว่างรอดาวน์โหลดโค้ดแล้วค่อยเด้งเนื้อหาตามมาทีหลัง */
   useEffect(() => {
-    const warm = () => { void loadQuestSection(); void loadMoodCheckIn(); void loadShopSection(); void loadProfilePage() }
+    const warm = () => {
+      void loadQuestSection(); void loadMoodCheckIn(); void loadShopSection(); void loadProfilePage()
+      // [แก้ตามที่ระบุ — เควสก้าวเปิดทันที] เตรียมภาพแผนที่ของทริปปัจจุบัน (หรือการ์ดเลือกแผนที่) ไว้ก่อนแตะ
+      void import('../quest/games/physical/stepQuestWarmup').then((m) => m.warmStepQuest())
+    }
     const w = window as Window & { requestIdleCallback?: (cb: () => void) => number; cancelIdleCallback?: (id: number) => void }
     if (w.requestIdleCallback) {
       const id = w.requestIdleCallback(warm)
@@ -297,12 +304,21 @@ export default function Dashboard() {
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
   // [แก้ตามที่ระบุ] วิดีโอพื้นหลังเลือกได้ในการตั้งค่า (เดิมชี้ไฟล์ hero-waterfall.mp4 ที่ถูกลบไปแล้ว → พื้นหลังไม่ขึ้น)
-  const bgSrc = homeBackgroundSrc(settings.homeBackground)
+  // [แก้ตามที่ระบุ] ฉากที่เลือกไว้แต่ยังล็อก (เลเวลไม่ถึง) → ใช้ฉาก 1 จนกว่าจะปลดล็อก
+  const homeBgId = effectiveHomeBackground(settings.homeBackground, userData.level)
+  const bgSrc = homeBackgroundSrc(homeBgId)
   const bgVideo = useVideoStallGuard(videoRef, bgSrc)
+  /** [ใหม่ — อนุมัติแล้ว] ฉากพื้นหลังที่วาดด้วยโค้ด (ฉาก 3-5) — มีค่า = ใช้แทนวิดีโอ (ทั้งหน้า Home และหน้าดูต้นไม้เพื่อน) */
+  const codeScene = homeSceneById(homeBgId)
+  const homeWeather = useHomeWeather()
+  /** ค่าเลื่อนฉากตามการลากต้นไม้ — ตัวเรนเดอร์อ่านทุกเฟรม (ไม่ re-render ทั้งหน้า) */
+  const scenePanRef = useRef(0)
 
   /* ลากฉากต้นไม้ซ้าย-ขวา → วิดีโอพื้นหลังเลื่อนตามช้ากว่า (BG_PARALLAX เท่า) ให้รู้สึกว่าฉากหลังอยู่ไกล
      วิดีโอกว้างขึ้นเท่าระยะที่ต้องเลื่อน (ไม่เห็นขอบว่าง) — ใส่ style ตรงที่ DOM ไม่ re-render ทั้งหน้า */
   const handleTreePan = useCallback((pan: number, range: number) => {
+    // ฉากวาดด้วยโค้ด: เลื่อนตามต้นไม้ช้ากว่า (ชั้นไกลช้า ชั้นหญ้าใกล้เร็ว — พารัลแลกซ์ในตัวเรนเดอร์)
+    scenePanRef.current = -pan * 0.35
     const v = videoRef.current
     if (!v) return
     const extra = range * BG_PARALLAX
@@ -645,9 +661,14 @@ export default function Dashboard() {
           poster/webm ที่อ้างไว้ก็ไม่มีอยู่จริง — ตอนนี้แสดงวิดีโอทุกขนาดจอ (พื้นไล่สีอยู่ใต้ไว้ระหว่างโหลด)
           ผู้ใช้ที่ขอลดการเคลื่อนไหว: วิดีโอหยุดนิ่งที่เฟรมแรก (#t=0.1) ยังเห็นภาพพื้นหลังเหมือนเดิม */}
       {/* [1.5] พื้นนิ่ง = เฟรมแรกของวิดีโอพื้นหลังที่เลือก (โปสเตอร์) — เห็นฉากทันทีก่อนวิดีโอพร้อม */}
-      <div className="dashboard__bg-still" aria-hidden="true" style={{ ['--bg-poster' as string]: `url("${posterOf(bgSrc)}")` } as React.CSSProperties} />
+      {codeScene && (
+        <div className="dashboard__bg-scene">
+          <HomeSceneRenderer spec={codeScene} weather={homeWeather} panRef={scenePanRef} animate={!anyModalOpen} mbti={userData.mbtiType as MbtiType} />
+        </div>
+      )}
+      {!codeScene && <div className="dashboard__bg-still" aria-hidden="true" style={{ ['--bg-poster' as string]: `url("${posterOf(bgSrc)}")` } as React.CSSProperties} />}
       {/* [แก้ตามที่ระบุ] เน็ตไม่ดี: วิดีโอจางเข้าเฉพาะตอนเล่นได้จริง กระตุกรอโหลด/โหลดไม่ได้ → เห็นพื้นนิ่งแทน ไม่ค้าง */}
-      {!bgVideo.failed && (
+      {!codeScene && !bgVideo.failed && (
         <video
           key={bgSrc}
           ref={videoRef}
@@ -693,7 +714,7 @@ export default function Dashboard() {
 
       {/* ═══ ต้นไม้เต็มจอ ═══ */}
       {/* [แก้ตามที่ระบุ] แสงแดด (ธีมสว่าง) / ฉากกลางคืน (ธีมมืด) / ฝนตกตามสภาพอากาศจริง */}
-      <HomeAmbience hidden={anyModalOpen} />
+      <HomeAmbience hidden={anyModalOpen} sceneHandlesWeather={!!codeScene} />
 
       {!hideHomeChrome && showOverCalorie && <OverCalorieNotice streakDays={overCalorieStreak} />}
 
@@ -708,7 +729,8 @@ export default function Dashboard() {
         {viewingPlayer && viewingTreeStats ? (
           <>
             {/* [แก้ตามที่ระบุ] ปุ่มกลับบ้านเหลือแค่ไอคอน Return — ข้อความ "กลับบ้าน" ชนป้ายชื่อต้นไม้เพื่อนบนจอเล็ก */}
-            <button className="dashboard__back-btn lb-banner" onClick={() => setViewingPlayer(null)} aria-label="กลับบ้าน" title="กลับบ้าน">
+            {/* [แก้ตามที่ระบุ] หน้าดูต้นไม้เพื่อน: ปุ่มกลับเป็นไอคอนล้วน (ไม่มีกรอบ/พื้น) — ปุ่มโหมดดูต้นไม้ของฉันยังเป็นป้ายเดิม */}
+            <button className="dashboard__back-btn dashboard__back-btn--icon" onClick={() => setViewingPlayer(null)} aria-label="กลับบ้าน" title="กลับบ้าน">
               <img src={BADGE_ICONS.back} className="icon-img" alt="" />
             </button>
             <div className="dashboard__viewing-name-pill lb-banner">ต้นไม้ของ {viewingPlayer.username}</div>
@@ -942,8 +964,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* [แก้ตามที่ระบุ] เปิดสตอรี่แล้วไม่ต้องมีแถบเมนูล่างทับ — หน้าสตอรี่มีปุ่มกากบาทปิดอยู่แล้ว */}
-      {!hideHomeChrome && !modals.story && (
+      {/* [แก้ตามที่ระบุ] หน้าสตอรี่แสดงแถบเมนูล่างเหมือนหน้าอื่น (ธีมเดียวกัน · ไอคอนสตอรี่ไฮไลต์) —
+          Story.css เว้นที่ด้านล่างให้แถบ (--gpf-safe-bottom) */}
+      {!hideHomeChrome && (
       <ActionMenuBar
         active={activeNavKey}
         activeQuestCount={completedQuestCount}

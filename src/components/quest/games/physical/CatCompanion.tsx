@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MapDef } from '../../../../types.journey'
-import { OWL_AVATAR_ICON } from '../../../../config/iconAssets'
+import CanvasHero, { type HeroOutfit } from './CanvasHero'
+import { useAppContext } from '../../../../context/AppContext'
 import { poseAtPathPct, samplePath, withLivePath } from './journeyPathMath'
 import { usePrefersReducedMotion } from '../../../../hooks/useMediaQuery'
 import './CatCompanion.css'
 
 /*============================================================================*\
-  CatCompanion.tsx — ตัวละครนำทาง (นกฮูก OwlAvatar) ที่เดินตามเส้นทางบนแผนที่ Step Journey
+  CatCompanion.tsx — ตัวละครนำทาง ([แก้ตามที่ระบุ] คน — CanvasHero แทนนกฮูก) ที่เดินตามเส้นทางบนแผนที่ Step Journey
   ────────────────────────────────────────────────────────────────────────────
   [แก้ตามที่ระบุ — เดินตามเส้นทาง + หันตามทิศ] เดิมย้ายตำแหน่งด้วย CSS transition ของ left/top
   ซึ่งเคลื่อนเป็น "เส้นตรง" จากจุดเก่าไปจุดใหม่ — ตัดมุมโค้งของถนนทุกครั้งที่ก้าวเพิ่มทีละมาก และไม่เคย
   หันตามทาง ตอนนี้ไล่ค่า progress ทีละเฟรม (requestAnimationFrame) แล้ววางตามจุดบนเส้นโค้งจริงทุกเฟรม
-  (poseAtPathPct — สูตรเดียวกับเส้นที่ MapPathRenderer วาด) · หันซ้าย/ขวาตามทิศที่เดิน + เอียงตามความชัน
+  (poseAtPathPct — สูตรเดียวกับเส้นที่ MapPathRenderer วาด) · หันซ้าย/ขวาตามทิศที่เดิน (ตั้งตรงเสมอ ไม่เอียงตามทาง)
 \*============================================================================*/
 
 interface CatCompanionProps {
@@ -20,22 +21,27 @@ interface CatCompanionProps {
   progressPct: number
 }
 
-interface OwlPose { x: number; y: number; facing: 1 | -1; tilt: number }
+interface HeroPose { x: number; y: number; facing: 1 | -1 }
 
 /** เวลาเดินจากตำแหน่งเดิมไปตำแหน่งใหม่ (ms) — ยิ่งไกลยิ่งนาน แต่ไม่เกินเพดาน */
 const walkDuration = (deltaPct: number) => Math.min(2400, 500 + Math.abs(deltaPct) * 60)
-/** เอียงตัวตามความชันของทางได้ไม่เกินเท่านี้ (องศา) — มากกว่านี้ดูเหมือนล้ม */
-const MAX_TILT = 14
 
-function poseOf(samples: ReturnType<typeof samplePath>, pct: number, prevFacing: 1 | -1): OwlPose {
+function poseOf(samples: ReturnType<typeof samplePath>, pct: number, prevFacing: 1 | -1): HeroPose {
   const p = poseAtPathPct(samples, pct)
   // ทางแทบตั้งตรง (dx ใกล้ 0) → คงทิศเดิม ไม่สะบัดหน้าไปมา
   const facing: 1 | -1 = Math.abs(p.dx) > 0.02 ? (p.dx >= 0 ? 1 : -1) : prevFacing
-  const slope = Math.atan2(p.dy, Math.abs(p.dx) || 1e-6) * (180 / Math.PI)
-  return { x: p.x, y: p.y, facing, tilt: Math.max(-MAX_TILT, Math.min(MAX_TILT, slope)) * facing }
+  // [แก้ตามที่ระบุ] ไม่เอียงตามความชันของทางแล้ว — นกฮูกตั้งตรงบนจอเสมอ (หันซ้าย/ขวาด้วยการกลับด้านเท่านั้น)
+  return { x: p.x, y: p.y, facing }
+}
+
+/** ชุดตามเพศผู้เล่น: ชาย = เจ้าชาย · หญิง = เจ้าหญิง */
+function outfitOf(gender: string | null | undefined): HeroOutfit {
+  return gender === 'MALE' ? 'prince' : gender === 'FEMALE' ? 'princess' : null
 }
 
 export default function CatCompanion({ mapDef, progressPct }: CatCompanionProps) {
+  const { userData } = useAppContext()
+  const outfit = outfitOf(userData.gender)
   const live = withLivePath(mapDef)
   // คีย์ของเส้นทาง — คำนวณจุดตัวอย่างใหม่เฉพาะเมื่อจุดเส้นทางเปลี่ยนจริง (ไม่ใช่ทุก render)
   const pathKey = JSON.stringify([live.entryPct, live.waypoints, live.exitPct])
@@ -46,7 +52,7 @@ export default function CatCompanion({ mapDef, progressPct }: CatCompanionProps)
 
   const shownRef = useRef(target)
   const facingRef = useRef<1 | -1>(1)
-  const [pose, setPose] = useState<OwlPose>(() => poseOf(samples, target, 1))
+  const [pose, setPose] = useState<HeroPose>(() => poseOf(samples, target, 1))
   const [walking, setWalking] = useState(false)
 
   useEffect(() => {
@@ -77,14 +83,16 @@ export default function CatCompanion({ mapDef, progressPct }: CatCompanionProps)
   }, [target, reducedMotion, samples])
 
   return (
-    <img
-      src={OWL_AVATAR_ICON}
-      alt=""
-      className={`cat-companion${walking ? ' cat-companion--walking' : ''}`}
+    // [แก้ตามที่ระบุ] ตัวคนวาดด้วย Canvas — เคลื่อนที่อยู่ = เดินก้าวขาไปตามเส้นทาง · หยุด = ยืนกะพริบตา/โบกมือ
+    <CanvasHero
+      size={120}
+      walking={walking}
+      outfit={outfit}
+      className="cat-companion"
       style={{
         left: `${pose.x}%`,
         top: `${pose.y}%`,
-        transform: `translate(-50%, -68%) rotate(${pose.tilt}deg) scaleX(${pose.facing})`,
+        transform: `translate(-50%, -88%) scaleX(${pose.facing})`,
       }}
     />
   )

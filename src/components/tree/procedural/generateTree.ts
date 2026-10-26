@@ -38,6 +38,12 @@ export interface TreeParams {
   gnarl: number
   /** เริ่มมีพุ่มใบตั้งแต่กิ่งชั้นนี้ขึ้นไป */
   leafFromDepth: number
+  /** กิ่งข้างฝั่งขวา (+) / ซ้าย (−) ยาวกว่าอีกฝั่ง -0.4..0.4 — ต้นไม่สมมาตร (0 = เท่ากัน) */
+  sideBias: number
+  /** ลำต้นเอนไปทางขวา (+) / ซ้าย (−) (สัดส่วนของแนวตั้ง, 0 = ตรง) */
+  trunkLean: number
+  /** โอกาสที่กิ่งข้าง (ชั้น 1+) ไม่แตก 0-1 — จำนวนกิ่งแต่ละข้อ/แต่ละฝั่งไม่เท่ากัน (0 = แตกครบ) */
+  pruneChance: number
 }
 
 export const DEFAULT_TREE_PARAMS: TreeParams = {
@@ -53,6 +59,9 @@ export const DEFAULT_TREE_PARAMS: TreeParams = {
   upwardBias: 0.12,
   gnarl: 0.12,
   leafFromDepth: 4,
+  sideBias: 0,
+  trunkLean: 0,
+  pruneChance: 0,
 }
 
 export interface BranchSegment {
@@ -182,10 +191,14 @@ export function generateTree(overrides: Partial<TreeParams> = {}): GeneratedTree
       const lateralDir = normalize(lerp(deflect(dir, tilt, azimuth), UP, p.upwardBias))
       // ลำต้นช่วงล่างไม่แตกกิ่งข้าง — ให้เห็นลำต้นเปลือยก่อนถึงพุ่ม
       if (depth === 0 && i === 0) continue
-      grow(end, lateralDir, len * p.lengthDecay * range(0.85, 1.05), childRadius * range(0.62, 0.78), depth + 1)
+      // ไม่สุ่มเพิ่มเมื่อ pruneChance = 0 → ต้นมาตรฐานได้ลำดับสุ่มเดิมเป๊ะ
+      if (p.pruneChance > 0 && depth >= 1 && rand() < p.pruneChance) continue
+      // เอียงข้างเฉพาะกิ่งหลักที่แตกจากลำต้น — ถ้าหลายชั้นจะทบกันจนพุ่มเบี้ยวไปข้างเดียว
+      const sideK = depth === 0 ? 1 + p.sideBias * lateralDir[0] : 1
+      grow(end, lateralDir, len * p.lengthDecay * range(0.85, 1.05) * sideK, childRadius * range(0.62, 0.78), depth + 1)
     }
   }
 
-  grow([0, 0, 0], UP, p.trunkHeight, p.trunkRadius, 0)
+  grow([0, 0, 0], p.trunkLean ? normalize([p.trunkLean, 1, 0]) : UP, p.trunkHeight, p.trunkRadius, 0)
   return { branches, leafAnchors }
 }

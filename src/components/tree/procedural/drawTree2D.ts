@@ -27,12 +27,17 @@ export const TREE_BASE_Y_RATIO = 0.84
 /** จัดต้นให้พอดีกล่อง: โคนต้นที่ baseYRatio ของความสูง, ความสูงต้น = maxHeightRatio × growth */
 /** ความสูงต้นโตเต็มที่เทียบความสูงกล่อง — [ขยายรอบนี้] 0.76 → 0.82 ให้ต้นเด่นขึ้นบนหน้า Home */
 export const TREE_MAX_HEIGHT_RATIO = 0.82
+/** ระยะเว้นขั้นต่ำจากขอบบน (สัดส่วนความสูง) / ขอบซ้าย-ขวา (สัดส่วนความกว้าง) */
+const FIT_TOP_PAD = 0.04
+const FIT_SIDE_PAD = 0.03
 
 export function fitTree(model: TreeModel, width: number, height: number, baseYRatio = TREE_BASE_Y_RATIO, maxHeightRatio = TREE_MAX_HEIGHT_RATIO): TreeFit {
   const baseY = height * baseYRatio
   const targetH = height * maxHeightRatio * model.growth
   const halfW = Math.max(-model.bounds.minX, model.bounds.maxX, 0.5)
-  const scale = Math.min(targetH / Math.max(model.bounds.maxY, 0.5), (width * 0.5) / halfW)
+  // [แก้ตามที่ระบุ: ต้นไม่โตเลยขอบจอ] เว้นขอบบน/ข้างเสมอ — เผื่อแอนิเมชันเด้ง (scale 1.06 รอบโคนต้น) ไม่ล้นจอ
+  const maxH = Math.min(targetH, (baseY - height * FIT_TOP_PAD) / 1.06)
+  const scale = Math.min(maxH / Math.max(model.bounds.maxY, 0.5), (width * (0.5 - FIT_SIDE_PAD)) / (halfW * 1.06))
   return { scale, baseX: width / 2, baseY }
 }
 
@@ -412,6 +417,15 @@ const MIN_BRANCH_RADIUS_PX = 1.4
 export function drawBranches(ctx: CanvasRenderingContext2D, model: TreeModel, fit: TreeFit) {
   const dark = shade(model.trunkColor, -0.1)
   const light = shade(model.trunkColor, 0.14)
+  if (model.mound) {
+    // เนินดินเล็กๆ ใต้โคนต้น (ไล่เข้มลงขอบ ไม่มีเส้นขอบ)
+    const [mx, my] = toScreen([0, 0, 0], fit)
+    const rx = model.mound.rx * fit.scale, ry = model.mound.ry * fit.scale
+    const g = ctx.createRadialGradient(mx - rx * 0.2, my - ry * 0.6, 0, mx, my, rx)
+    g.addColorStop(0, shade(model.mound.color, 0.08)); g.addColorStop(1, shade(model.mound.color, -0.04))
+    ctx.fillStyle = g
+    ctx.beginPath(); ctx.ellipse(mx, my, rx, ry * 1.6, 0, Math.PI, Math.PI * 2); ctx.ellipse(mx, my, rx, ry * 0.7, 0, 0, Math.PI); ctx.fill()
+  }
   // กิ่งหลังก่อน (z น้อย) → กิ่งหน้าทีหลัง, ชั้นใหญ่ก่อนชั้นเล็กในระนาบเดียวกัน
   const ordered = [...model.branches].sort((a, b) => (a.mid[2] - b.mid[2]) || (a.depth - b.depth))
   for (const b of ordered) {
@@ -430,7 +444,7 @@ export function drawBranches(ctx: CanvasRenderingContext2D, model: TreeModel, fi
       // เรียวถึงรัศมีปลายปกติ (กิ่งปลายสุดก็ไม่เรียวจนแหลม) + ขั้นต่ำบนจอ → ปลายกิ่งมน ปิดด้วยวงกลมด้านล่าง
       let r = (b.radiusStart + (b.radiusEnd - b.radiusStart) * t) * fit.scale
       // โคนต้นบานออก (เฉพาะท่อนที่เริ่มจากพื้น — ลำต้นหลายท่อนอย่างปาล์ม/ไผ่ไม่บานทุกข้อ, ไผ่ไม่บานเลย)
-      if (b.depth === 0 && b.start[1] < 0.01 && model.bark !== 'bamboo') r *= 1 + 0.7 * Math.pow(1 - t, 4)
+      if (b.depth === 0 && b.start[1] < 0.01 && model.bark !== 'bamboo' && model.bark !== 'segmented') r *= 1 + 0.7 * Math.pow(1 - t, 4)
       r = Math.max(r, MIN_BRANCH_RADIUS_PX)
       // ตั้งฉากกับทิศกิ่ง: (-dy, dx)
       left.push([p[0] - dy * r, p[1] + dx * r])
@@ -451,7 +465,7 @@ export function drawBranches(ctx: CanvasRenderingContext2D, model: TreeModel, fi
     ctx.beginPath()
     ctx.arc(ex, ey, er, 0, Math.PI * 2)
     ctx.fill()
-    if (model.bark !== 'plain' && b.depth <= (model.bark === 'birch' ? 2 : 0)) drawBark(ctx, model, fit, b, left, right, steps)
+    if (model.bark !== 'plain' && b.depth <= (model.bark === 'birch' || model.bark === 'lenticel' ? 2 : model.bark === 'ridged' ? 1 : 0)) drawBark(ctx, model, fit, b, left, right, steps)
     // แถบสว่างด้านซ้าย (แสงมาจากซ้ายบน) — ให้กิ่งดูกลมมีมิติ
     if (b.depth < 5) {
       ctx.beginPath()
@@ -511,6 +525,72 @@ function drawBark(
       ctx.quadraticCurveTo((l[0] + r[0]) / 2, (l[1] + r[1]) / 2 + 1.5, r[0], r[1])
       ctx.stroke()
     }
+  } else if (model.bark === 'lenticel') {
+    // ซากุระ: ขีดสั้นแนวขวางสีอ่อน (lenticel) ห่างๆ ตามลำต้น/กิ่งใหญ่
+    let k = Math.abs(Math.sin(b.start[0] * 53.1 + b.start[1] * 29.7)) * 1000
+    const rnd = () => { k = (k * 9301 + 49297) % 233280; return k / 233280 }
+    const n = Math.max(1, Math.round(lenPx / 14))
+    ctx.strokeStyle = shade(model.trunkColor, 0.22)
+    ctx.globalAlpha = 0.7
+    for (let i = 0; i < n; i++) {
+      const [l, r] = across(0.1 + rnd() * 0.8)
+      const a = 0.25 + rnd() * 0.3, w = 0.18 + rnd() * 0.2
+      ctx.lineWidth = Math.max(0.8, Math.hypot(r[0] - l[0], r[1] - l[1]) * 0.07)
+      ctx.beginPath()
+      ctx.moveTo(l[0] + (r[0] - l[0]) * a, l[1] + (r[1] - l[1]) * a)
+      ctx.lineTo(l[0] + (r[0] - l[0]) * (a + w), l[1] + (r[1] - l[1]) * (a + w))
+      ctx.stroke()
+    }
+  } else if (model.bark === 'ridged') {
+    // สันเปลือกแนวตั้งหลายเส้นตามความยาวกิ่ง + ขอบแสงสี (ชมพู) ด้านรับแสง (ซ้าย)
+    const lines = 5
+    ctx.strokeStyle = shade(model.trunkColor, -0.12)
+    ctx.globalAlpha = 0.65
+    ctx.lineWidth = Math.max(0.8, Math.hypot(right[0][0] - left[0][0], right[0][1] - left[0][1]) * 0.035)
+    for (let j = 1; j < lines; j++) {
+      const f = j / lines
+      ctx.beginPath()
+      for (let i = 0; i <= steps; i++) {
+        const x = left[i][0] + (right[i][0] - left[i][0]) * f, y = left[i][1] + (right[i][1] - left[i][1]) * f
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
+      ctx.stroke()
+    }
+    if (model.barkRim) {
+      ctx.strokeStyle = model.barkRim
+      ctx.globalAlpha = 0.75
+      ctx.lineWidth = Math.max(1, ctx.lineWidth * 1.6)
+      ctx.beginPath()
+      for (let i = 0; i <= steps; i++) {
+        const x = left[i][0] + (right[i][0] - left[i][0]) * 0.08, y = left[i][1] + (right[i][1] - left[i][1]) * 0.08
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
+      ctx.stroke()
+    }
+  } else if (model.bark === 'segmented') {
+    // ไผ่ (โครงจากข้อมูล): ข้อปล้องเป็นแถบเข้มนูนกว้างกว่าลำเล็กน้อย + แถบสว่างแนวยาวด้านรับแสง
+    ctx.strokeStyle = shade(model.trunkColor, 0.2)
+    ctx.globalAlpha = 0.55
+    ctx.lineWidth = Math.max(1, Math.hypot(right[0][0] - left[0][0], right[0][1] - left[0][1]) * 0.18)
+    ctx.beginPath()
+    for (let i = 0; i <= steps; i++) {
+      const x = left[i][0] + (right[i][0] - left[i][0]) * 0.28, y = left[i][1] + (right[i][1] - left[i][1]) * 0.28
+      if (i === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.stroke()
+    ctx.globalAlpha = 1
+    const [l, r] = across(0.97)
+    const w = Math.hypot(r[0] - l[0], r[1] - l[1])
+    const ox = (r[0] - l[0]) / (w || 1) * w * 0.08, oy = (r[1] - l[1]) / (w || 1) * w * 0.08
+    ctx.strokeStyle = shade(model.trunkColor, -0.16)
+    ctx.lineWidth = Math.max(1.2, w * 0.16)
+    ctx.beginPath()
+    ctx.moveTo(l[0] - ox, l[1] - oy)
+    ctx.lineTo(r[0] + ox, r[1] + oy)
+    ctx.stroke()
   } else if (model.bark === 'bamboo') {
     // ไผ่: ข้อปล้องที่ปลายแต่ละท่อน (เส้นเข้ม + ขอบสว่างใต้ข้อ)
     const [l, r] = across(0.999)

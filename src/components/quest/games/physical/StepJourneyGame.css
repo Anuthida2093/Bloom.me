@@ -182,6 +182,9 @@
    ธีมสว่าง: พื้นเขียวอ่อน, แถบบน/แผงควบคุมเขียวเข้มกว่า, ขอบทอง, ตัวหนังสือดำทั้งหมด
    ธีมมืด: ของเดิม (เขียวเข้ม) แต่ขอบทอง + ตัวหนังสือขาวทั้งหมด
    ═══════════════════════════════════════════════════════════════════════════ */
+/* [แก้ตามที่ระบุ] ภาพแผนที่ยังไม่พร้อม → ซ่อนทุกอย่าง (นกฮูก/แถบข้อมูล/ปุ่ม) เหลือหน้าโหลดเขียวเต็มจอ */
+.step-journey-game.is-art-pending > :not(.game-loading) { visibility: hidden; }
+
 .step-journey-game { --sj-gold: color-mix(in srgb, var(--coin) 70%, var(--g600)); }
 .step-journey-game__pill-header,
 .step-journey-game__controls { border: 2px solid var(--sj-gold); }

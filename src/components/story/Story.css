@@ -772,8 +772,14 @@ button.story-tag { cursor: pointer; font-family: inherit; }
 }
 .story-chat__composer button:disabled { opacity: .5; cursor: default; }
 
-/* แถบเมนูล่างไม่แสดงบนหน้าสตอรี่แล้ว → ไม่ต้องเว้นที่ด้านล่างให้มัน */
-.story-overlay { --gpf-safe-bottom: 12px; }
+/* [แก้ตามที่ระบุ] แถบเมนูล่าง (ActionMenuBar) แสดงบนหน้าสตอรี่แล้ว → เว้นที่ด้านล่างให้ฟีด/หน้าย่อย/แถบข้าง/ปุ่ม + */
+.story-feed,
+.story-subpage,
+.story-sidebar { padding-bottom: calc(var(--gpf-safe-bottom) + 12px); }
+.story-compose-fab { bottom: calc(var(--gpf-safe-bottom) + 12px); }
+@media (max-width: 900px) {
+  .story-sidebar { bottom: var(--gpf-safe-bottom); }
+}
 
 /* ═══ [แก้ตามที่ระบุ] โพสต์แบบ Instagram ═══ */
 .story-post-card--ig { padding: 12px 16px 14px; }

@@ -10,6 +10,7 @@ import { QUEST_TABS, QUEST_CATALOG_BY_TAB, SPECIAL_QUEST_CODES, findQuestByCode,
 import { Z_INDEX } from '../../config/zIndex'
 import { QUEST_ICONS, QUEST_TAB_ICONS } from '../../config/iconAssets'
 import { useAppContext, DAILY_FOCUS_QUOTA_MINUTES } from '../../context/AppContext'
+import { warmStepQuest } from './games/physical/stepQuestWarmup'
 import QuestRewardCelebration, { type QuestCelebrationData } from './QuestRewardCelebration'
 import { playSfx, stopSfx } from '../../utils/audioPlayer'
 import GameAlert from '../ui/GameAlert'
@@ -163,6 +164,10 @@ export default function QuestSection({
   useEscapeKey(onClose, !anyGameplayOpen)
 
   const tab = QUEST_TABS.find((t) => t.id === activeTab) ?? QUEST_TABS[0]
+  // [แก้ตามที่ระบุ — เควสก้าวเปิดทันที] เปิดรายการเควสสุขภาพกาย → เตรียมภาพแผนที่ของเควสก้าวไว้ก่อนแตะ
+  useEffect(() => {
+    if (activeTab === 'physical') warmStepQuest(userData.id)
+  }, [activeTab, userData.id])
   const catalog = QUEST_CATALOG_BY_TAB[activeTab]
 
   /** เควสรายวันนับเฉพาะวันนี้ · หมวดการเรียนรู้ทำครบทุกด่าน = เริ่มรอบใหม่จากด่านแรก (utils/questCompletion.ts) */

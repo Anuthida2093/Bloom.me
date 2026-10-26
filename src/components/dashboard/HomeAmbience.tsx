@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { fetchHomeWeather, WEATHER_CACHE_MS, type HomeWeather } from '../../services/weather'
+import { useMemo } from 'react'
+import { useHomeWeather } from '../../hooks/useHomeWeather'
 import './HomeAmbience.css'
 
 /*============================================================================*\
@@ -19,18 +19,12 @@ const SUN_RAYS = 5
 interface HomeAmbienceProps {
   /** [แก้ตามที่ระบุ] ซ่อนเมื่อเปิดหน้าอื่นทับ (เควส/ร้านค้า/โปรไฟล์ ฯลฯ) — ไม่ให้หมอกมืดไปทับหน้าเหล่านั้น */
   hidden?: boolean
+  /** [ใหม่] ฉากพื้นหลังวาดด้วยโค้ดวาดแดด/ฝนเองแล้ว → ไม่ซ้อนลำแสงแดดและฝนของชั้นนี้ (ธีมกลางคืนยังทำงาน) */
+  sceneHandlesWeather?: boolean
 }
 
-export default function HomeAmbience({ hidden = false }: HomeAmbienceProps) {
-  const [weather, setWeather] = useState<HomeWeather>('clear')
-
-  useEffect(() => {
-    let cancelled = false
-    const load = () => { void fetchHomeWeather().then((w) => { if (!cancelled) setWeather(w) }) }
-    load()
-    const id = window.setInterval(load, WEATHER_CACHE_MS)
-    return () => { cancelled = true; window.clearInterval(id) }
-  }, [])
+export default function HomeAmbience({ hidden = false, sceneHandlesWeather = false }: HomeAmbienceProps) {
+  const weather = useHomeWeather()
 
   // ตำแหน่ง/จังหวะคงที่ตลอดอายุคอมโพเนนต์ (สุ่มแบบกำหนดได้จาก index)
   const drops = useMemo(() => Array.from({ length: RAINDROPS }, (_, i) => ({
@@ -57,12 +51,12 @@ export default function HomeAmbience({ hidden = false }: HomeAmbienceProps) {
     </div>
     <div className={`home-ambience${weather === 'rain' ? ' is-rain' : ''}`} aria-hidden="true">
       {/* ธีมสว่าง: แสงแดดสาดส่องมาที่ต้นไม้ */}
-      <div className="home-ambience__day">
+      {!sceneHandlesWeather && <div className="home-ambience__day">
         <div className="home-ambience__sun-glow" />
         {Array.from({ length: SUN_RAYS }).map((_, i) => (
           <span key={i} className="home-ambience__ray" style={{ ['--ray-i' as string]: i }} />
         ))}
-      </div>
+      </div>}
 
       {/* ธีมมืด: หิ่งห้อยลอยรอบต้นไม้ (ไม่มีชั้นมืดทับแล้ว — ความมืดอยู่ที่พื้นหลังเท่านั้น) */}
       <div className="home-ambience__night">
@@ -76,7 +70,7 @@ export default function HomeAmbience({ hidden = false }: HomeAmbienceProps) {
       </div>
 
       {/* ฝนตกปอยๆ ตามสภาพอากาศจริง */}
-      {weather === 'rain' && (
+      {weather === 'rain' && !sceneHandlesWeather && (
         <div className="home-ambience__rain">
           {drops.map((d, i) => (
             <span

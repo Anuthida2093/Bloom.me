@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '../../context/LanguageContext'
 import SceneBackground from '../layout/SceneBackground'
@@ -9,6 +9,8 @@ import { BADGE_ICONS } from '../../config/iconAssets'
 import type { TranslationKey } from '../../i18n/th'
 import WelcomeMessageCycler from './WelcomeMessageCycler'
 import AppFeaturesFooter from './AppFeaturesFooter'
+import GameLoadingScreen from '../common/GameLoadingScreen'
+import { useMediaLoadProgress } from '../../hooks/useMediaLoadProgress'
 
 const SHADOW_HOVER = 'color-mix(in srgb, var(--g700) 45%, transparent)'
 
@@ -44,6 +46,8 @@ const MESSAGES: { key: TranslationKey; icon?: { src: string; fallback: string; l
 export default function WelcomeModal() {
   const navigate = useNavigate()
   const { t } = useLanguage()
+  const rootRef = useRef<HTMLDivElement>(null)
+  const media = useMediaLoadProgress(rootRef)
   const messages = useMemo<ReactNode[]>(
     () => MESSAGES.map(({ key, icon }) => (
       <>
@@ -63,6 +67,7 @@ export default function WelcomeModal() {
 
   return (
     <div
+      ref={rootRef}
       style={{
         minHeight: '100vh',
         position: 'relative',
@@ -75,6 +80,8 @@ export default function WelcomeModal() {
       }}
     >
       <SceneBackground />
+      {/* [ใหม่ตามที่ระบุ] หน้าโหลดเปอร์เซ็นต์จริง (วิดีโอฉากหลัง + โลโก้ + ไอคอน) — โผล่เฉพาะเมื่อโหลดนาน */}
+      <GameLoadingScreen loading={!media.ready} progress={media.progress} hint="กำลังเตรียมโลกของคุณ…" />
 
       {/* มุมขวาบน: ปุ่มเลือกภาษา + ปุ่มลำโพง */}
       <LanguageSwitcher />

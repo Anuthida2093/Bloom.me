@@ -126,6 +126,7 @@
   height: clamp(180px, calc(100dvh - 480px), 360px);
   border-radius: 12px;
   overflow: hidden;
+  position: relative; /* ป้ายกุญแจของแผนที่ที่ยังล็อกวางทับรูปนี้ */
   background: var(--glass-b-60);
   pointer-events: none; /* ห้ามลากเฉพาะตัวรูปภาพ */
 }
@@ -175,3 +176,22 @@
 @media (max-width: 640px) {
   .destination-picker__img-wrapper { height: clamp(140px, calc(100cqh - 420px), 360px); }
 }
+
+/* [ใหม่] แผนที่ที่ยังไม่ถึงเลเวลปลดล็อก (แผนที่ 9 = Lv.50) — ภาพจาง + กุญแจ + ป้ายเลเวล · กดไม่ได้ */
+.destination-picker__item--locked { cursor: not-allowed; }
+.destination-picker__item--locked .destination-picker__img { filter: grayscale(0.7) brightness(0.6); }
+.destination-picker__lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--fixed-white);
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 18px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+.destination-picker__lock-icon { font-size: 44px; }

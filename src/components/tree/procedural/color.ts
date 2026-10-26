@@ -21,3 +21,13 @@ export function shade(hex: string, dl: number, dh = 0, ds = 0): string {
   const H = (((h + dh) % 1) + 1) % 1
   return `hsl(${Math.round(H * 360)}, ${Math.round(clamp01(s + ds) * 100)}%, ${Math.round(clamp01(l + dl) * 100)}%)`
 }
+
+/** เหมือน shade แต่คืน '#rrggbb' — ใช้สร้างชุดสีใหม่ที่ส่งต่อเข้า shade ได้อีกชั้น */
+export function shadeHex(hex: string, dl: number, dh = 0, ds = 0): string {
+  const [h, sat, lum] = shade(hex, dl, dh, ds).match(/\d+/g)!.map(Number)
+  const S = sat / 100, L = lum / 100
+  const k = (n: number) => (n + h / 30) % 12
+  const a = S * Math.min(L, 1 - L)
+  const f = (n: number) => Math.round((L - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))) * 255)
+  return `#${[f(0), f(8), f(4)].map((v) => v.toString(16).padStart(2, '0')).join('')}`
+}

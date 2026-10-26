@@ -1,12 +1,15 @@
 import { useState, useRef } from 'react'
-import { JOURNEY_MAPS } from '../../../../config/journeyMaps'
+import { isMapUnlocked, JOURNEY_MAPS } from '../../../../config/journeyMaps'
+import MapArtImage from './MapArtImage'
 import './DestinationPicker.css'
 
 interface DestinationPickerProps {
   onPicked: (mapId: string) => void
+  /** เลเวลผู้เล่น — แผนที่ที่ยังไม่ถึงเลเวลปลดล็อกแสดงกุญแจและเลือกไม่ได้ */
+  playerLevel: number
 }
 
-export default function DestinationPicker({ onPicked }: DestinationPickerProps) {
+export default function DestinationPicker({ onPicked, playerLevel }: DestinationPickerProps) {
   const [pickingId, setPickingId] = useState<string | null>(null)
   
   // ตัวแปรสำหรับทำระบบลากด้วยเมาส์ (Mouse Drag to Scroll)
@@ -65,22 +68,32 @@ export default function DestinationPicker({ onPicked }: DestinationPickerProps) 
         onPointerLeave={handlePointerUp}
       >
         <div className="destination-picker__track">
-          {JOURNEY_MAPS.map((m) => (
+          {JOURNEY_MAPS.map((m) => {
+            const locked = !isMapUnlocked(m, playerLevel)
+            return (
             <button
               key={m.id}
-              className={`destination-picker__item ${pickingId === m.id ? 'destination-picker__item--picking' : ''}`}
-              onClick={() => handlePick(m.id)}
-              disabled={pickingId !== null}
+              className={`destination-picker__item ${pickingId === m.id ? 'destination-picker__item--picking' : ''}${locked ? ' destination-picker__item--locked' : ''}`}
+              onClick={() => { if (!locked) handlePick(m.id) }}
+              disabled={pickingId !== null || locked}
+              aria-label={locked ? `${m.name} — ปลดล็อกที่ Lv.${m.unlockLevel}` : undefined}
             >
               <div className="destination-picker__img-wrapper">
-                <img src={m.artAsset} alt="" className="destination-picker__img" loading="lazy" />
+                <MapArtImage mapDef={m} className="destination-picker__img" variant="thumb" />
+                {locked && (
+                  <div className="destination-picker__lock">
+                    <span className="destination-picker__lock-icon" aria-hidden="true">🔒</span>
+                    <span>ปลดล็อกที่ Lv.{m.unlockLevel}</span>
+                  </div>
+                )}
               </div>
               <div className="destination-picker__info">
                 <span className="destination-picker__order">แผนที่ {m.order}</span>
                 <span className="destination-picker__name">{m.name}</span>
               </div>
             </button>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>

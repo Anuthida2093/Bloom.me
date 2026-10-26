@@ -1,5 +1,13 @@
 /* ── ตั้งรูปพื้นหลังหน้า Home (HomeBackgroundPicker.tsx) ── */
 .home-bg-open { width: 100%; }
+/* [ใหม่] ปุ่มสลับกลับฉาก 1 ในแตะเดียว */
+[data-theme="dark"] .home-bg-reset { color: var(--fixed-black, #111); }
+/* ฉากวาดด้วยโค้ดที่ยังล็อก (ปลดล็อกตามเลเวลต้นไม้) */
+.home-bg-thumb.is-locked { cursor: default; }
+.home-bg-thumb__lock {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+  background: rgba(20, 30, 25, 0.55); color: #fff; font-family: var(--font-display); font-size: 13px; line-height: 1.5;
+}
 .home-bg-open small { opacity: 0.7; }
 /* [แก้ตามที่ระบุ] ธีมมืด: ปุ่ม "ตั้งค่าพื้นหลัง" พื้นสีอ่อน แต่ตัวอักษรเป็นสีอ่อนตามธีม (--text) จึงมองไม่เห็น → ตัวอักษรดำ */
 [data-theme="dark"] .home-bg-open { color: var(--fixed-black, #111); }

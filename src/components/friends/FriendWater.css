@@ -166,26 +166,52 @@
 .fw-stats__water { border: none; color: #fff; background: linear-gradient(180deg, #5cbcff, #2f8fe8); box-shadow: 0 4px 10px rgba(47, 143, 232, 0.35); }
 .fw-modal__ghost { border: 1.5px solid var(--border-mid, rgba(0, 0, 0, 0.15)); background: none; color: var(--text-sub, #5c6b62); }
 
-/* ปุ่มเพิ่มเพื่อน (แทนปุ่มหยดน้ำ ตอนยังไม่เป็นเพื่อน) */
+/* ปุ่มเพิ่มเพื่อน (แทนปุ่มหยดน้ำ ตอนยังไม่เป็นเพื่อน)
+   [แก้ตามที่ระบุ] วงกลมไอคอนนูน + ป้ายชื่อบรรทัดเดียว line-height เผื่อสระบน/ล่างภาษาไทยไม่ให้ซ้อนกัน */
 .fw-add-friend {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  width: 64px;
-  padding: 8px 4px;
-  border: 2px solid #fff;
-  border-radius: 16px;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
   font-family: var(--font-display);
-  font-size: 12px;
-  line-height: 1.2;
-  color: #fff;
-  background: linear-gradient(180deg, #7fd36b, #3f9d4a);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.fw-add-friend span { font-size: 18px; }
-.fw-add-friend--sent { background: linear-gradient(180deg, #b9c2bb, #87918a); }
+.fw-add-friend__icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, #a8e890 0%, #5cbf55 45%, #2f8a3e 100%);
+  box-shadow: 0 4px 0 #23692f, 0 8px 14px rgba(0, 0, 0, 0.28), inset 0 -4px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.fw-add-friend:hover .fw-add-friend__icon { transform: translateY(-1px) scale(1.04); }
+.fw-add-friend:active .fw-add-friend__icon {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #23692f, 0 3px 6px rgba(0, 0, 0, 0.25), inset 0 -4px 6px rgba(0, 0, 0, 0.15);
+}
+.fw-add-friend__label {
+  white-space: nowrap;
+  padding: 2px 10px 3px;
+  border-radius: 99px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #2b5a2f;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+.fw-add-friend--sent .fw-add-friend__icon {
+  background: radial-gradient(circle at 35% 30%, #dfe5e0 0%, #a9b3ac 50%, #7d877f 100%);
+  box-shadow: 0 4px 0 #5f6862, 0 8px 14px rgba(0, 0, 0, 0.22), inset 0 -4px 6px rgba(0, 0, 0, 0.12);
+}
+.fw-add-friend--sent .fw-add-friend__label { color: #5f6862; }
 
 /* ป้ายหยดน้ำข้างชื่อในห้องแชท + แผงสถานะ */
 .fw-badge-wrap { position: relative; }

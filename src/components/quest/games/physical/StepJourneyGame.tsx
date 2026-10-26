@@ -6,7 +6,7 @@ import type { JourneyRecord } from '../../../../types.journey'
 import { useAppContext } from '../../../../context/AppContext'
 import { useStepTracker } from '../../../../hooks/useStepTracker'
 import { mapFrameInset, useBottomReserve, useMapPanZoom } from '../../../../hooks/useMapPanZoom'
-import { JOURNEY_MAPS } from '../../../../config/journeyMaps'
+import { isMapUnlocked, JOURNEY_MAPS } from '../../../../config/journeyMaps'
 import { calcDailyStepTarget, calcMapTotalStepsTarget, calcProportionalRewards } from '../../../../config/journeyRules'
 import { getMockWeather } from '../../../../config/weatherMock'
 import { getActiveJourney, startJourney, addSteps, abandonJourney, clearPendingJourneyClaim } from '../../../../services/api/journey.api'
@@ -21,9 +21,11 @@ import {
   startDeviceMotionTracking,
   describeStepSyncError,
 } from '../../../../services/stepTracking'
-import { MAP_NATIVE_SIZE } from './journeyPathMath'
+import { MAP_NATIVE_SIZE, mapNativeSize, poseAtPathPct, samplePath, withLivePath } from './journeyPathMath'
 import MapPathRenderer from './MapPathRenderer'
 import CatCompanion from './CatCompanion'
+import { OWL_AVATAR_ICON } from '../../../../config/iconAssets'
+import MiniMap from './MiniMap'
 import WeatherEffectLayer from './WeatherEffectLayer'
 import MapScenery, { MapAmbience } from './MapScenery'
 import StatsOverlay from './StatsOverlay'
@@ -36,10 +38,14 @@ import CompletedJourneyMap from './CompletedJourneyMap'
 import CompletedTripView from './CompletedTripView'
 import { useStepChest } from '../../../../hooks/useStepChest'
 import { holdStepSettlement, waitForStepSettlement } from '../../../../services/stepSettlement'
-import { OWL_AVATAR_ICON } from '../../../../config/iconAssets'
 import { getJourneyDaySteps, getTodayJourneySteps, recordJourneySteps, resetStepJourneyDays } from '../../../../utils/stepJourneyDays'
 import { calculateStepReward, getDailyStepGoal, STEP_BONUS_LABEL, classifyStepBmiTier } from '../../../../config/stepGoalByBmi'
 import { formatDistance, stepsToDistanceMeters } from '../../../../utils/strideDistance'
+import GameLoadingScreen from '../../../common/GameLoadingScreen'
+import { createProgressTracker } from '../../../../utils/progressTracker'
+import { generatedArtSize, isMapArtReady, stopMapArtListener, warmMapArt } from './mapArtLoader'
+import { stopMapArtProgress } from './mapgen/renderMapArt'
+import { readJourneySnapshot, writeJourneySnapshot } from './stepQuestWarmup'
 import '../games.css'
 import './StepJourneyGame.css'
 import '../../../leaderboard/leaderboardRow.css'
@@ -66,12 +72,24 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
 
   /** [แก้ตามที่ระบุ] ยืนยันเปลี่ยนจุดหมาย — การ์ดกลางจอแบบกระดานจัดอันดับ แทน window.confirm ของเบราว์เซอร์ */
   const [confirmReset, setConfirmReset] = useState(false)
-  const [journey, setJourney] = useState<JourneyRecord | null>(null)
-  const [loading, setLoading] = useState(true)
+  /** [แก้ตามที่ระบุ — เปิดเควสทันที] วาดจากสแนปช็อตทริปในเครื่องก่อน แล้วค่อยอัปเดตเมื่อเซิร์ฟเวอร์ตอบ
+   *  (stale-while-revalidate) — ไม่ต้องรอเน็ตก่อนเห็นแผนที่ */
+  const [journey, setJourney] = useState<JourneyRecord | null>(() => readJourneySnapshot(userData.id))
+  const [loading, setLoading] = useState(() => readJourneySnapshot(userData.id) === null)
+  /** เปอร์เซ็นต์โหลดจริง: ทริป (น้ำหนัก 1) + ภาพแผนที่ (น้ำหนัก 7 — ดาวน์โหลด/ถอดรหัส หรือวาดแผนที่โค้ด) */
+  const [loadTracker] = useState(() => {
+    const t = createProgressTracker({ journey: 1, art: 7 })
+    if (!loading) t.set('journey', 1)
+    return t
+  })
+  const [loadPct, setLoadPct] = useState(() => loadTracker.value())
+  const [artReadyFor, setArtReadyFor] = useState<string | null>(null)
   /** วันนี้เดินถึงเป้าและรับรางวัลแล้ว — เปิดเควสซ้ำจะเห็นแผนที่เดิม (CompletedTripView) */
   const [completedToday, setCompletedToday] = useState<StepDayRecord | null>(null)
   const [transitioning, setTransitioning] = useState(false)
   const [failedNotice, setFailedNotice] = useState(false)
+  /** [ใหม่] ทริปค้างบนแผนที่ที่ยังไม่ถึงเลเวลปลดล็อก → ปิดทริปแล้วให้เลือกแผนที่ใหม่ (ผู้ใช้เลือก: ล็อกทันที) */
+  const [lockedNotice, setLockedNotice] = useState<string | null>(null)
 
   const [visualMapIndex, setVisualMapIndex] = useState(0)
   const [isFogging, setIsFogging] = useState(false)
@@ -105,10 +123,11 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
         setCompletedToday(today)
         if (active) setTodaySteps(getTodayJourneySteps(active.id))
         setLoading(false)
+        setLoadPct(loadTracker.set('journey', 1))
       }
     })()
     return () => { cancelled = true; release() }
-  }, [])
+  }, [loadTracker])
 
   const bmi = userData.bmi ?? 0
   const dailyStepTarget = calcDailyStepTarget(bmi)
@@ -131,6 +150,28 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const weather = useMemo(() => getMockWeather(), [journey?.id, visualMapIndex])
 
+  // เก็บสแนปช็อตทริปล่าสุดไว้วาดทันทีครั้งหน้า
+  useEffect(() => { if (!loading) writeJourneySnapshot(userData.id, journey) }, [journey, loading, userData.id])
+
+  /* [แก้ตามที่ระบุ — ไม่มีสถานะครึ่งๆ] ภาพแผนที่ยังไม่พร้อม → หน้าโหลดเขียวเต็มจอ + เปอร์เซ็นต์จริง
+     ไม่แสดงนกฮูก/แถบข้อมูลลอยบนพื้นเขียว · พร้อมแล้วฉากโผล่ทั้งฉากพร้อมกัน */
+  const artReady = !!visualMapDef && (artReadyFor === visualMapDef.id || isMapArtReady(visualMapDef))
+  useEffect(() => {
+    if (!visualMapDef || isMapArtReady(visualMapDef)) return
+    let alive = true
+    const onProgress = (p: number) => { if (alive) setLoadPct(loadTracker.set('art', p)) }
+    void warmMapArt(visualMapDef, onProgress).then(() => {
+      if (!alive) return
+      setLoadPct(loadTracker.set('art', 1))
+      setArtReadyFor(visualMapDef.id)
+    })
+    return () => {
+      alive = false
+      stopMapArtListener(visualMapDef, onProgress)
+      if (visualMapDef.generated) stopMapArtProgress(visualMapDef.generated, generatedArtSize('scene'), onProgress)
+    }
+  }, [visualMapDef, loadTracker])
+
   const tripDate = journey ? localDateKey(new Date(journey.startedAt)) : null
   /** ยืนยันก้าวของวันทริปเข้าบัญชีก่อนเปิดหีบ — เซิร์ฟเวอร์ตรวจว่าวันนั้นถึงเป้าจริงจากค่านี้ */
   const confirmTripDay = useCallback(async () => {
@@ -150,7 +191,16 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
   const chestPromptRef = useRef<HTMLDivElement | null>(null)
   const showChestPrompt = chest.ready && !chest.popupOpen
   const bottomReserve = useBottomReserve(chestPromptRef, [showChestPrompt])
-  const { containerRef, scale, pan, handlers } = useMapPanZoom(MAP_NATIVE_SIZE, { fit: reachedGoal, fitInset: mapFrameInset(bottomReserve), portraitZoom: 1.45 })
+  // [แก้ตามที่ระบุ] แผนที่ 9 ใหญ่ 2 เท่า (ลากได้ทุกทิศ) — เปิดมาให้นกฮูกอยู่กลางจอ (ทางเริ่มอยู่ซ้ายล่าง ไม่ใช่กลางล่าง)
+  const nativeSize = mapNativeSize(visualMapDef)
+  const owlFocusPct = useMemo(() => {
+    if (!visualMapDef?.generated) return undefined
+    const p = poseAtPathPct(samplePath(withLivePath(visualMapDef)), localProgressPct)
+    return { x: p.x, y: p.y }
+  }, [visualMapDef, localProgressPct])
+  const { containerRef, scale, pan, handlers } = useMapPanZoom(nativeSize, {
+    fit: reachedGoal, fitInset: mapFrameInset(bottomReserve), portraitZoom: 1.45, coverSize: MAP_NATIVE_SIZE, initialFocusPct: owlFocusPct,
+  })
 
   useEffect(() => {
     if (journey && activeMapIndex !== visualMapIndex && !isFogging) {
@@ -305,6 +355,7 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
 
   const handlePickDestination = (mapId: string) => {
     setFailedNotice(false)
+    setLockedNotice(null)
     // [แก้ตามที่ระบุ] หมอกขาวเล่นครั้งเดียว — เดิมเล่นที่หน้าเลือกจุดหมายรอบหนึ่ง แล้วพอแผนที่ขึ้นก็เล่นซ้ำอีกรอบ
     // (คนละ element กัน) ตอนนี้เล่นแค่ตอนแผนที่ขึ้น
     setTransitioning(true)
@@ -330,6 +381,22 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
     setJourney(null)
     if (id) abandonJourney(id).catch(() => setFailedNotice(true))
   }
+
+  // [แก้ตามที่ระบุ 2026-10-27] แผนที่ล็อกตามเลเวลมีผลทันที: ทริปที่ค้างอยู่บนแผนที่ที่ยังไม่ปลดล็อก
+  // (เช่น แผนที่ 9 ก่อน Lv.50) ถูกปิด แล้วให้ผู้เล่นเลือกแผนที่ใหม่ พร้อมป้ายบอกเหตุผล
+  const level = userData.level ?? 1
+  useEffect(() => {
+    if (loading || !journey || journey.status !== 'IN_PROGRESS') return
+    const map = JOURNEY_MAPS.find((m) => m.id === journey.destinationMapId)
+    if (!map || isMapUnlocked(map, level)) return
+    // ทำหลัง effect (ไม่ setState ซ้อนใน effect)
+    const t = window.setTimeout(() => {
+      setLockedNotice(`แผนที่ "${map.name}" ปลดล็อกที่ Lv.${map.unlockLevel} — เลือกแผนที่ใหม่สำหรับวันนี้`)
+      handleAbandon()
+    }, 0)
+    return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ตรวจเมื่อทริป/เลเวลเปลี่ยน
+  }, [loading, journey?.id, journey?.status, level])
 
   /** ก้าวจริงของวันทริป (ไม่ตัดที่เป้า) — เดิมตกไปใช้ความคืบหน้าทริปซึ่งถูกตัดที่เป้า (เดิน 9,120 แต่ขึ้น 8,000) */
   const tripActualSteps = journey && tripDate
@@ -385,7 +452,7 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
         ? `ซิงค์ล่าสุด ${lastSync.at.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} · +${lastSync.added.toLocaleString()} ก้าว`
         : 'ยังไม่ได้ซิงค์ก้าวรอบนี้'
 
-  if (loading) return <div className="step-journey-game step-journey-game--center">กำลังโหลดทริปของคุณ...</div>
+  if (loading) return <div className="step-journey-game"><GameLoadingScreen loading progress={loadPct} hint="กำลังเตรียมเส้นทางของคุณ…" /></div>
 
   if (!journey && completedToday) return <CompletedTripView day={completedToday} onClose={exit} />
 
@@ -393,26 +460,28 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
     return (
       <div className="step-journey-game step-journey-game--center">
         {failedNotice && <div className="qg-tag qg-tag--warn step-journey-game__failed-notice">เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ ลองเลือกจุดหมายอีกครั้ง</div>}
-        <DestinationPicker onPicked={handlePickDestination} />
+        {lockedNotice && <div className="qg-tag qg-tag--warn step-journey-game__failed-notice">{lockedNotice}</div>}
+        <DestinationPicker onPicked={handlePickDestination} playerLevel={userData.level ?? 1} />
       </div>
     )
   }
 
   return (
     <div
-      className={`step-journey-game${reachedGoal ? ' is-route-complete is-map-framed' : ''}`}
+      className={`step-journey-game${reachedGoal ? ' is-route-complete is-map-framed' : ''}${artReady ? '' : ' is-art-pending'}`}
       ref={containerRef}
       onPointerDown={handlers.onPointerDown}
       onPointerMove={handlers.onPointerMove}
       onPointerUp={handlers.onPointerUp}
       onPointerCancel={handlers.onPointerUp}
     >
+      <GameLoadingScreen loading={!artReady} progress={loadPct} hint="กำลังวาดแผนที่…" />
       {reachedGoal && <MapStars />}
       <div
         className="step-journey-game__map-canvas"
         style={{
-          width: MAP_NATIVE_SIZE.width,
-          height: MAP_NATIVE_SIZE.height,
+          width: nativeSize.width,
+          height: nativeSize.height,
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
           ...(reachedGoal ? { '--mf-radius': `${16 / Math.max(scale, 0.01)}px` } : {}),
         } as React.CSSProperties}
@@ -433,7 +502,7 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
         )}
       </div>
 
-      {reachedGoal && <MapFrame pan={pan} scale={scale} title={visualMapDef?.name} />}
+      {reachedGoal && <MapFrame pan={pan} scale={scale} size={nativeSize} title={visualMapDef?.name} />}
 
       {showChestPrompt && (
         // ถึงเป้าแล้ว — ชวนแตะหีบที่เส้นชัย (ปุ่มนี้เปิดหีบได้เช่นกัน)
@@ -471,6 +540,18 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
           กดแล้วข้อมูลทั้งหมด + ปุ่มรีเฟรชก้าว/เปลี่ยนแผนที่ ค่อยแสดง · แถบเปิดอยู่ → ปุ่มนกฮูกมุมซ้ายบนของแถบไว้ปิด */}
       {/* [แก้ตามที่ระบุ] ปุ่มนกฮูกอยู่ "ใต้" ปุ่มกากบาทเสมอ (ตำแหน่งเดียวทั้งตอนเปิด/ปิด) และแถบข้อมูลเลื่อนเข้า-ออก
           แบบกระดานจัดอันดับหน้า Home — ไม่มีปุ่มนกฮูกตัวที่สองในแถบอีกแล้ว */}
+      {/* [ใหม่ตามที่ระบุ] แผนที่ย่อมุมซ้ายบน (แทนปุ่มแผนที่ม้วน) — แตะเพื่อขยาย */}
+      {!showSummary && visualMapDef && journey && (
+        <MiniMap
+          mapDef={visualMapDef}
+          progressPct={localProgressPct}
+          steps={journey.progressOnCurrentMapSteps}
+          goalSteps={tripStepTarget}
+          pan={pan}
+          scale={scale}
+        />
+      )}
+
       {!showSummary && !reachedGoal && (
         <button
           type="button"
@@ -481,6 +562,7 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
           aria-label={panelOpen ? 'ซ่อนข้อมูลการเดินทาง' : 'แสดงข้อมูลการเดินทาง'}
           title={panelOpen ? 'ซ่อนข้อมูลการเดินทาง' : 'แสดงข้อมูลการเดินทาง'}
         >
+          {/* [แก้ตามที่ระบุ] กลับไปใช้รูปนกฮูกเดิม (OwlAvatar.webp) */}
           <img src={OWL_AVATAR_ICON} alt="" className="step-journey-game__panel-toggle-img" />
         </button>
       )}

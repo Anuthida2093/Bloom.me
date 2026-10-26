@@ -176,8 +176,22 @@ export function AddFriendButton({ requested, onClick, friendName }: { requested:
   const label = requested ? `ส่งคำขอเป็นเพื่อนถึง ${friendName} แล้ว รอติดตามกลับ` : `เพิ่ม ${friendName} เป็นเพื่อน`
   return (
     <button type="button" className={`fw-add-friend${requested ? ' fw-add-friend--sent' : ''}`} onClick={onClick} title={label} aria-label={label}>
-      <span aria-hidden="true">{requested ? '⏳' : '➕'}</span>
-      {requested ? 'รอติดตามกลับ' : 'เพิ่มเพื่อน'}
+      {/* [แก้ตามที่ระบุ] ไอคอนคน+ วาดด้วย SVG ในวงกลม + ป้ายชื่อบรรทัดเดียว (เดิมสระ/วรรณยุกต์ซ้อนกันตอนขึ้นบรรทัดใหม่) */}
+      <span className="fw-add-friend__icon" aria-hidden="true">
+        {requested ? (
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="8.5" />
+            <path d="M12 7.5V12l3 2" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="9.5" cy="8" r="3.6" />
+            <path d="M3 19.5c.6-3.4 3.3-5.5 6.5-5.5s5.9 2.1 6.5 5.5" />
+            <path d="M19 7.5v6M16 10.5h6" />
+          </svg>
+        )}
+      </span>
+      <span className="fw-add-friend__label">{requested ? 'รอตอบรับ' : 'เพิ่มเพื่อน'}</span>
     </button>
   )
 }

@@ -31,9 +31,9 @@ export function MapStars() {
   )
 }
 
-export default function MapFrame({ pan, scale, title }: { pan: { x: number; y: number }; scale: number; title?: string }) {
-  const w = MAP_NATIVE_SIZE.width * scale
-  const h = MAP_NATIVE_SIZE.height * scale
+export default function MapFrame({ pan, scale, title, size = MAP_NATIVE_SIZE }: { pan: { x: number; y: number }; scale: number; title?: string; size?: { width: number; height: number } }) {
+  const w = size.width * scale
+  const h = size.height * scale
   if (w <= 0 || h <= 0) return null
   return (
     <div className="map-frame" style={{ left: pan.x, top: pan.y, width: w, height: h }} aria-hidden="true">

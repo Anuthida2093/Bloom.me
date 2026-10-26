@@ -44,6 +44,22 @@ const ProceduralTreePage = import.meta.env.DEV
 const WaypointEditorPage = import.meta.env.DEV
   ? lazy(() => import('./experiments/waypoints/WaypointEditorPage'))
   : null
+// [dev only] ตรวจแผนที่ 9 ที่วาดด้วยโค้ด (หลาย seed / โหมด debug / วัดเวลา) — ไม่ถูก bundle ใน build จริง
+const GeneratedMapPage = import.meta.env.DEV
+  ? lazy(() => import('./experiments/generated-map/GeneratedMapPage'))
+  : null
+// [dev only] แผ่นตัวอย่างต้นไม้ฉากประกอบ 2 สไตล์ (เลือกก่อนใช้กับทั้งป่า)
+const TreeSheetPage = import.meta.env.DEV
+  ? lazy(() => import('./experiments/tree-sheet/TreeSheetPage'))
+  : null
+// [dev only] โครงลำต้น+กิ่งจากข้อมูล 3 สายพันธุ์ (รออนุมัติ)
+const SpeciesSheetPage = import.meta.env.DEV
+  ? lazy(() => import('./experiments/species-sheet/SpeciesSheetPage'))
+  : null
+// [dev only] ฉากพื้นหลังหน้า Home ที่วาดด้วยโค้ด (ฉาก 3-5)
+const HomeScenesPage = import.meta.env.DEV
+  ? lazy(() => import('./experiments/home-scenes/HomeScenesPage'))
+  : null
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -90,6 +106,10 @@ export default function App() {
                     />
                     {ProceduralTreePage && <Route path="/dev/procedural-tree" element={<ProceduralTreePage />} />}
                     {WaypointEditorPage && <Route path="/dev/waypoints" element={<WaypointEditorPage />} />}
+                    {GeneratedMapPage && <Route path="/dev/generated-map" element={<GeneratedMapPage />} />}
+                    {TreeSheetPage && <Route path="/dev/tree-sheet" element={<TreeSheetPage />} />}
+                    {SpeciesSheetPage && <Route path="/dev/species-sheet" element={<SpeciesSheetPage />} />}
+                    {HomeScenesPage && <Route path="/dev/home-scenes" element={<HomeScenesPage />} />}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Suspense>
