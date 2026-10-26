@@ -87,6 +87,11 @@ export function msSinceSpecialSfx(): number { return performance.now() - lastSpe
 export function playSfx(key: SfxKey, options: PlaySfxOptions = {}): void {
   if (key !== 'CLICK') markSpecialSfx()
   if (options.enabled === false || isSfxSuppressed()) return
+  // [แก้ตามที่ระบุ] เสียงพิมพ์ใช้เสียงสังเคราะห์ชุดใหม่ (ติ๊กนุ่มๆ) แทนไฟล์ keypress.mp3 เดิม
+  if (key === 'KEYPRESS') {
+    uiSounds.keypress(options.enabled, options.volume)
+    return
+  }
   const fileName = SFX_FILES[key]
   if (!fileName) return
 
@@ -118,8 +123,6 @@ export function playSfx(key: SfxKey, options: PlaySfxOptions = {}): void {
       // หากไม่มีไฟล์ mp3 อยู่จริง ให้ Fallback ไปใช้เสียงสังเคราะห์ Web Audio API
       if (key === 'CLICK') {
         uiSounds.click(options.enabled)
-      } else if (key === 'KEYPRESS') {
-        uiSounds.keypress(options.enabled)
       } else if (key === 'CARD_FLIP' || key === 'CARD_DRAW') {
         uiSounds.pop(options.enabled)
       } else if (key === 'WATER_DROP' || key === 'REWARD_CLAIM') {
@@ -220,6 +223,7 @@ export function stopLoopingSfx(key: SfxKey): void {
 const AudioCtx =
   window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
 let synthCtx: AudioContext | null = null
+let lastKeypressAt = 0
 
 const initSynth = () => {
   if (!synthCtx) {
@@ -232,24 +236,50 @@ const initSynth = () => {
 }
 
 export const uiSounds = {
-  /** เสียงพิมพ์ข้อความ Typewriter */
-  keypress: (enabled = true) => {
+  /** เสียงพิมพ์ข้อความ Typewriter — [แก้ตามที่ระบุ] เสียงใหม่: "ติ๊ก" นุ่มๆ แบบปลายนิ้วแตะไม้
+   *  (noise สั้นผ่าน bandpass + เสียงทุ้มจางๆ) สุ่มระดับเสียงเล็กน้อยทุกครั้งไม่ให้จำเจ
+   *  เว้นระยะขั้นต่ำ 60ms กันเสียงรัวเกินตอนพิมพ์เร็ว */
+  keypress: (enabled = true, volume = 70) => {
     if (!enabled || isSfxSuppressed()) return
+    const now = performance.now()
+    if (now - lastKeypressAt < 60) return
+    lastKeypressAt = now
     const ctx = initSynth()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
+    const t = ctx.currentTime
+    const level = Math.min(1, Math.max(0, volume / 100))
+    const pitch = 0.85 + Math.random() * 0.3
 
-    osc.connect(gain)
-    gain.connect(ctx.destination)
+    const out = ctx.createGain()
+    out.gain.value = level
+    out.connect(ctx.destination)
 
-    osc.type = 'triangle'
-    osc.frequency.setValueAtTime(800 + Math.random() * 200, ctx.currentTime)
+    // ชั้นที่ 1: เสียงแตะ (noise burst สั้นมาก กรองให้เหลือย่านกลาง-สูงนุ่มๆ)
+    const len = Math.floor(ctx.sampleRate * 0.03)
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate)
+    const data = buf.getChannelData(0)
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3)
+    const noise = ctx.createBufferSource()
+    noise.buffer = buf
+    const band = ctx.createBiquadFilter()
+    band.type = 'bandpass'
+    band.frequency.value = 2400 * pitch
+    band.Q.value = 1.4
+    const tapGain = ctx.createGain()
+    tapGain.gain.value = 0.22
+    noise.connect(band).connect(tapGain).connect(out)
+    noise.start(t)
 
-    gain.gain.setValueAtTime(0.03, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04)
-
-    osc.start()
-    osc.stop(ctx.currentTime + 0.04)
+    // ชั้นที่ 2: เสียงทุ้มสั้นๆ ให้มีน้ำหนักแบบปุ่มไม้
+    const body = ctx.createOscillator()
+    body.type = 'sine'
+    body.frequency.setValueAtTime(320 * pitch, t)
+    body.frequency.exponentialRampToValueAtTime(160 * pitch, t + 0.05)
+    const bodyGain = ctx.createGain()
+    bodyGain.gain.setValueAtTime(0.06, t)
+    bodyGain.gain.exponentialRampToValueAtTime(0.001, t + 0.06)
+    body.connect(bodyGain).connect(out)
+    body.start(t)
+    body.stop(t + 0.07)
   },
 
   /** เสียงคลิกปุ่มทั่วไป */

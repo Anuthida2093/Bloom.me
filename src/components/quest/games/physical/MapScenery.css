@@ -1,0 +1,151 @@
+/* ═══════════════════════════════════════════════════════════════
+   MapScenery.css — ต้นไม้/หญ้าโยกไหว + ผีเสื้อ ใบไม้ปลิว เงาเมฆ บนแผนที่ก้าวเพื่อสุขภาพ
+   transform/opacity ล้วน (composited) ไม่แตะ layout · ไม่รับการแตะ (ลากแผนที่ผ่านได้)
+   ═══════════════════════════════════════════════════════════════ */
+
+.msc-layer,
+.msc-ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* ต้นไม้/หญ้าอยู่ใต้หีบ (5) และแมว (6) · ผีเสื้อ/ใบไม้/เมฆลอยเหนือทุกอย่างบนแผนที่ */
+.msc-layer { z-index: 1; }
+.msc-ambient { overflow: hidden; z-index: 7; }
+
+/* โคนต้น/โคนกอ = จุดที่กำหนด (กึ่งกลางล่าง) */
+.msc-item {
+  position: absolute;
+  transform: translate(-50%, -100%);
+}
+.msc-item--tree { aspect-ratio: 60 / 80; }
+.msc-item--tuft { aspect-ratio: 30 / 22; }
+.msc-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+/* โยกจากโคน — ต้นไม้ช้า/แกว่งน้อย กอหญ้าเร็ว/แกว่งมากกว่า */
+.msc-sway {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 100%;
+  animation: mscTreeSway 4s ease-in-out infinite alternate;
+  will-change: transform;
+}
+.msc-item--tuft .msc-sway { animation-name: mscGrassSway; }
+@keyframes mscTreeSway {
+  from { transform: rotate(-2deg) skewX(1deg); }
+  to { transform: rotate(2.4deg) skewX(-1.5deg); }
+}
+@keyframes mscGrassSway {
+  from { transform: rotate(-7deg) skewX(4deg); }
+  to { transform: rotate(8deg) skewX(-5deg); }
+}
+/* พุ่มไหวเพิ่มอีกนิด (ใบสั่นตามลม) */
+.msc-canopy {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: mscCanopyRustle 2.6s ease-in-out infinite alternate;
+}
+@keyframes mscCanopyRustle {
+  from { transform: scale(1, 1) translateX(-0.6px); }
+  to { transform: scale(1.025, 0.985) translateX(0.8px); }
+}
+
+/* เงาเมฆลอยผ่านช้าๆ ซ้าย→ขวา */
+.msc-cloud {
+  position: absolute;
+  left: 0;
+  width: 46%;
+  height: 26%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(20, 40, 50, 0.22), rgba(20, 40, 50, 0.1) 55%, transparent);
+  mix-blend-mode: multiply;
+  animation: mscCloudDrift 50s linear infinite;
+}
+.msc-cloud--small { width: 32%; height: 18%; }
+@keyframes mscCloudDrift {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(330%); }
+}
+
+/* ใบไม้ปลิว: ราง (เต็มแผนที่) เลื่อนลง+ส่ายไปข้าง · ใบหมุนตัวเอง */
+.msc-leaf-track {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  animation: mscLeafFall 14s linear infinite;
+}
+.msc-leaf {
+  position: absolute;
+  top: -2%;
+  left: 0;
+  width: 1.3%;
+  height: 0.8%;
+  border-radius: 80% 10% 80% 10%;
+  box-shadow: inset -1px -1px 0 rgba(0, 0, 0, 0.18);
+  animation: mscLeafSpin 2.8s ease-in-out infinite alternate;
+}
+@keyframes mscLeafFall {
+  0% { transform: translate(0, 0); opacity: 0; }
+  8% { opacity: 0.95; }
+  30% { transform: translate(calc(var(--drift) * 0.6), 30%); }
+  55% { transform: translate(calc(var(--drift) * -0.2), 55%); }
+  80% { transform: translate(var(--drift), 80%); opacity: 0.9; }
+  100% { transform: translate(calc(var(--drift) * 0.5), 104%); opacity: 0; }
+}
+@keyframes mscLeafSpin {
+  from { rotate: -35deg; }
+  to { rotate: 60deg; }
+}
+
+/* ผีเสื้อ: ราง (เต็มแผนที่) บินวนเป็นวง · ปีกกระพือ */
+.msc-flyer {
+  position: absolute;
+  inset: 0;
+  animation: mscFlyA 18s ease-in-out infinite;
+}
+.msc-flyer--b { animation-name: mscFlyB; }
+.msc-flyer--c { animation-name: mscFlyC; }
+.msc-butterfly {
+  position: absolute;
+  width: 2.6%;
+  overflow: visible;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.25));
+}
+.msc-wing {
+  transform-box: fill-box;
+  animation: mscFlap 0.22s ease-in-out infinite alternate;
+}
+.msc-wing--l { transform-origin: 100% 50%; }
+.msc-wing--r { transform-origin: 0% 50%; }
+@keyframes mscFlap {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0.25); }
+}
+@keyframes mscFlyA {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(9%, -6%) rotate(8deg); }
+  40% { transform: translate(16%, 3%) rotate(-6deg); }
+  60% { transform: translate(7%, 9%) rotate(10deg); }
+  80% { transform: translate(-4%, 4%) rotate(-8deg); }
+}
+@keyframes mscFlyB {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-10%, 5%) rotate(-10deg); }
+  50% { transform: translate(-3%, 12%) rotate(6deg); }
+  75% { transform: translate(6%, 4%) rotate(-4deg); }
+}
+@keyframes mscFlyC {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  30% { transform: translate(8%, -9%) rotate(12deg); }
+  55% { transform: translate(-6%, -12%) rotate(-8deg); }
+  80% { transform: translate(-9%, -2%) rotate(5deg); }
+}
+
+/* ผู้ใช้ขอลดการเคลื่อนไหว — ต้นไม้/หญ้านิ่ง (ชั้นผีเสื้อ/ใบไม้/เมฆไม่แสดงเลย ดู MapAmbience) */
+.msc-layer--still .msc-sway,
+.msc-layer--still .msc-canopy { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .msc-sway, .msc-canopy, .msc-ambient * { animation: none !important; }
+}

@@ -19,4 +19,5 @@ export const queryKeys = {
   following: ['following'] as const,
   activity: ['activity'] as const,
   socialSearch: (query: string) => ['social-search', query] as const,
+  friendWater: (friendId: string) => ['friend-water', friendId] as const,
 } as const

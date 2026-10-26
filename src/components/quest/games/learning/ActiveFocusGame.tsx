@@ -3,9 +3,8 @@ import type { QuestGameProps } from '../../../../types.mental'
 import { useAppContext } from '../../../../context/AppContext'
 import '../games.css'
 
-const C_1 = '#FFD9A8'
-
-const TEXT_1 = C_1
+/** [แก้ตามที่ระบุ] คำแนะนำระดับง่ายเป็นสีแดง (เดิมส้มอ่อน #FFD9A8) */
+const TEXT_1 = 'var(--red)'
 
 /*  เควส Active Focus (เพ่งสมาธิ / ตั้งเป้าหมาย)
     ทฤษฎี: Deliberate Practice (Ericsson et al., 1993)
@@ -15,7 +14,7 @@ const TEXT_1 = C_1
       1. ระบุทักษะที่จะฝึก (specific)
       2. ระบุว่าจะทำให้ "ดีขึ้นกว่าเดิม" อย่างไร (improvement goal)
       3. ประเมินระดับความท้าทาย — ถ้าต่ำกว่า 3 ถือว่าอยู่ใน comfort zone
-         ระบบจะไม่ให้ผ่าน พร้อมอธิบายเหตุผล                                     */
+         [แก้ตามที่ระบุ] เลือกได้ทุกระดับ (ไม่ล็อกปุ่มแล้ว) — ระดับง่ายแค่ขึ้นคำแนะนำเบาๆ                */
 
 const CHALLENGE_LABELS = ['สบายมาก', 'ค่อนข้างง่าย', 'กำลังดี', 'ท้าทาย', 'ท้าทายมาก']
 
@@ -26,7 +25,7 @@ export default function ActiveFocusGame({ finish }: QuestGameProps) {
   const [challenge, setChallenge] = useState(3)
 
   const tooEasy = challenge < 3
-  const canSubmit = skill.trim().length >= 3 && improvement.trim().length >= 5 && !tooEasy
+  const canSubmit = skill.trim().length >= 3 && improvement.trim().length >= 5
 
   const handleSubmit = () => {
     logActivity({ activityType: 'CHECKIN', durationSeconds: 0, meta: { skill, improvement, challenge } })
@@ -58,17 +57,20 @@ export default function ActiveFocusGame({ finish }: QuestGameProps) {
           {CHALLENGE_LABELS.map((label, i) => (
             <button
               key={label}
+              type="button"
               className={`qg-chip${challenge === i + 1 ? ' is-active' : ''}`}
               onClick={() => setChallenge(i + 1)}
+              aria-pressed={challenge === i + 1}
             >
+              {challenge === i + 1 && <span aria-hidden="true">✓ </span>}
               {label}
             </button>
           ))}
         </div>
         {tooEasy && (
-          <p className="qg-hint" style={{ marginTop: 10, color: TEXT_1 }}>
-            งานที่ทำได้สบายอยู่แล้วไม่ทำให้เก่งขึ้น Deliberate Practice ต้องอยู่เหนือระดับที่ทำได้ในปัจจุบันเล็กน้อย 
-            ลองเพิ่มความยากหรือลดเวลาที่ให้ตัวเองดู
+          <p className="qg-hint" style={{ marginTop: 10, color: TEXT_1, fontWeight: 700 }}>
+            💡 คำแนะนำ: งานที่ทำได้สบายอยู่แล้วช่วยให้เก่งขึ้นได้น้อย ถ้าพร้อมลองเพิ่มความยากอีกนิด
+            หรือลดเวลาที่ให้ตัวเองดู (ปักธงเป้าหมายระดับนี้ได้ตามปกติ)
           </p>
         )}
       </div>

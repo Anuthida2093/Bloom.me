@@ -82,6 +82,8 @@ export interface MockProgression {
   doubleRewardUntil?: string | null
   /** ของขวัญสุ่มเมื่อจบรอบเส้นทางการเรียนรู้ (key = id ของ log ที่ปิดรอบ) — idempotent */
   learningGifts?: Record<string, import('../../config/learningGift').LearningGift>
+  /** [ใหม่] รดน้ำต้นไม้ให้เพื่อน: friendId → วันที่เรารด/เพื่อนรด + รางวัลที่ให้แล้ว (ดู utils/friendWater.ts) */
+  friendWater?: Record<string, import('../../utils/friendWater').FriendWaterRecord>
 }
 
 export function emptyProgression(firstLoginDate: string): MockProgression {

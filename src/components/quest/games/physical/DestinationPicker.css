@@ -16,7 +16,15 @@
   overflow-y: auto;
   padding: 40px 0 calc(var(--gpf-safe-bottom, 90px) + 12px);
   box-sizing: border-box;
+  /* [แก้ตามที่ระบุ — iPhone 13 ขอบล่างโดนตัด] ฉากแม่ (.step-journey-game) ปิด touch-action ไว้สำหรับลากแผนที่
+     → นิ้วเลื่อนหน้านี้ขึ้นลงไม่ได้ · เปิดให้เลื่อนแนวตั้ง (การ์ดเลื่อนแนวนอนในแถบ slider ของมันเอง) */
+  touch-action: pan-x pan-y;
+  /* ความสูงรูปการ์ดคิดจากความสูงจริงของหน้านี้ (cqh) ไม่ใช่ทั้งจอ — กรอบเกม/แถบบนกินที่ไปแล้ว */
+  container-type: size;
 }
+/* [แก้ตามที่ระบุ] ลูกของ flex column ห้ามหด — slider มี overflow จึงหดได้ถึง 0 แล้วตัดท้ายการ์ด (ชื่อแผนที่) ทิ้ง
+   ปล่อยให้สูงตามเนื้อหา แล้วให้ทั้งหน้าเลื่อนแทน */
+.destination-picker > * { flex-shrink: 0; }
 /* จอเตี้ย/มือถือ: วางชิดบน (ไม่จัดกึ่งกลาง) การ์ดจึงอยู่สูงขึ้น ไม่ไปชนแถบเมนู */
 @media (max-width: 768px), (max-height: 900px) {
   .destination-picker { justify-content: flex-start; gap: 6px; padding-top: 64px; }
@@ -118,6 +126,7 @@
   height: clamp(180px, calc(100dvh - 480px), 360px);
   border-radius: 12px;
   overflow: hidden;
+  position: relative; /* ป้ายกุญแจของแผนที่ที่ยังล็อกวางทับรูปนี้ */
   background: var(--glass-b-60);
   pointer-events: none; /* ห้ามลากเฉพาะตัวรูปภาพ */
 }
@@ -158,3 +167,31 @@
   color: var(--fixed-white);
   margin: 0;
 }
+/* มีป้ายแจ้งเตือนเหนือหน้าเลือกแผนที่ → หน้าเลือกแผนที่กินเฉพาะที่เหลือ ไม่ล้นกรอบจนขอบบน/ล่างหาย */
+.step-journey-game--center > .destination-picker { flex: 1 1 0; min-height: 0; height: auto; }
+
+/* [แก้ตามที่ระบุ] มือถือ (เช่น iPhone 13) เท่านั้น: รูปการ์ดคิดจากความสูงจริงของหน้านี้ (cqh) ให้การ์ดพอดีจอ ไม่โดนตัดขอบล่าง
+   ส่วนที่ไม่ใช่รูป (หัวข้อ ชื่อแผนที่ ขอบการ์ด แถบเมนูล่าง+safe-area) ≈ 420px
+   โน้ตบุ๊ก/iPad คงการ์ดแนวตั้งสูงแบบเดิม (สูตร dvh ด้านบน สูงสุด 360px) ไม่บีบจนเป็นสี่เหลี่ยมจัตุรัส */
+@media (max-width: 640px) {
+  .destination-picker__img-wrapper { height: clamp(140px, calc(100cqh - 420px), 360px); }
+}
+
+/* [ใหม่] แผนที่ที่ยังไม่ถึงเลเวลปลดล็อก (แผนที่ 9 = Lv.50) — ภาพจาง + กุญแจ + ป้ายเลเวล · กดไม่ได้ */
+.destination-picker__item--locked { cursor: not-allowed; }
+.destination-picker__item--locked .destination-picker__img { filter: grayscale(0.7) brightness(0.6); }
+.destination-picker__lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--fixed-white);
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 18px;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+.destination-picker__lock-icon { font-size: 44px; }

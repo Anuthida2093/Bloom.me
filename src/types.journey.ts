@@ -2,7 +2,12 @@ export interface MapDef {
   id: string
   order: number
   name: string
+  /** ภาพแผนที่ (ภาพวาด) — แผนที่ที่วาดด้วยโค้ดเป็นค่าว่าง ใช้ generated แทน */
   artAsset: string
+  /** แผนที่ที่วาดด้วยโค้ดทั้งใบ (แผนที่ 9) — seed เดิม = ภาพและเส้นทางเดิมทุกครั้ง */
+  generated?: { seed: number }
+  /** [ใหม่] ปลดล็อกเมื่อผู้เล่นถึงเลเวลนี้ (ไม่มี = เปิดตั้งแต่แรก) */
+  unlockLevel?: number
   /** จุดบนเส้นทางตามลำดับ — via: true = จุดดัดความโค้งให้ตรงถนน (ไม่แสดงเป็นจุดหมายเลขบนแผนที่) */
   waypoints: { x: number; y: number; via?: boolean }[]
   entryPct: { x: number; y: number }

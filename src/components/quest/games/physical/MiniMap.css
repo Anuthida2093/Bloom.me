@@ -1,0 +1,97 @@
+/* MiniMap — แผนที่ย่อมุมซ้ายบน + แถบชื่อ (สไตล์มนน่ารักของแอปเอง) */
+.mini-map {
+  position: absolute;
+  top: calc(62px + env(safe-area-inset-top, 0px));
+  left: calc(10px + env(safe-area-inset-left, 0px));
+  z-index: 21; /* ระดับเดียวกับปุ่มนกฮูกฝั่งขวา — ใต้ป๊อปอัป/โมดัลทั้งหมด */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  touch-action: manipulation;
+}
+.mini-map__frame {
+  display: block;
+  padding: 0;
+  border: 3px solid #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #2f6a3a;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--coin, #f5b301) 70%, transparent), 0 6px 14px rgba(0, 0, 0, 0.32);
+  cursor: pointer;
+  line-height: 0;
+}
+.mini-map__frame canvas { display: block; }
+.mini-map__bar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 8px 6px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255, 252, 240, 0.96), rgba(241, 228, 196, 0.96));
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.22);
+  font-family: var(--font-display);
+  color: #4a3420;
+  line-height: 1.35;
+  pointer-events: none;
+}
+.mini-map__name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-map__steps { font-size: 11px; opacity: 0.85; white-space: nowrap; }
+.mini-map__line { display: block; height: 4px; border-radius: 99px; background: rgba(74, 52, 32, 0.18); overflow: hidden; }
+.mini-map__line i { display: block; height: 100%; border-radius: 99px; background: #4fb4ff; }
+
+/* แผนที่ขยาย — แตะที่ไหนก็ได้/กด Esc เพื่อย่อกลับ (ไม่ขังผู้ใช้) */
+.mini-map-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(8, 20, 14, 0.62);
+  backdrop-filter: blur(3px);
+}
+.mini-map-expanded__map {
+  padding: 0;
+  border: 4px solid #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  line-height: 0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  cursor: zoom-out;
+}
+.mini-map-expanded__bar { pointer-events: auto; }
+.mini-map-expanded__bar .mini-map__name { font-size: 15px; }
+.mini-map-expanded__bar .mini-map__steps { font-size: 13px; }
+
+@media (max-width: 480px) {
+  .mini-map { top: calc(56px + env(safe-area-inset-top, 0px)); left: calc(6px + env(safe-area-inset-left, 0px)); }
+}
+
+/* [ใหม่ตามที่ระบุ] ชื่อสถานที่บนแผนที่ย่อ (ปราสาทหิน ป่าพิศวง ...) */
+.mini-map__canvas-wrap {
+  position: relative;
+  display: block;
+}
+.mini-map__places {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.mini-map__place {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  line-height: 1;
+  color: #4a3420;
+  background: rgba(255, 247, 226, 0.88);
+  border: 1px solid rgba(176, 138, 82, 0.8);
+  border-radius: 99px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.mini-map__place-icon { font-size: 0.95em; }

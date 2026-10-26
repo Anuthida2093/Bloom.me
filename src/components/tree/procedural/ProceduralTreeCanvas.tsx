@@ -18,6 +18,8 @@ interface ProceduralTreeCanvasProps {
   animateWind?: boolean
   /** style ชั้นใบ (filter ใบเหี่ยว/ความจาง) — ลำต้นไม่โดนผลนี้ */
   foliageStyle?: CSSProperties
+  /** style ชั้นลำต้น/กิ่ง (filter ลำต้นแห้งซีด — หมวดการเรียนรู้) */
+  branchStyle?: CSSProperties
   /** ผู้ใช้ใหม่: พื้นเขียวเรียบ ไม่สร้างใบหญ้า/ดอกไม้ */
   bareGround?: boolean
 }
@@ -54,7 +56,7 @@ interface FlutterSlot {
  * ดิน/ลำต้น/ใบ วาดใหม่เฉพาะตอนข้อมูลหรือขนาดเปลี่ยน — มีแค่ 2 ชั้นหญ้าที่วาดซ้ำทุกเฟรม (เฉพาะช่วงที่อยู่ในจอ)
  */
 export default function ProceduralTreeCanvas({
-  model, size, viewWidth, panRef, grassSoilLevel, dryness, animateWind = true, foliageStyle, bareGround = false,
+  model, size, viewWidth, panRef, grassSoilLevel, dryness, animateWind = true, foliageStyle, branchStyle, bareGround = false,
 }: ProceduralTreeCanvasProps) {
   const groundRef = useRef<HTMLCanvasElement>(null)
   const meadowBackRef = useRef<HTMLCanvasElement>(null)
@@ -215,7 +217,7 @@ export default function ProceduralTreeCanvas({
     <>
       <canvas ref={groundRef} className="tree-of-life__canvas tree-of-life__canvas--ground" aria-hidden="true" />
       <canvas ref={meadowBackRef} className="tree-of-life__canvas tree-of-life__canvas--meadow" aria-hidden="true" />
-      <canvas ref={branchRef} className="tree-of-life__canvas tree-of-life__canvas--branches" style={bandStyle} aria-hidden="true" />
+      <canvas ref={branchRef} className="tree-of-life__canvas tree-of-life__canvas--branches" style={{ ...branchStyle, ...bandStyle }} aria-hidden="true" />
       <canvas ref={meadowFrontRef} className="tree-of-life__canvas tree-of-life__canvas--meadow-front" aria-hidden="true" />
       <canvas
         ref={foliageRef}

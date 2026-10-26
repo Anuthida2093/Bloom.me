@@ -8,6 +8,10 @@ import PlayerTreeCard from '../leaderboard/PlayerTreeCard'
 import TreeStatsPanel from '../tree/TreeStatsPanel'
 import NotificationPanel from './NotificationPanel'
 import WateringCanFx from './WateringCanFx'
+import { AddFriendButton, FriendWaterCan, RecoverWaterPopup, WaterDropButton } from '../friends/FriendWater'
+import { useFriendWater } from '../../hooks/useFriendWater'
+import { useSocial } from '../../context/SocialContext'
+import { exchangeCardLabel } from '../../config/exchangeItems'
 import MedicalBoxAlert from './MedicalBoxAlert'
 import RankUpModal from './RankUpModal'
 import ActionMenuBar from '../layout/ActionMenuBar'
@@ -66,6 +70,9 @@ import DoubleRewardChip from './DoubleRewardChip'
 import { useStepSettlement } from '../../hooks/useStepSettlement'
 import { useVideoStallGuard } from '../../hooks/useVideoStallGuard'
 import { homeBackgroundSrc } from '../../config/homeBackgrounds'
+import { homeSceneById, effectiveHomeBackground } from '../../config/homeScenes'
+import HomeSceneRenderer from '../scenery/homeScenes/HomeSceneRenderer'
+import { useHomeWeather } from '../../hooks/useHomeWeather'
 import { computeCalorieTarget, getOverCalorieStreak, getVisibleRocks, MEALS_CHANGED_EVENT, OVER_CALORIE_STREAK_DAYS } from '../../utils/nutrition'
 import { posterOf } from '../../utils/videoPoster'
 const TreeSummaryModal = lazy(() => import('../tree/TreeSummaryModal'))
@@ -119,6 +126,17 @@ export default function Dashboard() {
    *  กดปุ่มต้นไม้/แตะต้นไม้ถึงจะเปิด — เก็บ id เพื่อนที่เปิดการ์ดอยู่ (ดูคนใหม่ = เริ่มแบบปิด) */
   const [shownFriendCardId, setShownFriendCardId] = useState<string | null>(null)
   const friendCardOpen = !!viewingPlayer && shownFriendCardId === viewingPlayer.id
+  /* [ใหม่ตามที่ระบุ] รดน้ำต้นไม้ให้เพื่อน (วันละครั้ง คล้ายเติมไฟ — utils/friendWater.ts)
+     ปุ่มหยดน้ำใต้ปุ่มข้อมูลต้นไม้ → บัวรดน้ำขึ้นเหนือต้นไม้ → แตะบัว = รดน้ำ → หยดน้ำที่ปุ่มกระเซ็นเป็นสีฟ้า
+     waterCanFor = id เพื่อนที่เปิดบัวอยู่ (ดูคนใหม่ = บัวปิดเอง) */
+  const { isFriend, followStatus, toggleFollow } = useSocial()
+  const friendWater = useFriendWater(viewingPlayer?.id ?? null)
+  const [waterCanFor, setWaterCanFor] = useState<string | null>(null)
+  /** ป็อบอัพกู้คืนหยดน้ำ (id เพื่อน) — หยดน้ำดับแต่ยังกู้คืนได้วันนี้ */
+  const [recoverFor, setRecoverFor] = useState<string | null>(null)
+  /** เปลี่ยนค่า = เอฟเฟกต์ประกายฟ้า + หยดน้ำเด้ง (รดครบทั้งคู่) */
+  const [waterCelebrateKey, setWaterCelebrateKey] = useState(0)
+  const waterResultRef = useRef<{ full: boolean; reward: { code: string; streak: number } | null }>({ full: false, reward: null })
   /* [แก้ตามที่ระบุ] การ์ดข้อมูลต้นไม้เพื่อนปิดเองเมื่อแตะที่อื่นบนหน้าจอ (ไม่ต้องกดกากบาท) —
      ยกเว้นแตะในการ์ดเอง หรือปุ่มต้นไม้ที่ใช้เปิด/ปิดการ์ด */
   useEffect(() => {
@@ -184,7 +202,11 @@ export default function Dashboard() {
      ล่วงหน้าตอนหน้า Home ว่าง — กดเปิดครั้งแรกจะขึ้นทันทีพร้อมกันทั้งหน้า ไม่มีช่วงจอว่าง
      (Suspense fallback) ระหว่างรอดาวน์โหลดโค้ดแล้วค่อยเด้งเนื้อหาตามมาทีหลัง */
   useEffect(() => {
-    const warm = () => { void loadQuestSection(); void loadMoodCheckIn(); void loadShopSection(); void loadProfilePage() }
+    const warm = () => {
+      void loadQuestSection(); void loadMoodCheckIn(); void loadShopSection(); void loadProfilePage()
+      // [แก้ตามที่ระบุ — เควสก้าวเปิดทันที] เตรียมภาพแผนที่ของทริปปัจจุบัน (หรือการ์ดเลือกแผนที่) ไว้ก่อนแตะ
+      void import('../quest/games/physical/stepQuestWarmup').then((m) => m.warmStepQuest())
+    }
     const w = window as Window & { requestIdleCallback?: (cb: () => void) => number; cancelIdleCallback?: (id: number) => void }
     if (w.requestIdleCallback) {
       const id = w.requestIdleCallback(warm)
@@ -224,14 +246,79 @@ export default function Dashboard() {
   /** ข้อความแจ้งผลปุ่มแชร์ (เช่น copy link fallback ตอนเบราว์เซอร์ไม่รองรับ navigator.share) */
   const [infoAlert, setInfoAlert] = useState<string | null>(null)
 
+  /** กดปุ่มหยดน้ำ: วันนี้รดแล้ว = แจ้งเฉยๆ · ดับ (กู้คืนได้) = ป็อบอัพกู้คืน · ไม่งั้นเปิด/ปิดบัวรดน้ำ */
+  const handleFriendWaterButton = () => {
+    if (!viewingPlayer) return
+    const s = friendWater.summary
+    if (s?.wateredToday) {
+      setInfoAlert(s.friendWateredToday
+        ? 'วันนี้รดน้ำให้กันครบแล้ว พรุ่งนี้มารดใหม่นะ 💧'
+        : `วันนี้คุณรดน้ำให้ ${viewingPlayer.username} แล้ว รอเพื่อนรดกลับก่อนเที่ยงคืนนะ 💧`)
+      return
+    }
+    if (s?.status === 'broken') { setRecoverFor(viewingPlayer.id); return }
+    setWaterCanFor((id) => (id === viewingPlayer.id ? null : viewingPlayer.id))
+  }
+  /** กู้คืน = รดน้ำตามปกติของวันนี้ (เปิดบัวรดน้ำ) */
+  const handleRecoverWater = () => {
+    if (!viewingPlayer) return
+    setRecoverFor(null)
+    setWaterCanFor(viewingPlayer.id)
+  }
+  /** ยังไม่เป็นเพื่อน → ติดตาม (เป็นเพื่อนเมื่อเขาติดตามกลับ) */
+  const handleAddFriend = () => {
+    if (!viewingPlayer) return
+    const st = followStatus(viewingPlayer.id)
+    if (st === 'following') {
+      setInfoAlert(`ส่งคำขอถึง ${viewingPlayer.username} แล้ว รอเขาติดตามกลับก็จะเป็นเพื่อนกัน แล้วรดน้ำให้กันได้`)
+      return
+    }
+    toggleFollow(viewingPlayer.id)
+    setInfoAlert(st === 'followsYou'
+      ? `เป็นเพื่อนกับ ${viewingPlayer.username} แล้ว! รดน้ำต้นไม้ให้กันได้เลย 💧`
+      : `ส่งคำขอเป็นเพื่อนถึง ${viewingPlayer.username} แล้ว รอเขาติดตามกลับนะ`)
+  }
+  const handleFriendPour = async (): Promise<boolean> => {
+    try {
+      const result = await friendWater.water()
+      waterResultRef.current = {
+        full: result.summary.status === 'full',
+        reward: result.rewardCardItemCode ? { code: result.rewardCardItemCode, streak: result.summary.streak } : null,
+      }
+      return true
+    } catch (err) {
+      setInfoAlert(err instanceof Error && err.message ? err.message : 'รดน้ำไม่สำเร็จ ลองใหม่อีกครั้งนะ')
+      return false
+    }
+  }
+  const handleFriendPourDone = (poured: boolean) => {
+    setWaterCanFor(null)
+    if (!poured) return
+    const { full, reward } = waterResultRef.current
+    waterResultRef.current = { full: false, reward: null }
+    if (full) setWaterCelebrateKey((k) => k + 1)
+    if (reward) {
+      setInfoAlert(`รดน้ำให้กันครบ ${reward.streak} วัน! ได้รับ${exchangeCardLabel(reward.code)} 1 ใบ (เพื่อนก็ได้สุ่มการ์ดด้วยนะ)`)
+    }
+  }
+
   const videoRef = useRef<HTMLVideoElement | null>(null)
   // [แก้ตามที่ระบุ] วิดีโอพื้นหลังเลือกได้ในการตั้งค่า (เดิมชี้ไฟล์ hero-waterfall.mp4 ที่ถูกลบไปแล้ว → พื้นหลังไม่ขึ้น)
-  const bgSrc = homeBackgroundSrc(settings.homeBackground)
+  // [แก้ตามที่ระบุ] ฉากที่เลือกไว้แต่ยังล็อก (เลเวลไม่ถึง) → ใช้ฉาก 1 จนกว่าจะปลดล็อก
+  const homeBgId = effectiveHomeBackground(settings.homeBackground, userData.level)
+  const bgSrc = homeBackgroundSrc(homeBgId)
   const bgVideo = useVideoStallGuard(videoRef, bgSrc)
+  /** [ใหม่ — อนุมัติแล้ว] ฉากพื้นหลังที่วาดด้วยโค้ด (ฉาก 3-5) — มีค่า = ใช้แทนวิดีโอ (ทั้งหน้า Home และหน้าดูต้นไม้เพื่อน) */
+  const codeScene = homeSceneById(homeBgId)
+  const homeWeather = useHomeWeather()
+  /** ค่าเลื่อนฉากตามการลากต้นไม้ — ตัวเรนเดอร์อ่านทุกเฟรม (ไม่ re-render ทั้งหน้า) */
+  const scenePanRef = useRef(0)
 
   /* ลากฉากต้นไม้ซ้าย-ขวา → วิดีโอพื้นหลังเลื่อนตามช้ากว่า (BG_PARALLAX เท่า) ให้รู้สึกว่าฉากหลังอยู่ไกล
      วิดีโอกว้างขึ้นเท่าระยะที่ต้องเลื่อน (ไม่เห็นขอบว่าง) — ใส่ style ตรงที่ DOM ไม่ re-render ทั้งหน้า */
   const handleTreePan = useCallback((pan: number, range: number) => {
+    // ฉากวาดด้วยโค้ด: เลื่อนตามต้นไม้ช้ากว่า (ชั้นไกลช้า ชั้นหญ้าใกล้เร็ว — พารัลแลกซ์ในตัวเรนเดอร์)
+    scenePanRef.current = -pan * 0.35
     const v = videoRef.current
     if (!v) return
     const extra = range * BG_PARALLAX
@@ -277,6 +364,8 @@ export default function Dashboard() {
     return {
       EMOTION: toDays(latestByCategory.EMOTION),
       HEALTH: toDays(latestByCategory.HEALTH),
+      // [แก้ตามที่ระบุ] ลำต้น/กิ่งเหี่ยวตามจำนวนวันที่ไม่ได้ทำเควสการเรียนรู้ (เกณฑ์ 5/10 วันเดียวกับส่วนอื่น)
+      KNOWLEDGE: toDays(latestByCategory.KNOWLEDGE),
     }
   }, [questLogs])
 
@@ -572,9 +661,14 @@ export default function Dashboard() {
           poster/webm ที่อ้างไว้ก็ไม่มีอยู่จริง — ตอนนี้แสดงวิดีโอทุกขนาดจอ (พื้นไล่สีอยู่ใต้ไว้ระหว่างโหลด)
           ผู้ใช้ที่ขอลดการเคลื่อนไหว: วิดีโอหยุดนิ่งที่เฟรมแรก (#t=0.1) ยังเห็นภาพพื้นหลังเหมือนเดิม */}
       {/* [1.5] พื้นนิ่ง = เฟรมแรกของวิดีโอพื้นหลังที่เลือก (โปสเตอร์) — เห็นฉากทันทีก่อนวิดีโอพร้อม */}
-      <div className="dashboard__bg-still" aria-hidden="true" style={{ ['--bg-poster' as string]: `url("${posterOf(bgSrc)}")` } as React.CSSProperties} />
+      {codeScene && (
+        <div className="dashboard__bg-scene">
+          <HomeSceneRenderer spec={codeScene} weather={homeWeather} panRef={scenePanRef} animate={!anyModalOpen} mbti={userData.mbtiType as MbtiType} />
+        </div>
+      )}
+      {!codeScene && <div className="dashboard__bg-still" aria-hidden="true" style={{ ['--bg-poster' as string]: `url("${posterOf(bgSrc)}")` } as React.CSSProperties} />}
       {/* [แก้ตามที่ระบุ] เน็ตไม่ดี: วิดีโอจางเข้าเฉพาะตอนเล่นได้จริง กระตุกรอโหลด/โหลดไม่ได้ → เห็นพื้นนิ่งแทน ไม่ค้าง */}
-      {!bgVideo.failed && (
+      {!codeScene && !bgVideo.failed && (
         <video
           key={bgSrc}
           ref={videoRef}
@@ -620,7 +714,7 @@ export default function Dashboard() {
 
       {/* ═══ ต้นไม้เต็มจอ ═══ */}
       {/* [แก้ตามที่ระบุ] แสงแดด (ธีมสว่าง) / ฉากกลางคืน (ธีมมืด) / ฝนตกตามสภาพอากาศจริง */}
-      <HomeAmbience hidden={anyModalOpen} />
+      <HomeAmbience hidden={anyModalOpen} sceneHandlesWeather={!!codeScene} />
 
       {!hideHomeChrome && showOverCalorie && <OverCalorieNotice streakDays={overCalorieStreak} />}
 
@@ -635,7 +729,8 @@ export default function Dashboard() {
         {viewingPlayer && viewingTreeStats ? (
           <>
             {/* [แก้ตามที่ระบุ] ปุ่มกลับบ้านเหลือแค่ไอคอน Return — ข้อความ "กลับบ้าน" ชนป้ายชื่อต้นไม้เพื่อนบนจอเล็ก */}
-            <button className="dashboard__back-btn lb-banner" onClick={() => setViewingPlayer(null)} aria-label="กลับบ้าน" title="กลับบ้าน">
+            {/* [แก้ตามที่ระบุ] หน้าดูต้นไม้เพื่อน: ปุ่มกลับเป็นไอคอนล้วน (ไม่มีกรอบ/พื้น) — ปุ่มโหมดดูต้นไม้ของฉันยังเป็นป้ายเดิม */}
+            <button className="dashboard__back-btn dashboard__back-btn--icon" onClick={() => setViewingPlayer(null)} aria-label="กลับบ้าน" title="กลับบ้าน">
               <img src={BADGE_ICONS.back} className="icon-img" alt="" />
             </button>
             <div className="dashboard__viewing-name-pill lb-banner">ต้นไม้ของ {viewingPlayer.username}</div>
@@ -683,6 +778,7 @@ export default function Dashboard() {
                 daysSinceLastOracle={daysSinceLastOracle}
                 daysSinceLastMentalQuest={daysSinceLastQuestByCategory.EMOTION}
                 daysSinceLastPhysicalQuest={daysSinceLastQuestByCategory.HEALTH}
+                daysSinceLastKnowledgeQuest={daysSinceLastQuestByCategory.KNOWLEDGE}
               />
             </ErrorBoundary>
           </div>
@@ -691,6 +787,19 @@ export default function Dashboard() {
         {/* แอนิเมชันบัวรดน้ำ — เล่นครั้งเดียวเมื่อกลับมาหน้า Home หลังได้หยดน้ำใหม่ หรือหลังกดรดน้ำในเช็คอิน
             (wateringKey — ดู homeVisible effect ด้านบน) ไม่โชว์ตอนดูต้นไม้ของคนอื่น */}
         {!hideHomeChrome && <WateringCanFx waterPulseKey={wateringKey} />}
+        {/* [ใหม่ตามที่ระบุ] บัวรดน้ำเหนือต้นไม้เพื่อน — แตะบัว = รดน้ำให้เพื่อน (วันละครั้ง) */}
+        {viewingPlayer && (
+          <FriendWaterCan open={waterCanFor === viewingPlayer.id} onPour={handleFriendPour} onDone={handleFriendPourDone} />
+        )}
+        {viewingPlayer && (
+          <RecoverWaterPopup
+            open={recoverFor === viewingPlayer.id}
+            friendName={viewingPlayer.username}
+            streak={friendWater.summary?.streak ?? 0}
+            onRecover={handleRecoverWater}
+            onClose={() => setRecoverFor(null)}
+          />
+        )}
 
         {/* [แก้ตามที่ระบุ] โพสอิทลอยบนจอ — ขึ้นกลางต้นไม้ ลากไปวางตรงไหนก็ได้ (ดู PostItLayer.tsx) */}
         {!hideHomeChrome && <PostItLayer postIts={postIts} onOpen={setOpenPostIt} onMove={movePostIt} />}
@@ -742,6 +851,21 @@ export default function Dashboard() {
               >
                 <img src={BADGE_ICONS.tree} className="icon-img" alt="" />
               </button>
+              {/* [ใหม่ตามที่ระบุ] เพื่อน → ปุ่มหยดน้ำ + จำนวนวันที่รดน้ำให้กัน · ยังไม่เป็นเพื่อน → ปุ่มเพิ่มเพื่อน */}
+              {isFriend(viewingPlayer.id) ? (
+                <WaterDropButton
+                  summary={friendWater.summary}
+                  friendName={viewingPlayer.username}
+                  onClick={handleFriendWaterButton}
+                  celebrateKey={waterCelebrateKey}
+                />
+              ) : (
+                <AddFriendButton
+                  requested={followStatus(viewingPlayer.id) === 'following'}
+                  friendName={viewingPlayer.username}
+                  onClick={handleAddFriend}
+                />
+              )}
             </div>
           </>
         ) : (
@@ -754,6 +878,7 @@ export default function Dashboard() {
                   onOpenMoodCheckin={() => { setShowTreeStats(false); openModal('moodCheckin') }}
                   daysSinceLastMentalQuest={daysSinceLastQuestByCategory.EMOTION}
                   daysSinceLastPhysicalQuest={daysSinceLastQuestByCategory.HEALTH}
+                  daysSinceLastKnowledgeQuest={daysSinceLastQuestByCategory.KNOWLEDGE}
                   onClose={() => setShowTreeStats(false)}
                   onViewMyTree={() => { setShowTreeStats(false); setShowNotifications(false); setTreeOnlyView(true) }}
                 />
@@ -839,8 +964,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* [แก้ตามที่ระบุ] เปิดสตอรี่แล้วไม่ต้องมีแถบเมนูล่างทับ — หน้าสตอรี่มีปุ่มกากบาทปิดอยู่แล้ว */}
-      {!hideHomeChrome && !modals.story && (
+      {/* [แก้ตามที่ระบุ] หน้าสตอรี่แสดงแถบเมนูล่างเหมือนหน้าอื่น (ธีมเดียวกัน · ไอคอนสตอรี่ไฮไลต์) —
+          Story.css เว้นที่ด้านล่างให้แถบ (--gpf-safe-bottom) */}
+      {!hideHomeChrome && (
       <ActionMenuBar
         active={activeNavKey}
         activeQuestCount={completedQuestCount}

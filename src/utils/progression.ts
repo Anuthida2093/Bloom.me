@@ -7,7 +7,7 @@ import { EXP_PER_LEVEL, STACK_PER_VISUAL_LEVEL } from '../types'
   (1) โหมด mock ที่ต้องจำลองผลแทน backend และ (2) แปลง stack → ขั้นภาพตอนแสดงผล
   อ้างอิง bloom-me-project:
     src/utils/level.ts  → calculateLevel       (100 EXP ต่อเลเวล คงที่)
-    src/utils/tree.ts   → calculateVisualLevel (50 คะแนน stack ต่อขั้น ไม่มีเพดาน)
+    src/utils/tree.ts   → calculateVisualLevel (50 คะแนน stack ต่อขั้น สูงสุดเลเวล 100)
     src/utils/streak.ts → calculateNextStreak  (ขาด 1 วันไม่รีเซ็ต ขาด 2 วันติดขึ้นไปเริ่มที่ 1)
 \*============================================================================*/
 
@@ -18,9 +18,18 @@ export function calculateLevel(exp: number): number {
   return Math.floor(exp / EXP_PER_LEVEL) + 1
 }
 
-/** ขั้นภาพของแต่ละส่วนต้นไม้ — ไม่มีเพดาน (ผู้วาดแปลงเป็นขั้นภาพ 1-8 เองที่จุดเลือกภาพ) */
+/** [แก้ตามที่ระบุ] เลเวลสูงสุดของแต่ละส่วนต้นไม้ (ลำต้น/ใบ/พื้นดิน) — ครบแล้วยังทำเควสได้ตามปกติ
+ *  คะแนนสะสม (stack) ยังเพิ่มต่อ ได้ EXP/เหรียญ/เหรียญรางวัลเหมือนเดิม แค่ภาพต้นไม้ส่วนนั้นหยุดที่ 100 */
+export const MAX_VISUAL_LEVEL = 100
+
+/** เลเวลของแต่ละส่วนต้นไม้ 1-100 (50 คะแนน stack ต่อเลเวล) — ผู้วาดแปลงเป็นภาพต่อเนื่องทุกเลเวลเอง */
 export function calculateVisualLevel(stack: number): number {
-  return Math.floor(Math.max(0, stack) / STACK_PER_VISUAL_LEVEL) + 1
+  return Math.min(MAX_VISUAL_LEVEL, Math.floor(Math.max(0, stack) / STACK_PER_VISUAL_LEVEL) + 1)
+}
+
+/** % ความคืบหน้าของส่วนต้นไม้ (0 = เลเวล 1, 100 = เลเวล 100) — ใช้แสดงแถบสถานะ */
+export function visualLevelPct(stack: number): number {
+  return Math.min(100, (Math.max(0, stack) / (STACK_PER_VISUAL_LEVEL * (MAX_VISUAL_LEVEL - 1))) * 100)
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000

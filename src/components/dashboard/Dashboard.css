@@ -21,6 +21,7 @@
   z-index: 0;
   pointer-events: none;
 }
+.dashboard__bg-scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 .dashboard__bg-video { object-fit: cover; opacity: 0; transition: opacity .6s ease; }
 .dashboard__bg-video.is-ready { opacity: 1; }
 .dashboard__bg-still {
@@ -516,6 +517,21 @@
 .dashboard__back-btn.lb-banner::before,
 .dashboard__back-btn.lb-banner::after { content: none; }
 
+
+/* [แก้ตามที่ระบุ] ปุ่มกลับหน้าดูต้นไม้เพื่อน: ไอคอนล้วน ไม่มีพื้น/ขอบ — เงานุ่มรอบตัวไอคอนให้อ่านออกบนทุกฉาก
+   พื้นที่กดยังเป็น 48×48 (มือถือ 44×44) ตาม .dashboard__back-btn */
+.dashboard__back-btn--icon {
+  position: fixed;
+  background: none;
+  border: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+.dashboard__back-btn--icon .icon-img {
+  width: 36px;
+  height: 36px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 6px rgba(255, 255, 255, 0.55));
+}
 
 /* ═══ [แก้ตามที่ระบุ] โพสอิทลอยบนจอหลัก (PostItLayer.tsx) — ลากวางได้ทั่วจอ ═══ */
 .postit-layer { position: fixed; inset: 0; z-index: 45; pointer-events: none; }

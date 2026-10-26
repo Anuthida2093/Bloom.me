@@ -4,7 +4,7 @@ import { BADGE_ICONS } from '../../../../config/iconAssets'
 import { recordStepDay, type StepDayRecord } from '../../../../services/api/progression.api'
 import { mapFrameInset, useBottomReserve, useMapPanZoom } from '../../../../hooks/useMapPanZoom'
 import { useStepChest } from '../../../../hooks/useStepChest'
-import { MAP_NATIVE_SIZE } from './journeyPathMath'
+import { MAP_NATIVE_SIZE, mapNativeSize } from './journeyPathMath'
 import MapPathRenderer from './MapPathRenderer'
 import { StepChestMarker, StepChestPopup } from './StepChest'
 import MapFrame, { MapStars } from './MapFrame'
@@ -26,7 +26,8 @@ export default function CompletedTripView({ day, onClose }: { day: StepDayRecord
   // แผนที่ย่อพอดีพื้นที่เหนือการ์ดล่าง (วัดความสูงการ์ดจริง) — การ์ดไม่บังแผนที่
   const cardRef = useRef<HTMLDivElement | null>(null)
   const bottomReserve = useBottomReserve(cardRef, [bigMap])
-  const { containerRef, scale, pan, handlers } = useMapPanZoom(MAP_NATIVE_SIZE, { fit: !bigMap, fitInset: mapFrameInset(bottomReserve) })
+  const nativeSize = mapNativeSize(mapDef)
+  const { containerRef, scale, pan, handlers } = useMapPanZoom(nativeSize, { fit: !bigMap, fitInset: mapFrameInset(bottomReserve), coverSize: MAP_NATIVE_SIZE })
 
   // หีบของวันนี้ยังไม่ได้เปิด (เช่นปิดเควสก่อนแตะหีบ) — เปิดต่อที่นี่ได้ 1 ครั้ง
   const confirmDay = useCallback(() => recordStepDay(day.date, day.steps, day.goal), [day.date, day.steps, day.goal])
@@ -47,7 +48,7 @@ export default function CompletedTripView({ day, onClose }: { day: StepDayRecord
         <div
           className="step-journey-game__map-canvas"
           style={{
-            width: MAP_NATIVE_SIZE.width, height: MAP_NATIVE_SIZE.height, transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+            width: nativeSize.width, height: nativeSize.height, transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
             '--mf-radius': `${16 / Math.max(scale, 0.01)}px`,
           } as React.CSSProperties}
         >
@@ -59,7 +60,7 @@ export default function CompletedTripView({ day, onClose }: { day: StepDayRecord
         </div>
       )}
 
-      {mapDef && !bigMap && <MapFrame pan={pan} scale={scale} title={mapDef.name} />}
+      {mapDef && !bigMap && <MapFrame pan={pan} scale={scale} size={nativeSize} title={mapDef.name} />}
 
       {bigMap ? (
         <button type="button" className="sjg-bigmap-back" onPointerDown={(e) => e.stopPropagation()} onClick={() => setBigMap(false)}>‹ กลับ</button>

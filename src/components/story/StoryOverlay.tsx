@@ -15,6 +15,7 @@ import StoryProfilePage from './StoryProfilePage'
 import OtherProfileView from './OtherProfileView'
 import FriendsListPanel from './FriendsListPanel'
 import ChatListPage from './ChatListPage'
+import { MOCK_LEADERBOARD_PLAYERS } from '../../config/leaderboardData'
 import ChatThreadPage from './ChatThreadPage'
 import ContentSettingsPage from './ContentSettingsPage'
 import PostListPage from './PostListPage'
@@ -160,6 +161,10 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
                 friendName={chatWith.name}
                 onBack={() => setChatWith(null)}
                 onOpenPost={setOpenedPostId}
+                onViewTree={(id) => {
+                  const player = MOCK_LEADERBOARD_PLAYERS.find((pl) => pl.id === id)
+                  if (player) handleViewTree(player)
+                }}
               />
             )}
             {view === 'activity' && <ActivityPanel onBack={backToFeed} />}

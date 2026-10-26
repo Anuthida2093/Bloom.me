@@ -1,4 +1,6 @@
 import type { MapDef } from '../../../../types.journey'
+import { generateMapRoute, MUSHROOM_FOREST_SEED } from './mapgen/generateMapScene'
+import { sceneToPathPoints } from './mapgen/sceneRoute'
 
 /*============================================================================*\
   journeyPathMath.ts — เรขาคณิตเส้นทางของแผนที่ Step Journey — แยกออกมาจาก
@@ -438,12 +440,25 @@ export const MAP_PATH_POINTS: Record<string, MapPathPoints> = {
   },
 }
 
+// ── แผนที่ 9 · ป่าเห็ดมหัศจรรย์ — วาดด้วยโค้ด จุดเส้นทางมาจากทางที่วาดจริง (ห้ามแก้ด้วยมือที่นี่ —
+//    เปลี่ยนที่ mapgen/generateMapScene.ts แล้วทั้งภาพและเส้นทางเปลี่ยนตามกัน) ──
+MAP_PATH_POINTS['mushroom-forest'] = sceneToPathPoints(generateMapRoute(MUSHROOM_FOREST_SEED))
+
 /** [เพิ่มรอบนี้ — ปรับ layout เต็มจอ] ขนาดจริงของไฟล์ภาพแผนที่ทุกใบ (เช็คจริงจาก JPEG header
  *  ของทั้ง 8 ไฟล์ใน public/assets/images/mini-game/vitality-steps/ แล้ว — ทุกใบเป็นจัตุรัส
  *  1024x1024px เป๊ะ) ใช้เป็น "ขนาดโลก" คงที่ให้ useMapPanZoom.ts คำนวณ cover-zoom และให้
  *  MapPathRenderer.tsx ตั้งขนาดกล่องของตัวเองตรงกันเสมอ (ไม่ใช้ width:100%/aspect-ratio แบบเดิม
  *  อีกต่อไป เพราะ viewport ตอนนี้เต็มพื้นที่ที่เหลือทั้งหมด ไม่ใช่จัตุรัสคงที่แล้ว) */
 export const MAP_NATIVE_SIZE = { width: 1024, height: 1024 }
+
+/** [แก้ตามที่ระบุ] แผนที่ที่วาดด้วยโค้ด (แผนที่ 9) ใหญ่ 2 เท่าทั้งสองแกน — บนจอซูมระดับเดียวกับแผนที่ 1024px
+ *  (useMapPanZoom coverSize) จึงเกินจอทั้งแนวนอนและแนวตั้ง ลากเลื่อนได้ทุกทิศ · ตัวละคร/จุด/หีบขนาดเท่าเดิม */
+export const GENERATED_MAP_NATIVE_SIZE = { width: 2048, height: 2048 }
+
+/** ขนาดกล่องแผนที่ (px ก่อนซูม) ของแผนที่ใบนั้น */
+export function mapNativeSize(mapDef: Pick<MapDef, 'generated'> | null | undefined): { width: number; height: number } {
+  return mapDef?.generated ? GENERATED_MAP_NATIVE_SIZE : MAP_NATIVE_SIZE
+}
 
 /** [แก้รอบนี้ — feedback รอบ 2: เส้นทางต้องโค้งตามภาพจริง ไม่ใช่เส้นตรง] แปลงจุด waypoints
  *  (entryPct → waypoints → exitPct) เป็นเส้นโค้ง Catmull-Rom แปลงเป็น cubic Bezier (τ=1/6 —

@@ -76,6 +76,14 @@ const LEAF_HEALTH_FILTER: Record<HealthPhase, string> = {
   dying: 'sepia(0.7) saturate(0.45) hue-rotate(-20deg) brightness(0.88)',
 }
 
+/** [แก้ตามที่ระบุ — บทที่ 2 State Axis] ลำต้น/กิ่งแห้งซีดตามจำนวนวันที่ไม่ได้ทำเควสการเรียนรู้ (CSS filter
+ *  sepia/brightness/hue-rotate บน canvas ลำต้นเท่านั้น ไม่ต้องวาดภาพใหม่) — ใบ/หญ้ามีของตัวเองแยกกัน */
+const TRUNK_HEALTH_FILTER: Record<HealthPhase, string> = {
+  healthy: 'none',
+  wilting: 'sepia(0.35) saturate(0.75) hue-rotate(-8deg) brightness(0.9)',
+  dying: 'sepia(0.6) saturate(0.4) hue-rotate(-15deg) brightness(0.72) contrast(0.92)',
+}
+
 /** พิกัดกำหนดเอง (%) ของไอเทมตกแต่งแต่ละชิ้น — key = itemId (type อยู่ที่ types.ts ใช้ร่วมกับ AppContext.tsx) */
 
 /** [แก้ตามที่ระบุ] ละอองดาวที่โปรยลงมาที่ต้นไม้ตอนทำเควสสำเร็จ — ตำแหน่ง/ขนาด/จังหวะคงที่ (ไม่สุ่มทุก render)
@@ -163,6 +171,8 @@ interface TreeOfLifeProps {
   /** [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 3] เหมือนกันแต่ผูกกับหมวด "สุขภาพกาย" (HEALTH) — คุมการ
    *  จางหาย/เปลี่ยนสีของหญ้า (ground variant 2/3) แทนใบ */
   daysSinceLastPhysicalQuest?: number | null
+  /** [แก้ตามที่ระบุ] เหมือนกันแต่ผูกกับหมวด "การเรียนรู้" (KNOWLEDGE) — คุมการแห้งซีดของลำต้น/กิ่ง */
+  daysSinceLastKnowledgeQuest?: number | null
   /** ฉากกว้างกว่าจอ กดค้างที่พื้นแล้วลากซ้าย-ขวาเพื่อเลื่อนดูได้ (หน้า Home) — ต้นไม้เริ่มกึ่งกลาง */
   pannable?: boolean
   /** แจ้งตำแหน่งเลื่อน (px, -range…0) ทุกครั้งที่ลาก — Dashboard ใช้เลื่อนวิดีโอพื้นหลังช้ากว่า (parallax) */
@@ -191,22 +201,36 @@ function TreeOfLifeBase({
   onDecorationStore,
   onTreeClick,
   growthPulse,
-  hasSoot = false,
-  daysSinceLastOracle = null,
-  daysSinceLastMentalQuest = null,
-  daysSinceLastPhysicalQuest = null,
+  hasSoot: hasSootProp = false,
+  daysSinceLastOracle: daysSinceLastOracleProp = null,
+  daysSinceLastMentalQuest: daysSinceLastMentalQuestProp = null,
+  daysSinceLastPhysicalQuest: daysSinceLastPhysicalQuestProp = null,
+  daysSinceLastKnowledgeQuest: daysSinceLastKnowledgeQuestProp = null,
   pannable = false,
   onPanChange,
   recenterKey,
   postIts = [],
-  groundRocks = 0,
+  groundRocks: groundRocksProp = 0,
   onPostItClick,
   className,
   userSeed = null,
   bareGround = false,
 }: TreeOfLifeProps) {
+  /* [แก้ตามที่ระบุ] โหมดปกติ = ไม่มีการลงโทษ ไม่เหี่ยว (ลำต้น/ใบ/หญ้าสดเสมอ ไม่มีคราบหมอง/ใบร่วง/ก้อนหิน)
+     โหมดจริงจัง (ตั้งค่า → โหมดความเข้มงวด) = เหี่ยว/เอฟเฟกต์ตามบทที่ 2 ครบ
+     ผลแบบประเมินสุขภาพจิต (riskLevel: ดอกหุบ/กล่องสายด่วน 1323) แสดงทั้งสองโหมด — เป็นการดูแลความปลอดภัย ไม่ใช่บทลงโทษ */
+  const { settings: appSettings } = useAppContext()
+  const serious = appSettings.strictMode
+  const hasSoot = serious && hasSootProp
+  const daysSinceLastOracle = serious ? daysSinceLastOracleProp : null
+  const daysSinceLastMentalQuest = serious ? daysSinceLastMentalQuestProp : null
+  const daysSinceLastPhysicalQuest = serious ? daysSinceLastPhysicalQuestProp : null
+  const daysSinceLastKnowledgeQuest = serious ? daysSinceLastKnowledgeQuestProp : null
+  const groundRocks = serious ? groundRocksProp : 0
   /* [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 4] ใบเหี่ยว/ร่วงตามจำนวนวันที่ไม่ได้ทำเควสหมวดจิตใจ */
   const leafHealthPhase = useMemo(() => toHealthPhase(daysSinceLastMentalQuest), [daysSinceLastMentalQuest])
+  /* ลำต้น/กิ่งแห้งซีดตามจำนวนวันที่ไม่ได้ทำเควสการเรียนรู้ (หมวดของลำต้นเอง) */
+  const trunkHealthPhase = toHealthPhase(daysSinceLastKnowledgeQuest)
 
   /* หญ้าเหี่ยว → แห้ง → ดินร้าง ตามจำนวนวันที่ไม่ได้ทำเควสหมวดสุขภาพกาย (คนละหมวดกับใบซึ่งผูกหมวดจิตใจ)
      ไล่ต่อเนื่องทีละวัน — และดินแห้งทำให้ต้นไม้โตช้าลง (ดู config/groundFertility.ts) */
@@ -271,7 +295,7 @@ function TreeOfLifeBase({
   // [ใหม่] เล่น burst effect ทุกครั้งที่ growthPulse.key เปลี่ยน (เควสสำเร็จ) แล้วเคลียร์เอง
   // อัตโนมัติหลัง 1.8s — ไม่ต้องให้ AppContext เป็นคนจับเวลาเคลียร์ค่าทิ้ง กัน stale closure
   const [activePulse, setActivePulse] = useState<{ category: QuestCategory; key: number } | null>(null)
-  const { settings: audioSettings } = useAppContext()
+  const audioSettings = appSettings
 
   // [แก้] เดิม setActivePulse(growthPulse) เรียกตรงๆ ตอนต้น effect (react-hooks/set-state-in-effect)
   // ย้ายมาตั้งค่า "ระหว่าง render" ทันทีที่ growthPulse.key เปลี่ยน ส่วนเสียง/ตัวจับเวลาเคลียร์
@@ -340,6 +364,7 @@ function TreeOfLifeBase({
           dryness={bareGround ? 0 : groundDry}
           bareGround={bareGround}
           animateWind={!reducedMotion}
+          branchStyle={{ filter: TRUNK_HEALTH_FILTER[trunkHealthPhase] }}
           foliageStyle={{
             filter: LEAF_HEALTH_FILTER[leafHealthPhase],
             opacity: leafHealthPhase === 'dying' ? LEAF_DYING_OPACITY : 1,
@@ -662,91 +687,16 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
        - กดแล้วลากทันที = ย้ายตำแหน่ง
        - กดค้าง (~0.45 วิ) แล้วลาก = ย่อ/ขยาย (ลากออกจากกลางไอเทม = ใหญ่ขึ้น, ลากเข้า = เล็กลง) ไม่โชว์ตัวเลข %
        - แตะเฉยๆ = โชว์ปุ่ม "เก็บ" (เก็บไอเทมกลับเข้าคลัง)
-       - [แก้ตามที่ระบุ] มือถือ: นิ้วแรกแตะไอเทม + นิ้วที่สองแตะที่ไหนก็ได้ แล้วถ่าง/หุบ = ย่อ/ขยายทันที ไม่ต้องกดค้าง
+       - [แก้ตามที่ระบุ] เอาการถ่าง/หุบสองนิ้วออกแล้ว — ย่อ/ขยายด้วยนิ้วเดียว (กดค้าง) อย่างเดียว ทั้งไอเทมรูปภาพและอีโมจิ
      สถานะระหว่างกดเก็บใน ref (อ่าน/เขียนเฉพาะใน handler — ไม่อ่านตอน render) */
-  const pressRef = useRef<{ itemId: string; pointerId: number; x: number; y: number; timer: number; mode: 'pending' | 'move' | 'resize' | 'pinch' } | null>(null)
-  /** ถอด listener ของการถ่าง/หุบสองนิ้ว (ติดตั้งตอนนิ้วแรกแตะไอเทม ถอดตอนปล่อย) */
-  const pinchCleanupRef = useRef<(() => void) | null>(null)
-  useEffect(() => () => pinchCleanupRef.current?.(), [])
-
-  /** เฝ้านิ้วที่สอง: ระหว่างที่นิ้วแรกยังแตะไอเทมอยู่ ถ้ามีนิ้วที่สองแตะจอ → เข้าโหมดถ่าง/หุบ
-   *  สเกลใหม่ = สเกลเดิม × (ระยะระหว่างสองนิ้วตอนนี้ / ระยะตอนเริ่ม) */
-  const watchPinch = (item: PlacedItem, firstPointerId: number, x: number, y: number) => {
-    pinchCleanupRef.current?.()
-    const pts = new Map<number, { x: number; y: number }>([[firstPointerId, { x, y }]])
-    const distance = () => {
-      const [a, b] = [...pts.values()]
-      return Math.hypot(a.x - b.x, a.y - b.y) || 1
-    }
-    let startDist = 1
-    let baseScale = 1
-    let latest: number | null = null
-    const onDown = (ev: PointerEvent) => {
-      const press = pressRef.current
-      if (!press || press.mode === 'pinch' || ev.pointerId === press.pointerId || pts.size >= 2) return
-      pts.set(ev.pointerId, { x: ev.clientX, y: ev.clientY })
-      window.clearTimeout(press.timer)
-      press.mode = 'pinch'
-      startDist = distance()
-      baseScale = Math.max(MIN_DECORATION_SCALE, decorationPositions[item.itemId]?.scale ?? DEFAULT_DECORATION_SCALE)
-      latest = baseScale
-      resizeStartRef.current = null
-      setDraggingId(null)
-      setPreviewPos(null)
-      setSelectedId(null)
-      setResizingId(item.itemId)
-      setPreviewScale(baseScale)
-    }
-    const onMove = (ev: PointerEvent) => {
-      if (!pts.has(ev.pointerId)) return
-      pts.set(ev.pointerId, { x: ev.clientX, y: ev.clientY })
-      if (pressRef.current?.mode !== 'pinch' || pts.size < 2) return
-      latest = clampScale(baseScale * (distance() / startDist), item.itemId)
-      setPreviewScale(latest)
-    }
-    const onUp = (ev: PointerEvent) => {
-      if (!pts.has(ev.pointerId)) return
-      pts.delete(ev.pointerId)
-      if (pressRef.current?.mode !== 'pinch') return
-      if (latest !== null && onDecorationMove) {
-        const pos = resolvedPosition(item)
-        onDecorationMove(item.itemId, pos.xPct, pos.yPct, Math.round(latest * 100) / 100)
-      }
-      window.clearTimeout(pressRef.current.timer)
-      pressRef.current = null
-      suppressClickRef.current = true
-      setResizingId(null)
-      setPreviewScale(null)
-      // กลืน click ของนิ้วที่สอง (ไม่ให้ไปเปิดแผงข้อมูลต้นไม้ ฯลฯ)
-      const swallow = (c: MouseEvent) => { c.stopPropagation(); c.preventDefault() }
-      window.addEventListener('click', swallow, true)
-      window.setTimeout(() => window.removeEventListener('click', swallow, true), 400)
-      cleanup()
-    }
-    // ระหว่างสองนิ้วแตะจอ ห้ามเบราว์เซอร์เลื่อน/ซูมหน้า
-    const onTouchMove = (ev: TouchEvent) => { if (ev.touches.length >= 2) ev.preventDefault() }
-    const cleanup = () => {
-      window.removeEventListener('pointerdown', onDown, true)
-      window.removeEventListener('pointermove', onMove, true)
-      window.removeEventListener('pointerup', onUp, true)
-      window.removeEventListener('pointercancel', onUp, true)
-      document.removeEventListener('touchmove', onTouchMove)
-      if (pinchCleanupRef.current === cleanup) pinchCleanupRef.current = null
-    }
-    window.addEventListener('pointerdown', onDown, true)
-    window.addEventListener('pointermove', onMove, true)
-    window.addEventListener('pointerup', onUp, true)
-    window.addEventListener('pointercancel', onUp, true)
-    document.addEventListener('touchmove', onTouchMove, { passive: false })
-    pinchCleanupRef.current = cleanup
-  }
+  const pressRef = useRef<{ itemId: string; pointerId: number; x: number; y: number; timer: number; mode: 'pending' | 'move' | 'resize' } | null>(null)
   /** เพิ่งลาก/ย่อขยายเสร็จ → กลืน click ที่เบราว์เซอร์ยิงตามมา ไม่ให้เปิดปุ่ม "เก็บ" */
   const suppressClickRef = useRef(false)
 
   const handlePointerDown = (e: ReactPointerEvent<HTMLSpanElement>, item: PlacedItem) => {
     if (!onDecorationMove) return // ไม่รองรับการลากถ้าผู้เรียกใช้ไม่ได้ผูก handler ไว้
     e.stopPropagation()
-    if (pressRef.current && pressRef.current.pointerId !== e.pointerId) return // นิ้วที่สอง — watchPinch จัดการ
+    if (pressRef.current && pressRef.current.pointerId !== e.pointerId) return // นิ้วที่สองระหว่างจับไอเทมอยู่ — ไม่สนใจ
     const el = e.currentTarget
     el.setPointerCapture(e.pointerId)
     if (pressRef.current) window.clearTimeout(pressRef.current.timer)
@@ -766,12 +716,11 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
       try { navigator.vibrate?.(15) } catch { /* ไม่รองรับการสั่น */ }
     }, LONG_PRESS_MS)
     pressRef.current = { itemId: item.itemId, pointerId: e.pointerId, x: e.clientX, y: e.clientY, timer, mode: 'pending' }
-    watchPinch(item, e.pointerId, e.clientX, e.clientY)
   }
 
   const handlePointerMove = (e: ReactPointerEvent<HTMLSpanElement>) => {
     const press = pressRef.current
-    if (!press || !containerRef.current || press.mode === 'pinch' || e.pointerId !== press.pointerId) return
+    if (!press || !containerRef.current || e.pointerId !== press.pointerId) return
     if (press.mode === 'pending') {
       if (Math.hypot(e.clientX - press.x, e.clientY - press.y) < MOVE_SLOP_PX) return
       window.clearTimeout(press.timer)
@@ -795,8 +744,7 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
 
   const handlePointerUp = (e: ReactPointerEvent<HTMLSpanElement>, item: PlacedItem) => {
     const press = pressRef.current
-    if (!press || press.mode === 'pinch' || e.pointerId !== press.pointerId) return
-    pinchCleanupRef.current?.()
+    if (!press || e.pointerId !== press.pointerId) return
     window.clearTimeout(press.timer)
     if (press.mode === 'move' && previewPos && onDecorationMove) {
       onDecorationMove(press.itemId, previewPos.xPct, previewPos.yPct)
@@ -842,7 +790,7 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
               key={item.itemId}
               className={`tree-of-life__decoration-item ${isDraggable ? 'tree-of-life__decoration-item--draggable' : ''} ${isDragging ? 'tree-of-life__decoration-item--dragging' : ''}${isResizing ? ' tree-of-life__decoration-item--resizing' : ''}`}
               style={{ left: pos.left, top: pos.top, width: boxSize, height: boxSize }}
-              title={isDraggable ? 'ลากเพื่อย้าย · กดค้างแล้วลาก หรือถ่าง/หุบสองนิ้ว เพื่อย่อ/ขยาย · แตะเพื่อเก็บ' : undefined}
+              title={isDraggable ? 'ลากเพื่อย้าย · กดค้างแล้วลากออก/เข้า เพื่อย่อ/ขยาย · แตะเพื่อเก็บ' : undefined}
               onPointerDown={(e) => handlePointerDown(e, item)}
               onPointerMove={handlePointerMove}
               onPointerUp={(e) => handlePointerUp(e, item)}
@@ -851,7 +799,7 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
               onContextMenu={isDraggable ? (e) => e.preventDefault() : undefined}
               onWheel={isDraggable ? (e) => stepScale(item, e.deltaY < 0 ? 1.1 : 1 / 1.1) : undefined}
             >
-              <DecorationVisual itemId={item.itemId} />
+              <DecorationVisual itemId={item.itemId} sizePx={boxSize} />
               {isDraggable && isSelected && onDecorationStore && (
                 // [แก้ตามที่ระบุ] แตะไอเทม → ปุ่ม "เก็บ" อย่างเดียว (ไม่มีปุ่ม −/+ และตัวเลข % แล้ว)
                 <span
@@ -889,12 +837,13 @@ function DecorationLayer({ placedItems, decorationPositions, onDecorationMove, o
   ไอเทมที่ ITEM_ICONS ยังไม่มีไฟล์จริงให้ (เช่น jade-dragon, gold-star) ยัง fallback เป็น
   emoji ตามเดิมผ่าน DECORATION_EMOJI เหมือนที่ ShopSection.tsx ทำ
 \*============================================================================*/
-function DecorationVisual({ itemId }: { itemId: string }) {
+function DecorationVisual({ itemId, sizePx }: { itemId: string; sizePx: number }) {
   const [failed, setFailed] = useState(false)
   const emoji = DECORATION_EMOJI[itemId] ?? '⭐'
   const imageUrl: string | undefined = ITEM_ICONS[itemId]
 
-  if (!imageUrl || failed) return <span className="tree-of-life__decoration-emoji">{emoji}</span>
+  // [แก้ตามที่ระบุ] emoji ย่อ/ขยายตามกล่องเหมือนรูปภาพ — เดิม font-size คงที่จาก CSS กล่องโตแต่ emoji ไม่โตตาม
+  if (!imageUrl || failed) return <span className="tree-of-life__decoration-emoji" style={{ fontSize: sizePx }}>{emoji}</span>
 
   return (
     <img

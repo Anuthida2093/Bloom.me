@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import type { StepDayRecord } from '../../../../services/api/progression.api'
 import { JOURNEY_MAPS } from '../../../../config/journeyMaps'
 import { useEscapeKey } from '../../../../hooks/useEscapeKey'
-import { MAP_NATIVE_SIZE } from './journeyPathMath'
+import { mapNativeSize } from './journeyPathMath'
 import MapPathRenderer from './MapPathRenderer'
 import CatCompanion from './CatCompanion'
 import '../../../shop/ShopItemDialog.css'
@@ -28,12 +28,12 @@ export default function CompletedJourneyMap({ day, onClose }: { day: StepDayReco
   useLayoutEffect(() => {
     const el = frameRef.current
     if (!el) return
-    const update = () => setScale(el.clientWidth / MAP_NATIVE_SIZE.width)
+    const update = () => setScale(el.clientWidth / mapNativeSize(mapDef).width)
     update()
     const ro = new ResizeObserver(update)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [mapDef])
 
   return createPortal(
     <div className="shop-dialog" role="dialog" aria-modal="true" aria-labelledby="completed-journey-title" onClick={onClose}>
@@ -51,7 +51,7 @@ export default function CompletedJourneyMap({ day, onClose }: { day: StepDayReco
           {mapDef ? (
             <div
               className="completed-journey__canvas"
-              style={{ width: MAP_NATIVE_SIZE.width, height: MAP_NATIVE_SIZE.height, transform: `scale(${scale})` }}
+              style={{ width: mapNativeSize(mapDef).width, height: mapNativeSize(mapDef).height, transform: `scale(${scale})` }}
             >
               <MapPathRenderer mapDef={mapDef} progressPct={routePct} />
               <CatCompanion mapDef={mapDef} progressPct={routePct} />

@@ -10,24 +10,45 @@ import { computeCalorieTarget, getVisibleRocks } from '../../utils/nutrition'
 import type { MbtiType } from '../../types'
 import './HomeBackgroundPicker.css'
 import { posterOf } from '../../utils/videoPoster'
+import { effectiveHomeBackground, HOME_SCENES, HOME_SCENES_SELECTABLE, homeSceneById, isHomeSceneUnlocked, type HomeSceneSpec } from '../../config/homeScenes'
+import HomeSceneRenderer from '../scenery/homeScenes/HomeSceneRenderer'
 
 /*============================================================================*\
   HomeBackgroundPicker — [เพิ่มตามที่ระบุ] ตั้งค่า → "ตั้งรูปพื้นหลัง" ของหน้า Home
   ────────────────────────────────────────────────────────────────────────────
-  กดปุ่ม → แสดงวิดีโออนิเมชันทั้ง 5 แบบ (config/homeBackgrounds.ts) → กดที่รูป → [แก้ไข] [ตั้งเป็นรูปพื้นหลัง] [✕]
+  กดปุ่ม → แสดงวิดีโอ 2 แบบ (config/homeBackgrounds.ts) + ฉากวาดด้วยโค้ด 3-5 (config/homeScenes.ts —
+  6 เปิดให้ทุกคน · 7-8 ปลดล็อกตามเลเวลต้นไม้) → กดที่รูป → [แก้ไข] [ตั้งเป็นรูปพื้นหลัง] [✕]
+  [ใหม่] ปุ่ม "ใช้ฉาก 1" ข้างปุ่มตั้งค่าพื้นหลัง — สลับกลับวิดีโอเดิมได้ด้วยการแตะครั้งเดียว
   [แก้ไข] = หน้า Home จำลอง (HomePreview): วิดีโอพื้นหลังจริง + ต้นไม้/พื้นดิน "ของเราจริง" (TreeOfLife ข้อมูลเดียวกับหน้า Home)
   ส่วนอื่นเป็นรูปทรงจำลอง — ปุ่มฝั่งขวา = วงกลมสีขาว · กระดานจัดอันดับ/แถบด้านบน = แถบสี่เหลี่ยมสีขาว
   ไม่มี ActionMenuBar · ✕ มุมขวาบน · ปุ่มล่าง [ยกเลิก] [ตั้งเป็นพื้นหลัง]
 \*============================================================================*/
 
+/** พื้นหลัง 1 แบบ — วิดีโอ (1-2) หรือฉากวาดด้วยโค้ด (3-5) */
+type BgItem = { kind: 'video'; id: number; label: string; bg: HomeBackground } | { kind: 'scene'; id: number; label: string; spec: HomeSceneSpec }
+
+function itemById(id: number): BgItem | null {
+  const spec = homeSceneById(id)
+  if (spec) return { kind: 'scene', id, label: `ฉากที่ ${id} · ${spec.name}`, spec }
+  const bg = HOME_BACKGROUNDS.find((b) => b.id === id)
+  return bg ? { kind: 'video', id, label: bg.label, bg } : null
+}
+
+/** ภาพพื้นหลังเต็มกล่อง (วิดีโอเล่นวน / ฉากวาดด้วยโค้ด) */
+function BgView({ item, className, animate = true }: { item: BgItem; className: string; animate?: boolean }) {
+  const { userData } = useAppContext()
+  if (item.kind === 'scene') return <div className={className} style={{ position: 'relative', overflow: 'hidden' }}><HomeSceneRenderer spec={item.spec} animate={animate} mbti={userData.mbtiType as MbtiType} /></div>
+  return <video className={className} src={item.bg.src} autoPlay muted loop playsInline aria-hidden="true" />
+}
+
 /** หน้า Home จำลอง — พื้นหลัง + ต้นไม้/พื้นดินจริง องค์ประกอบอื่นเป็นรูปทรงสีขาวแทน */
-function HomePreview({ bg, onClose, onApply }: { bg: HomeBackground; onClose: () => void; onApply: () => void }) {
+function HomePreview({ item, onClose, onApply }: { item: BgItem; onClose: () => void; onApply: () => void }) {
   useEscapeKey(onClose)
   const { userData, treeStats, placedItems, decorationPositions } = useAppContext()
   const rocks = getVisibleRocks(userData.id, computeCalorieTarget(userData))
   return createPortal(
-    <div className="home-preview" role="dialog" aria-modal="true" aria-label={`ตัวอย่างหน้า Home ${bg.label}`}>
-      <video className="home-preview__video" src={bg.src} autoPlay muted loop playsInline aria-hidden="true" />
+    <div className="home-preview" role="dialog" aria-modal="true" aria-label={`ตัวอย่างหน้า Home ${item.label}`}>
+      <BgView item={item} className="home-preview__video" />
       {/* ต้นไม้ + พื้นดินของเราจริง (ดูอย่างเดียว ลาก/กดไม่ได้) */}
       <div className="home-preview__tree-layer" aria-hidden="true">
         <TreeOfLife
@@ -97,11 +118,33 @@ function Thumb({ bg, active, missing, onPick, onMissing }: {
   )
 }
 
+/** การ์ดฉากวาดด้วยโค้ด — ภาพนิ่ง (ไม่วนแอนิเมชันหลายใบพร้อมกัน) · ล็อกอยู่ = แสดงเลเวลที่ต้องถึง */
+function SceneThumb({ spec, active, locked, onPick }: { spec: HomeSceneSpec; active: boolean; locked: boolean; onPick: () => void }) {
+  const { userData } = useAppContext()
+  return (
+    <button
+      type="button"
+      className={`home-bg-thumb${active ? ' is-active' : ''}${locked ? ' is-locked' : ''}`}
+      onClick={onPick}
+      disabled={locked}
+      aria-label={`ฉากที่ ${spec.id} ${spec.name}${active ? ' (ใช้อยู่)' : ''}${locked ? ` ล็อกอยู่ ปลดล็อกที่เลเวล ${spec.unlockLevel}` : ''}`}
+    >
+      <HomeSceneRenderer spec={spec} animate={false} frozenT={2} mbti={userData.mbtiType as MbtiType} />
+      {locked && <span className="home-bg-thumb__lock">🔒<br />ปลดล็อกที่ Lv.{spec.unlockLevel}</span>}
+      <span className="home-bg-thumb__label">ฉากที่ {spec.id} · {spec.name}{active ? ' ✓' : ''}</span>
+    </button>
+  )
+}
+
 export default function HomeBackgroundPicker() {
   const { settings, updateSettings } = useUI()
-  const current = settings.homeBackground ?? DEFAULT_HOME_BACKGROUND
+  const { userData } = useAppContext()
+  // ฉากที่ใช้จริง (ฉากที่ล็อกอยู่แสดงเป็นฉาก 1)
+  const current = effectiveHomeBackground(settings.homeBackground ?? DEFAULT_HOME_BACKGROUND, userData.level)
   const [open, setOpen] = useState(false)
-  const [picked, setPicked] = useState<HomeBackground | null>(null)
+  const [pickedId, setPickedId] = useState<number | null>(null)
+  const picked = pickedId === null ? null : itemById(pickedId)
+  const setPicked = (b: { id: number } | null) => setPickedId(b ? b.id : null)
   const [previewing, setPreviewing] = useState(false)
   const [missing, setMissing] = useState<Set<number>>(new Set())
   const close = () => { setOpen(false); setPicked(null); setPreviewing(false) }
@@ -130,6 +173,15 @@ export default function HomeBackgroundPicker() {
                   onMissing={() => setMissing((m) => new Set(m).add(bg.id))}
                 />
               ))}
+              {HOME_SCENES_SELECTABLE && HOME_SCENES.map((spec) => (
+                <SceneThumb
+                  key={spec.id}
+                  spec={spec}
+                  active={spec.id === current}
+                  locked={!isHomeSceneUnlocked(spec, userData.level)}
+                  onPick={() => setPicked(spec)}
+                />
+              ))}
             </div>
 
             {/* กดที่รูป → แก้ไข / ตั้งเป็นรูปพื้นหลัง / ✕ */}
@@ -137,7 +189,7 @@ export default function HomeBackgroundPicker() {
               <div className="home-bg-actions" role="dialog" aria-label={picked.label} onClick={() => setPicked(null)}>
                 <div className="home-bg-actions__card" onClick={(e) => e.stopPropagation()}>
                   <button type="button" className="home-bg-picker__x" onClick={() => setPicked(null)} aria-label="ปิด"><img src={BADGE_ICONS.close} alt="" /></button>
-                  <video className="home-bg-actions__video" src={picked.src} autoPlay muted loop playsInline aria-hidden="true" />
+                  <BgView item={picked} className="home-bg-actions__video" />
                   <div className="home-bg-actions__label">{picked.label}{picked.id === current ? ' · ใช้อยู่' : ''}</div>
                   <div className="home-bg-actions__buttons">
                     <button type="button" className="home-bg-btn home-bg-btn--ghost" onClick={() => setPreviewing(true)}>แก้ไข</button>
@@ -160,7 +212,7 @@ export default function HomeBackgroundPicker() {
 
       {previewing && picked && (
         <HomePreview
-          bg={picked}
+          item={picked}
           onClose={() => setPreviewing(false)}
           onApply={() => { updateSettings({ homeBackground: picked.id }); close() }}
         />

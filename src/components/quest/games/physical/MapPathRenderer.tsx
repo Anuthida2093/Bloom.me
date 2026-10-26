@@ -1,6 +1,8 @@
 import { useMemo, useState, type MouseEvent } from 'react'
 import type { MapDef } from '../../../../types.journey'
-import { buildJourneyPathD, MAP_NATIVE_SIZE, markerWaypoints, waypointPathPcts, withLivePath } from './journeyPathMath'
+import { buildJourneyPathD, MAP_NATIVE_SIZE, mapNativeSize, markerWaypoints, waypointPathPcts, withLivePath } from './journeyPathMath'
+import MapLandmarks from './MapLandmarks'
+import MapArtImage from './MapArtImage'
 import './MapPathRenderer.css'
 
 /** โหมดช่วยแก้จุดเส้นทาง: เติม ?editPath ท้าย URL → แตะแผนที่แล้วขึ้นพิกัด x,y (%) ของจุดที่แตะ
@@ -41,6 +43,10 @@ export default function MapPathRenderer({ mapDef: mapDefProp, progressPct }: Map
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const wpPcts = useMemo(() => waypointPathPcts(mapDef), [pathKey])
   const lastReached = wpPcts.reduce((last, pct, i) => (pct <= clampedProgress + 0.3 ? i : last), -1)
+  // [แก้ตามที่ระบุ] แผนที่ใหญ่ (2048) → ย่อจุด/ตัวเลขรอบตำแหน่งของมันเอง ให้บนจอขนาดเท่าแผนที่ปกติ
+  const native = mapNativeSize(mapDef)
+  const k = MAP_NATIVE_SIZE.width / native.width
+  const at = (x: number, y: number) => (k === 1 ? undefined : `translate(${x} ${y}) scale(${k}) translate(${-x} ${-y})`)
 
   const handlePick = (e: MouseEvent<HTMLDivElement>) => {
     if (!EDIT_PATH_MODE) return
@@ -55,18 +61,15 @@ export default function MapPathRenderer({ mapDef: mapDefProp, progressPct }: Map
   return (
     <div
       className="map-path-renderer"
-      style={{ width: MAP_NATIVE_SIZE.width, height: MAP_NATIVE_SIZE.height }}
+      style={{ width: native.width, height: native.height }}
       onClick={EDIT_PATH_MODE ? handlePick : undefined}
     >
       <div className="map-path-renderer__fallback-bg" aria-hidden="true" />
       {!artFailed && (
-        <img
-          src={mapDef.artAsset}
-          alt=""
-          className="map-path-renderer__art"
-          onError={() => setArtFailed(true)}
-        />
+        <MapArtImage mapDef={mapDef} className="map-path-renderer__art" onError={() => setArtFailed(true)} />
       )}
+
+      {mapDef.generated && <MapLandmarks mapDef={mapDef} />}
 
       <svg className="map-path-renderer__svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         {/* [แก้ตามที่ระบุ] ไม่แสดงเส้นทางให้เห็น (ยังใช้คำนวณตำแหน่งนกฮูก/จุดตามเดิม) — โหมด ?editPath ยังเห็นเส้นไว้จูนจุด */}
@@ -85,8 +88,10 @@ export default function MapPathRenderer({ mapDef: mapDefProp, progressPct }: Map
         </defs>
 
         {/* จุดเริ่มต้น (Start) */}
-        <circle cx={mapDef.entryPct.x} cy={mapDef.entryPct.y} r="1.1" className="mpr-dot mpr-dot--start" />
-        <text x={mapDef.entryPct.x} y={mapDef.entryPct.y - 1.7} {...LABEL_PROPS}>Start</text>
+        <g transform={at(mapDef.entryPct.x, mapDef.entryPct.y)}>
+          <circle cx={mapDef.entryPct.x} cy={mapDef.entryPct.y} r="1.1" className="mpr-dot mpr-dot--start" />
+          <text x={mapDef.entryPct.x} y={mapDef.entryPct.y - 1.7} {...LABEL_PROPS}>Start</text>
+        </g>
 
         {/* [แก้ตามที่ระบุ] จุดระหว่างทาง: สีฟ้า (เดิมส้มขอบดำ) — ยังไม่ถึง = ฟ้าใสขอบขาว · ผ่านแล้ว = ฟ้าเข้มมีแสงเรือง
             · จุดที่นกฮูกเพิ่งไปถึง = วงแสงกะพริบขยายออก (จุดสิ้นสุดเป็นหีบสมบัติ — StepChestMarker) */}
@@ -95,7 +100,7 @@ export default function MapPathRenderer({ mapDef: mapDefProp, progressPct }: Map
           // [แก้ตามที่ระบุ] ทุก 5 จุดเป็นป้อม 1 ป้อม (จุดที่ 5, 10, 15 ...)
           if ((i + 1) % FORT_EVERY === 0) {
             return (
-              <g key={i} className={`mpr-fort${reached ? ' mpr-fort--reached' : ''}${i === lastReached ? ' mpr-wp--arrived' : ''}`}>
+              <g key={i} transform={at(wp.x, wp.y)} className={`mpr-fort${reached ? ' mpr-fort--reached' : ''}${i === lastReached ? ' mpr-wp--arrived' : ''}`}>
                 {reached && <circle cx={wp.x} cy={wp.y - 0.6} r="3.4" fill="url(#mpr-dot-glow)" className="mpr-wp__glow" />}
                 <g transform={`translate(${wp.x} ${wp.y})`}>
                   <line x1="0" y1="-2.2" x2="0" y2="-3.7" className="mpr-fort__pole" />
@@ -108,7 +113,7 @@ export default function MapPathRenderer({ mapDef: mapDefProp, progressPct }: Map
             )
           }
           return (
-            <g key={i} className={`mpr-wp${reached ? ' mpr-wp--reached' : ''}${i === lastReached ? ' mpr-wp--arrived' : ''}`}>
+            <g key={i} transform={at(wp.x, wp.y)} className={`mpr-wp${reached ? ' mpr-wp--reached' : ''}${i === lastReached ? ' mpr-wp--arrived' : ''}`}>
               {reached && <circle cx={wp.x} cy={wp.y} r="2.2" fill="url(#mpr-dot-glow)" className="mpr-wp__glow" />}
               {i === lastReached && <circle cx={wp.x} cy={wp.y} r="0.9" className="mpr-wp__ring" />}
               <circle cx={wp.x} cy={wp.y} r={reached ? 0.85 : 0.7} fill={reached ? 'url(#mpr-dot-fill)' : 'rgba(150, 215, 255, 0.55)'} className="mpr-wp__dot" />

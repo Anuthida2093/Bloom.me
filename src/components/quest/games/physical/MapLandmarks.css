@@ -1,0 +1,62 @@
+/* MapLandmarks — ป้ายชื่อสถานที่ + แสงคริสตัลกะพริบบนแผนที่ที่วาดด้วยโค้ด (หน่วย px ของกล่องแผนที่ 2048) */
+
+.map-landmarks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.map-landmarks__label {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 12px 4px 9px;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.5;
+  color: #4a3420;
+  background: linear-gradient(180deg, #fff7e2, #f1dcb0);
+  border: 1.5px solid #b08a52;
+  border-radius: 99px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+.map-landmarks__icon { font-size: 15px; }
+
+.map-landmarks__twinkle {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  animation: mapLandmarkTwinkle 2.6s ease-in-out infinite;
+}
+.map-landmarks__twinkle--crystal {
+  background: radial-gradient(circle, rgba(255, 245, 255, 0.95) 0%, rgba(214, 150, 255, 0.55) 22%, rgba(190, 120, 255, 0) 70%);
+}
+.map-landmarks__twinkle--mystic {
+  background: radial-gradient(circle, rgba(230, 245, 255, 0.9) 0%, rgba(130, 200, 255, 0.45) 25%, rgba(130, 200, 255, 0) 70%);
+  animation-duration: 3.4s;
+}
+/* ประกายดาว 4 แฉกกลางแสง */
+.map-landmarks__twinkle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34%;
+  height: 34%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  clip-path: polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%);
+}
+
+@keyframes mapLandmarkTwinkle {
+  0%, 100% { opacity: 0.25; transform: translate(-50%, -50%) scale(0.75); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.12) rotate(20deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-landmarks__twinkle { animation: none; opacity: 0.7; }
+}

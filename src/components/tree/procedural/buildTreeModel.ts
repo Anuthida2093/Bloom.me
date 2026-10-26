@@ -1,10 +1,11 @@
 import { MBTI_TREE_THEME, type MbtiType } from '../../../types'
-import { MBTI_SHAPE_MAP, getLeafDensityRange, toTrunkVisualLevel, type TreeShape } from '../../../config/treeAssets'
+import { MBTI_SHAPE_MAP, toTrunkVisualLevel, trunkStageProgress, type TreeShape } from '../../../config/treeAssets'
 import { seededRandom } from '../../../utils/seededRandom'
 import { generateTree, pointOnBranch, type BranchSegment, type TreeParams, type Vec3 } from './generateTree'
-import { shade } from './color'
+import { shade, shadeHex } from './color'
 import { DEFAULT_SPECIES, SPECIES, type BarkStyle, type LeafShape, type Species } from './species'
 import { aerialRoots, buildSpecialForm, weepingStrands, type FormInput } from './speciesForms'
+import { buildCulmClump, buildSkeleton, type SpeciesSpec } from './speciesSkeleton'
 
 export { shade } from './color'
 export type { LeafShape } from './species'
@@ -41,6 +42,20 @@ const RADIUS_BY_VISUAL_LEVEL = [0.3, 0.4, 0.52, 0.62, 0.72, 0.82, 0.92, 1]
 const FILL_BY_VISUAL_LEVEL = [0, 0, 0.55, 0.7, 0.85, 0.92, 1, 1]
 /** ขั้นภาพที่ยังเป็นต้นกล้า (ใบเรียงเป็นระเบียบตามกิ่ง ไม่มีพุ่ม) */
 const SEEDLING_MAX_LEVEL = 2
+/** ใบต่อจุดบนกิ่ง [min, max] — คูณด้วยความแน่นของใบตามเลเวลจิตใจ (leafFill) */
+const LEAF_DENSITY: [number, number] = [3, 6]
+
+/** [แก้ตามที่ระบุ: 100 เลเวล] ค่าของขั้นนี้ไล่ต่อเนื่องไปหาค่าของขั้นถัดไปตามความคืบหน้าในขั้น
+ *  → ความสูง/ความหนา/ความแน่นพุ่มเปลี่ยนทุกเลเวล ไม่ใช่กระโดดทีละ 8 ขั้น */
+function stageValue(table: number[], stage: number, progress: number): number {
+  const a = table[stage - 1], b = table[Math.min(table.length - 1, stage)]
+  return a + (b - a) * progress
+}
+
+/** [แก้ตามที่ระบุ: ใบมี 100 เลเวล ผูกกับเควสจิตใจเท่านั้น] ความแน่นของใบ 45% (เลเวล 1) → 100% (เลเวล 100) */
+export function leafFillOf(leafFlowerLevel: number): number {
+  return 0.45 + 0.55 * clamp01((leafFlowerLevel - 1) / 99)
+}
 
 /** รูปทรงต่อกลุ่ม MBTI — NT ตั้งตรงสูงโปร่ง, NF แผ่กิ่งอ่อนช้อย, SJ ทรงโดมกลม, SP กว้างแผ่ออก */
 const SHAPE_PARAMS: Record<TreeShape, Partial<TreeParams>> = {
@@ -161,12 +176,16 @@ export interface TreeModel {
   trunkColor: string
   /** 0-1 สัดส่วนความสูงต้นเทียบกับต้นโตเต็มที่ (ผู้วาดใช้ย่อ/ขยายในกล่อง) */
   growth: number
-  /** trunk visual level 1-8 (ตรงกับระบบเดิม ใช้แสดงใน tooltip) */
+  /** ขั้นโครงสร้างลำต้น 1-8 (จากเลเวลลำต้น 1-100 — ดู toTrunkVisualLevel) */
   visualLevel: number
   /** ชั้นของกิ่งปลายสุดที่แสดง */
   tipDepth: number
   /** วงรีทรงพุ่ม (ระนาบ x-y) ที่ใบทุกใบอยู่ข้างใน */
   crown: { cx: number; cy: number; rx: number; ry: number }
+  /** เนินดินใต้โคนต้น (โครงต้นจากข้อมูลบางสายพันธุ์) */
+  mound?: { rx: number; ry: number; color: string }
+  /** ขอบแสงสีบนเปลือกด้านรับแสง (เปลือกแบบ ridged) */
+  barkRim?: string
   /** ขอบเขตพิกัดของต้นที่แสดง (รวมพุ่มใบ) */
   bounds: { minX: number; maxX: number; maxY: number }
   /** หน้าตาน่ารักบนลำต้น — แบบตา/ปาก/แก้มแดง สุ่มต่อผู้ใช้ (ผู้วาดข้ามถ้าลำต้นเล็กเกินไป) */
@@ -217,31 +236,84 @@ export interface TreeProgress {
   mbtiType: MbtiType | null | undefined
   /** เกมเลเวลจาก knowledgeStack — คุมขนาด/ชั้นกิ่ง/ใบ */
   trunkBranchLevel: number
-  /** เลเวลหมวดจิตใจ — คุมจำนวนดอก */
+  /** เลเวลหมวดจิตใจ 1-100 — คุมความแน่น/ขนาดใบ และจำนวนดอก */
   leafFlowerLevel: number
   /** จอเล็ก → ใบ/ดอกน้อยลง (ประหยัดงานวาด) */
   compact?: boolean
   /** id ผู้ใช้ — ต้นสายพันธุ์เดียวกันของแต่ละคนแตกกิ่ง/กลุ่มใบ/ดอก/หน้าตาไม่ซ้ำกัน (สี/ทรงหลักของสายพันธุ์คงเดิม)
    *  ไม่ใส่ = ต้นมาตรฐานของ MBTI นั้น (หน้าทดลอง/เทสต์) */
   userSeed?: string | null
+  /** [รออนุมัติ — ใช้เฉพาะหน้า /dev/species-sheet] โครงลำต้น+กิ่งจากข้อมูล (speciesSkeleton.ts)
+   *  แทนการแตกกิ่งเดิม — ใบ/ดอกยังเป็นของ MBTI นั้นตามเดิม · ไม่ใส่ = ต้นเดิมทุกอย่าง */
+  skeleton?: SpeciesSpec
 }
 
-/** ปรับโครงกิ่งเล็กน้อยต่อผู้ใช้ — มุม/ความยาว/ความคด/จำนวนกิ่งข้าง เท่านั้น ไม่แตะสีและรูปใบของสายพันธุ์
- *  ช่วงแกว่งแคบพอให้ยังจำทรงสายพันธุ์ได้ แต่ต้นของแต่ละคนไม่ซ้ำกัน */
+/** [แก้ตามที่ระบุ: กิ่งของแต่ละคนต่างกันให้มากที่สุด] ปรับโครงกิ่งต่อผู้ใช้ — มุม/ความยาว/ความคด/
+ *  จำนวนกิ่งข้าง/ความสูงจุดแตกกิ่ง/ฝั่งที่กิ่งยาวกว่า/ลำต้นเอน/กิ่งที่ไม่แตก ไม่แตะสีและรูปใบของสายพันธุ์
+ *  กลุ่ม MBTI ยังกำหนดทรงหลัก (ตั้งตรง/แผ่กว้าง) แต่ต้นของแต่ละคนแตกกิ่งไม่ซ้ำกัน */
 function userVariation(params: Partial<TreeParams>, userSeed: string): Partial<TreeParams> {
   const r = seededRandom(`tree-shape-${userSeed}`)
   const j = (spread: number) => (r() * 2 - 1) * spread
   const lat = params.lateralBranches ?? [1, 3]
-  const latMax = Math.max(lat[0], Math.min(4, lat[1] + Math.round(j(1))))
+  const latMin = Math.max(1, Math.min(3, lat[0] + Math.round(j(0.8))))
+  const latMax = Math.max(latMin, Math.min(4, lat[1] + Math.round(j(1.4))))
   return {
     ...params,
-    branchAngle: (params.branchAngle ?? 50) + j(9),
-    lengthDecay: Math.min(0.9, Math.max(0.7, (params.lengthDecay ?? 0.8) + j(0.03))),
-    gnarl: (params.gnarl ?? 0.12) * (0.7 + r() * 0.7),
-    upwardBias: Math.max(0, (params.upwardBias ?? 0.12) + j(0.04)),
-    angleJitter: Math.max(3, (params.angleJitter ?? 14) + j(5)),
-    lateralBranches: [lat[0], latMax],
+    branchAngle: (params.branchAngle ?? 50) + j(14),
+    lengthDecay: Math.min(0.9, Math.max(0.7, (params.lengthDecay ?? 0.8) + j(0.05))),
+    gnarl: (params.gnarl ?? 0.12) * (0.5 + r() * 1.1),
+    upwardBias: Math.max(0, (params.upwardBias ?? 0.12) + j(0.06)),
+    angleJitter: Math.max(3, (params.angleJitter ?? 14) + j(8)),
+    lateralBranches: [latMin, latMax],
+    trunkHeight: (params.trunkHeight ?? 3.2) * (0.96 + r() * 0.2),
+    sideBias: j(0.25),
+    trunkLean: j(0.05),
+    pruneChance: r() * 0.3,
   }
+}
+
+/** ต้นของผู้ใช้: ลองสูงสุด 3 seed เอาต้นแรกที่พุ่มไม่เบี้ยวข้างเดียวเกิน 1.4 เท่า (ไม่งั้นเอาที่สมดุลสุด)
+ *  — พุ่มเบี้ยวมากทำให้ fitTree ต้องย่อทั้งต้นจนดูเล็กกว่าคนอื่น */
+function balancedTree(seed: number, params: Partial<TreeParams>) {
+  let best: ReturnType<typeof generateTree> | null = null, bestRatio = Infinity
+  for (let k = 0; k < 3; k++) {
+    const t = generateTree({ ...params, seed: seed + k * 7919, maxDepth: FULL_DEPTH })
+    let minX = 0, maxX = 0
+    for (const b of t.branches) { minX = Math.min(minX, b.end[0]); maxX = Math.max(maxX, b.end[0]) }
+    const ratio = Math.max(-minX, maxX) / Math.max(0.5, Math.min(-minX, maxX))
+    if (ratio < bestRatio) { best = t; bestRatio = ratio }
+    if (ratio <= 1.4) break
+  }
+  return best!
+}
+
+/** [แก้ตามที่ระบุ: จำนวนไม่จำเป็นต้องเท่ากัน] ตัวคูณจำนวน/ทรงต่อผู้ใช้ — ไม่มี userSeed = ค่ากลาง (ต้นมาตรฐานเดิมเป๊ะ) */
+interface UserVariety {
+  /** ตัวคูณจำนวนดอก (รวมดอกป่ารอบโคน) */ flowers: number
+  /** ตัวคูณจำนวนผล */ fruits: number
+  /** ต้นโครงพิเศษ: ตัวคูณความกว้างทรง */ width: number
+  /** ต้นโครงพิเศษ: ชั้นกิ่งสน / ทางใบปาล์ม / ลำไผ่ เพิ่ม-ลด */ countShift: number
+  /** สน: เลื่อนสีใบเล็กน้อย [ความสว่าง, hue, ความอิ่มสี] */ tone: [number, number, number]
+}
+
+function varietyFor(userSeed: string | null): UserVariety {
+  if (!userSeed) return { flowers: 1, fruits: 1, width: 1, countShift: 0, tone: [0, 0, 0] }
+  const r = seededRandom(`tree-variety-${userSeed}`)
+  const j = (spread: number) => (r() * 2 - 1) * spread
+  return {
+    flowers: 0.55 + r() * 0.95,
+    fruits: 0.5 + r() * 1.1,
+    width: 0.86 + r() * 0.28,
+    countShift: Math.round(j(2)),
+    tone: [j(0.035), j(0.02), j(0.06)],
+  }
+}
+
+/** [แก้ตามที่ระบุ] ต้นสน (ไซเปรส/สปรูซ) ของแต่ละคนสีต่างกันเล็กน้อย — ยังเป็นเขียวสนเข้มเหมือนเดิม */
+function tintConifer(species: Species, tone: UserVariety['tone']): Species {
+  if ((species.form !== 'column' && species.form !== 'cone') || tone.every((t) => t === 0)) return species
+  const tint = (c: string) => shadeHex(c, ...tone)
+  return { ...species, leafColors: species.leafColors.map(tint), ...(species.tipColors ? { tipColors: species.tipColors.map(tint) } : {}) }
 }
 
 function faceFor(seedKey: string): TreeFace {
@@ -254,23 +326,27 @@ function faceFor(seedKey: string): TreeFace {
   }
 }
 
-export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, compact = false, userSeed = null }: TreeProgress): TreeModel {
+export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, compact = false, userSeed = null, skeleton }: TreeProgress): TreeModel {
   const mbtiKey = mbtiType ?? 'BALANCED'
   // ไม่มี userSeed → key เดิมเป๊ะ (ต้นมาตรฐานของ MBTI) · มี → ต้นเฉพาะของผู้ใช้คนนั้น
   const key = userSeed ? `${mbtiKey}-${userSeed}` : mbtiKey
   const face = faceFor(key)
-  // ใบ (หมวดจิตใจ): ความหนาแน่นของพุ่มตามเลเวลจิตใจ 60% → 100% (ลำต้น/กิ่งยังโตตามหมวดการเรียนรู้)
-  const emotionFill = 0.6 + 0.4 * clamp01((leafFlowerLevel - 1) / 14)
+  // ใบ (หมวดจิตใจ): ความหนาแน่นของพุ่มตามเลเวลจิตใจ 1-100 (ลำต้น/กิ่งโตตามหมวดการเรียนรู้)
+  const emotionFill = leafFillOf(leafFlowerLevel)
   const shape: TreeShape = (mbtiType && MBTI_SHAPE_MAP[mbtiType]) || 3
   const traits = traitsOf(mbtiType)
   const theme = MBTI_TREE_THEME[mbtiType ?? 'INFP'] ?? MBTI_TREE_THEME.INFP
   const visualLevel = toTrunkVisualLevel(trunkBranchLevel)
+  const stageProgress = trunkStageProgress(trunkBranchLevel)
   // [แก้ตามที่ระบุ] เรียนรู้มาก (เลเวลลำต้นสูง) → ลำต้นอวบขึ้นต่อเนื่องทุกเลเวล ไม่ใช่แค่ตามขั้นภาพ 8 ขั้น
   // เลเวล ≤10 เท่าเดิม → เลเวล 100 ลำต้นหนาขึ้น ~55% (กิ่งหลักหนาขึ้นครึ่งหนึ่งของนั้น)
   const girth = 1 + 0.55 * Math.min(1, Math.max(0, (trunkBranchLevel - 10) / 90))
-  const shownDepth = DEPTH_BY_VISUAL_LEVEL[visualLevel - 1]
+  // โครงต้นจากข้อมูล (ต้นแตกกิ่ง) — สร้างก่อน เพราะกำหนดชั้นกิ่งปลายที่ใบผลิ
+  const skel = skeleton && skeleton.canopy.shape !== 'none' ? buildSkeleton(skeleton, key, trunkBranchLevel, compact ? 'simple' : 'full') : null
+  const shownDepth = skel ? skel.maxDepth : DEPTH_BY_VISUAL_LEVEL[visualLevel - 1]
   const seedling = visualLevel <= SEEDLING_MAX_LEVEL
-  const species = (mbtiType && SPECIES[mbtiType]) || DEFAULT_SPECIES
+  const variety = varietyFor(userSeed)
+  const species = tintConifer((mbtiType && SPECIES[mbtiType]) || DEFAULT_SPECIES, variety.tone)
   const leafShape = species.leafShape
   const style = LEAF_STYLE[leafShape]
   const leafSize = style.length * (species.leafSize ?? 1)
@@ -278,11 +354,17 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
   // ต้นโตเต็มที่ seed เดิมเสมอสำหรับ MBTI เดียวกัน → ตัดเหลือชั้นที่ขั้นนี้แสดง + กิ่งเรียวตามอายุ
   const seed = Math.floor(seededRandom(`tree-${key}`)() * 1e9)
   const baseParams = { ...typeParams(shape, traits), ...species.params }
-  const full = generateTree({ seed, maxDepth: FULL_DEPTH, ...(userSeed ? userVariation(baseParams, userSeed) : baseParams) })
-  const rScale = RADIUS_BY_VISUAL_LEVEL[visualLevel - 1]
-  const branches = full.branches
+  const full = userSeed
+    ? balancedTree(seed, userVariation(baseParams, userSeed))
+    : generateTree({ seed, maxDepth: FULL_DEPTH, ...baseParams })
+  const rScale = stageValue(RADIUS_BY_VISUAL_LEVEL, visualLevel, stageProgress)
+  const branches = skel ? skel.branches : full.branches
     .filter((b) => b.depth <= shownDepth)
     .map((b) => ({ ...b, radiusStart: b.radiusStart * rScale, radiusEnd: b.radiusEnd * rScale }))
+  // ลักษณะเปลือก/ขนาดต้นของโครงจากข้อมูล (ไม่มี = ค่าเดิมของสายพันธุ์)
+  const skelLook = skeleton
+    ? { bark: SKELETON_BARK[skeleton.trunk.barkStyle], trunkColor: skeleton.palette.trunk, ...(skeleton.palette.rim ? { barkRim: skeleton.palette.rim } : {}) }
+    : undefined
 
   const rand = seededRandom(`tree-foliage-${key}-${visualLevel}`)
   const leaves: TreeLeaf[] = []
@@ -292,8 +374,8 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
   const clumps: TreeClump[] = []
 
   // กิ่งที่ใบผลิ: ต้นกล้า = ทุกกิ่งอ่อน / ต้นไม้ = 2-3 ชั้นนอกสุดที่แสดงอยู่
-  const leafBranches = branches.filter((b) => b.depth >= (seedling ? 1 : Math.max(1, shownDepth - 2)))
-  const rawCrown = crownEllipse(leafBranches.length ? leafBranches : branches)
+  const leafBranches = skel ? skel.twigs : branches.filter((b) => b.depth >= (seedling ? 1 : Math.max(1, shownDepth - 2)))
+  const rawCrown = skel ? skel.crown : crownEllipse(leafBranches.length ? leafBranches : branches)
   // [แก้ตามที่ระบุ] roundCrown (จาคารันดา): พุ่มเป็นวงกลมโค้งมนด้านบน ไม่ใช่วงรีสูงตัน
   const crown = species.roundCrown
     ? (() => { const r = Math.max(rawCrown.rx, rawCrown.ry * 0.92); return { ...rawCrown, rx: r, ry: r } })()
@@ -302,13 +384,18 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
   const center: Vec3 = [crown.cx, crown.cy, leafBranches.length ? average(leafBranches.map((b) => b.end))[2] : 0]
   const widthOf = () => style.width[0] + rand() * (style.width[1] - style.width[0])
   const flowerColors = species.flowers?.colors ?? theme.flowers
-  const formInput: FormInput = { species, level: visualLevel, rand, leafLength: 0.5 * leafSize, widthOf, compact }
+  // สน/ปาล์ม/ไผ่: ใบ/ใบเข็มยาวขึ้นตามเลเวลจิตใจ (เลเวลต่ำใบยังสั้น) — โครงต้นยังโตตามหมวดการเรียนรู้
+  const formInput: FormInput = {
+    species, level: visualLevel, rand, leafLength: 0.5 * leafSize * (0.8 + 0.25 * emotionFill), widthOf, compact,
+    width: variety.width, countShift: variety.countShift,
+  }
 
   // ── สายพันธุ์โครงพิเศษ (สน/ปาล์ม/ไผ่): สร้างทั้งต้นใน speciesForms + ดอกป่ารอบโคน (หมวดจิตใจ) ──
-  if (species.form === 'column' || species.form === 'cone' || species.form === 'palm' || species.form === 'bamboo') {
-    const out = buildSpecialForm(species.form, formInput)
+  const culmSpec = skeleton?.culms ? skeleton : null
+  if (culmSpec || species.form === 'column' || species.form === 'cone' || species.form === 'palm' || species.form === 'bamboo') {
+    const out = culmSpec ? buildCulmClump(culmSpec, formInput, key, trunkBranchLevel) : buildSpecialForm(species.form as 'column' | 'cone' | 'palm' | 'bamboo', formInput)
     const wild: TreeFlower[] = []
-    const n = Math.round((Math.min(100, leafFlowerLevel) / 100) * (compact ? 6 : 10))
+    const n = Math.round((Math.min(100, leafFlowerLevel) / 100) * (compact ? 6 : 10) * variety.flowers)
     for (let i = 0; i < n; i++) {
       const side = i % 2 === 0 ? 1 : -1
       wild.push({
@@ -319,12 +406,12 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
       })
     }
     // จุดเด่นประจำกลุ่มของต้นโครงพิเศษ: ประกาย (NT ไซเปรส) / ผลกลม (SJ สนสปรูซ — ปาล์มมีมะพร้าวของตัวเองแล้ว)
-    const specialFill = FILL_BY_VISUAL_LEVEL[visualLevel - 1]
+    const specialFill = stageValue(FILL_BY_VISUAL_LEVEL, visualLevel, stageProgress)
     const c = out.crown
     const specialOuter = out.leaves.filter((l) => ((l.position[0] - c.cx) / c.rx) ** 2 + ((l.position[1] - c.cy) / c.ry) ** 2 > 0.35)
     const formFruits = [...out.fruits]
     if (species.fruit && visualLevel >= 4 && (species.form === 'cone' || species.form === 'column')) {
-      const n = Math.round((Math.min(100, leafFlowerLevel) / 100) * 10 * species.fruit.amount * specialFill) + 2
+      const n = Math.round((Math.min(100, leafFlowerLevel) / 100) * 10 * species.fruit.amount * specialFill * variety.fruits) + 2
       for (let i = 0; i < n && specialOuter.length; i++) {
         const host = specialOuter[Math.floor(rand() * specialOuter.length)]
         formFruits.push({
@@ -337,13 +424,15 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
     const formSparkles = visualLevel >= 3 ? makeSparkles(species, specialOuter, leafFlowerLevel, specialFill, rand) : []
     return assembleModel({
       ...out, fruits: formFruits, sparkles: formSparkles, flowers: wild, species, leafShape, visualLevel,
-      tipDepth: 1, girth, face: { ...face, anchor: specialFaceAnchor(species.form, out) },
+      tipDepth: 1, girth: culmSpec ? 1 : girth, stageProgress, face: { ...face, anchor: specialFaceAnchor(culmSpec ? 'bamboo' : species.form, out) },
+      ...(culmSpec && skelLook ? { look: { ...skelLook, growth: (out as { growth?: number }).growth ?? 1 } } : {}),
     })
   }
 
   if (seedling) {
     // ── ต้นกล้า: ใบเรียงตามข้อกิ่ง — J ออกเป็นคู่ตรงข้าม / P ออกสลับข้าง, T ใบชี้ขึ้น / F ใบแผ่ออก ──
-    const L = 1.0 * leafSize * (traits.intuitive ? 1.08 : 1)
+    // ใบต้นกล้าใหญ่ขึ้นตามเลเวลจิตใจ (ใบเลเวลต่ำยังเล็ก)
+    const L = 1.0 * leafSize * (traits.intuitive ? 1.08 : 1) * (0.8 + 0.25 * emotionFill)
     const spreadAngle = traits.feeling ? 1.05 : 0.8
     const nodes = traits.outgoing ? [0.42, 0.63, 0.84] : [0.5, 0.78]
     const fresh = (i: number, dl = 0) =>
@@ -390,8 +479,8 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
     }
   } else if (leafBranches.length) {
     // ── ต้นไม้: ใบผลิตามกิ่งในวงรีทรงพุ่ม + ขอบโดม + ก้อนพุ่ม — ความแน่นตามขั้น ──
-    const fill = FILL_BY_VISUAL_LEVEL[visualLevel - 1]
-    const density = getLeafDensityRange(trunkBranchLevel) ?? [2, 4]
+    const fill = stageValue(FILL_BY_VISUAL_LEVEL, visualLevel, stageProgress)
+    const density = LEAF_DENSITY
     const cap = compact ? 3500 : 8000
     const wanted = Math.round((density[0] + density[1]) * 1.6 * fill)
     const perBranch = Math.max(3, Math.round(Math.min(wanted, Math.floor(cap / leafBranches.length)) * leafDensity * emotionFill))
@@ -539,7 +628,7 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
 
     // ดอก: เลเวลหมวดจิตใจ 0-100 → 0-18 ดอก (จอเล็ก 0-8) × ปริมาณดอกของสายพันธุ์ (ซากุระ/จาคารันดาบานเต็มต้น)
     const flowerSpec = species.flowers
-    const maxFlowers = Math.round((compact ? 8 : 18) * (flowerSpec?.amount ?? 1))
+    const maxFlowers = Math.round((compact ? 8 : 18) * (flowerSpec?.amount ?? 1) * variety.flowers)
     const flowerCount = Math.min(maxFlowers, Math.round((Math.min(100, leafFlowerLevel) / 100) * maxFlowers * fill))
     const outer = leaves.filter((l) => ((l.position[0] - crown.cx) / crown.rx) ** 2 + ((l.position[1] - crown.cy) / crown.ry) ** 2 > 0.35)
     for (let i = 0; i < flowerCount && outer.length; i++) {
@@ -556,7 +645,7 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
 
     // ผล (ขั้น 4+): แอปเปิลแดง / ส้ม — ห้อยใต้ใบริมพุ่ม จำนวนตามเลเวลหมวดจิตใจ
     if (species.fruit && visualLevel >= 4) {
-      const n = Math.round((Math.min(100, leafFlowerLevel) / 100) * 14 * species.fruit.amount * fill) + 2
+      const n = Math.round((Math.min(100, leafFlowerLevel) / 100) * 14 * species.fruit.amount * fill * variety.fruits) + 2
       for (let i = 0; i < n && outer.length; i++) {
         const host = outer[Math.floor(rand() * outer.length)]
         fruits.push({
@@ -587,7 +676,9 @@ export function buildTreeModel({ mbtiType, trunkBranchLevel, leafFlowerLevel, co
   if (species.aerialRoots && visualLevel >= 3) branches.push(...aerialRoots(branches, formInput))
 
   return assembleModel({
-    branches, leaves, clumps, fruits, flowers, flutterable, crown, species, leafShape, visualLevel, tipDepth: shownDepth, girth, face, sparkles,
+    branches, leaves, clumps, fruits, flowers, flutterable, crown, species, leafShape, visualLevel, tipDepth: shownDepth, girth: skel ? 1 : girth, face, sparkles,
+    stageProgress,
+    ...(skel && skelLook ? { look: { ...skelLook, growth: skel.growth, ...(skel.mound ? { mound: skel.mound } : {}) } } : {}),
   })
 }
 
@@ -608,10 +699,15 @@ function makeSparkles(species: Species, outer: TreeLeaf[], leafFlowerLevel: numb
   return out
 }
 
+/** ลายเปลือกตาม barkStyle ของโครงต้นจากข้อมูล */
+const SKELETON_BARK: Record<SpeciesSpec['trunk']['barkStyle'], BarkStyle> = { lenticel: 'lenticel', ridged: 'ridged', segmented: 'segmented' }
+
 /** รวมผลลัพธ์เป็น TreeModel: เรียงใบหลัง→หน้า (index ใบไหวตามไปด้วย) + คำนวณขอบเขต */
 function assembleModel(p: {
   /** ตัวคูณความอวบลำต้น (depth 0) — กิ่งหลัก (depth 1) ได้ครึ่งหนึ่งของส่วนที่เพิ่ม */
   girth?: number
+  /** ความคืบหน้าในขั้นภาพปัจจุบัน 0-1 — ความสูงไล่ต่อเนื่องทุกเลเวล */
+  stageProgress?: number
   branches: BranchSegment[]
   leaves: TreeLeaf[]
   clumps: TreeClump[]
@@ -625,6 +721,8 @@ function assembleModel(p: {
   visualLevel: number
   tipDepth: number
   face: TreeFace
+  /** โครงต้นจากข้อมูล: เปลือก/สีลำต้น/ความสูง/เนินดิน แทนค่าของสายพันธุ์ */
+  look?: { bark: BarkStyle; trunkColor: string; growth: number; barkRim?: string; mound?: TreeModel['mound'] }
 }): TreeModel {
   // วาดจากหลังมาหน้า (z น้อย → มาก) ให้ใบด้านหน้าทับด้านหลังถูกลำดับ
   const order = p.leaves.map((_, i) => i).sort((a, b) => p.leaves[a].position[2] - p.leaves[b].position[2])
@@ -641,6 +739,16 @@ function assembleModel(p: {
     minX = Math.min(minX, l.position[0] - l.length); maxX = Math.max(maxX, l.position[0] + l.length)
     maxY = Math.max(maxY, l.position[1] + l.length)
   }
+  // [แก้ตามที่ระบุ: ต้นไม่โตเลยขอบจอ] นับก้อนพุ่ม/ดอก/ผล/ประกาย/ความหนากิ่งด้วย (เดิมนับแค่ปลายกิ่ง+ใบ ส่วนอื่นล้นกรอบได้)
+  // ตัวคูณรัศมีเท่ากับขนาดที่วาดจริง (ดอก ×1.3 / ประกาย ×2.2 ใน ProceduralTreeCanvas)
+  const extend = (pos: Vec3, r: number) => {
+    minX = Math.min(minX, pos[0] - r); maxX = Math.max(maxX, pos[0] + r); maxY = Math.max(maxY, pos[1] + r)
+  }
+  for (const b of p.branches) extend(b.end, b.radiusEnd)
+  for (const c of p.clumps) extend(c.position, c.radius)
+  for (const f of p.flowers) extend(f.position, f.radius * 1.3)
+  for (const f of p.fruits) extend(f.position, f.radius)
+  for (const sp of p.sparkles ?? []) extend(sp.position, sp.radius * 2.2)
 
   const g = p.girth ?? 1
   const branches = g === 1 ? p.branches : p.branches.map((b) => {
@@ -656,14 +764,16 @@ function assembleModel(p: {
     ...(p.sparkles?.length ? { sparkles: p.sparkles } : {}),
     ...(p.species.glossy ? { glossy: true } : {}),
     speciesName: p.species.name,
-    bark: p.species.bark ?? 'plain',
+    bark: p.look?.bark ?? p.species.bark ?? 'plain',
     clumps: p.clumps,
     flutterable,
     leafShape: p.leafShape,
     // เปลือกธรรมดาใช้น้ำตาลอ่อนเดียวกันทุกต้น / เปลือกเฉพาะ (เบิร์ช/ปาล์ม/ไผ่) คงสีสายพันธุ์
     // ไซเปรส (column) คงลำต้นน้ำตาลเข้มตามภาพอ้างอิง
-    trunkColor: (p.species.bark ?? 'plain') === 'plain' && p.species.form !== 'column' ? TRUNK_COLOR : p.species.trunkColor,
-    growth: GROWTH_BY_VISUAL_LEVEL[p.visualLevel - 1],
+    trunkColor: p.look?.trunkColor ?? ((p.species.bark ?? 'plain') === 'plain' && p.species.form !== 'column' ? TRUNK_COLOR : p.species.trunkColor),
+    growth: p.look?.growth ?? stageValue(GROWTH_BY_VISUAL_LEVEL, p.visualLevel, p.stageProgress ?? 0),
+    ...(p.look?.mound ? { mound: p.look.mound } : {}),
+    ...(p.look?.barkRim ? { barkRim: p.look.barkRim } : {}),
     visualLevel: p.visualLevel,
     tipDepth: p.tipDepth,
     crown: p.crown,

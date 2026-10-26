@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { buildTreeModel } from '../buildTreeModel'
+import { fitTree } from '../drawTree2D'
+import { MBTI_SHAPE_MAP } from '../../../../config/treeAssets'
+import type { MbtiType } from '../../../../types'
 
 const base = { mbtiType: 'INFJ' as const, leafFlowerLevel: 50 }
 
@@ -8,20 +11,39 @@ describe('buildTreeModel', () => {
     expect(buildTreeModel({ ...base, trunkBranchLevel: 60 })).toEqual(buildTreeModel({ ...base, trunkBranchLevel: 60 }))
   })
 
-  it('gives young trees (game level 1-20) a few young leaves, growing with the level, and no flowers', () => {
+  it('gives seedlings (trunk level 1-5) a few young leaves, growing with the level, and no flowers', () => {
     const lv1 = buildTreeModel({ ...base, trunkBranchLevel: 1, leafFlowerLevel: 100 })
-    const lv20 = buildTreeModel({ ...base, trunkBranchLevel: 20, leafFlowerLevel: 100 })
-    const lv21 = buildTreeModel({ ...base, trunkBranchLevel: 21, leafFlowerLevel: 100 })
+    const lv5 = buildTreeModel({ ...base, trunkBranchLevel: 5, leafFlowerLevel: 100 })
+    const lv6 = buildTreeModel({ ...base, trunkBranchLevel: 6, leafFlowerLevel: 100 })
     expect(lv1.leaves.length).toBeGreaterThan(0)
-    expect(lv1.leaves.length).toBeLessThan(lv20.leaves.length)
-    expect(lv20.leaves.length).toBeLessThan(lv21.leaves.length) // เลเวล 21 = ใบเต็มตามเกณฑ์เดิม
+    expect(lv1.leaves.length).toBeLessThan(lv5.leaves.length)
+    expect(lv5.leaves.length).toBeLessThan(lv6.leaves.length) // เลเวล 6 = ต้นไม้ (มีพุ่ม)
     expect(lv1.flowers).toHaveLength(0)
-    expect(lv20.flowers).toHaveLength(0)
+    expect(lv5.flowers).toHaveLength(0)
+  })
+
+  it('keeps growing at every trunk level up to 100 and stops there', () => {
+    let prev = buildTreeModel({ ...base, trunkBranchLevel: 1 })
+    for (let lv = 2; lv <= 100; lv++) {
+      const m = buildTreeModel({ ...base, trunkBranchLevel: lv })
+      const grew = m.growth > prev.growth || m.branches[0].radiusStart > prev.branches[0].radiusStart
+      expect(grew).toBe(true)
+      prev = m
+    }
+    expect(buildTreeModel({ ...base, trunkBranchLevel: 100 })).toEqual(buildTreeModel({ ...base, trunkBranchLevel: 150 }))
+  })
+
+  it('ties leaves to the mental level 1-100 only (same trunk, denser crown)', () => {
+    const counts = [1, 25, 50, 75, 100].map((leafFlowerLevel) => buildTreeModel({ ...base, trunkBranchLevel: 60, leafFlowerLevel }).leaves.length)
+    for (let i = 1; i < counts.length; i++) expect(counts[i]).toBeGreaterThan(counts[i - 1])
+    const a = buildTreeModel({ ...base, trunkBranchLevel: 60, leafFlowerLevel: 1 })
+    const b = buildTreeModel({ ...base, trunkBranchLevel: 60, leafFlowerLevel: 100 })
+    expect(a.branches).toEqual(b.branches)
   })
 
   it('grows the same tree as the level rises (young tree = inner branches of the grown tree, thinner)', () => {
-    const young = buildTreeModel({ ...base, trunkBranchLevel: 25 })
-    const grown = buildTreeModel({ ...base, trunkBranchLevel: 130 })
+    const young = buildTreeModel({ ...base, trunkBranchLevel: 12 })
+    const grown = buildTreeModel({ ...base, trunkBranchLevel: 100 })
     expect(young.growth).toBeLessThan(grown.growth)
     expect(young.branches.length).toBeLessThan(grown.branches.length)
     const key = (b: { start: number[]; end: number[] }) => `${b.start.join()}|${b.end.join()}`
@@ -31,7 +53,7 @@ describe('buildTreeModel', () => {
   })
 
   it('makes every visual stage visibly different: taller, thicker trunk, more branches/leaves', () => {
-    const stages = [5, 15, 30, 50, 70, 90, 110, 130].map((lv) => buildTreeModel({ ...base, trunkBranchLevel: lv }))
+    const stages = [1, 3, 6, 11, 21, 36, 56, 81].map((lv) => buildTreeModel({ ...base, trunkBranchLevel: lv }))
     for (let i = 1; i < stages.length; i++) {
       expect(stages[i].visualLevel).toBe(i + 1)
       expect(stages[i].growth).toBeGreaterThan(stages[i - 1].growth)
@@ -43,44 +65,44 @@ describe('buildTreeModel', () => {
   it('gives all 16 MBTI types their own look (no two identical trees)', () => {
     const types = ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'] as const
     const signatures = types.map((mbtiType) => {
-      const m = buildTreeModel({ ...base, mbtiType, trunkBranchLevel: 130 })
+      const m = buildTreeModel({ ...base, mbtiType, trunkBranchLevel: 100 })
       return `${m.branches.length}:${m.bounds.maxX.toFixed(2)}:${m.bounds.maxY.toFixed(2)}:${m.leafShape}`
     })
     expect(new Set(signatures).size).toBe(16)
   })
 
   it('lets only some leaves flutter (seedling: all, grown tree: outer front leaves only)', () => {
-    const seedling = buildTreeModel({ ...base, trunkBranchLevel: 5 })
-    const grown = buildTreeModel({ ...base, trunkBranchLevel: 130 })
+    const seedling = buildTreeModel({ ...base, trunkBranchLevel: 3 })
+    const grown = buildTreeModel({ ...base, trunkBranchLevel: 100 })
     expect(seedling.flutterable).toHaveLength(seedling.leaves.length)
     expect(grown.flutterable.length).toBeGreaterThan(0)
     expect(grown.flutterable.length).toBeLessThan(grown.leaves.length)
   })
 
   it('shows more flowers for a higher mental-health level, none at level 0', () => {
-    const none = buildTreeModel({ ...base, trunkBranchLevel: 130, leafFlowerLevel: 0 })
-    const many = buildTreeModel({ ...base, trunkBranchLevel: 130, leafFlowerLevel: 100 })
+    const none = buildTreeModel({ ...base, trunkBranchLevel: 100, leafFlowerLevel: 0 })
+    const many = buildTreeModel({ ...base, trunkBranchLevel: 100, leafFlowerLevel: 100 })
     expect(none.flowers).toHaveLength(0)
     expect(many.flowers.length).toBeGreaterThan(0)
   })
 
   it('uses fewer leaves in compact (small-screen) mode', () => {
-    const full = buildTreeModel({ ...base, trunkBranchLevel: 130 })
-    const compact = buildTreeModel({ ...base, trunkBranchLevel: 130, compact: true })
+    const full = buildTreeModel({ ...base, trunkBranchLevel: 100 })
+    const compact = buildTreeModel({ ...base, trunkBranchLevel: 100, compact: true })
     expect(compact.leaves.length).toBeLessThan(full.leaves.length)
     expect(compact.leaves.length).toBeLessThanOrEqual(3500 + 400)
   })
 
   it('gives different MBTI groups different silhouettes', () => {
-    const nt = buildTreeModel({ ...base, mbtiType: 'INTJ', trunkBranchLevel: 130 })
-    const sp = buildTreeModel({ ...base, mbtiType: 'ESTP', trunkBranchLevel: 130 })
+    const nt = buildTreeModel({ ...base, mbtiType: 'INTJ', trunkBranchLevel: 100 })
+    const sp = buildTreeModel({ ...base, mbtiType: 'ESTP', trunkBranchLevel: 100 })
     const width = (m: typeof nt) => m.bounds.maxX - m.bounds.minX
     expect(width(nt) / nt.bounds.maxY).not.toBeCloseTo(width(sp) / sp.bounds.maxY, 1)
   })
 
   it('keeps every leaf inside the crown ellipse for round-crowned broadleaf species', () => {
     for (const mbtiType of ['ESFJ', 'ISFJ', 'ENTJ', 'ESFP'] as const) { // ซากุระ (INFJ) ตั้งใจให้กลุ่มดอกฟูเลยขอบนิดๆ
-      const m = buildTreeModel({ ...base, mbtiType, trunkBranchLevel: 130 })
+      const m = buildTreeModel({ ...base, mbtiType, trunkBranchLevel: 100 })
       for (const l of m.leaves) {
         const e = ((l.position[0] - m.crown.cx) / m.crown.rx) ** 2 + ((l.position[1] - m.crown.cy) / m.crown.ry) ** 2
         expect(e).toBeLessThanOrEqual(1)
@@ -90,7 +112,7 @@ describe('buildTreeModel', () => {
 
   it('gives each MBTI its signature tree species and features', () => {
     const grown = (mbtiType: Parameters<typeof buildTreeModel>[0]['mbtiType']) =>
-      buildTreeModel({ ...base, mbtiType, trunkBranchLevel: 130, leafFlowerLevel: 100 })
+      buildTreeModel({ ...base, mbtiType, trunkBranchLevel: 100, leafFlowerLevel: 100 })
     expect(grown('INFP').speciesName).toBe('ต้นหลิว')
     expect(grown('ENFJ').leafShape).toBe('maple')
     expect(grown('INTP').leafShape).toBe('fan')
@@ -113,7 +135,7 @@ describe('buildTreeModel', () => {
   it('grows special forms with the level too (palm / bamboo / spruce)', () => {
     for (const mbtiType of ['ESTP', 'ISTP', 'ISTJ'] as const) {
       const young = buildTreeModel({ ...base, mbtiType, trunkBranchLevel: 5 })
-      const grown = buildTreeModel({ ...base, mbtiType, trunkBranchLevel: 130 })
+      const grown = buildTreeModel({ ...base, mbtiType, trunkBranchLevel: 100 })
       expect(grown.growth).toBeGreaterThan(young.growth)
       expect(grown.leaves.length).toBeGreaterThan(young.leaves.length)
       expect(grown.branches.length).toBeGreaterThanOrEqual(young.branches.length)
@@ -139,9 +161,33 @@ describe('buildTreeModel ต้นเฉพาะของผู้ใช้ (us
     expect(mine.leafShape).toBe(plain.leafShape)
   })
 
+  it('แต่ละคนแตกกิ่ง/จำนวนกิ่ง/ดอกไม่เท่ากัน', () => {
+    const users = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6']
+    const models = users.map((userSeed) => buildTreeModel({ ...grown, trunkBranchLevel: 100, leafFlowerLevel: 100, userSeed }))
+    expect(new Set(models.map((m) => m.branches.length)).size).toBeGreaterThan(3)
+    expect(new Set(models.map((m) => m.flowers.length)).size).toBeGreaterThan(2)
+  })
+
+  it('ต้นสนของแต่ละคนสีต่างกันเล็กน้อย', () => {
+    const pine = (userSeed: string) => buildTreeModel({ mbtiType: 'ISTJ', trunkBranchLevel: 60, leafFlowerLevel: 50, userSeed }).clumps[0].color
+    expect(pine('user-a')).not.toBe(pine('user-b'))
+  })
+
+  it('ต้นโตเต็มที่ของทุกคนไม่ล้นขอบกล่อง (เผื่อแอนิเมชันเด้ง 1.06)', () => {
+    const W = 390, H = 700
+    for (const mbtiType of Object.keys(MBTI_SHAPE_MAP) as MbtiType[]) {
+      for (const userSeed of ['u1', 'u2', 'u3', null]) {
+        const m = buildTreeModel({ mbtiType, trunkBranchLevel: 100, leafFlowerLevel: 100, userSeed })
+        const f = fitTree(m, W, H)
+        expect(m.bounds.maxY * f.scale * 1.06).toBeLessThanOrEqual(f.baseY)
+        expect(Math.max(-m.bounds.minX, m.bounds.maxX) * f.scale * 1.06).toBeLessThanOrEqual(W / 2)
+      }
+    }
+  })
+
   it('ใบผูกกับเลเวลจิตใจ: เลเวลจิตใจสูงพุ่มแน่นกว่า', () => {
     const low = buildTreeModel({ ...grown, leafFlowerLevel: 1 })
-    const high = buildTreeModel({ ...grown, leafFlowerLevel: 20 })
+    const high = buildTreeModel({ ...grown, leafFlowerLevel: 40 })
     expect(high.leaves.length).toBeGreaterThan(low.leaves.length)
   })
 })

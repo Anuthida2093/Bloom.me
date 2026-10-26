@@ -21,13 +21,16 @@ describe('groundFertility', () => {
     expect(groundDryness(40)).toBe(1)
     expect(groundStage(0)).toBe('lush')
     expect(groundStage(groundDryness(5))).toBe('wilting')
-    expect(groundStage(groundDryness(10))).toBe('dry')
+    expect(groundStage(groundDryness(4))).toBe('lush')
+    expect(groundStage(groundDryness(8))).toBe('dry')
+    expect(groundStage(groundDryness(10))).toBe('barren') // บทที่ 2: ขาด 10 วันขึ้นไป = ทรุดโทรม
     expect(groundStage(1)).toBe('barren')
   })
 
-  it('slows tree growth on poor soil (full → half on barren soil)', () => {
+  it('slows tree growth only slightly on poor soil (wilting -5%, barren -10%)', () => {
     expect(knowledgeGrowthMultiplier(0)).toBe(1)
-    expect(knowledgeGrowthMultiplier(1)).toBe(0.5)
+    expect(knowledgeGrowthMultiplier(groundDryness(5))).toBeCloseTo(0.95)
+    expect(knowledgeGrowthMultiplier(1)).toBeCloseTo(0.9)
     expect(knowledgeGrowthMultiplier(groundDryness(9))).toBeLessThan(1)
   })
 

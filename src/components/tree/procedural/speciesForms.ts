@@ -22,6 +22,10 @@ export interface FormInput {
   widthOf: () => number
   /** จอเล็ก → องค์ประกอบน้อยลง */
   compact: boolean
+  /** ต่อผู้ใช้: ตัวคูณความกว้างทรง (ไม่ใส่ = 1) */
+  width?: number
+  /** ต่อผู้ใช้: ชั้นกิ่งสน / ทางใบปาล์ม / ลำไผ่ เพิ่ม-ลด (ไม่ใส่ = 0) */
+  countShift?: number
 }
 
 export interface FormOutput {
@@ -68,9 +72,10 @@ function columnOrCone(inp: FormInput, cone: boolean): FormOutput {
   const flutterable: number[] = []
 
   // กรวยสปรูซแบ่งเป็นชั้น (เพิ่มชั้นตามอายุ) ขอบล่างแต่ละชั้นกว้างกว่าบน — สมมาตร เป็นระเบียบ
-  const tiers = cone ? 3 + Math.round(level * 1.1) : 0
-  const columnTiers = 5 + level
-  const Wb = H * (cone ? 0.34 : 0.21)
+  const shift = inp.countShift ?? 0
+  const tiers = cone ? Math.max(3, 3 + Math.round(level * 1.1) + shift) : 0
+  const columnTiers = Math.max(4, 5 + level + shift)
+  const Wb = H * (cone ? 0.34 : 0.21) * (inp.width ?? 1)
   const width = (y: number) => {
     const u = Math.max(0, Math.min(1, (y - y0) / (H - y0)))
     if (!cone) {
@@ -179,8 +184,8 @@ function palm(inp: FormInput): FormOutput {
   const top = trunkAt(1)
 
   // ทางใบ: จำนวนเพิ่มตามอายุ แผ่รอบยอด (ด้านข้างมากกว่าด้านบน) โค้งลงตามน้ำหนัก
-  const fronds = Math.min(compact ? 10 : 13, 4 + level)
-  const frondLen = Math.max(2.2, H * 0.34)
+  const fronds = Math.max(4, Math.min(compact ? 10 : 13, 4 + level + (inp.countShift ?? 0)))
+  const frondLen = Math.max(2.2, H * 0.34) * (inp.width ?? 1)
   for (let f = 0; f < fronds; f++) {
     const u = fronds === 1 ? 0.5 : f / (fronds - 1)
     const theta = (u - 0.5) * Math.PI * 1.55 + (rand() - 0.5) * 0.2 // มุมจากแนวตั้ง
@@ -233,11 +238,11 @@ function bamboo(inp: FormInput): FormOutput {
   const branches: BranchSegment[] = []
   const leaves: TreeLeaf[] = []
   const flutterable: number[] = []
-  const culms = Math.min(9, 1 + Math.floor(level * 1.1))
+  const culms = Math.max(1, Math.min(9, 1 + Math.floor(level * 1.1) + (level >= 3 ? inp.countShift ?? 0 : 0)))
   const r = 0.1 * (0.6 + 0.4 * g)
   let minX = 0, maxX = 0
   for (let c = 0; c < culms; c++) {
-    const x0 = (c - (culms - 1) / 2) * 0.42 + (rand() - 0.5) * 0.15
+    const x0 = (c - (culms - 1) / 2) * 0.42 * (inp.width ?? 1) + (rand() - 0.5) * 0.15
     const h = H * (c === Math.floor(culms / 2) ? 1 : 0.62 + rand() * 0.34)
     const lean = x0 * 0.18 + (rand() - 0.5) * 0.3
     const at = (t: number): Vec3 => [x0 + lean * t * t * h * 0.1, h * t, (rand() - 0.5) * 0.02]

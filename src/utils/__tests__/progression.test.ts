@@ -11,11 +11,13 @@ describe('calculateLevel (ตรงกับ backend level.ts)', () => {
 })
 
 describe('calculateVisualLevel (ตรงกับ backend tree.ts)', () => {
-  it('50 คะแนนต่อขั้น ไม่มีเพดานที่ 8', () => {
+  it('50 คะแนนต่อเลเวล สูงสุดเลเวล 100 (คะแนนเกินยังสะสมได้ แต่ภาพหยุดที่ 100)', () => {
     expect(calculateVisualLevel(0)).toBe(1)
     expect(calculateVisualLevel(49)).toBe(1)
     expect(calculateVisualLevel(50)).toBe(2)
-    expect(calculateVisualLevel(5000)).toBe(101)
+    expect(calculateVisualLevel(4950)).toBe(100)
+    expect(calculateVisualLevel(5000)).toBe(100)
+    expect(calculateVisualLevel(99999)).toBe(100)
   })
 })
 

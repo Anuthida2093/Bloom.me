@@ -1,7 +1,7 @@
 import { http, API_MODE, ApiError, mockDelay } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import { ALL_QUESTS, findQuestByCode, type QuestDef } from '../../config/questCatalog'
-import { daysSinceLastHealthQuest, groundDryness, knowledgeGrowthMultiplier } from '../../config/groundFertility'
+import { crossGrowthMultiplier, isSeriousMode } from '../../config/crossGrowth'
 import type { MoodCategory, MoodTypeValue, QuestLogEntry, QuestCategory, UserData } from '../../types'
 import { MAX_PAGE_SIZE, toQuestLogEntry, toUserData, type Paginated } from './adapters'
 import { getMe } from './user.api'
@@ -168,12 +168,11 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
     const cardEligible = !skipped && (isDailyQuest || questCode === STEP_REWARD_QUEST_CODE)
 
     const db = updateDb((d) => {
-      // ดินไม่อุดมสมบูรณ์ (ไม่ได้ทำเควสสุขภาพติดต่อกันหลายวัน) → เควสความรู้ได้คะแนนลำต้นน้อยลง
-      // ต้นไม้จึงโตช้าลง (ดู config/groundFertility.ts) — หมวดอื่นได้เต็มเหมือนเดิม
+      // [แก้ตามที่ระบุ] ทั้ง 3 ด้านมีผลต่อกันเล็กน้อย: ขาดเควสหมวดต้นทาง 5-9 วัน → หมวดนี้ได้คะแนน stack -5%,
+      // 10 วันขึ้นไป → -10% (สุขภาพ→ความรู้, ความรู้→จิตใจ, จิตใจ→สุขภาพ — ดู config/crossGrowth.ts)
       // [หมายเหตุ] กลไกนี้มีแค่ในโหมด mock — backend จริงให้ stack = expReward เต็มเสมอ
-      const growth = category === 'KNOWLEDGE'
-        ? knowledgeGrowthMultiplier(groundDryness(daysSinceLastHealthQuest(d.questLogs)))
-        : 1
+      // [แก้ตามที่ระบุ] ลดเฉพาะโหมดจริงจัง — โหมดปกติได้เต็มเสมอ
+      const growth = isSeriousMode() ? crossGrowthMultiplier(category, d.questLogs) : 1
       const awarded = Math.round(expGain * growth)
       if (isRepeatable) {
         const newLog: QuestLogEntry = {

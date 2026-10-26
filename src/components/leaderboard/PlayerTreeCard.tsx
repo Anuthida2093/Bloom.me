@@ -1,4 +1,5 @@
-import { MBTI_TREE_THEME, STACK_PER_VISUAL_LEVEL, type MbtiType } from '../../types'
+import { MBTI_TREE_THEME, type MbtiType } from '../../types'
+import { visualLevelPct } from '../../utils/progression'
 import MiniTree from '../tree/MiniTree'
 import FadeInText from '../welcome/FadeInText'
 import './leaderboardRow.css'
@@ -14,7 +15,8 @@ interface PlayerTreeCardProps {
   onClose?: () => void
 }
 
-const toBarPct = (stack: number): number => Math.min(100, (stack / (STACK_PER_VISUAL_LEVEL * 5)) * 100)
+// ความคืบหน้าสู่เลเวล 100 ของแต่ละส่วนต้นไม้ (สูตรเดียวกับแผงข้อมูลต้นไม้)
+const toBarPct = visualLevelPct
 
 /**
  * PlayerTreeCard — แผงข้อมูลต้นไม้ของ "คนอื่น" แบบอ่านอย่างเดียว (read-only)

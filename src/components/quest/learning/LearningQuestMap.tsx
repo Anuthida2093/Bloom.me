@@ -7,6 +7,8 @@ import { playSfx } from '../../../utils/audioPlayer'
 import { usePrefersReducedMotion } from '../../../hooks/useMediaQuery'
 import { LEARNING_MAP_VIDEO } from '../../../utils/prefetchAsset'
 import { posterOf } from '../../../utils/videoPoster'
+import GameLoadingScreen from '../../common/GameLoadingScreen'
+import { useMediaLoadProgress } from '../../../hooks/useMediaLoadProgress'
 
 const C_13 = '#4B5563'
 const C_14 = '#374151'
@@ -373,15 +375,20 @@ export default function LearningQuestMap({
     return () => window.clearTimeout(id)
   }, [])
   const containerRef = useRef<HTMLDivElement | null>(null)
+  // [ใหม่ตามที่ระบุ] หน้าโหลดเปอร์เซ็นต์จริง (วิดีโอแผนที่ + ภาพเฟรมแรก + ไอคอน) — โผล่เฉพาะเมื่อโหลดนาน
+  const media = useMediaLoadProgress(containerRef, [posterOf(LEARNING_MAP_VIDEO)])
   /** [แก้ตามที่ระบุ] แถบเควสเสริมเปิด/ปิดได้แบบแถบข้อมูลของแผนที่ก้าวเพื่อสุขภาพ — ปุ่มรูปเควสการเรียนรู้
-   *  ใต้ปุ่มกากบาท · ค่าเริ่มต้น = ปิด · จำค่าไว้ในเครื่อง */
+   *  ใต้ปุ่มกากบาท · ค่าเริ่มต้น = ปิด · จำค่าไว้ในเครื่อง
+   *  [แก้ตามที่ระบุ] บนโทรศัพท์เริ่มแบบปิดทุกครั้งที่เข้าหน้า (ไม่อ่านค่าที่จำไว้) */
   const [sideOpen, setSideOpen] = useState(() => {
+    if (window.matchMedia('(max-width: 768px)').matches) return false
     try { return localStorage.getItem(SIDE_OPEN_KEY) === '1' } catch { return false }
   })
-  const toggleSide = () => setSideOpen((open) => {
-    try { localStorage.setItem(SIDE_OPEN_KEY, open ? '0' : '1') } catch { /* storage ปิดอยู่ */ }
-    return !open
-  })
+  const toggleSide = () => {
+    const next = !sideOpen
+    setSideOpen(next)
+    try { localStorage.setItem(SIDE_OPEN_KEY, next ? '1' : '0') } catch { /* storage ปิดอยู่ */ }
+  }
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
 
   /*==========================================================================*\
@@ -640,6 +647,9 @@ export default function LearningQuestMap({
     // เท่านั้น ตอนแตะเฉยๆ (ปล่อยมือโดยไม่เกิน threshold) จะไม่มี capture เลย ปล่อยให้เบราว์เซอร์
     // จัดการ click ปกติทั้งหมด
     hasCapturedPointerRef.current = false
+    // นิ้วแรกของท่าทางใหม่ = นิ้วเก่าทั้งหมดปล่อยไปแล้ว (เช่น ปล่อยบนโมดัลเควสที่เปิดทับ pointerup จึงไม่มาถึงนี่)
+    // ล้างค้างทิ้ง ไม่ให้แตะครั้งถัดไปถูกนับเป็นบีบซูม 2 นิ้ว
+    if (e.isPrimary) pointersRef.current.clear()
     pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
     if (pointersRef.current.size === 1) {
@@ -723,7 +733,10 @@ export default function LearningQuestMap({
   }
 
   const handlePointerUpOrCancel = (e: ReactPointerEvent<HTMLDivElement>) => {
-    pointersRef.current.delete(e.pointerId)
+    // [แก้บั๊ก — ปุ่มเควสเสริมต้องกดหลายที] ปุ่ม/แถบเควสเสริมกัน pointerdown ไว้ แต่ pointerup ยัง bubble
+    // มาถึงนี่ — เดิมเช็ค dragMovedRef ค้างจากการลากแผนที่ครั้งก่อน → ตั้ง suppressNextClick กลืน click ของปุ่มทิ้ง
+    // ตอนนี้สนใจเฉพาะนิ้ว/เมาส์ที่เริ่มกดบนแผนที่จริงเท่านั้น
+    if (!pointersRef.current.delete(e.pointerId)) return
     try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* noop */ }
 
     if (pointersRef.current.size === 0) {
@@ -823,6 +836,7 @@ export default function LearningQuestMap({
       onPointerCancel={handlePointerUpOrCancel}
       onClickCapture={handleClickCapture}
     >
+      <GameLoadingScreen loading={!media.ready} progress={media.progress} hint="กำลังโหลดแผนที่การเรียนรู้…" />
       {/* [ใหม่ — pan/zoom] เลเยอร์เดียวที่ถูก pan/zoom ร่วมกัน ขนาดคงที่เท่าเฟรมวิดีโอต้นฉบับ
           (VIDEO_NATIVE_WIDTH×HEIGHT) — พื้นหลัง+โหนดเควสทั้งหมดอยู่ในนี้ ตำแหน่ง % เดิมของ
           โหนด (FIXED_NODE_POSITIONS) จึงใช้ตรงๆ ได้โดยไม่ต้องแปลงพิกัดแบบเดิมอีก */}

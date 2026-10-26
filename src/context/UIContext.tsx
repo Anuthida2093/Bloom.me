@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { usePersistentState } from '../hooks/usePersistentState'
+import { LEGACY_BACKGROUND_IDS } from '../config/homeBackgrounds'
 import type { DecorationPositionMap, PostItData } from '../types'
 
 /*============================================================================*\
@@ -29,8 +30,10 @@ export interface AppSettings {
   dailyQuestReminderTime: string
   /** [เพิ่มรอบนี้ — ข้อ 5] แจ้งเตือนเมื่อมีเควสใหม่ปลดล็อก/ถูกล็อก (เช่นจากผลคัดกรองสุขภาพจิต) */
   questUnlockNotifyEnabled: boolean
-  /** วิดีโอพื้นหลังหน้า Home ที่เลือก (1-5 — config/homeBackgrounds.ts) ไม่มี = ค่าเริ่มต้น */
+  /** พื้นหลังหน้า Home ที่เลือก: 1-2 วิดีโอ (config/homeBackgrounds.ts) · 3-5 วาดด้วยโค้ด (config/homeScenes.ts) */
   homeBackground?: number
+  /** แปลงเลขฉากจากลำดับเดิม (วิดีโอ 1-5 + โค้ด 6-8) เป็นลำดับใหม่ไปแล้ว */
+  homeBackgroundOrderV2?: boolean
 }
 
 const SETTINGS_INITIAL: AppSettings = {
@@ -84,11 +87,24 @@ export function UIProvider({ children }: { children: ReactNode }) {
   // questUnlockNotifyEnabled จะไม่มี 3 คีย์นี้เลยใน localStorage (undefined จริงตอน runtime
   // ถึง type จะบอกว่าไม่ใช่ก็ตาม) เติม fallback จาก SETTINGS_INITIAL ตรงนี้จุดเดียว
   const settings = useMemo(() => ({ ...SETTINGS_INITIAL, ...settingsRaw }), [settingsRaw])
+  // [แก้ตามที่ระบุ 2026-10-27] ลำดับฉากใหม่: แปลงค่าที่เลือกไว้เดิมครั้งเดียว (3→2, 6→3, 7→4, 8→5 · 2/4/5 ที่ถูกลบ → 1)
+  useEffect(() => {
+    if (settingsRaw.homeBackgroundOrderV2) return
+    setSettings((s) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- ทิ้งคีย์ของระบบเดิม (ตั้งฉาก 6 ให้ทุกคน)
+      const { homeSceneDefaultApplied, ...rest } = s as AppSettings & { homeSceneDefaultApplied?: boolean }
+      const old = s.homeBackground
+      return { ...rest, homeBackground: old === undefined ? undefined : (LEGACY_BACKGROUND_IDS[old] ?? 1), homeBackgroundOrderV2: true }
+    })
+  }, [settingsRaw.homeBackgroundOrderV2, setSettings])
   const [decorationPositions, setDecorationPositions] =
     usePersistentState<DecorationPositionMap>('decoration-positions', {})
 
   const [modals, setModals] = useState<Record<ModalKey, boolean>>(MODALS_INITIAL)
-  const [leaderboardCollapsed, setLeaderboardCollapsedState] = useState(false)
+  // [แก้ตามที่ระบุ] บนโทรศัพท์เริ่มแบบปิด (เห็นแค่ปุ่ม กดแล้วตารางค่อยออกมา) · จอคอมเปิดไว้เหมือนเดิม
+  const [leaderboardCollapsed, setLeaderboardCollapsedState] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches,
+  )
   const [activePostIt] = useState<PostItData | null>(null)
 
   useEffect(() => {

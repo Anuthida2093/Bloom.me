@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   CatCompanion.css — ตัวละครนำทางบนแผนที่ Journey (placeholder: OwlAvatar.png)
+   CatCompanion.css — ตัวละครนำทางบนแผนที่ Journey (นกฮูกวาดด้วย Canvas — CanvasOwl.tsx)
    ═══════════════════════════════════════════════════════════════ */
 
 .cat-companion {
@@ -7,19 +7,13 @@
   /* [แก้ตามที่ระบุ] ใหญ่ขึ้นเกือบ 2 เท่า — แผนที่ 1024px ย่อลงบนมือถือ เดิม 72px เหลือตัวเล็กมาก */
   /* [แก้ตามที่ระบุ] ใหญ่ขึ้นอีก 140 → 184px · ตำแหน่ง/ทิศเดินตามเส้นทางทีละเฟรม (CatCompanion.tsx)
      จึงไม่มี transition ของ left/top แล้ว (เดิมทำให้เดินตัดมุมเป็นเส้นตรง) — transform ตั้งจาก JS */
-  width: 184px;
-  height: 184px;
-  object-fit: contain;
-  transform-origin: 50% 68%;
+  /* [แก้ตามที่ระบุ] เล็กลง 184 → 120px (นกฮูก Canvas วาดชัดทุกขนาด) */
+  width: 120px;
+  height: 120px;
+  transform-origin: 50% 88%; /* ปลายเท้าของนกฮูกใน CanvasOwl */
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.4));
   z-index: 6;
   pointer-events: none;
 }
 
-/* เดินอยู่ → เด้งตัวเบาๆ เหมือนก้าวเท้า (ขยับทั้งภาพด้วย margin ไม่ชน transform ที่ JS ตั้ง) */
-.cat-companion--walking { animation: catCompanionHop .36s ease-in-out infinite; }
-@keyframes catCompanionHop { 0%, 100% { margin-top: 0; } 50% { margin-top: -10px; } }
-
-@media (prefers-reduced-motion: reduce) {
-  .cat-companion--walking { animation: none; }
-}
+/* [แก้ตามที่ระบุ] ท่าบิน/กระพือปีกวาดอยู่ใน CanvasOwl แล้ว — ไม่ต้องเด้งตัวด้วย CSS */

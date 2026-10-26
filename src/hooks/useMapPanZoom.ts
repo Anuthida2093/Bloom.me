@@ -38,8 +38,21 @@ function easeInOutCubic(t: number): number {
 
 /** fit = เห็นภาพทั้งใบในกรอบ (contain — ใช้ตอนเดินถึงเป้าแล้ว ให้เห็นเส้นทางครบทั้งเส้น)
  *  ไม่ใส่ = เต็มกรอบ (cover — ตอนกำลังเดิน ไม่เหลือขอบ) */
-export function useMapPanZoom(nativeSize: Size, options: { fit?: boolean; fitInset?: (container: Size) => FitInset; portraitZoom?: number } = {}) {
+export function useMapPanZoom(nativeSize: Size, options: {
+  fit?: boolean
+  fitInset?: (container: Size) => FitInset
+  portraitZoom?: number
+  /** [แก้ตามที่ระบุ] ขนาดที่ใช้คิดซูมแบบเต็มกรอบ (ค่าเริ่ม = nativeSize) — แผนที่ใหญ่ (2048) ใส่ 1024
+   *  → ซูมเท่าแผนที่ปกติ ภาพเลยใหญ่เกินจอทั้งสองแกน ลากเลื่อนซ้าย-ขวา ขึ้น-ลงได้ */
+  coverSize?: Size
+  /** จุดที่ให้อยู่กลางจอตอนเริ่ม (% ของแผนที่) เช่นตำแหน่งนกฮูก — ไม่ใส่ = กลางล่างของภาพ (จุดเริ่มเส้นทาง) */
+  initialFocusPct?: { x: number; y: number }
+} = {}) {
   const fit = options.fit ?? false
+  const coverSize = options.coverSize ?? nativeSize
+  const focusRef = useRef(options.initialFocusPct)
+  // ประกาศก่อน effect จัดภาพเริ่มต้น → อัปเดตก่อนในรอบ commit เดียวกัน
+  useEffect(() => { focusRef.current = options.initialFocusPct })
   /** [แก้ตามที่ระบุ] จอแนวตั้ง (มือถือ) ขยายแผนที่เกินจอทั้งสองแกน → ลากเลื่อนขึ้นลงได้แบบแผนที่การเรียนรู้ */
   const portraitZoom = options.portraitZoom ?? 1
   const fitInsetFn = options.fitInset
@@ -102,10 +115,10 @@ export function useMapPanZoom(nativeSize: Size, options: { fit?: boolean; fitIns
 
   const getBaseZoom = useCallback((w: number, h: number) => {
     if (w <= 0 || h <= 0 || nativeSize.width <= 0 || nativeSize.height <= 0) return 1
-    if (!fit) return Math.max(w / nativeSize.width, h / nativeSize.height) * (h > w ? portraitZoom : 1)
+    if (!fit) return Math.max(w / coverSize.width, h / coverSize.height) * (h > w ? portraitZoom : 1)
     const iw = Math.max(1, w - inset.left - inset.right), ih = Math.max(1, h - inset.top - inset.bottom)
     return Math.min(iw / nativeSize.width, ih / nativeSize.height)
-  }, [nativeSize, fit, inset, portraitZoom])
+  }, [nativeSize, coverSize.width, coverSize.height, fit, inset, portraitZoom])
 
   // ล็อกการลากให้ติดเป๊ะแค่ขอบภาพ ห้ามลากทะลุ
   const clampPanValue = useCallback((px: number, py: number, z: number) => {
@@ -148,7 +161,12 @@ export function useMapPanZoom(nativeSize: Size, options: { fit?: boolean; fitIns
     const initY = containerSize.height - scaledH - barOverlap
 
     scaleRef.current = bZ
-    panRef.current = fit ? clampPanValue(initX, 0, bZ) : { x: initX, y: initY }
+    const focus = focusRef.current
+    panRef.current = fit
+      ? clampPanValue(initX, 0, bZ)
+      : focus
+        ? clampPanValue(containerSize.width / 2 - (focus.x / 100) * scaledW, containerSize.height / 2 - (focus.y / 100) * scaledH, bZ)
+        : { x: initX, y: initY }
     
     // ใช้ Timeout เพื่อป้องกัน Error: set-state-in-effect
     const timer = setTimeout(() => scheduleFlush(), 0)
