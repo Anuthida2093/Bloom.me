@@ -12,6 +12,7 @@ import { calculateStepReward } from '../../config/stepGoalByBmi'
 import { mockHasDoubleReward, mockRollDailyCard, mockRollLearningGift } from './progression.api'
 import type { LearningGift } from '../../config/learningGift'
 import { isQuestDoneNow, learningRoundState, LEARNING_DAILY_CODES } from '../../utils/questCompletion'
+import { requiredQuestPhotos } from './upload.api'
 
 /** เควสที่รางวัลคิดจากก้าวจริงตอนจบ (ตรงกับ Quest.config.stepReward ของ backend vitality-steps) */
 const STEP_REWARD_QUEST_CODE = 'phys-vitality-steps'
@@ -232,6 +233,15 @@ export async function completeQuest(input: CompleteQuestPayload): Promise<Comple
     return { log: resultLog, user: db.user, exchangeCard, learningGift }
   }
 
+  // เควสรูปถ่าย: ต้องอัปโหลดรูปมาก่อน (upload.api.ts prepareQuestPhotos) แล้วส่ง photoPaths ครบจำนวนเป๊ะ
+  // ห้ามส่ง data URL ขึ้นไปใน payload — ไม่ครบ = ไม่ยิง complete เลย
+  const requiredPhotos = requiredQuestPhotos(questCode)
+  if (requiredPhotos > 0) {
+    const paths = payload?.photoPaths
+    const valid = Array.isArray(paths) && paths.length === requiredPhotos
+      && paths.every((p) => typeof p === 'string' && p.length > 0 && !p.startsWith('data:'))
+    if (!valid) throw new ApiError(400, `ต้องอัปโหลดรูป ${requiredPhotos} รูปก่อนส่งเควสนี้`)
+  }
   // backend: POST /api/quest-logs/complete → { log, user } (user เป็น select ย่อย) — เติม field
   // ที่ขาดจากโปรไฟล์เต็ม ให้หน้าจอได้ stack/เลเวลล่าสุดครบ
   const res = await http.post<{ log: Record<string, unknown>; user: Record<string, unknown>; exchangeCard?: string | null; learningGift?: LearningGift | null }>('/quest-logs/complete', input)

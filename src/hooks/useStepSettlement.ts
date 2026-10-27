@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAppContext } from '../context/AppContext'
 import { settlePreviousStepDay } from '../services/stepSettlement'
 import { queryKeys } from '../services/queryKeys'
+import { API_MODE } from '../services/http'
+import { markNewWaterDrop } from '../utils/waterPrompt'
 
 /*============================================================================*\
   useStepSettlement — เรียกปิดรอบเควสก้าวของวันก่อนหน้า (services/stepSettlement.ts) ตอนเปิดแอป
@@ -32,6 +34,8 @@ export function useStepSettlement(enabled: boolean) {
       })
         .then((record) => {
           if (!record || cancelled) return
+          // โหมด live หยดน้ำ (จากหีบ) เซิร์ฟเวอร์บวกให้แล้ว — ยอดจริงมากับการรีเฟรช me ด้านล่าง
+          if (API_MODE === 'live' && record.waterDrops > 0) markNewWaterDrop(userId)
           void queryClient.invalidateQueries({ queryKey: queryKeys.questLogs() })
           void queryClient.invalidateQueries({ queryKey: queryKeys.me })
           void queryClient.invalidateQueries({ queryKey: queryKeys.progression })

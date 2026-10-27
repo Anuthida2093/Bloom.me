@@ -570,7 +570,7 @@ export default function Dashboard() {
   // เปิดแอป/กลับมาที่แอป → ปิดรอบเควสก้าวของวันก่อนหน้าที่ยังไม่ได้รับ (ตัดรอบเที่ยงคืนเวลาไทย)
   useStepSettlement(isLoggedIn && !introPhase)
   // เควสแคลอรี่: 18:00 แล้วกินครบเป้า → นับสำเร็จให้อัตโนมัติ + หน้าจอรับรางวัล
-  const calorieReward = useCalorieGoalReward(isLoggedIn && !introPhase && !viewingPlayer)
+  const calorieReward = useCalorieGoalReward(isLoggedIn && !introPhase && !viewingPlayer, setInfoAlert)
   // ปุ่ม "แลกซื้อ" ในป็อปอัปการ์ดจากหีบสมบัติ (เควสก้าว) → ปิดหน้าเควส เปิดร้านที่ป็อปอัปสินค้านั้นทันที
   useEffect(() => {
     const onOpenShopItem = (e: Event) => {

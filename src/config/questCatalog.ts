@@ -223,6 +223,8 @@ export const PHYSICAL_DAILY: QuestDef[] = [
     theory: 'Circadian Rhythm แสงเช้ากระตุ้น Serotonin และรีเซ็ตนาฬิกาชีวภาพ',
     category: 'HEALTH', controlType: 'PHOTO', coinReward: 35, expReward: 25, isDaily: true,
     gameKey: 'photosynthesis', energyLevel: 'LOW',
+    // โหมด live: อัปโหลดรูปก่อนส่งเควส แล้วส่ง payload.photoPaths ให้ครบจำนวนนี้ (services/api/upload.api.ts)
+    config: { requiresPhotos: 1 },
   },
   {
     code: 'phys-green-vision', icon: '👀', title: 'Green Vision', titleTh: 'พักสายตา / ถนอมใบไม้',
@@ -244,6 +246,8 @@ export const PHYSICAL_DAILY: QuestDef[] = [
     theory: 'Hydration & Cognitive Performance ขาดน้ำ 1-2% สมาธิและความจำลดลงชัดเจน',
     category: 'HEALTH', controlType: 'PHOTO', coinReward: 25, expReward: 20, isDaily: true,
     gameKey: 'pure-water', energyLevel: 'LOW', maxPerDay: 10, isRepeatable: true,
+    // รูปก่อนดื่ม + หลังดื่ม (โหมด live อัปโหลดแล้วส่ง payload.photoPaths 2 รายการ)
+    config: { requiresPhotos: 2 },
   },
   {
     // [แก้รอบนี้ — Step Journey] ยังไม่มีไอคอนไฟล์รูปเฉพาะในตาราง badges/quests ที่มีอยู่ ใช้

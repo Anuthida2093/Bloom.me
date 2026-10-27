@@ -20,7 +20,8 @@ export interface DiaryRewardScrollProps {
   goal: number
   exp: number
   coins: number
-  waterDrops: number
+  /** null = ไม่แสดงบรรทัดหยดน้ำ (โหมด live ยังไม่ให้หยดน้ำตามสัดส่วนทริป) */
+  waterDrops: number | null
   /** วันนี้มีบัฟคูณสองจากกล่อง → EXP/เหรียญที่แสดงคูณแล้ว */
   doubled: boolean
   /** ผลหีบสมบัติที่เส้นชัยวันนี้ (null = ไม่ถึงเป้า ไม่มีหีบ) */
@@ -53,7 +54,7 @@ export default function DiaryRewardScroll(props: DiaryRewardScrollProps) {
     { key: 'steps', icon: '🦶', text: <>เดินได้ <b>{steps.toLocaleString()}</b> / {goal.toLocaleString()} ก้าว {reachedGoal ? ' ถึงเป้าแล้ว!' : ''}</> },
     { key: 'exp', icon: <img src={BADGE_ICONS.exp} alt="" />, text: <>EXP <b>+{exp}</b>{doubled && <span className="diary-scroll__x2">×2</span>}</> },
     { key: 'coins', icon: <img src={BADGE_ICONS.coins} alt="" />, text: <>เหรียญ <b>+{coins}</b>{doubled && <span className="diary-scroll__x2">×2</span>}</> },
-    { key: 'water', icon: <img src={BADGE_ICONS.water} alt="" />, text: <>หยดน้ำ <b>+{waterDrops}</b></> },
+    ...(waterDrops !== null ? [{ key: 'water', icon: <img src={BADGE_ICONS.water} alt="" />, text: <>หยดน้ำ <b>+{waterDrops}</b></> }] : []),
     ...(chest ? [{ key: 'chest', icon: chestIcon(chest), text: describeStepChest(chest), highlight: chest.kind === 'EXCHANGE_CARD' }] : []),
   ]
 

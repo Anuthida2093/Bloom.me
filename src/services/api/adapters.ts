@@ -7,9 +7,9 @@ import { DEFAULT_USER_DATA, type ActivityItem, type Gender, type InventoryItem, 
   ────────────────────────────────────────────────────────────────────────────
   ยึดสัญญาของ backend เป็นหลัก (path/body/ชื่อ field) แล้วแปลงที่ชั้น service จุดเดียว
   คอมโพเนนต์/Context ไม่ต้องรู้ว่าข้อมูลมาจาก mock หรือ backend จริง
-  gender/isProfilePrivate มีคอลัมน์ใน backend แล้ว (migration frontend_contract) — เหลือ
-  waterDrops ที่ยังเก็บในเครื่องแยกตาม user (localExtras) เพราะยังไม่ได้ตัดสินกติกาการได้หยดน้ำ
-  ฝั่งเซิร์ฟเวอร์ (ถ้าให้หน้าเว็บส่งค่ามาเองผู้ใช้จะโกงได้) — ดู docs/DB_CHANGES.md
+  gender/isProfilePrivate มีคอลัมน์ใน backend แล้ว (migration frontend_contract)
+  waterDrops: backend เก็บ User.waterDrops แล้ว (GET/PATCH /users/me คืนค่า) — อ่านจากเซิร์ฟเวอร์เท่านั้น
+  หน้าเว็บไม่ส่ง/ไม่บวกเอง (กันโกง) แหล่งที่ได้หยดน้ำ → รีเฟรช user จากเซิร์ฟเวอร์ — ดู docs/DB_CHANGES.md
 \*============================================================================*/
 
 /** รายการแบบแบ่งหน้าของ backend: GET /mood/me, /quests/logs/me, /brain-dump/me ฯลฯ */
@@ -26,12 +26,11 @@ export function notSupportedYet(feature: string): never {
   throw new ApiError(501, `${feature} ยังไม่รองรับบนเซิร์ฟเวอร์ รอ backend เพิ่ม endpoint`)
 }
 
-/* ── field ที่ backend ยังไม่มี (waterDrops) + ค่าสำรองของ gender/isProfilePrivate: เก็บในเครื่อง ──
+/* ── ค่าสำรองของ gender/isProfilePrivate: เก็บในเครื่อง ──
    ค่าจาก backend ชนะเสมอ ใช้ค่าในเครื่องเฉพาะเมื่อ response ไม่มี field นั้น */
 
 export interface LocalUserExtras {
   gender: Gender
-  waterDrops: number
   isProfilePrivate: boolean
 }
 
@@ -40,7 +39,6 @@ const EXTRAS_KEY = (userId: string) => `bloom:user-extras:${userId}`
 export function getLocalExtras(userId: string): LocalUserExtras {
   const fallback: LocalUserExtras = {
     gender: DEFAULT_USER_DATA.gender,
-    waterDrops: DEFAULT_USER_DATA.waterDrops,
     isProfilePrivate: DEFAULT_USER_DATA.isProfilePrivate,
   }
   try {
@@ -70,8 +68,8 @@ export function toUserData(raw: Record<string, unknown>, prev?: UserData): UserD
   }
   const extras = id ? getLocalExtras(id) : null
   const localOnly: Partial<LocalUserExtras> = {}
+  // waterDrops มาจาก raw ผ่านลูปด้านบน (response ไม่มี = ค่าเดิมในแคช `prev`)
   if (extras) {
-    localOnly.waterDrops = extras.waterDrops
     if (raw.gender == null) localOnly.gender = extras.gender
     if (raw.isProfilePrivate == null) localOnly.isProfilePrivate = extras.isProfilePrivate
   }

@@ -1,3 +1,4 @@
+import { API_MODE } from '../../../../services/http'
 import { createPortal } from 'react-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -422,7 +423,8 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
 
     // หยดน้ำยังให้ตามสัดส่วนเหมือนเดิม — EXP/เหรียญคิดจากก้าวจริงตอนจบเควส (finish → completeQuest)
     // เดิมบวกเหรียญเองที่นี่ด้วย ซึ่งซ้ำกับรางวัลเควส จึงตัดออก
-    updateProfile({ waterDrops: (userData.waterDrops || 0) + rewards.waterDrops })
+    // โหมด live: ปิดไว้ก่อน (backend ยังไม่ให้หยดน้ำตามสัดส่วนทริป รอตัดสินใจกติกา)
+    if (API_MODE === 'mock') updateProfile({ waterDrops: (userData.waterDrops || 0) + rewards.waterDrops })
 
     const currentMapId = journey.routeMapIds?.[activeMapIndex] || journey.destinationMapId
     const consecutiveGoalDays = progression.goalStreakDays
@@ -637,7 +639,7 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
           goal={tripStepTarget}
           exp={(stepRewardPreview?.exp ?? 0) * rewardMultiplier}
           coins={(stepRewardPreview?.coins ?? 0) * rewardMultiplier}
-          waterDrops={calcProportionalRewards(journey.progressOnCurrentMapSteps, tripStepTarget).waterDrops}
+          waterDrops={API_MODE === 'mock' ? calcProportionalRewards(journey.progressOnCurrentMapSteps, tripStepTarget).waterDrops : null}
           doubled={rewardMultiplier > 1}
           chest={chest.opened}
           sfx={{ volume: settings.sfxVolume, enabled: settings.soundEnabled }}

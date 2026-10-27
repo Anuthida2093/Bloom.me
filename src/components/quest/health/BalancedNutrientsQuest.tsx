@@ -13,6 +13,7 @@ import type { QuestPlayPayload } from '../../../types.mental'
 import '../../leaderboard/leaderboardRow.css'
 import './BalancedNutrientsQuest.css'
 import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
+import { prepareQuestPhotos } from '../../../services/api/upload.api'
 import { computeCalorieTarget, loadMeals, saveMeals, totalCalories, type MealLog } from '../../../utils/nutrition'
 
 const QUEST_CODE = 'phys-balanced-nutrients'
@@ -226,14 +227,29 @@ export default function BalancedNutrientsQuest({ onComplete, onClose }: Balanced
     window.setTimeout(() => setToast(null), 3200)
   }
 
-  const handleFinish = () => {
-    if (!mealsDone) return
+  /** โหมด live: กำลังอัปโหลดรูปมื้ออาหารก่อนส่งเควส */
+  const [finishing, setFinishing] = useState(false)
+
+  const handleFinish = async () => {
+    if (!mealsDone || finishing) return
+    // โหมด live: อัปโหลดรูปมื้อล่าสุด (requiresPhotos 1) ก่อนส่งเควส — ล้มเหลว = แจ้งผู้ใช้ ไม่ส่งเควส
+    let photoPayload: QuestPlayPayload
+    setFinishing(true)
+    setAnalysisError(null)
+    try {
+      photoPayload = await prepareQuestPhotos(QUEST_CODE, meals.slice(-1).map((m) => m.photo))
+    } catch (err) {
+      setFinishing(false)
+      setAnalysisError(err instanceof Error && err.message ? err.message : 'อัปโหลดรูปไม่สำเร็จ ลองอีกครั้ง')
+      return
+    }
+    setFinishing(false)
     // [แก้รอบนี้ — ตามสเปกใหม่] เล่น reward-claim.mp3 ตอนครบเงื่อนไข (ไฟล์มีจริง ดูสรุปท้าย)
     playSfx('REWARD_CLAIM', sfxOpts)
     logActivity({ activityType: 'NUTRITION', durationSeconds: 0, meta: { meals: mealsLoggedCount, calorieTarget } })
     // [ตามที่ระบุ] แอนิเมชันบัวรดน้ำเล่นตอนกลับมา Dashboard หลังปิดเควส ไม่ใช่ในหน้านี้ — ผูกกับ
     // treeGrowthPulse.questCode === QUEST_CODE (ดู WateringCanFx.tsx + ProgressContext.tsx)
-    onComplete({ meals: mealsLoggedCount, calorieTarget })
+    onComplete({ meals: mealsLoggedCount, calorieTarget, ...photoPayload })
     onClose()
   }
 
@@ -326,8 +342,8 @@ export default function BalancedNutrientsQuest({ onComplete, onClose }: Balanced
         )}
 
         {mealsDone && (
-          <button className="balanced-nutrients__btn balanced-nutrients__btn--primary" onClick={handleFinish}>
-            🌾 เสร็จสิ้นภารกิจวันนี้
+          <button className="balanced-nutrients__btn balanced-nutrients__btn--primary" onClick={handleFinish} disabled={finishing}>
+            {finishing ? 'กำลังอัปโหลดรูป...' : '🌾 เสร็จสิ้นภารกิจวันนี้'}
           </button>
         )}
 

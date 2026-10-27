@@ -5,6 +5,7 @@ import { useProgress } from '../../../../context/ProgressContext'
 import { findQuestByCode } from '../../../../config/questCatalog'
 import './PureWaterGame.css'
 import { QUEST_ICONS } from '../../../../config/iconAssets'
+import { prepareQuestPhotos } from '../../../../services/api/upload.api'
 
 const QUEST_CODE = 'phys-hydration-drop'
 
@@ -15,6 +16,9 @@ export default function PureWaterGame({ finish, exit }: QuestGameProps) {
   // สเตทเก็บรูปภาพ
   const [photoBefore, setPhotoBefore] = useState<string | null>(null)
   const [photoAfter, setPhotoAfter] = useState<string | null>(null)
+  // โหมด live: อัปโหลดรูปทั้ง 2 รูปก่อนส่งเควส — ล้มเหลว = แจ้งผู้ใช้ ไม่ส่งเควส
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   
   // [แก้ตามที่ระบุ] วงกลมนับจำนวนแก้วที่ดื่มสำเร็จ "วันนี้" จริงจาก questLogs (เดิมค้าง 0 ตลอด)
   const { questLogs } = useProgress()
@@ -38,18 +42,26 @@ export default function PureWaterGame({ finish, exit }: QuestGameProps) {
   }
 
   // เมื่อกดยืนยันบันทึก
-  const handleSubmit = () => {
-    if (photoBefore && photoAfter) {
+  const handleSubmit = async () => {
+    if (!photoBefore || !photoAfter || uploading) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const photoPayload = await prepareQuestPhotos(QUEST_CODE, [photoBefore, photoAfter])
       // เรียกฟังก์ชัน finish เพื่อจบรอบและรับรางวัล
       finish({
         status: 'COMPLETED',
-        steps: 1 
+        steps: 1,
+        ...photoPayload,
       })
-      // หากต้องการให้ผู้เล่นทำรอบต่อไปได้โดยไม่ต้องปิดป๊อปอัป ให้เปิดคอมเมนต์ด้านล่างครับ:
-      // setRoundsCompleted(prev => prev + 1)
-      // setPhotoBefore(null)
-      // setPhotoAfter(null)
+    } catch (err) {
+      setUploadError(err instanceof Error && err.message ? err.message : 'อัปโหลดรูปไม่สำเร็จ ลองอีกครั้ง')
+      setUploading(false)
     }
+    // หากต้องการให้ผู้เล่นทำรอบต่อไปได้โดยไม่ต้องปิดป๊อปอัป ให้เปิดคอมเมนต์ด้านล่างครับ:
+    // setRoundsCompleted(prev => prev + 1)
+    // setPhotoBefore(null)
+    // setPhotoAfter(null)
   }
 
   // ==========================================
@@ -129,9 +141,10 @@ export default function PureWaterGame({ finish, exit }: QuestGameProps) {
       </div>
 
       {/* ปุ่มบันทึก จะโชว์ก็ต่อเมื่อถ่ายครบทั้ง 2 รูปแล้ว */}
+      {uploadError && <p className="pure-water-desc" role="alert">⚠️ {uploadError}</p>}
       {photoBefore && photoAfter ? (
-        <button className="lb-btn pure-water-submit-btn" onClick={handleSubmit}>
-          บันทึก
+        <button className="lb-btn pure-water-submit-btn" onClick={handleSubmit} disabled={uploading}>
+          {uploading ? 'กำลังอัปโหลดรูป...' : 'บันทึก'}
         </button>
       ) : (
         <button className="pure-water-cancel-btn" onClick={exit}>

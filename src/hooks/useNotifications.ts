@@ -97,7 +97,7 @@ function settlementText(r: StepSettlementRecord, now: Date): string {
     : `วันที่ ${new Date(`${r.date}T00:00:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}`
   const parts = [
     `เดินได้ ${r.steps.toLocaleString()} ก้าว ${r.goalMet ? 'ถึงเป้า ✅' : `(เป้า ${r.goal.toLocaleString()})`}`,
-    `EXP +${r.exp}`, `เหรียญ +${r.coins}`, `หยดน้ำ +${r.waterDrops}`,
+    `EXP +${r.exp}`, `เหรียญ +${r.coins}`, ...(r.waterDrops > 0 ? [`หยดน้ำ +${r.waterDrops}`] : []),
     ...(r.chest ? [describeStepChest(r.chest)] : []),
   ]
   return `ผลสรุปรางวัลก้าวเพื่อสุขภาพ${when}: ${parts.join(' · ')}`

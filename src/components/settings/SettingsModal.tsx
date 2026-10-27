@@ -9,7 +9,10 @@ import GameAlert from '../ui/GameAlert'
 import PasswordInput from '../ui/PasswordInput'
 import '../leaderboard/leaderboardRow.css'
 import { BADGE_ICONS } from '../../config/iconAssets'
-import { ApiError } from '../../services/http'
+import { useQueryClient } from '@tanstack/react-query'
+import { ApiError, API_MODE } from '../../services/http'
+import { uploadAvatar } from '../../services/api/user.api'
+import { queryKeys } from '../../services/queryKeys'
 import { validatePasswordStrength } from '../../utils/mockAuth'
 import { useLanguage } from '../../context/LanguageContext'
 import HomeBackgroundPicker from './HomeBackgroundPicker'
@@ -772,19 +775,38 @@ function ProfileSettingsForm({ userData, onSave }: { userData: UserData, accent:
   const [avatarUrl, setAvatarUrl] = useState<string | null>(userData.avatarUrl)
   const [isProfilePrivate, setIsProfilePrivate] = useState(userData.isProfilePrivate)
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
+  const queryClient = useQueryClient()
+  /** โหมด live: กำลังอัปโหลดรูปโปรไฟล์ / ข้อความเมื่ออัปโหลดไม่สำเร็จ */
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  /** [ใหม่ — ข้อ 5a] อัปโหลดรูปโปรไฟล์ — โปรเจกต์นี้ยังไม่มีระบบเก็บไฟล์ขึ้นเซิร์ฟเวอร์จริง
-   *  (เหมือนรูปแนบโพสต์ใน ComposeStoryModal.tsx) จึงอ่านเป็น data URL ฝั่ง client ล้วนๆ ผ่าน
-   *  FileReader ไปก่อน วันที่มี endpoint อัปโหลดไฟล์จริง ค่อยเปลี่ยนเป็นยิงไฟล์ขึ้นก่อนแล้ว
-   *  ค่อยเก็บ URL จริงแทน */
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  /** [ใหม่ — ข้อ 5a] อัปโหลดรูปโปรไฟล์
+   *  โหมด live: อัปโหลดทันทีที่เลือกรูป (POST /users/me/avatar-upload-url → PUT ไฟล์ → PATCH /users/me
+   *  { avatarUrl: publicUrl }) แล้วเก็บ publicUrl — ไม่ส่ง data URL ขึ้นเซิร์ฟเวอร์
+   *  โหมด mock: อ่านเป็น data URL ฝั่ง client ผ่าน FileReader เหมือนเดิม */
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
+    if (API_MODE === 'live') {
+      setAvatarUploading(true)
+      setAvatarError(null)
+      try {
+        const nextUser = await uploadAvatar(file)
+        queryClient.setQueryData(queryKeys.me, nextUser)
+        setAvatarUrl(nextUser.avatarUrl)
+      } catch (err) {
+        setAvatarError(err instanceof ApiError ? err.userMessage : 'อัปโหลดรูปโปรไฟล์ไม่สำเร็จ ลองอีกครั้ง')
+      } finally {
+        setAvatarUploading(false)
+      }
+      return
+    }
     const reader = new FileReader()
     reader.onload = () => setAvatarUrl(typeof reader.result === 'string' ? reader.result : null)
     reader.readAsDataURL(file)
@@ -866,12 +888,13 @@ function ProfileSettingsForm({ userData, onSave }: { userData: UserData, accent:
         </div>
         <div>
           <button
-            type="button" onClick={() => avatarInputRef.current?.click()}
+            type="button" onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading}
             style={{ minHeight: 44, padding: '9px 18px', borderRadius: 999, border: `1.5px solid ${SETTINGS_GOLD}`, background: 'transparent', color: 'var(--text)', fontWeight: 700, fontSize: 'var(--fs-sm)' }}
           >
-            🖼️ เปลี่ยนรูปโปรไฟล์
+            {avatarUploading ? 'กำลังอัปโหลด...' : '🖼️ เปลี่ยนรูปโปรไฟล์'}
           </button>
           <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarChange} hidden />
+          {avatarError && <p role="alert" style={{ margin: '6px 0 0', fontSize: 'var(--fs-xs)', color: 'var(--danger, #c4532f)' }}>⚠️ {avatarError}</p>}
         </div>
       </div>
 

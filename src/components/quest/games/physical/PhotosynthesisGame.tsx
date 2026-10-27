@@ -3,6 +3,7 @@ import CameraCapture from '../../shared/CameraCapture'
 import type { QuestGameProps } from '../../../../types.mental'
 import './PhotosynthesisGame.css'
 import { QUEST_ICONS } from '../../../../config/iconAssets'
+import { prepareQuestPhotos } from '../../../../services/api/upload.api'
 
 export default function PhotosynthesisGame({ finish, exit }: QuestGameProps) {
   // สเตทสำหรับสลับหน้าจอระหว่าง 'intro' (หน้าหลัก) และ 'camera' (หน้ากล้อง)
@@ -10,6 +11,9 @@ export default function PhotosynthesisGame({ finish, exit }: QuestGameProps) {
   
   // สเตทเก็บรูปภาพ 1 รูป
   const [photo, setPhoto] = useState<string | null>(null)
+  // โหมด live: อัปโหลดรูปก่อนส่งเควส — ล้มเหลว = แจ้งผู้ใช้ ไม่ส่งเควส
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   // เมื่อถ่ายรูปเสร็จ
   const handleSavePhoto = (imgSrc: string) => {
@@ -18,13 +22,21 @@ export default function PhotosynthesisGame({ finish, exit }: QuestGameProps) {
   }
 
   // เมื่อกดยืนยันบันทึก
-  const handleSubmit = () => {
-    if (photo) {
+  const handleSubmit = async () => {
+    if (!photo || uploading) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const photoPayload = await prepareQuestPhotos('phys-sunlit-root', [photo])
       // จบเควสและส่งผลลัพธ์รับรางวัล
       finish({
         status: 'COMPLETED',
-        steps: 1 
+        steps: 1,
+        ...photoPayload,
       })
+    } catch (err) {
+      setUploadError(err instanceof Error && err.message ? err.message : 'อัปโหลดรูปไม่สำเร็จ ลองอีกครั้ง')
+      setUploading(false)
     }
   }
 
@@ -60,9 +72,10 @@ export default function PhotosynthesisGame({ finish, exit }: QuestGameProps) {
       </div>
 
       {/* ปุ่มบันทึก จะโชว์ก็ต่อเมื่อถ่ายรูปแล้ว */}
+      {uploadError && <p className="photosynthesis-desc" role="alert">⚠️ {uploadError}</p>}
       {photo ? (
-        <button className="photosynthesis-submit-btn" onClick={handleSubmit}>
-          บันทึก (รับรางวัล)
+        <button className="photosynthesis-submit-btn" onClick={handleSubmit} disabled={uploading}>
+          {uploading ? 'กำลังอัปโหลดรูป...' : 'บันทึก (รับรางวัล)'}
         </button>
       ) : (
         <button className="photosynthesis-cancel-btn" onClick={exit}>

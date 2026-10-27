@@ -3,7 +3,8 @@ import { getDb, updateDb, resetDb, switchActiveAccount } from '../mock/mockDb'
 import { DEFAULT_USER_DATA, type UserData, type MbtiType, type Gender } from '../../types'
 import { computeBmi, computeBodyType } from '../../utils/bmi'
 import { hashPasswordMock, verifyPasswordMock, generateMockResetToken } from '../../utils/mockAuth'
-import { setLocalExtras, toProfilePatchBody, toUserData } from './adapters'
+import { toProfilePatchBody, toUserData } from './adapters'
+import { dataUrlToBlob, uploadAvatarBlob } from './upload.api'
 
 /** อายุของโทเคนกู้รหัสผ่านจำลอง — ของจริง backend มักตั้ง 15-60 นาที */
 const RESET_TOKEN_TTL_MS = 30 * 60_000
@@ -244,28 +245,23 @@ export async function updateProfile(patch: Partial<UserData>): Promise<UserData>
       d.user = next
     }).user
   }
-  // waterDrops ยังไม่มีคอลัมน์ใน backend — เก็บในเครื่องแยกตาม user (ดู adapters.ts)
+  // waterDrops เซิร์ฟเวอร์เป็นผู้ให้เท่านั้น — ไม่อยู่ใน PROFILE_PATCH_KEYS จึงไม่ถูกส่งไป (ดู adapters.ts)
   const current = await getMe()
-  if (patch.waterDrops !== undefined) setLocalExtras(current.id, { waterDrops: patch.waterDrops })
   // รูปโปรไฟล์ที่เลือกจากเครื่องเป็น data URL — backend รับเฉพาะ URL จริง ต้องอัปโหลดขึ้น
   // storage ก่อน (POST /users/me/avatar-upload-url → PUT ไฟล์ไปที่ signedUrl → ใช้ publicUrl)
   const body = toProfilePatchBody(patch)
   if (typeof body.avatarUrl === 'string' && body.avatarUrl.startsWith('data:')) {
-    body.avatarUrl = await uploadAvatarDataUrl(body.avatarUrl)
+    body.avatarUrl = await uploadAvatarBlob(dataUrlToBlob(body.avatarUrl))
   }
   if (Object.keys(body).length === 0) return toUserData({}, current)
   return toUserData(await http.patch<Record<string, unknown>>('/users/me', body), current)
 }
 
-/** อัปโหลดรูปโปรไฟล์ (data URL) ขึ้น Supabase Storage ผ่าน signed URL ของ backend → คืน URL สาธารณะ */
-async function uploadAvatarDataUrl(dataUrl: string): Promise<string> {
-  const blob = await (await fetch(dataUrl)).blob()
-  const subtype = blob.type.split('/')[1] ?? 'png'
-  const fileExt = (['jpg', 'jpeg', 'png', 'webp'] as const).find((e) => e === subtype) ?? 'png'
-  const { signedUrl, publicUrl } = await http.post<{ signedUrl: string; path: string; publicUrl: string }>(
-    '/users/me/avatar-upload-url', { fileExt },
-  )
-  const upload = await fetch(signedUrl, { method: 'PUT', headers: { 'Content-Type': blob.type }, body: blob })
-  if (!upload.ok) throw new ApiError(upload.status, 'อัปโหลดรูปโปรไฟล์ไม่สำเร็จ ลองอีกครั้ง')
-  return publicUrl
+/** [โหมด live] เปลี่ยนรูปโปรไฟล์: POST /users/me/avatar-upload-url { fileExt } → PUT ไฟล์ → PATCH /users/me { avatarUrl: publicUrl }
+ *  (หน้าตั้งค่าเรียกทันทีที่เลือกรูป — ล้มเหลว = throw ApiError ให้หน้าจอแจ้งผู้ใช้) */
+export async function uploadAvatar(file: Blob): Promise<UserData> {
+  const current = await getMe()
+  const avatarUrl = await uploadAvatarBlob(file)
+  cachedMe = toUserData(await http.patch<Record<string, unknown>>('/users/me', { avatarUrl }), current)
+  return cachedMe
 }

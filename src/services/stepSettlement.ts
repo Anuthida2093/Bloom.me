@@ -6,6 +6,7 @@ import { calculateStepReward } from '../config/stepGoalByBmi'
 import type { StepChestReward } from '../config/stepChest'
 import { getJourneyDaySteps, resetStepJourneyDays } from '../utils/stepJourneyDays'
 import { bangkokTimeOn } from '../utils/progression'
+import { API_MODE } from './http'
 
 /*============================================================================*\
   stepSettlement.ts — ปิดรอบเควสก้าวเพื่อสุขภาพของ "วันที่ผ่านไปแล้ว" แบบ lazy ตอนเปิดแอปครั้งถัดไป
@@ -14,7 +15,9 @@ import { bangkokTimeOn } from '../utils/progression'
   "จบแล้วแต่ยังไม่รับ" (pending claim) → เปิดแอปครั้งถัดไประบบรับให้อัตโนมัติด้วย "ก้าวล่าสุดที่บันทึกไว้":
     1) ยืนยันก้าวของวันนั้นเข้าบัญชี (recordStepDay — นับวันถึงเป้าสะสม 21 วัน)
     2) completeQuest ด้วยสูตรเดิมของ backend (ต่อ 100 ก้าว) + settleDate = วันทริป (ไม่กินโควตาวันนี้)
-    3) หยดน้ำตามสัดส่วน (ฝั่งหน้าเว็บ) + ถ้าถึงเป้า เปิดหีบของวันนั้นให้ (ผลสุ่มจากเซิร์ฟเวอร์ ครั้งเดียว)
+    3) หยดน้ำตามสัดส่วน (ฝั่งหน้าเว็บ — โหมด mock เท่านั้น) + ถ้าถึงเป้า เปิดหีบของวันนั้นให้ (ผลสุ่มจากเซิร์ฟเวอร์ ครั้งเดียว)
+       โหมด live: หน้าเว็บไม่บวกหยดน้ำเอง — หีบเซิร์ฟเวอร์บวกให้ (ผู้เรียกรีเฟรช user) ส่วนตามสัดส่วนปิดไว้ก่อน
+       (backend ยังไม่ให้จากแหล่งนี้ รอตัดสินใจกติกา)
     4) เก็บผลสรุปไว้แสดงเป็นแจ้งเตือน "ผลสรุปรางวัลก้าวเพื่อสุขภาพเมื่อวาน" ตอนเช้า (useNotifications)
   [ข้อจำกัด] ก้าวที่ใช้คือก้าวที่ซิงค์เข้ามาแล้วก่อนเที่ยงคืน — ก้าวที่เดินหลังซิงค์ครั้งสุดท้ายไม่ถูกนับ
   และ backend ยังรับ logDate ย้อนหลังไม่ได้ (โหมด live จะลงเป็นวันนี้) — ข้อเสนอใน docs/PROGRESSION_API.md
@@ -74,7 +77,7 @@ export function waitForStepSettlement(): Promise<unknown> {
 export interface SettleContext {
   userId: string
   bmi: number
-  /** บวกหยดน้ำ (ข้อมูลฝั่งหน้าเว็บ — backend ไม่มี) */
+  /** บวกหยดน้ำฝั่งหน้าเว็บ — เรียกเฉพาะโหมด mock (โหมด live เซิร์ฟเวอร์เป็นผู้ให้) */
   addWaterDrops: (amount: number) => void
 }
 
@@ -115,7 +118,7 @@ async function run({ userId, bmi, addWaterDrops }: SettleContext): Promise<StepS
 
   // แสดงผลด้วยสูตรเดียวกับ backend/หน้าสรุป (DiaryRewardScroll) — ตัวเลขจริงอยู่ที่เซิร์ฟเวอร์แล้ว
   const reward = calculateStepReward({ steps: journey.progressOnCurrentMapSteps, bmi, consecutiveGoalDays })
-  let waterDrops = calcProportionalRewards(journey.progressOnCurrentMapSteps, tripTarget).waterDrops
+  let waterDrops = API_MODE === 'mock' ? calcProportionalRewards(journey.progressOnCurrentMapSteps, tripTarget).waterDrops : 0
   let chest: StepChestReward | null = null
   if (goalMet) {
     const opened = await openStepChest(tripDate).catch(() => null)
@@ -124,7 +127,7 @@ async function run({ userId, bmi, addWaterDrops }: SettleContext): Promise<StepS
       if (!opened.alreadyOpened && opened.reward.kind === 'WATER_DROPS') waterDrops += opened.reward.amount
     }
   }
-  if (waterDrops > 0) addWaterDrops(waterDrops)
+  if (waterDrops > 0 && API_MODE === 'mock') addWaterDrops(waterDrops)
 
   const now = new Date()
   const morning = bangkokTimeOn(today, MORNING_HOUR)

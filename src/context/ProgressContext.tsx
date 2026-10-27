@@ -179,6 +179,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       if (gift) {
         setLearningGift({ ...gift, key: Date.now() })
         void queryClient.invalidateQueries({ queryKey: queryKeys.progression })
+        // โหมด live: หยดน้ำ/เหรียญจากของขวัญเซิร์ฟเวอร์บวกให้แล้ว — ดึง user ล่าสุด (waterDrops) จากเซิร์ฟเวอร์
+        if (API_MODE === 'live') void queryClient.invalidateQueries({ queryKey: queryKeys.me })
       }
       if (exchangeCard) {
         setCardDrop({ itemCode: exchangeCard, key: Date.now() })

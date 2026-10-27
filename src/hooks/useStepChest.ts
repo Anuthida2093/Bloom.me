@@ -3,14 +3,17 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { StepChestReward } from '../config/stepChest'
 import { getStepHistory, openStepChest } from '../services/api/progression.api'
 import { queryKeys } from '../services/queryKeys'
+import { API_MODE } from '../services/http'
 import { useAppContext } from '../context/AppContext'
+import { markNewWaterDrop } from '../utils/waterPrompt'
 
 /*============================================================================*\
   useStepChest — หีบสมบัติของวันที่เดินถึงเป้า (1 ใบ/วัน) ผูกกับ "วันที่ของทริป"
   ────────────────────────────────────────────────────────────────────────────
   - โหลดสถานะจากเซิร์ฟเวอร์ (getStepHistory → chest) ว่าเปิดไปแล้วหรือยัง
   - open(): ป็อปอัปขึ้นทันที (popupOpen) แล้วค่อยรอผลจากเซิร์ฟเวอร์ — ผลสุ่ม/การให้รางวัลทำที่เซิร์ฟเวอร์
-    ยกเว้นหยดน้ำ (ข้อมูลฝั่งหน้าเว็บเท่านั้น) บวกผ่าน updateProfile เมื่อเปิดครั้งแรก (!alreadyOpened)
+    หยดน้ำ: โหมด live เซิร์ฟเวอร์บวกให้เอง → รีเฟรช user จากเซิร์ฟเวอร์ · โหมด mock บวกผ่าน updateProfile
+    เมื่อเปิดครั้งแรก (!alreadyOpened) เหมือนเดิม
   - beforeOpen: ให้ผู้เรียกยืนยันก้าวของวันนั้นเข้าบัญชีก่อน (กันกรณีเซิร์ฟเวอร์ยังไม่เห็นว่าถึงเป้า)
 \*============================================================================*/
 
@@ -49,7 +52,8 @@ export function useStepChest(date: string | null, eligible: boolean, beforeOpen?
       await beforeOpen?.().catch(() => { /* เซิร์ฟเวอร์ตัดสินเองว่าถึงเป้าหรือยัง */ })
       const res = await openStepChest(date)
       if (!res.alreadyOpened && res.reward.kind === 'WATER_DROPS') {
-        updateProfile({ waterDrops: (userData.waterDrops ?? 0) + res.reward.amount })
+        if (API_MODE === 'mock') updateProfile({ waterDrops: (userData.waterDrops ?? 0) + res.reward.amount })
+        else markNewWaterDrop(userData.id) // หน้า Home เล่นบัวรดน้ำ — ยอดจริงมากับ GET /users/me ด้านล่าง
       }
       setOpened(res.reward)
       setPopupReward(res.reward)
@@ -60,7 +64,7 @@ export function useStepChest(date: string | null, eligible: boolean, beforeOpen?
     } finally {
       busy.current = false
     }
-  }, [date, beforeOpen, updateProfile, userData.waterDrops, queryClient])
+  }, [date, beforeOpen, updateProfile, userData.waterDrops, userData.id, queryClient])
 
   const closePopup = useCallback(() => { setPopupOpen(false); setError(null) }, [])
 
