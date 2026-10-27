@@ -1,0 +1,39 @@
+/* GameLoadingScreen — พื้นเขียวเต็มจอ + แถบความคืบหน้าโค้งมน (สีจาก design tokens) */
+.game-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--g500, #4f9a5a) 0%, var(--g700, #2f6a3a) 100%);
+  transition: opacity 260ms ease;
+}
+.game-loading.is-fading { opacity: 0; pointer-events: none; }
+.game-loading__box { width: min(320px, 78vw); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.game-loading__bar {
+  width: 100%;
+  height: 16px;
+  padding: 3px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25), 0 0 0 2px rgba(255, 255, 255, 0.55);
+}
+.game-loading__fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #fff3b0 0%, #f5c84a 55%, #e3a72b 100%);
+  box-shadow: 0 0 10px rgba(255, 220, 120, 0.6);
+  transition: width 160ms linear;
+}
+.game-loading__pct {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+.game-loading__hint { font-family: var(--font-display); font-size: 13px; color: rgba(255, 255, 255, 0.85); }
+
+@media (prefers-reduced-motion: reduce) {
+  .game-loading, .game-loading__fill { transition: none; }
+}

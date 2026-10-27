@@ -1,0 +1,426 @@
+import type { QuestCategory, QuestControlType } from '../types'
+
+/**
+ * questCatalog.ts
+ * ────────────────
+ * แคตตาล็อกเควสทั้งหมด อ้างอิงเอกสาร "ภาพรวมโปรเจกต์" + เอกสารเควส 3 ไฟล์
+ *
+ * [แก้รอบนี้ล่าสุด — เก็บกวาดเควสซ้ำซ้อน/ไม่ได้ใช้ตามที่ระบุ]
+ *  1) รวม 'know-time-capsule' เข้ากับ 'know-strategic-delay' (ทั้งสองเป็นเรื่อง Spacing
+ *     Effect เหมือนกัน ต่างแค่ระยะเวลา) เหลือเควสเดียวชื่อ "กลยุทธ์การรอคอย"
+ *  2) ลบ 'know-mirror-of-truth' ออกทั้งระบบ (รวม questGameRegistry.ts + ไฟล์เกม)
+ *  3) ลบ 'phys-mindful-breeze' ออกจากหมวดสุขภาพกาย — ซ้ำกับเควสฝึกหายใจในหมวดสุขภาพจิต
+ *     (ตัดออกจาก CALMING_QUEST_CODES ด้วย)
+ *  4) ลบ 'ment-daily-potion' ออกทั้งระบบ — การเช็กอินอารมณ์ประจำวันไหลผ่าน MoodGateScreen
+ *     → MoodCheckIn.tsx (3 ปุ่มเดิม) ซึ่งเรียก submitMoodPotion() ท่อเดียวกันอยู่แล้ว
+ *     (ตัดออกจาก SPECIAL_QUEST_CODES ด้วย)
+ *  5) ลบ 'ment-sunlit-root' ออกจากหมวดสุขภาพจิต (MENTAL_SIDE) — ซ้ำกับ 'phys-photosynthesis'
+ *     ในหมวดสุขภาพกาย (ทั้งคู่คือ "ออกไปรับแดดตอนเช้า" ทฤษฎีเดียวกัน — Circadian Rhythm /
+ *     Serotonin) ต้นตอคือตอนย้ายกลไกจาก "จับเวลา" มาเป็น "ถ่ายรูปยืนยัน" (ดู SunlitRootGame.tsx
+ *     เดิม) มีคนสร้างเป็นเควสใหม่แยกในหมวดจิตใจแทนที่จะแก้เควส phys-photosynthesis ตัวเดิม
+ *     ทำให้เควสเดียวกันไปโผล่ซ้ำสองหมวด เหลือไว้แค่ใน HEALTH/physical ตามเดิม (ลบไฟล์เกม +
+ *     รายการใน questGameRegistry.ts ทิ้งไปด้วย — ไม่มีใครอ้างอิงแล้ว)
+ *
+ * [แก้รอบก่อนหน้า — 3 อย่าง]
+ *  1) เพิ่ม field `gameKey` — ชี้ว่าเควสนี้ใช้ไฟล์เกมไหนใน src/components/quest/games/
+ *     (ดู questGameRegistry.ts) เพื่อให้ "1 เควส = 1 ไฟล์" แก้ไขง่าย ไม่ต้องรื้อ modal กลาง
+ *  2) เพิ่ม field `energyLevel` + `isCalming` — ใช้โดยระบบ Moderate Risk Action:
+ *     เมื่อ currentRiskLevel = MODERATE/HIGH ระบบจะล็อกเควส energyLevel:'HIGH' ทั้งหมด
+ *     และปล่อยเฉพาะเควส isCalming ให้ทำได้ (ทอดสมอใจ / เตาเผาขยะความคิด)
+ */
+
+export type QuestTabId = 'knowledge' | 'physical' | 'mental'
+
+/** ระดับพลังงานที่เควสเรียกร้องจากผู้ใช้ — HIGH จะถูกล็อกอัตโนมัติเมื่อความเสี่ยงสูง */
+export type QuestEnergyLevel = 'LOW' | 'HIGH'
+
+export interface QuestDef {
+  /** slug คงที่ ตรงกับ Quest.code ใน docs/DATA_DICTIONARY.md — ห้ามเปลี่ยนหลังใช้งานจริง */
+  code: string
+  icon: string
+  title: string
+  titleTh: string
+  desc: string
+  howTo: string
+  theory?: string
+  category: QuestCategory
+  controlType?: QuestControlType
+  coinReward: number
+  expReward: number
+  isDaily: boolean
+  isLocked?: boolean
+  unlockAfterQuestCount?: number
+  /** [เพิ่มตามที่ระบุ — เทียบ schema.prisma backend Quest.requiresQuestIds] รายการ quest
+   *  code ที่ต้อง "สำเร็จวันนี้" ให้ครบทุกตัวก่อนถึงจะเล่นเควสนี้ได้ — แทนที่ตรรกะเดิมที่
+   *  hardcode "ต้องทำด่านก่อนหน้าใน KNOWLEDGE_DAILY array ให้เสร็จก่อน" (อิงตำแหน่งใน array
+   *  ไม่ใช่ข้อมูลต่อเควส) ดู isRequiredQuestsIncomplete() ใน QuestSection.tsx — ปล่อยว่าง/
+   *  ไม่ใส่ = ไม่มีเงื่อนไขแบบนี้ (เช่นเควสที่ล็อกแบบนับจำนวนด้วย isLocked+unlockAfterQuestCount
+   *  อย่าง know-daily-checkin ไม่ต้องใส่ field นี้ ตามที่ comment ใน schema.prisma ระบุไว้เอง) */
+  requiresQuestIds?: string[]
+  isPassive?: boolean
+  /** [แก้ตามที่ระบุ] ล็อกไว้จนกว่า login streak จะครบจำนวนวันนี้ (เช่น ป่าแห่งสิบปี 21 วัน) */
+  unlockStreakDays?: number
+  /** คีย์ของไฟล์เกมใน src/config/questGameRegistry.ts (ไม่ใส่ = ใช้หน้าเควสยืนยันแบบง่าย) */
+  gameKey?: string
+  /** default = 'LOW' */
+  energyLevel?: QuestEnergyLevel
+  /** true = เควสสงบใจ ใช้เป็นทางเลือกบังคับตอนความเสี่ยงปานกลาง/สูง */
+  isCalming?: boolean
+  /** [เพิ่มรอบนี้] จำนวนครั้งสูงสุดที่เล่นซ้ำได้ต่อวัน (ไม่ใส่ = เล่นได้ครั้งเดียวต่อวันตามปกติ)
+   *  ทุกครั้งที่เล่นสำเร็จได้รางวัลเต็มเท่ากันหมด ไม่ลดหลั่น — ดู quest.api.ts (completeQuest)
+   *  สำหรับการนับจำนวนครั้ง "วันนี้" จาก completedAt จริง */
+  maxPerDay?: number
+  /** [เพิ่มรอบนี้ — ตามที่ระบุ] ธงชัดเจนแยกจาก maxPerDay ล้วนๆ ว่าเควสนี้ "เล่นซ้ำได้ในวันเดียว"
+   *  (ต่างจาก isDaily ซึ่งมีเควสเกือบทุกตัวติดไว้อยู่แล้ว แปลว่าแค่ "รีเซ็ตทุกวัน" ไม่ใช่ "เล่นได้
+   *  หลายครั้งในวันเดียว") ปัจจุบันตรงกับเควสที่มี maxPerDay ทุกตัว (ตอนนี้มีแค่ phys-hydration-drop)
+   *  แยกเป็นธงของตัวเองเพื่อให้ UI (badge 🔁 ใน QuestGateView.tsx/LearningQuestMap.tsx) เช็คตรงๆ
+   *  ได้โดยไม่ต้องอนุมานจาก "มี maxPerDay ไหม" กระจายไปทุกจุดที่ต้องโชว์ป้าย — เควสอื่นที่ตอนนี้
+   *  ไม่มี maxPerDay (เช่น green-vision/breathing) ยังไม่ได้ติดธงนี้เพราะเป็นการตัดสินใจเชิงโปรดักต์
+   *  ว่าจะเปิดให้เล่นซ้ำได้ไหม ไม่ใช่บั๊กที่ต้องแก้ — ถ้าอยากเปิดเพิ่มเติมให้ผู้ดูแลโปรเจกต์ตัดสินใจ */
+  isRepeatable?: boolean
+  /** [เพิ่มรอบนี้ — ปรับ layout เควส Step Journey] true = เกมของเควสนี้ต้องการพื้นที่เต็ม
+   *  .game-shell__stage จริงๆ (เช่น แผนที่เดินที่ต้องเต็มจอ) — GameShell.tsx จะสลับไปใช้แถบหัว
+   *  บาง 95px + ไม่มีกล่อง howTo/theory + .game-shell__stage ไม่มี max-width/padding แทน header
+   *  ปกติ (ไอคอน+ชื่อ+คำอธิบาย) ไม่ใส่ = พฤติกรรมเดิมทุกประการ (เควสอื่นทั้งหมดไม่กระทบ) */
+  fullscreenGame?: boolean
+  /** [เพิ่มรอบนี้ — เควสสุขภาพใหม่ Vitality Steps/Balanced Nutrients] ค่าตั้งค่าเฉพาะของเควส
+   *  นั้นๆ ที่หน้าเล่นเควส (special quest component) อ่านไปใช้ตรงๆ แทนการ hardcode ค่าคงที่
+   *  แยกไว้ในไฟล์ component เอง — แต่ละเควสมี shape ของตัวเอง ไม่มีโครงสร้างร่วมตายตัว จึงพัก
+   *  เป็น loose object ก่อน (เทียบเท่า quest_logs.payload ฝั่งบันทึกผล — ดู types.mental.ts) */
+  config?: Record<string, unknown>
+}
+
+export const QUEST_TABS: { id: QuestTabId; label: string; emoji: string; accent: string; accentBg: string }[] = [
+  { id: 'knowledge', label: 'ด้านการเรียนรู้', emoji: '📚', accent: '#40916C', accentBg: '#D8F3DC' },
+  { id: 'physical', label: 'ด้านสุขภาพกาย', emoji: '💪', accent: '#D05F2E', accentBg: '#FFE8DA' },
+  { id: 'mental', label: 'ด้านสุขภาพจิต', emoji: '🌸', accent: '#9B52CC', accentBg: '#F3E8FF' },
+]
+
+// ── หมวดความรู้ (Knowledge) → ลำต้นและกิ่งก้าน ──
+export const KNOWLEDGE_DAILY: QuestDef[] = [
+  {
+    code: 'know-active-focus', icon: '🎯', title: 'Active Focus', titleTh: 'เพ่งสมาธิ / ตั้งเป้าหมาย',
+    desc: 'ตั้งเป้าหมายการเรียนรู้ที่ท้าทายและเฉพาะเจาะจงก่อนเริ่มต้น',
+    howTo: 'ก่อนเริ่มทำงานหรือเรียน ตั้งเป้าหมายเฉพาะเจาะจงว่าวันนี้จะเก่งขึ้นเรื่องอะไร ต้องมีความท้าทาย ไม่ใช่แค่ทำสิ่งที่ทำได้ดีอยู่แล้วเพื่อความเพลิดเพลิน',
+    theory: 'Deliberate Practice (Ericsson et al., 1993)',
+    category: 'KNOWLEDGE', controlType: 'GOAL_INPUT', coinReward: 30, expReward: 20, isDaily: true,
+    gameKey: 'active-focus', energyLevel: 'LOW',
+  },
+  {
+    code: 'know-deep-root', icon: '🌿', title: 'The Deep Root', titleTh: 'หยั่งรากลึก / โหมดจดจ่อ',
+    desc: 'จดจ่อ 90 นาที + พัก 15 นาที = 1 รอบ (วันละไม่เกิน 3 รอบ) จบรอบแรกปลดล็อกเทกระเป๋าความจำ ครบ 3 รอบรับรางวัลพิเศษ',
+    howTo: 'อ่านหนังสือหรือทำงานแบบ Deep Work 90 นาที ห้ามวอกแวก แล้วพักสมองจริงๆ 15 นาที (หลับตา เดินเล่น ห้ามเล่นมือถือ) นับเป็น 1 รอบ จบรอบแรก "เทกระเป๋าความจำผ่านเสียง" เล่นได้ทันที และกลับมาเล่นโหมดจดจ่อต่อได้อีกจนครบ 3 รอบของวัน (ครบ 3 รอบไม่กดข้าม ได้รางวัลพิเศษ: การ์ดแลกซื้อหรือเหรียญโบนัส) · โหมดปกติกดข้ามได้หลังจดจ่อครบ 45 นาที แต่ได้รางวัลครึ่งเดียว',
+    theory: '90/20 Rule · Ultradian Rhythms (Psomas, 2021)',
+    // [แก้ตามที่ระบุ — Focus Mode] 1 รอบ (90+15) = ทำสำเร็จ 1 ครั้ง วันละไม่เกิน 3 ครั้ง — backend รองรับ
+    // Quest.maxPerDay + QuestLog.sequenceInDay อยู่แล้ว (seed ต้องตั้ง maxPerDay: 3 ให้ deep-root — ดู docs/PROGRESSION_API.md)
+    category: 'KNOWLEDGE', controlType: 'TIMER', coinReward: 50, expReward: 40, isDaily: true, maxPerDay: 3,
+    gameKey: 'deep-root', energyLevel: 'HIGH', requiresQuestIds: ['know-active-focus'],
+  },
+  {
+    code: 'know-brain-dump', icon: '🧠', title: 'Brain Dump (Voice Edition)', titleTh: 'เทกระเป๋าความจำผ่านเสียง',
+    desc: 'อัดเสียงอธิบายสิ่งที่เรียนรู้ด้วยคำพูดของคุณเอง ห้ามดูโน้ต',
+    howTo: 'หลังเรียนจบ พักจอ 5 นาที แล้วกดปุ่มไมโครโฟนพูดอธิบายทุกสิ่งที่จำได้ออกมาดังๆ ห้ามเปิดดูเนื้อหา ระบบจะแปลงเป็นข้อความให้เช็กว่าลืมประเด็นไหนไปบ้าง',
+    theory: 'Testing Effect (Roediger & Karpicke, 2006) · Production Effect (MacLeod, 2010)',
+    category: 'KNOWLEDGE', controlType: 'MIC', coinReward: 40, expReward: 35, isDaily: true,
+    gameKey: 'brain-dump', energyLevel: 'HIGH', requiresQuestIds: ['know-deep-root'],
+  },
+  {
+    code: 'know-cross-pollination', icon: '🔀', title: 'Cross-Pollination', titleTh: 'ผสมเกสรข้ามศาสตร์',
+    desc: 'สลับสับเปลี่ยนหัวข้อการเรียนเมื่อเรียนต่อเนื่องเกิน 2 ชั่วโมง',
+    howTo: 'ถ้ามีเวลาเรียน 2 ชั่วโมงขึ้นไป ให้สลับหมวดหมู่วิชาเรียน เช่น ชั่วโมงแรกเรียนภาษา ชั่วโมงที่สองสลับไปแก้โจทย์คณิตศาสตร์',
+    theory: 'Interleaved Practice (Rohrer, 2012)',
+    category: 'KNOWLEDGE', controlType: 'TOGGLE_TOPICS', coinReward: 35, expReward: 25, isDaily: true,
+    gameKey: 'cross-pollination', energyLevel: 'HIGH', requiresQuestIds: ['know-brain-dump'],
+  },
+  {
+    code: 'know-daily-checkin', icon: '💧', title: 'Daily Learning Check-in', titleTh: 'เช็กอินรายวัน',
+    desc: 'ตอบคำถามสั้นๆ 5 ข้อประเมินผลการเรียนรู้ นำคะแนนไปรดน้ำต้นไม้',
+    howTo: 'ให้คะแนน 5 ด้าน: ความชัดเจนของเป้าหมาย, การจดจ่อ, ความพยายามดึงข้อมูล, การพักผ่อนสมอง, ความพึงพอใจในการเติบโต ตอบครบ 5 ข้อ บัวรดน้ำจะเทน้ำลงลำต้นพร้อมเอฟเฟกต์แสงวิบวับ',
+    theory: 'Deliberate Practice · Ultradian Rhythms · Growth Mindset',
+    // [แก้บั๊ก] เดิม isLocked + unlockAfterQuestCount: 2 = ทำด่านไหนก็ได้ 2 ด่านแล้วด่านสุดท้ายปลดล็อกเลย
+    // (ข้ามด่าน 3-4 ได้) ตอนนี้ต้องผ่านด่านก่อนหน้า (ผสมเกสรข้ามศาสตร์) ตามลำดับเหมือนด่านอื่น
+    category: 'KNOWLEDGE', controlType: 'PROGRESS_BAR', coinReward: 60, expReward: 50, isDaily: true,
+    requiresQuestIds: ['know-cross-pollination'], gameKey: 'daily-checkin', energyLevel: 'LOW',
+  },
+]
+
+export const KNOWLEDGE_SIDE: QuestDef[] = [
+  {
+    // [แก้ตามที่ระบุ — ยึดตาม backend ใหม่ ตัวเลือก (ก)] เดิมรวม 'know-time-capsule' เข้ากับ
+    // 'know-strategic-delay' เป็นเควสเดียว ตามคำสั่งรอบก่อน — ตอนนี้แยกกลับตามที่ backend
+    // (seed.ts) ออกแบบไว้จริง: 'content-review' (title "Time Capsule") เป็นเควสเล่นได้จริง
+    // แยกต่างหาก ส่วน "Strategic Delay" ไม่ใช่เควสอีกต่อไป — เป็น badge ที่ปลดล็อกจากการทำ
+    // เควสนี้ต่อเนื่องรายเดือน 3 รอบ (ดู src/config/badgeCatalog.ts + MentalContext.earnedBadges)
+    // code เปลี่ยนจาก 'know-strategic-delay' → 'know-content-review' ให้ตรงกับ backend
+    // controlType เปลี่ยนจาก GOAL_INPUT → CALENDAR ตาม backend (เลือกวันที่ทบทวน ไม่ใช่พิมพ์
+    // ข้อความยาว) — เกมเปลี่ยนจาก StrategicDelayGame.tsx (วางแผน 3 รอบ % ของช่วงเวลา) เป็น
+    // ContentReviewGame.tsx (เลือกวันเดียวทบทวนเป้าหมาย Active Focus ของวันนี้ 1-30 วันข้างหน้า
+    // ตรงกับ backend config: minDaysAhead:1, maxDaysAhead:30)
+    code: 'know-content-review', icon: '📅', title: 'Time Capsule', titleTh: 'แคปซูลเวลา',
+    desc: 'ปลดล็อกเมื่อทำ "เทกระเป๋าความจำผ่านเสียง" สำเร็จ ตั้งวัน-เวลากลับมาทบทวน ระบบเตือนเมื่อถึงเวลา',
+    howTo: 'เลือกวันในอนาคต (1-30 วันข้างหน้า) ที่อยากกลับมาทบทวนเป้าหมาย/สิ่งที่ตั้งใจไว้วันนี้อีกครั้ง ยิ่งเว้นระยะห่างพอดีกับจังหวะที่สมองกำลังจะลืม ยิ่งจำได้แม่นยำและนานขึ้น',
+    theory: 'Spacing Effect (Cepeda et al., 2008)',
+    // isDaily: ตั้งแคปซูลใหม่ได้วันละครั้ง (หลังเทกระเป๋าความจำของวันนั้น) — เดิม false = ทำได้ครั้งเดียวตลอดชาติ
+    category: 'KNOWLEDGE', controlType: 'CALENDAR', coinReward: 40, expReward: 30, isDaily: true,
+    gameKey: 'content-review', energyLevel: 'LOW', requiresQuestIds: ['know-brain-dump'],
+  },
+  {
+    // [นำกลับมาตามที่ระบุ] กลยุทธ์การรอคอย — วางแผนทบทวนระยะยาวรายเดือน (คนละอย่างกับแคปซูลเวลา
+    // ที่นัดทบทวนเป้าหมายของวันนี้) ใช้ StrategicDelayGame.tsx เดิมจากประวัติ git
+    code: 'know-strategic-delay', icon: '📅', title: 'Strategic Delay', titleTh: 'กลยุทธ์การรอคอย',
+    desc: 'วางแผนทบทวนเรื่องที่อยากจำให้ได้นานเป็นรายเดือน ระบบจัดตารางทบทวน 3 รอบให้',
+    howTo: 'เลือกเรื่องที่อยากจำให้ได้ยาวๆ และระยะเวลาที่อยากจำ (3/6/12 เดือน) ระบบเว้นระยะทบทวนราว 8% ของช่วงเวลาทั้งหมด ถ้าต้องการจำข้อมูลให้ได้เป็นปี ระยะห่างในการทบทวนควรเป็นแค่ 5-10% ของเวลาทั้งหมด',
+    theory: 'Spacing Effect (Cepeda et al., 2008)',
+    category: 'KNOWLEDGE', controlType: 'GOAL_INPUT', coinReward: 40, expReward: 30, isDaily: true,
+    // [แก้ตามที่ระบุ] ล็อกจนกว่าจะตั้งแคปซูลเวลาวันนี้สำเร็จ
+    gameKey: 'strategic-delay', energyLevel: 'LOW', requiresQuestIds: ['know-content-review'],
+  },
+  {
+    // [นำกลับมาตามที่ระบุ] กระจกแห่งความจริง — ตอบความรู้สึกจริงหลังทำเควสของวันนี้
+    // บันทึกผ่าน submitQuestFeedback() ท่อเดียวกับ QuestFeedbackPrompt (badge Mirror of Truth)
+    code: 'know-mirror-of-truth', icon: '🪞', title: 'Mirror of Truth', titleTh: 'กระจกแห่งความจริง',
+    desc: 'ย้อนดูเควสที่ทำวันนี้ แล้วตอบตรงๆ ว่ารู้สึกยังไงหลังทำแต่ละอัน',
+    howTo: 'หลังเรียน/ทำเควสเสร็จ เลือกความรู้สึกจริงของแต่ละเควส (ดี / เฉยๆ / ไม่ค่อยดี) ไม่มีคำตอบถูกผิด ใช้ดูว่าวิธีเรียนแบบไหนเหมาะกับเรา',
+    theory: 'Metacognition การสะท้อนคิดหลังเรียน',
+    category: 'KNOWLEDGE', controlType: 'ACTION_BUTTON', coinReward: 20, expReward: 15, isDaily: true,
+    // [แก้ตามที่ระบุ] ล็อกจนกว่าจะเช็กอินรายวัน (ด่านสุดท้ายของเส้นทาง) สำเร็จวันนี้
+    gameKey: 'mirror-of-truth', energyLevel: 'LOW', requiresQuestIds: ['know-daily-checkin'],
+  },
+  {
+    code: 'know-guardian-of-rest', icon: '🛡️', title: 'Guardian of Rest', titleTh: 'ผู้พิทักษ์การพักผ่อน',
+    desc: 'พักผ่อนให้ครบ 15 นาทีหลังจดจ่อแต่ละรอบ แล้วกดรับรางวัลได้วันละครั้ง ฝึกหนักเกิน 4-5 ชม./วัน ต้นไม้จะเริ่มไหม้เกรียม',
+    howTo: 'บังคับหยุดฝึกเมื่อครบโควตา 4-5 ชั่วโมงของการฝึกหนักต่อวัน หากฝืนทำต่อ ต้นไม้จะเฉา (Burnout) ทำงานอัตโนมัติจากเวลาสะสม',
+    theory: 'Deliberate Practice ขีดจำกัดการฝึกฝน 4-5 ชม./วัน',
+    // ปลดล็อกเมื่อจบโหมดจดจ่อรอบแรกของวันนี้ (requiresQuestIds)
+    // [แก้ตามที่ระบุ] จ่ายรางวัลเมื่อพักครบ 15 นาทีเต็ม (utils/restLog.ts) — กดรับในหน้าเควส วันละครั้ง
+    category: 'KNOWLEDGE', coinReward: 30, expReward: 20, isDaily: true, isPassive: true,
+    gameKey: 'guardian-of-rest', energyLevel: 'LOW', requiresQuestIds: ['know-deep-root'],
+  },
+  {
+    code: 'know-ten-year-forest', icon: '🏕️', title: 'Ten-Year Forest', titleTh: 'ป่าแห่งสิบปี',
+    desc: 'ปฏิทิน Streak วันต่อวัน เข้าแอปต่อเนื่องครบ 21 วัน กดรับรางวัลได้วันละครั้ง',
+    howTo: 'รักษาความต่อเนื่อง (login streak) ของการฝึกฝน ไม่จำเป็นต้องเยอะ แต่ต้องไม่ขาด',
+    theory: 'The 10-Year Rule (Ericsson et al., 1993)',
+    // [แก้ตามที่ระบุ] รับรางวัลได้วันละครั้ง (isDaily) เมื่อ streak ต่อเนื่อง ≥ 21 วัน — เดิมไม่มีทางรับรางวัลเลย
+    category: 'KNOWLEDGE', coinReward: 20, expReward: 15, isDaily: true, isPassive: true,
+    // [แก้ตามที่ระบุ] ไม่ล็อก — เปิดดูปฏิทิน streak ได้เสมอ (รางวัลยังรับได้เมื่อครบ 21 วัน ดู TenYearForestGame)
+    gameKey: 'ten-year-forest', energyLevel: 'LOW',
+  },
+]
+
+// ── หมวดสุขภาพกาย (Health) → ราก ดิน และผืนหญ้า ──
+export const PHYSICAL_DAILY: QuestDef[] = [
+  {
+    // [แก้ตามที่ระบุ — เทียบ seed.ts backend] เดิม code 'phys-photosynthesis' ไม่ตรงกับ
+    // backend ที่ใช้ code 'sunlit-root' เลย (คนละ string กันเป๊ะ) ถ้าต่อ backend จริง QuestLog
+    // จะถูกสร้างภายใต้คนละ code กันไม่มีทาง sync — เปลี่ยน code+title ให้ตรงกับ backend
+    // (คงค่า reward/gameKey/controlType เดิมไว้ทั้งหมด เพราะเป็นการตัดสินใจ product/balance
+    // แยกต่างหาก ไม่ได้อยู่ในสโคปที่ขอให้ "เอาตาม backend" รอบนี้ — แค่แก้ identity ให้ sync ได้)
+    code: 'phys-sunlit-root', icon: '☀️', title: 'Sunlit Root', titleTh: 'สังเคราะห์แสง / รับแดดยามเช้า',
+    desc: 'ออกไปรับแสงแดดอ่อนๆ แล้วถ่ายรูปยืนยันว่าออกไปรับแดดจริง',
+    // [แก้รอบนี้ — ข้อ D7] เปลี่ยนจากจับเวลา → ถ่ายรูปยืนยัน (เหมือน phys-hydration-drop)
+    howTo: 'ออกไปรับแสงแดดอ่อนๆ หรือยืนใกล้หน้าต่างที่แดดส่องถึงในช่วงเช้า ก่อนเริ่มเรียนหรือทำงาน แล้วถ่ายรูปยืนยันว่าออกไปรับแดดจริง',
+    theory: 'Circadian Rhythm แสงเช้ากระตุ้น Serotonin และรีเซ็ตนาฬิกาชีวภาพ',
+    category: 'HEALTH', controlType: 'PHOTO', coinReward: 35, expReward: 25, isDaily: true,
+    gameKey: 'photosynthesis', energyLevel: 'LOW',
+  },
+  {
+    code: 'phys-green-vision', icon: '👀', title: 'Green Vision', titleTh: 'พักสายตา / ถนอมใบไม้',
+    desc: 'ละสายตาจากจอไปมองไกล 20 ฟุต เป็นเวลาอย่างน้อย 20 วินาที',
+    howTo: 'หลังจ้องจอเป็นเวลานาน ละสายตาไปมองสิ่งที่อยู่ไกล 20 ฟุต อย่างน้อย 20 วินาที (กฎ 20-20-20)',
+    theory: 'The 20-20-20 Rule (American Optometric Association)',
+    category: 'HEALTH', controlType: 'BELL', coinReward: 20, expReward: 15, isDaily: true,
+    gameKey: 'green-vision', energyLevel: 'LOW',
+  },
+  {
+    // [แก้ตามที่ระบุ — เทียบ seed.ts backend] เดิม code 'phys-pure-water' ไม่ตรงกับ backend
+    // ที่ใช้ code 'hydration-drop' เลย — เปลี่ยน code+title ให้ตรงกับ backend (คงค่า
+    // reward/gameKey/maxPerDay/isRepeatable เดิมไว้ทั้งหมด ด้วยเหตุผลเดียวกับ sunlit-root
+    // ด้านบน — backend ออกแบบเควสนี้เป็นเล่นได้วันละครั้งเดียวไม่มี maxPerDay แต่การตัดสินใจ
+    // "เล่นซ้ำได้ 10 ครั้ง/วัน" ของ frontend เป็น product decision ที่แยกจากเรื่อง identity sync)
+    code: 'phys-hydration-drop', icon: '💧', title: 'Hydration Drop', titleTh: 'น้ำพุหล่อเลี้ยงราก',
+    desc: 'ถ่ายรูปแก้วน้ำเต็ม แล้วถ่ายอีกครั้งตอนดื่มหมดแก้ว เพื่อยืนยันว่าดื่มน้ำจริง',
+    howTo: 'ถ่ายรูปแก้วน้ำตอนเต็มแก้ว 1 รูป ดื่มให้หมด แล้วถ่ายรูปแก้วเปล่าอีก 1 รูปเพื่อยืนยัน เล่นซ้ำได้สูงสุด 10 ครั้ง/วัน ได้รางวัลเท่ากันทุกครั้ง',
+    theory: 'Hydration & Cognitive Performance ขาดน้ำ 1-2% สมาธิและความจำลดลงชัดเจน',
+    category: 'HEALTH', controlType: 'PHOTO', coinReward: 25, expReward: 20, isDaily: true,
+    gameKey: 'pure-water', energyLevel: 'LOW', maxPerDay: 10, isRepeatable: true,
+  },
+  {
+    // [แก้รอบนี้ — Step Journey] ยังไม่มีไอคอนไฟล์รูปเฉพาะในตาราง badges/quests ที่มีอยู่ ใช้
+    // emoji 🦶 ไปก่อนตามที่ระบุ จนกว่าจะมี asset จริง (ดู QUEST_ICONS ใน iconAssets.ts — ไม่มี key
+    // 'phys-vitality-steps' จึงfallback เป็น quest.icon นี้เองอัตโนมัติ) — code เดิมไม่เปลี่ยน
+    // (กัน questLogs เก่าของผู้เล่นอ้างอิงเควสที่หายไป) เปลี่ยนกลไกทั้งหมดเป็นเลือกแผนที่ปลายทาง
+    // 1 ใบจาก 8 ใบแล้วเดินข้ามแผนที่ใบนั้นด้วยก้าวจริง (ดู StepJourneyGame.tsx ผ่าน
+    // questGameRegistry.ts — ไม่ใช่ SPECIAL_QUEST เต็มจอแบบเดิมอีกต่อไป จึงตัดออกจาก
+    // SPECIAL_QUEST_CODES ด้านล่างด้วย)
+    // isDaily:false เพราะ 1 ทริปใช้เวลาหลายวันกว่าจะถึงจุดหมาย ไม่ใช่ทำครั้งเดียวจบในวันเดียว —
+    // maxPerDay:1 + isRepeatable:true ไม่ได้แปลว่าจะสำเร็จได้วันละครั้งจริงๆ (เป็นไปไม่ได้อยู่แล้ว
+    // เพราะ 1 ทริปกินเวลาหลายวัน) แต่จำเป็นต้องมีเพื่อปลดล็อกเงื่อนไข "isCompleted() เช็คแบบไม่มี
+    // deadline" ของ QuestSection.tsx/QuestConfirmModal.tsx ที่บล็อกเควสไม่มี maxPerDay ไม่ให้เล่น
+    // ซ้ำได้อีกเลยหลังสำเร็จครั้งแรก (ดูสรุปท้ายบทสนทนา) — ไม่มี maxPerDay ตัวนี้ผู้เล่นจะเดินได้
+    // แค่ทริปเดียวตลอดชาติ เล่นซ้ำไม่ได้อีกเลยหลังถึงจุดหมายครั้งแรก
+    code: 'phys-vitality-steps', icon: '🦶', title: 'Vitality Steps', titleTh: 'ก้าวเพื่อสุขภาพ',
+    desc: 'ทริปรายวัน: เลือกแผนที่ 1 ใบ เดินให้ถึงเป้าก้าววันนี้ตาม BMI พาตัวละครไปถึงปลายทาง',
+    howTo: 'เลือกแผนที่ 1 ใบจาก 8 ใบสำหรับวันนี้ แล้วเดินสะสมก้าว (ซิงก์จาก Google Fit/Apple Health/เซนเซอร์ หรือกรอกเอง) ตัวละครเดินตามเส้นทางตามก้าวที่เดินได้ ถึงเป้าแล้วเปิดหีบสมบัติที่เส้นชัย (วันละ 1 ใบ) แล้วรับรางวัลวันนี้ ตัดรอบเที่ยงคืน ถ้าลืมกดรับ ระบบสรุปรางวัลให้ตอนเปิดแอปครั้งถัดไป เดินครบเป้าสะสม 21 วันขึ้นไป มีโอกาสได้ไอเทมแลกซื้อของพิเศษ/หายาก',
+    theory: 'Physical Activity Guidelines เดิน 8,000+ ก้าว/วัน ลดความเสี่ยงโรคหัวใจและเบาหวานชนิดที่ 2 ได้อย่างมีนัยสำคัญ',
+    category: 'HEALTH', controlType: 'STEP_JOURNEY', coinReward: 60, expReward: 50, isDaily: false,
+    gameKey: 'step-journey', energyLevel: 'LOW', maxPerDay: 1, isRepeatable: true,
+    // [เพิ่มรอบนี้ — ปรับ layout] แผนที่ต้องเต็มพื้นที่ .game-shell__stage จริงๆ ไม่ใช่การ์ด
+    // จำกัดความกว้าง 620px แบบเควสอื่น — ดู comment ของ fullscreenGame ใน interface ด้านบน
+    fullscreenGame: true,
+  },
+  {
+    code: 'phys-balanced-nutrients', icon: '🍽️', title: 'Balanced Nutrients', titleTh: 'แคลอรี่ตาม BMI',
+    desc: 'ถ่ายรูปมื้ออาหาร ให้ระบบช่วยดูแลเป้าหมายแคลอรี่ตามรูปร่างของคุณ',
+    howTo: 'ถ่ายรูปมื้ออาหารก่อนทานทุกมื้อ (ครบ 3 มื้อ/วันถือว่าสำเร็จ) ระบบจะคำนวณเป้าหมายแคลอรี่วันนี้ให้จาก BMI ของคุณ และช่วยตรวจสอบรูปเบื้องต้น ถึง 18:00 แล้วกินครบเป้าแคลอรี่ของวัน รับรางวัลให้อัตโนมัติ',
+    theory: 'Mifflin-St Jeor Equation (TDEE) ปรับตามเกณฑ์ BMI ต่ำ/ปกติ/เกิน กำหนดส่วนเกิน/สมดุล/ส่วนขาดของพลังงานที่ต่างกัน',
+    category: 'HEALTH', controlType: 'PHOTO', coinReward: 40, expReward: 30, isDaily: true,
+    energyLevel: 'LOW',
+    config: {
+      verificationMethod: 'PHOTO',
+      requiresPhotos: 1,
+      photoLabels: ['ถ่ายรูปมื้ออาหารก่อนทาน'],
+      calorieTargetRule: 'BMI_BASED',
+      flavorTextOnSubmit: 'จิบหยาดน้ำแห่งอรุณรุ่งเพื่อเติมพลังให้ผืนดิน',
+      // [ตามที่ระบุ] ปิดเควสเมื่อถ่ายรูปมื้ออาหารครบเกณฑ์นี้ในวันเดียวกัน
+      mealsPerDayGoal: 3,
+    },
+  },
+]
+
+export const PHYSICAL_SIDE: QuestDef[] = [
+  {
+    code: 'phys-soil-restoration', icon: '🌙', title: 'Soil Restoration', titleTh: 'ฟื้นฟูหน้าดิน / คลิปกล่อมนอน',
+    desc: 'เปิดคลิปวิวธรรมชาติพร้อมเสียงเพราะๆ กล่อมนอน อย่างต่ำ 30 นาที',
+    howTo: 'ถึงเวลานอนแล้ว เลือกวิวที่ชอบ เลือกเสียงกล่อมนอน และระยะเวลา (อย่างต่ำ 30 นาที) จากนั้นวางจอแล้วหลับตาฟัง เมื่อครบเวลาภารกิจจะสำเร็จเองและหน้าจอจะปิดให้อัตโนมัติ',
+    theory: 'Blue Light & Melatonin Suppression · Sleep Soundscapes',
+    category: 'HEALTH', controlType: 'BELL', coinReward: 30, expReward: 20, isDaily: false,
+    gameKey: 'soil-restoration', energyLevel: 'LOW',
+  },
+]
+
+// ── หมวดสุขภาพจิต (Emotion) → ใบและดอก ──
+export const MENTAL_DAILY: QuestDef[] = [
+  {
+    code: 'ment-oracle-activation', icon: '🔮', title: 'Oracle & 2-Minute Activation', titleTh: 'ไพ่ทิพย์กระตุ้นพลัง',
+    desc: 'สุ่มเปิดไพ่รับคำคมให้กำลังใจ พร้อมทำกิจกรรมสั้นๆ 2 นาที',
+    howTo: 'สุ่มเปิดไพ่เพื่อรับคำคมให้กำลังใจ จากนั้นทำกิจกรรมสั้นๆ ตามไพ่ที่สุ่มได้ให้ครบ 2 นาที',
+    theory: 'Behavioral Activation (Jacobson) & Positive Affirmation',
+    category: 'EMOTION', controlType: 'ACTION_BUTTON', coinReward: 25, expReward: 20, isDaily: true,
+    energyLevel: 'LOW',
+  },
+  {
+    code: 'ment-cognitive-incinerator', icon: '🔥', title: 'Cognitive Incinerator', titleTh: 'เตาเผาขยะความคิด',
+    desc: 'พิมพ์ระบายความคิดลบลงบนก้อนหิน แล้วสไลด์ปัดทิ้งเข้ากองไฟ',
+    howTo: 'พิมพ์ความคิดลบที่รบกวนใจลงบนก้อนหินในจอ แล้วสไลด์ปัดก้อนหินทิ้งลงกองไฟเพื่อปลดปล่อยความคิดนั้น',
+    theory: 'CBT (Aaron T. Beck) & Externalization (Narrative Therapy)',
+    category: 'EMOTION', controlType: 'SWIPE_DISCARD', coinReward: 30, expReward: 25, isDaily: true,
+    energyLevel: 'LOW', isCalming: true,
+  },
+  {
+    code: 'ment-mindful-anchor', icon: '⚓', title: 'The Mindful Anchor', titleTh: 'ทอดสมอใจ',
+    desc: 'หายใจตามวงกลมเวทมนตร์จังหวะ 4-7-8 เป็นเวลา 2 นาที',
+    howTo: 'เมื่อต้องการความสงบ หน้าจอจะตัดเข้าสู่กราฟิกวงกลมขยายเข้า-ออก (หรือภาพลมพัดใบไม้) ให้หายใจตามจังหวะ 4-7-8 เข้า 4 วิ กลั้น 7 วิ ผ่อนออก 8 วิ ต่อเนื่อง 2 นาที',
+    theory: 'Mindfulness-Based Stress Reduction (Jon Kabat-Zinn, UMass)',
+    category: 'EMOTION', controlType: 'BREATHING', coinReward: 30, expReward: 25, isDaily: true,
+    energyLevel: 'LOW', isCalming: true,
+  },
+]
+
+export const MENTAL_SIDE: QuestDef[] = [
+  {
+    code: 'ment-reframer-journal', icon: '📖', title: 'My Diary', titleTh: 'ไดอะรี่ของฉัน',
+    desc: 'เขียนระบายความรู้สึก แล้วให้ AI ช่วยปรับมุมมองให้เป็นกลางขึ้น',
+    howTo: 'บันทึกเรื่องราวของคุณในแบบของคุณเอง ทั้งวันที่สดใสและวันที่หม่นหมอง ความสุขและความทุกข์ ทุกเรื่องราวที่คุณเลือกแบ่งปันล้วนมีพลัง ค่อยๆ เรียบเรียงความรู้สึกให้กลายเป็นถ้อยคำ แล้วปล่อยให้หน้ากระดาษโอบรับมันไว้ ถ้ามีความคิดที่หนักใจ AI จะช่วยชวนมองมุมใหม่ให้ใจเบาลง',
+    theory: 'Expressive Writing Therapy (Pennebaker) & Cognitive Restructuring',
+    category: 'EMOTION', controlType: 'GOAL_INPUT', coinReward: 40, expReward: 35, isDaily: false,
+    energyLevel: 'LOW', isCalming: true,
+  },
+  {
+    code: 'ment-gratitude-shield', icon: '🛡️', title: 'Gratitude', titleTh: 'คำขอบคุณ',
+    desc: 'พิมพ์ขอบคุณสิ่งดีๆ 1 เรื่องก่อนนอน ติดต่อกัน 14 วัน ปลดล็อกออร่าต้นไม้',
+    howTo: 'วันนี้คุณอยากขอบคุณใคร? อาจเป็นสิ่งดีๆ ที่คุณได้ลงมือทำ หรือใครสักคนที่มอบความใจดีให้คุณ ลองบอกว่าสิ่งนั้นมีความหมายกับหัวใจคุณอย่างไร แล้วเรียบเรียงเป็นถ้อยคำขอบคุณจากใจ ทำต่อเนื่องครบ 14 วันเพื่อปลดล็อกออร่าเรืองแสงรอบต้นไม้',
+    theory: 'Positive Psychology (Seligman) สร้าง Positive Bias และ Resilience',
+    category: 'EMOTION', controlType: 'GOAL_INPUT', coinReward: 35, expReward: 30, isDaily: false,
+    energyLevel: 'LOW', isCalming: true,
+  },
+  // [ลบ 'ment-sunlit-root'] ซ้ำกับ 'phys-photosynthesis' ในหมวดสุขภาพกายด้านบน (ดู comment
+  // หัวไฟล์ข้อ 5) — "อาบแดดตอนเช้า" เหลืออยู่แค่หมวดสุขภาพกายเหมือนเดิมเท่านั้น
+]
+
+export const QUEST_CATALOG_BY_TAB: Record<QuestTabId, { daily: QuestDef[]; side: QuestDef[] }> = {
+  knowledge: { daily: KNOWLEDGE_DAILY, side: KNOWLEDGE_SIDE },
+  physical: { daily: PHYSICAL_DAILY, side: PHYSICAL_SIDE },
+  mental: { daily: MENTAL_DAILY, side: MENTAL_SIDE },
+}
+
+export const ALL_QUESTS: QuestDef[] = [
+  ...KNOWLEDGE_DAILY, ...KNOWLEDGE_SIDE,
+  ...PHYSICAL_DAILY, ...PHYSICAL_SIDE,
+  ...MENTAL_DAILY, ...MENTAL_SIDE,
+]
+
+export function findQuestByCode(code: string): QuestDef | undefined {
+  return ALL_QUESTS.find((q) => q.code === code)
+}
+
+/** [ย้ายมาจาก GameplayFrame.tsx ตามที่ระบุ] เดิม const ท้องถิ่นในไฟล์เดียว ตอนนี้ต้องใช้ร่วม
+ *  กับ useNotifications.ts (สร้างลิงก์เควสใหม่ปลดล็อก/ทำสำเร็จ → พาไปแท็บที่ถูกต้อง) ด้วย
+ *  ย้ายมาเป็นจุดเดียวกลางกันสองไฟล์ประกาศคนละชุดแล้วเพี้ยนกันเอง */
+export const CATEGORY_TO_TAB: Record<QuestCategory, QuestTabId> = {
+  KNOWLEDGE: 'knowledge',
+  HEALTH: 'physical',
+  EMOTION: 'mental',
+}
+
+/** [เพิ่มรอบนี้ — รวมจุดคำนวณ "สำเร็จเต็มรูปแบบของวันนี้" ที่เคย copy-paste กระจาย 3 จุด]
+ *  เดิม QuestGateView.tsx แก้บั๊กนี้ไปจุดเดียว (เควสที่มี maxPerDay เช่น phys-pure-water
+ *  เคยขึ้น "สำเร็จแล้ว" ทันทีตั้งแต่เล่นรอบแรก เพราะ isCompleted() เช็คแค่ "มี log สำเร็จ
+ *  บ้างไหม" ไม่สนใจว่าเควสนั้นเล่นซ้ำได้กี่ครั้ง) แต่ LearningQuestMap.tsx ยังมี isCompleted()
+ *  ตรงๆ อีก 2 จุด (โหนดเส้นทางหลัก + FAB เควสเสริม) เก็บบั๊กเดิมไว้ครบ — ตอนนี้รวมตรรกะไว้
+ *  จุดเดียวตรงนี้ ทุกที่ที่ต้องเช็ค "เควสนี้สำเร็จเต็มรูปแบบของวันนี้หรือยัง" เรียกฟังก์ชันนี้
+ *  แทน isCompleted() ตรงๆ เพื่อไม่ให้พลาดจุดใดจุดหนึ่งอีกในอนาคต (แก้ที่เดียว ใช้ที่ไหนก็ตรงกัน)
+ *
+ *  [แก้เพิ่ม] เดิมเช็คแค่ q.maxPerDay อย่างเดียวเป็นตัวตัดสินว่าต้องนับรอบวันนี้ไหม — ถ้ามีเควส
+ *  ในอนาคตตั้ง maxPerDay ไว้แต่ลืมติด isRepeatable (สองฟิลด์นี้เป็น optional อิสระต่อกันตาม
+ *  type ไม่มีอะไรบังคับให้มาคู่กันเสมอ) getTodayCompletionCount จะไม่ถูกเรียกเลยเพราะเงื่อนไข
+ *  เดิมผูกกับ isRepeatable ทำให้ playsToday ค้างที่ 0 ตลอดไป (0 >= maxPerDay เป็นเท็จเสมอ)
+ *  แก้โดยเช็ค "q.maxPerDay ไหม" ตรงๆ เป็นตัวตัดสินแทน ไม่อิง isRepeatable อีกต่อไป */
+export function isQuestFullyDoneToday(
+  quest: QuestDef,
+  isCompleted: (questCode: string) => boolean,
+  getTodayCompletionCount: (questCode: string) => number,
+): boolean {
+  if (quest.maxPerDay) return getTodayCompletionCount(quest.code) >= quest.maxPerDay
+  return isCompleted(quest.code)
+}
+
+/** เควสที่ระบบจะ "บังคับ" ให้ทำแทน เมื่อความเสี่ยงอยู่ระดับปานกลางขึ้นไป
+ * [แก้] ตัด 'phys-mindful-breeze' ออก — เควสนี้ถูกลบทั้งระบบแล้ว (ซ้ำกับเควสฝึกหายใจ
+ * ในหมวดสุขภาพจิต) เหลือแค่ 2 เควสสงบใจที่ยังอยู่จริง */
+export const CALMING_QUEST_CODES = ['ment-mindful-anchor', 'ment-cognitive-incinerator']
+
+/** เควสหมวดสุขภาพจิตทั้งหมดที่ต้องเปิดเป็น "หน้าเต็มกรอบ" ไม่ใช่ QuestPlayModal (ดู GameplayFrame.tsx)
+ * [ย้ายมาจาก GameplayFrame.tsx] เดิม export ปนกับ default component export ในไฟล์เดียว ทำให้
+ * Fast Refresh ของไฟล์นั้นตกกลับไปเป็น full reload เสมอ (react-refresh/only-export-components)
+ * [แก้] ตัด 'ment-daily-potion' ออก — เควสนี้ถูกลบทั้งระบบแล้ว การเช็กอินอารมณ์ประจำวันตอนนี้
+ * ไหลผ่าน MoodGateScreen (เด้งขึ้นเองตอนเปิดไพ่ทิพย์/สมุดบันทึกโดยยังไม่มีอารมณ์ของวันนี้)
+ * ไปเข้า MoodCheckIn.tsx 3 ปุ่มเดิม ซึ่งเรียก submitMoodPotion() ท่อเดียวกันอยู่แล้ว */
+export const SPECIAL_QUEST_CODES = [
+  'ment-oracle-activation',
+  'ment-reframer-journal',
+  'ment-cognitive-incinerator',
+  'ment-gratitude-shield',
+  'ment-mindful-anchor',
+  // [เพิ่มรอบนี้ — เควสสุขภาพใหม่] มีฉาก/เสียง/VFX เป็นของตัวเอง (ถ่ายรูปมื้ออาหาร) เหมือน 5
+  // เควสสุขภาพจิตด้านบน จึงเปิดเป็นหน้าเต็มกรอบตรงๆ ไม่ผ่าน GameShell/registry
+  // [ตัดออกรอบนี้ — Step Journey] 'phys-vitality-steps' ย้ายไปผ่าน GameShell/registry ปกติแล้ว
+  // (gameKey: 'step-journey') ไม่ใช่หน้าเต็มจอของตัวเองอีกต่อไป — ดู StepJourneyGame.tsx
+  'phys-balanced-nutrients',
+]
+
+/** [ใหม่] เควสที่ต้องเช็คอินอารมณ์ของวันนี้ก่อนถึงจะเล่นได้จริง (GameplayFrame.tsx โชว์
+ * MoodGateScreen แทนหน้าจริงถ้ายังไม่มี todaysMoodEntry) — เดิมไม่มีสัญลักษณ์อะไรบอกผู้ใช้
+ * ล่วงหน้าเลยตอนยังอยู่ที่เมนู FAB เลือกเควส (QuestGateView.tsx) กดเข้าไปแล้วถึงจะเจอหน้ากั้น
+ * ดูเหมือนเควสพัง — export แยกไว้ที่นี่ให้ทั้งสองไฟล์อ้างอิงจุดเดียวกัน ไม่ต้องซ้ำ magic string */
+export const MOOD_GATED_QUEST_CODES = ['ment-oracle-activation', 'ment-reframer-journal']

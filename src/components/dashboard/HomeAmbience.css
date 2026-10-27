@@ -1,0 +1,106 @@
+/* ═══ HomeAmbience — แสงแดด (สว่าง) / กลางคืน (มืด) / ฝนตก ตามสภาพอากาศจริง ═══ */
+.home-ambience {
+  position: fixed;
+  inset: 0;
+  z-index: 2;              /* เหนือต้นไม้ (.dashboard__tree-layer z1) ใต้ปุ่ม/แผงทุกอย่าง */
+  pointer-events: none;
+  overflow: hidden;
+}
+.home-ambience__day,
+.home-ambience__night { position: absolute; inset: 0; transition: opacity 1.2s ease; }
+.home-ambience__night { opacity: 0; }
+[data-theme="dark"] .home-ambience__day { opacity: 0; }
+[data-theme="dark"] .home-ambience__night { opacity: 1; }
+
+/* ── ธีมสว่าง: แสงแดดสาดส่องจากมุมบนซ้ายลงมาที่ต้นไม้ ── */
+.home-ambience__sun-glow {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(38% 34% at 8% 0%, rgba(255, 236, 170, .55), transparent 70%),
+    radial-gradient(40% 40% at 50% 55%, rgba(255, 244, 205, .16), transparent 75%);
+  mix-blend-mode: soft-light;
+}
+.home-ambience__ray {
+  position: absolute;
+  top: -20%;
+  left: calc(-6% + var(--ray-i) * 7%);
+  width: calc(9% + var(--ray-i) * 1.5%);
+  height: 150%;
+  transform-origin: top center;
+  transform: rotate(calc(-38deg + var(--ray-i) * 4deg));
+  background: linear-gradient(180deg, rgba(255, 245, 205, .42) 0%, rgba(255, 245, 205, .12) 45%, transparent 80%);
+  filter: blur(6px);
+  opacity: .55;
+  mix-blend-mode: screen;
+  animation: homeAmbienceRay calc(7s + var(--ray-i) * 1.3s) ease-in-out infinite alternate;
+}
+@keyframes homeAmbienceRay {
+  from { opacity: .25; }
+  to   { opacity: .7; }
+}
+/* ฝนตก: ท้องฟ้าครึ้ม แสงแดดหรี่ลง */
+.home-ambience.is-rain .home-ambience__day { opacity: .15; }
+[data-theme="dark"] .home-ambience.is-rain .home-ambience__day { opacity: 0; }
+
+/* ── ธีมมืด: ฉากกลางคืน ── */
+/* [แก้ตามที่ระบุ] ความมืดกลางคืนอยู่ชั้นพื้นหลัง (.home-ambience-bg ใต้ต้นไม้) — ชั้นบนเหลือแค่หิ่งห้อย */
+.home-ambience-bg {
+  position: fixed; inset: 0;
+  z-index: 0;               /* อยู่ถัดจากวิดีโอพื้นหลัง (z0 มาก่อนใน DOM) แต่ใต้ต้นไม้ (.dashboard__tree-layer z1) */
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+[data-theme="dark"] .home-ambience-bg { opacity: 1; }
+.home-ambience-bg__night {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(4, 12, 32, .62) 0%, rgba(6, 16, 36, .4) 55%, rgba(3, 10, 20, .5) 100%);
+}
+.home-ambience__moon-glow {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(22% 20% at 86% 8%, rgba(220, 232, 255, .38), transparent 70%),
+    radial-gradient(45% 40% at 50% 55%, rgba(160, 200, 255, .08), transparent 75%);
+}
+.home-ambience__firefly {
+  position: absolute;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #F6FFB8;
+  box-shadow: 0 0 10px 3px rgba(236, 255, 150, .75);
+  opacity: 0;
+  animation: homeAmbienceFirefly 7s ease-in-out infinite;
+}
+@keyframes homeAmbienceFirefly {
+  0%   { opacity: 0; transform: translate(0, 0); }
+  25%  { opacity: .95; }
+  50%  { opacity: .4; transform: translate(18px, -22px); }
+  75%  { opacity: .9; transform: translate(-12px, -8px); }
+  100% { opacity: 0; transform: translate(6px, 12px); }
+}
+
+/* ── ฝนตกปอยๆ ── */
+.home-ambience__rain {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(40, 60, 80, .16), rgba(40, 60, 80, .06));
+}
+[data-theme="dark"] .home-ambience__rain { background: linear-gradient(180deg, rgba(10, 20, 35, .22), rgba(10, 20, 35, .08)); }
+.home-ambience__drop {
+  position: absolute;
+  top: -8%;
+  width: 1.5px;
+  height: 18px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, rgba(225, 240, 255, 0), rgba(225, 240, 255, .85));
+  transform: rotate(12deg);
+  animation: homeAmbienceRain 1s linear infinite;
+}
+@keyframes homeAmbienceRain {
+  from { transform: translate(0, 0) rotate(12deg); }
+  to   { transform: translate(-60px, 115vh) rotate(12deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-ambience__ray, .home-ambience__firefly { animation: none; }
+  .home-ambience__firefly { opacity: .6; }
+  .home-ambience__drop { animation: none; opacity: .3 !important; top: 30%; }
+}

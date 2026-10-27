@@ -1,0 +1,137 @@
+/* ═══════════════════════════════════════════════════════════════
+   BreathingVisual.css — วงกลมเวทมนตร์นำจังหวะหายใจ
+   ตัวแปรสีรับมาจาก parent ผ่าน --breath-accent / --breath-glow
+   ═══════════════════════════════════════════════════════════════ */
+
+.breath-visual {
+  position: relative;
+  width: min(74vw, 300px);
+  height: min(74vw, 300px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  --lc-c-2: #7FE7D9;
+  --breath-accent: var(--anchor-accent, var(--lc-c-2));
+  --lc-c-3: rgba(127, 231, 217, 0.55);
+  --breath-glow: var(--anchor-glow, var(--lc-c-3));
+}
+
+.breath-visual--dimmed { opacity: 0.45; }
+
+/* ── วงแหวนความคืบหน้าของเซสชัน ── */
+.breath-visual__session-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.breath-visual__ring-track {
+  fill: none;
+  stroke: var(--glass-w-12);
+  stroke-width: 1.6;
+}
+.breath-visual__ring-fill {
+  fill: none;
+  stroke: var(--breath-accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.2s linear;
+  filter: drop-shadow(0 0 6px var(--breath-glow));
+}
+
+/* ── แกนกลางวงกลมลมหายใจ ── */
+.breath-visual__orb {
+  position: relative;
+  width: 58%;
+  height: 58%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform;
+}
+.breath-visual__orb-core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, var(--glass-w-95), var(--glass-w-28) 45%, transparent 68%),
+    radial-gradient(circle, var(--breath-glow), transparent 72%);
+  box-shadow: 0 0 60px var(--breath-glow), inset 0 0 40px var(--glass-w-22);
+  --lc-border-1: rgba(255, 255, 255, 0.42);
+  border: 1.5px solid var(--lc-border-1);
+}
+
+/* ── ระลอกคลื่น: แผ่ออกเฉพาะตอนหายใจเข้า ── */
+.breath-visual__ripple {
+  position: absolute;
+  width: 58%;
+  height: 58%;
+  border-radius: 50%;
+  border: 1px solid var(--breath-accent);
+  opacity: 0;
+  pointer-events: none;
+}
+.breath-visual--inhale .breath-visual__ripple { animation: breathRipple 4s ease-out infinite; }
+.breath-visual--inhale .breath-visual__ripple--2 { animation-delay: 1.6s; }
+@keyframes breathRipple {
+  0%   { transform: scale(0.62); opacity: 0.55; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+
+/* ── ใบไม้ปลิว (โหมด leaves) ── */
+.breath-visual__leaf {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin-left: -10px;
+  margin-top: -10px;
+  transition: transform 0.28s linear;
+  filter: drop-shadow(0 3px 6px var(--glass-b-35));
+  animation: breathLeafSway 6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes breathLeafSway {
+  0%, 100% { opacity: 0.75; }
+  50%      { opacity: 1; }
+}
+
+/* ── วงแหวนอักขระเวทมนตร์ ── */
+.breath-visual__rune-ring {
+  position: absolute;
+  inset: 0;
+  animation: breathRuneSpin 44s linear infinite;
+  pointer-events: none;
+}
+.breath-visual__rune {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: var(--breath-accent);
+  opacity: 0.5;
+  box-shadow: 0 0 8px var(--breath-glow);
+}
+@keyframes breathRuneSpin { to { transform: rotate(360deg); } }
+
+/* ── ตัวเลขนับถอยหลังกลางวง ── */
+.breath-visual__count {
+  position: absolute;
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: clamp(34px, 9vw, 52px);
+  color: var(--fixed-white);
+  text-shadow: 0 2px 20px var(--glass-b-45);
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breath-visual__ripple,
+  .breath-visual__rune-ring,
+  .breath-visual__leaf { animation: none; }
+  .breath-visual__orb { transition: none; }
+}

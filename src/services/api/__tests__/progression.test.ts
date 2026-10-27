@@ -1,0 +1,196 @@
+// @vitest-environment jsdom
+/*============================================================================*\
+  progression.test.ts — ปลดล็อกระบบการ์ดแลกซื้อ (เดินถึงเป้าสะสม 21 วัน) / การ์ดสุ่มตกจากเควสประจำวัน /
+  แลกซื้อของพิเศษ / หน้าเว็บไม่ได้รับตัวนับวัน (โหมด mock)
+\*============================================================================*/
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+/** วันที่ไทยย้อนหลัง n วัน (ตรงกับ localDateKey ที่ตัดรอบเวลาไทย) */
+function dateDaysAgo(n: number): string {
+  return new Date(Date.now() + 7 * 3_600_000 - n * 86_400_000).toISOString().slice(0, 10)
+}
+
+describe('progression โหมด mock', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.stubEnv('VITE_API_MODE', 'mock')
+    window.localStorage.clear()
+  })
+  afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); window.localStorage.clear() })
+
+  async function setup(goalDaysBeforeToday: number) {
+    const db = await import('../../mock/mockDb')
+    db.updateDb((d) => {
+      d.user = { ...d.user, coins: 5_000 }
+      const p = db.emptyProgression(dateDaysAgo(60))
+      for (let i = 1; i <= goalDaysBeforeToday; i++) p.stepDays[dateDaysAgo(i)] = { steps: 9_000, goal: 8_000, goalMet: true }
+      d.progression = p
+    })
+    return { db, api: await import('../progression.api'), quest: await import('../quest.api') }
+  }
+
+  it('หน้าเว็บไม่ได้รับตัวนับวันสะสม/สถานะปลดล็อก', async () => {
+    const { api } = await setup(25)
+    const summary = await api.getProgression()
+    expect(Object.keys(summary).sort()).toEqual(['doubleCards', 'doubleRewardActive', 'doubleRewardUntil', 'exchangeCards', 'goalStreakDays', 'specialDust'])
+  })
+
+  it('ทำเควสการเรียนรู้ครบ 5 ด่าน → log สุดท้ายได้ของขวัญสุ่ม 1 ครั้ง · ด่านก่อนหน้าไม่ได้', async () => {
+    const { quest } = await setup(0)
+    const { KNOWLEDGE_DAILY } = await import('../../../config/questCatalog')
+    const results = []
+    for (const q of KNOWLEDGE_DAILY) results.push(await quest.completeQuest({ questCode: q.code }))
+    expect(results.slice(0, -1).every((r) => !r.learningGift)).toBe(true)
+    const gift = results[results.length - 1].learningGift
+    expect(gift).toBeTruthy()
+    expect(['BONUS_COINS', 'WATER_DROPS']).toContain(gift!.kind) // ยังไม่ปลดล็อกการ์ด → ไม่มีการ์ด
+  })
+
+  it('โหมดจดจ่อ: วันละไม่เกิน 3 รอบ รอบที่ 4 → 409 DAILY_LIMIT_REACHED', async () => {
+    const { quest } = await setup(0)
+    for (let i = 0; i < 3; i++) await quest.completeQuest({ questCode: 'know-deep-root', payload: { round: i + 1 } })
+    await expect(quest.completeQuest({ questCode: 'know-deep-root' })).rejects.toMatchObject({ code: 'DAILY_LIMIT_REACHED' })
+  })
+
+  it('ใช้ผงพิเศษ: หัก 1 ถุง ต้นไม้ได้ +1-2 EXP · ไม่มีผง → 400 NO_SPECIAL_DUST', async () => {
+    const { db, api } = await setup(0)
+    await expect(api.consumeSpecialDust()).rejects.toMatchObject({ code: 'NO_SPECIAL_DUST' })
+    db.updateDb((d) => { d.progression!.specialDust = 2 })
+    const before = db.getDb().user.exp
+    const res = await api.consumeSpecialDust()
+    expect(res.remaining).toBe(1)
+    expect(res.expGained).toBeGreaterThanOrEqual(1)
+    expect(res.expGained).toBeLessThanOrEqual(2)
+    expect(db.getDb().user.exp).toBe(before + res.expGained)
+    expect((await api.getProgression()).specialDust).toBe(1)
+  })
+
+  it('การ์ด ×2: ใช้แล้วรางวัลเควส ×2 นาน 12 ชม. · ซ้อนไม่ได้ · ไม่มีการ์ด → 400 NO_DOUBLE_CARD', async () => {
+    const { db, api, quest } = await setup(0)
+    await expect(api.consumeDoubleCard()).rejects.toMatchObject({ code: 'NO_DOUBLE_CARD' })
+    db.updateDb((d) => { d.progression!.doubleCards = 2 })
+
+    const coins0 = db.getDb().user.coins
+    await quest.completeQuest({ questCode: 'phys-green-vision' })
+    const normalGain = db.getDb().user.coins - coins0
+
+    const res = await api.consumeDoubleCard()
+    expect(res.remaining).toBe(1)
+    const hours = (Date.parse(res.doubleRewardUntil) - Date.now()) / 3_600_000
+    expect(hours).toBeGreaterThan(11.9)
+    expect(hours).toBeLessThanOrEqual(12)
+    await expect(api.consumeDoubleCard()).rejects.toMatchObject({ code: 'DOUBLE_ALREADY_ACTIVE' })
+
+    const summary = await api.getProgression()
+    expect(summary.doubleRewardActive).toBe(true)
+    expect(summary.doubleCards).toBe(1)
+
+    const coins1 = db.getDb().user.coins
+    await quest.completeQuest({ questCode: 'phys-sunlit-root' })
+    const { findQuestByCode } = await import('../../../config/questCatalog')
+    expect(db.getDb().user.coins - coins1).toBe(findQuestByCode('phys-sunlit-root')!.coinReward * 2)
+    expect(normalGain).toBe(findQuestByCode('phys-green-vision')!.coinReward)
+
+    // หมดเวลาแล้ว → ไม่คูณอีก
+    db.updateDb((d) => { d.progression!.doubleRewardUntil = new Date(Date.now() - 1000).toISOString() })
+    expect((await api.getProgression()).doubleRewardActive).toBe(false)
+  })
+
+  it('บันทึกก้าวรายวันพร้อมแผนที่ ประวัติเปิดดูแผนที่ของวันนั้นได้ และเก็บก้าวค่ามากสุด', async () => {
+    const { api } = await setup(0)
+    const today = api.localDateKey()
+    await api.recordStepDay(today, 9_000, 8_000, { mapId: 'lotus-pond', journeyId: 'j1' })
+    await api.recordStepDay(today, 3_000, 8_000)
+    const [day] = await api.getStepHistory()
+    expect(day).toMatchObject({ date: today, steps: 9_000, goalMet: true, mapId: 'lotus-pond', journeyId: 'j1' })
+  })
+
+  it('ยังไม่ครบ 21 วัน → ทำเควสประจำวันไม่มีวันได้การ์ด', async () => {
+    const { quest } = await setup(19)
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const res = await quest.completeQuest({ questCode: 'know-active-focus' })
+    expect(res.exchangeCard).toBeNull()
+  })
+
+  it('ครบ 21 วัน → ปลดล็อกถาวร แล้วการ์ดสุ่มตกจากเควสประจำวัน (ไม่ต้องรออีก 21 วัน)', async () => {
+    const { db, api, quest } = await setup(20)
+    await api.recordStepDay(api.localDateKey(), 8_000, 8_000) // วันที่ 21
+    expect(db.getDb().progression?.cardsUnlockedAt).toBeTruthy()
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const res = await quest.completeQuest({ questCode: 'know-active-focus' })
+    expect(res.exchangeCard).toBeTruthy()
+    expect((await api.getProgression()).exchangeCards[res.exchangeCard as string]).toBe(1)
+  })
+
+  it('กดข้ามตัวจับเวลา → ไม่ได้การ์ด', async () => {
+    const { db, quest } = await setup(0)
+    db.updateDb((d) => { d.progression!.cardsUnlockedAt = new Date().toISOString() })
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const res = await quest.completeQuest({ questCode: 'know-deep-root', payload: { skipped: true } })
+    expect(res.exchangeCard).toBeNull()
+  })
+
+  it('แลกซื้อ: การ์ดไม่พอ → 400 INSUFFICIENT_CARDS พร้อมจำนวนที่ขาด ไม่หักเหรียญ', async () => {
+    const { db, api } = await setup(0)
+    db.updateDb((d) => { d.progression!.exchangeCards['fire-dragon'] = 2 }) // ต้องใช้ 5
+    await expect(api.exchangeItem('fire-dragon', 2_500)).rejects.toMatchObject({
+      status: 400, detail: { error: { code: 'INSUFFICIENT_CARDS', missing: 3 } },
+    })
+    expect(db.getDb().user.coins).toBe(5_000)
+  })
+
+  it('แลกซื้อสำเร็จ: หักเหรียญ + การ์ด แล้วได้ของเข้าคลัง', async () => {
+    const { db, api } = await setup(0)
+    db.updateDb((d) => { d.progression!.exchangeCards['fire-dragon'] = 6 })
+    await api.exchangeItem('fire-dragon', 2_500)
+    const after = db.getDb()
+    expect(after.user.coins).toBe(2_500)
+    expect(after.progression!.exchangeCards['fire-dragon']).toBe(1)
+    expect(after.inventory.some((i) => i.shopItemId === 'fire-dragon')).toBe(true)
+  })
+
+  it('หยั่งรากลึกครบ 3 รอบก่อนปลดล็อก → ได้เหรียญโบนัส (ไม่มีการ์ด) และสุ่มครั้งเดียวต่อ rollKey', async () => {
+    const { api } = await setup(0)
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const a = await api.claimDeepRootBonus('deep-root:test:0')
+    const b = await api.claimDeepRootBonus('deep-root:test:0')
+    expect(a).toEqual({ cardItemCode: null, coins: 60 })
+    expect(b).toEqual(a)
+  })
+
+  it('หีบสมบัติ: วันที่ไม่ถึงเป้า → 400 GOAL_NOT_MET (ไม่มีหีบ)', async () => {
+    const { api } = await setup(0)
+    const today = api.localDateKey()
+    await api.recordStepDay(today, 3_000, 8_000)
+    await expect(api.openStepChest(today)).rejects.toMatchObject({ status: 400, detail: { error: { code: 'GOAL_NOT_MET' } } })
+  })
+
+  it('หีบสมบัติ: 1 ใบต่อวัน เปิดซ้ำได้ผลเดิม ไม่ได้รางวัลซ้ำ + ประวัติเห็นผลหีบ', async () => {
+    const { db, api } = await setup(0)
+    const today = api.localDateKey()
+    await api.recordStepDay(today, 9_000, 8_000)
+    vi.spyOn(Math, 'random').mockReturnValue(0) // ยังไม่ปลดล็อกการ์ด → ช่องแรกที่เหลือ = เหรียญโบนัส ค่าต่ำสุด
+    const first = await api.openStepChest(today)
+    const coinsAfter = db.getDb().user.coins
+    const again = await api.openStepChest(today)
+    expect(first).toEqual({ reward: { kind: 'BONUS_COINS', amount: 20, cardItemCode: null }, alreadyOpened: false })
+    expect(coinsAfter).toBe(5_020)
+    expect(again).toEqual({ reward: first.reward, alreadyOpened: true })
+    expect(db.getDb().user.coins).toBe(5_020)
+    expect((await api.getStepHistory())[0].chest).toEqual(first.reward)
+    // บันทึกก้าวเพิ่มหลังเปิดหีบ → ผลหีบไม่หาย
+    await api.recordStepDay(today, 10_000, 8_000)
+    expect((await api.getStepHistory())[0].chest).toEqual(first.reward)
+  })
+
+  it('หีบสมบัติ: การ์ดแลกซื้อออกได้หลังปลดล็อกเท่านั้น แล้วเข้ากระเป๋าการ์ด', async () => {
+    const { db, api } = await setup(0)
+    const today = api.localDateKey()
+    db.updateDb((d) => { d.progression!.cardsUnlockedAt = new Date().toISOString() })
+    await api.recordStepDay(today, 9_000, 8_000)
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const { reward } = await api.openStepChest(today)
+    expect(reward.kind).toBe('EXCHANGE_CARD')
+    expect((await api.getProgression()).exchangeCards[reward.cardItemCode as string]).toBe(1)
+  })
+})

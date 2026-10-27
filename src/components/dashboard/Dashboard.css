@@ -1,0 +1,691 @@
+/*============================================================================*\
+  Dashboard.css — [ไฟล์ใหม่] ย้ายมาจาก <style>{...} ที่เคยฝังอยู่ใน Dashboard.tsx
+  ────────────────────────────────────────────────────────────────────────────
+  ใช้โทเคนจาก index.css ทั้งหมด ไม่มีสีดิบเหลือในไฟล์นี้
+\*============================================================================*/
+
+.dashboard {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;   /* กันแถบ URL ของเบราว์เซอร์มือถือกินพื้นที่ */
+  padding-bottom: 90px;
+}
+
+/* ── พื้นหลัง ── */
+.dashboard__bg-video,
+.dashboard__bg-still {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+.dashboard__bg-scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.dashboard__bg-video { object-fit: cover; opacity: 0; transition: opacity .6s ease; }
+.dashboard__bg-video.is-ready { opacity: 1; }
+.dashboard__bg-still {
+  --lc-bg-7: rgba(98, 217, 192, .10);
+  background: var(--bg-poster, none) center / cover no-repeat,
+    radial-gradient(90% 60% at 50% 10%, var(--lc-bg-7), transparent 70%),
+    linear-gradient(180deg, var(--ae-deep) 0%, var(--ae-void) 100%);
+}
+
+/* ── ต้นไม้ ── */
+.dashboard__tree-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  /* [แก้ตามที่ระบุ] เลื่อนขึ้นลงได้: ฉากแรก = จอเดิมพอดี (ลูก position:absolute inset:0) + ชั้นดินต่อด้านล่าง
+     (.dashboard__soil-extension) — เลื่อนแนวนอนยังเป็นการลากฉากของ TreeOfLife เหมือนเดิม */
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* [แก้ตามที่ระบุ] none (เดิม contain) — ปิดการเด้งเลยขอบ (rubber-band) ของ iPhone: เลื่อนถึงขอบล่างของชั้นดิน
+     แล้วหยุดทันที ไม่ยกดินสูงเกินจนเห็นพื้นหลังด้านล่าง/ด้านบน */
+  overscroll-behavior: none;
+  scrollbar-width: none;
+}
+.dashboard__tree-layer::-webkit-scrollbar { display: none; }
+/* [แก้ตามที่ระบุ] พื้นหลังวิดีโอ/ภาพนิ่งอยู่กับที่ ไม่ขยับตามการเลื่อน (เลื่อนเฉพาะฉากต้นไม้ + ชั้นดิน) */
+
+/* ชั้นดินต่อจากขอบล่างของฉาก — สีต่อจากดินล่างสุดที่ drawGround วาด (#43301c) แล้วเข้มลงตามความลึก
+   + ริ้วชั้นดิน + กรวดเล็ก (ลวดลายซ้ำด้วย gradient ล้วน ไม่ต้องโหลดรูป) */
+.dashboard__soil-extension {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: clamp(70px, 12vh, 130px); /* [แก้ตามที่ระบุ] เพิ่มดินแค่นิดเดียว (เดิม max(55vh, 360px)) */
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(150, 132, 112, .55) 0 3px, transparent 4px) 0 0 / 74px 61px,
+    radial-gradient(circle at 63% 71%, rgba(120, 104, 88, .5) 0 4px, transparent 5px) 0 0 / 97px 83px,
+    radial-gradient(ellipse 6px 4px at 40% 45%, rgba(176, 156, 130, .4) 0 100%, transparent 100%) 0 0 / 53px 47px,
+    repeating-linear-gradient(178deg, transparent 0 46px, rgba(255, 225, 180, .08) 46px 48px),
+    linear-gradient(180deg, #43301c 0%, #3a2917 45%, #2a1d10 100%);
+}
+
+/* [เพิ่มรอบนี้ — เควส "แคลอรี่ตาม BMI"] แอนิเมชันบัวรดน้ำบินเข้ามาที่โคนต้นไม้ (ดู
+   WateringCanFx.tsx) — วางไว้ค่อนไปทางล่างขวาของ .dashboard__tree-layer ใกล้กระถาง/โคนต้น */
+.watering-can-fx {
+  position: absolute;
+  /* [แก้ตามที่ระบุ] รดตรงตำแหน่งต้นไม้เท่านั้น — โคนต้นอยู่กึ่งกลางจอ (x 50%) สูง 84% ของฉาก
+     (TREE_BASE_Y_RATIO ใน drawTree2D.ts) วางกล่องให้หัวพวย (หลังเอียง -25°) อยู่เหนือลำต้นพอดี */
+  left: calc(50% - 28px);
+  top: calc(84% - 190px);
+  z-index: 6;
+  /* [แก้ตามที่ระบุ] บัวรดน้ำใหญ่ขึ้นนิดหน่อย (เดิม 90px) */
+  width: 120px;
+  height: 120px;
+  pointer-events: none;
+}
+.watering-can-fx__can {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 14px var(--glass-b-35));
+}
+.watering-can-fx__drops {
+  /* จุดหัวพวยหลังเอียง -25° ในกล่อง 120px ≈ (28, 64) */
+  position: absolute;
+  top: 60px;
+  left: 24px;
+}
+.watering-can-fx__drop {
+  position: absolute;
+  top: 0;
+  width: 17px;
+  height: 17px;
+}
+@media (max-width: 640px) {
+  .watering-can-fx { width: 100px; height: 100px; left: calc(50% - 23px); top: calc(84% - 165px); }
+  .watering-can-fx__drops { top: 50px; left: 20px; }
+}
+
+/* [ใหม่ — ข้อ C] ตัวครอบต้นไม้ของตัวเอง ใช้เป็นเป้าหมายของ html-to-image ตอนกดแชร์
+   (ดู treeCaptureRef ใน Dashboard.tsx) — ต้อง position:absolute;inset:0 เอง เพราะ
+   TreeOfLife.tsx สูง/กว้าง 100% ของพาเรนต์ตรง (.tree-of-life { width/height:100% }
+   ไม่ได้ fixed เอง) ถ้าไม่กำหนดตรงนี้ div ธรรมดาจะสูง 0 ตามค่า default (height:auto ไม่มี
+   เนื้อหาที่ดันความสูง) แล้วต้นไม้จะยุบหายไปทันที */
+.dashboard__tree-capture-target {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── ทูลทิปชวนสุ่มไพ่ทิพย์ ──
+   [เปลี่ยนจากเดิม] ตัดอนิเมชันลอยขึ้น-ลงตลอดเวลาออก เหลือแค่ปรากฏขึ้นครั้งเดียว
+   การเคลื่อนไหวที่วนไม่จบและไม่ได้เกิดจากการกระทำของผู้ใช้ เป็นสิ่งรบกวนสายตา
+   มากกว่าเป็นสิ่งดึงดูด โดยเฉพาะในแอปที่ตั้งใจให้รู้สึกสงบ */
+.dashboard__oracle-nudge {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  max-width: min(80vw, 340px);
+  padding: 10px 18px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--ae-surface-edge);
+  background: var(--ae-surface);
+  backdrop-filter: var(--ae-blur);
+  -webkit-backdrop-filter: var(--ae-blur);
+  color: var(--ae-text);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  box-shadow: var(--ae-glow-sm);
+  animation: dashboardNudgeIn .5s var(--ease-out-soft) both;
+  transition: transform var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) ease;
+}
+.dashboard__oracle-nudge:hover { transform: translateX(-50%) scale(1.03); box-shadow: var(--ae-glow-md); }
+.dashboard__oracle-nudge:active { transform: translateX(-50%) scale(.97); }
+
+@keyframes dashboardNudgeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── แผงลอยข้างจอ ──
+   [ลบ NavBar แล้ว] ระยะบนของ UI ลอยทั้งหน้า Home เดิมเว้นใต้ NavBar สูง 80px (95px/มือถือ 80px/HUD 92px)
+   ตอนนี้ชิดขอบบนจอแทน (16px/มือถือ 8px/HUD 12px) */
+.dashboard__panel {
+  position: fixed;
+  top: 16px;
+  z-index: 50;
+  pointer-events: none;   /* ตัวกรอบไม่รับคลิก จะได้ไม่บังต้นไม้ */
+}
+.dashboard__panel > * { pointer-events: auto; }
+
+.dashboard__panel--left {
+  left: 16px;
+  overflow: visible;      /* ห้ามใส่ overflow:hidden — จะบังปุ่มย่อ/ขยาย */
+}
+.dashboard__panel--right {
+  right: 16px;
+  max-height: calc(100vh - 190px);/* [แก้ตามที่ระบุ] เดิมใช้ 100vh - 160px แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่
+     ทำให้แผงขวาเลยล้นจอออกไปนิดหน่อย เปลี่ยนเป็น 100vh - 190px ให้เหลือพื้นที่ว่าง
+     ด้านบน/ล่างเท่ากัน (95px) */
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  --lc-c-6: rgba(45, 106, 79, .25);
+  scrollbar-color: var(--lc-c-6) transparent;
+}
+.dashboard__panel--right::-webkit-scrollbar { width: 4px; }
+.dashboard__panel--right::-webkit-scrollbar-track { background: transparent; }
+.dashboard__panel--right::-webkit-scrollbar-thumb {
+  --lc-bg-5: rgba(45, 106, 79, .25);
+  background-color: var(--lc-bg-5);
+  border-radius: var(--r-pill);
+}
+
+/* ── ชั้นของโมดัล ── */
+.dashboard__modal-layer { position: relative; z-index: 500; }
+
+/* ── จอกลาง ── */
+@media (max-width: 768px) {
+  .dashboard__panel--left  { left: 6px; }
+  .dashboard__panel--right { right: 6px; }
+}
+
+/* ── มือถือ ──
+   [เปลี่ยนจากเดิม] เดิมใช้ transform: scale(.88) ย่อทั้งแผง ซึ่งทำให้ตัวอักษร
+   เบลอเล็กน้อยและกล่องรับคลิกเลื่อนไม่ตรงกับสิ่งที่ตาเห็น เปลี่ยนมาย่อด้วย
+   font-size + ความกว้างจริงแทน */
+@media (max-width: 480px) {
+  .dashboard__panel { top: 8px; }
+  .dashboard__panel--left,
+  .dashboard__panel--right { font-size: var(--fs-xs); max-width: 44vw; }
+  .dashboard__panel--right { max-height: calc(100vh - 190px); }
+  .dashboard__oracle-nudge { font-size: var(--fs-xs); padding: 8px 14px; }
+}
+/* ═══════════════════════════════════════════
+   [เพิ่มใหม่] HUD กลางจอชิดขอบบน แบบ V1
+   ═══════════════════════════════════════════ */
+.game-top-hud {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  width: 95%;/* [แก้ตามที่ระบุ] เดิมใช้ 100% แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่ ทำให้ HUD ล้นจอออกไปนิดหน่อย
+     เปลี่ยนเป็น 95% ให้เหลือพื้นที่ว่างด้านซ้าย/ขวาเท่ากัน */
+  max-width: 600px;
+  display: flex;
+  justify-content: center;
+  /* [แก้ตามที่ระบุ] ห้ามตัดขึ้นแถวใหม่ — แคปซูลทุกตัวอยู่แถวเดียวเสมอ แล้วย่อขนาดตามความกว้างจอแทน (ดู @media ≤520px) */
+  flex-wrap: nowrap;
+  gap: 10px;
+  pointer-events: none;
+}
+.game-top-hud > * { pointer-events: auto; }
+
+/* [แก้ตามที่ระบุ] ป้ายคะแนนแบบเกมน่ารัก — ขอบทอง + ขอบล่างหนาเหมือนปุ่มเกม + ไฮไลต์ด้านบน
+   สีชุดเดียวกับกรอบกระดานจัดอันดับ (สว่าง: เขียวอ่อน/ตัวหนังสือเข้ม, มืด: เขียวเข้ม/ขาว) */
+.hud-pill {
+  --hud-bg: var(--leaf-soft);
+  --hud-bg-2: var(--leaf-soft-strong);
+  --hud-text: var(--on-leaf-soft);
+  --hud-edge: color-mix(in srgb, var(--coin) 70%, var(--g600));
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 7px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(180deg, var(--hud-bg) 0%, var(--hud-bg-2) 100%);
+  border: 2px solid var(--hud-edge);
+  color: var(--hud-text);
+  font-family: var(--font-display);
+  /* [แก้ตามที่ระบุ] ตัวอักษร HUD (INTJ Lv.1 / เหรียญ / streak) เล็กไป ขยายจาก --fs-sm (13px)
+     เป็น --fs-lg (18px) — ยังใช้ design token เดิมตามที่เคยระบุห้ามใส่ค่า px มั่ว */
+  font-size: var(--fs-lg);
+  box-shadow:
+    0 3px 0 color-mix(in srgb, var(--hud-edge) 80%, var(--g800)),
+    0 6px 14px var(--glass-b-25),
+    inset 0 2px 0 color-mix(in srgb, var(--fixed-white) 55%, transparent);
+  transition: transform .15s ease;
+}
+.hud-pill:hover { transform: translateY(-1px); }
+[data-theme="dark"] .hud-pill {
+  --hud-bg: var(--g700);
+  --hud-bg-2: var(--g800);
+  --hud-text: var(--fixed-white);
+}
+/* [แก้ตามที่ระบุ] รูปเหรียญ/ดาว/ไอคอนบนแถบด้านบนใหญ่ขึ้น */
+.hud-icon { font-size: 20px; line-height: 1; width: 32px; height: 32px; margin: -4px 0; }
+.hud-bar-container { display: flex; align-items: center; gap: 6px; }
+.hud-bar-bg {
+  width: 60px; height: 10px; border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--hud-text) 22%, transparent); overflow: hidden;
+  box-shadow: inset 0 1px 2px var(--glass-b-25);
+}
+.hud-bar-fill { height: 100%; background: linear-gradient(90deg, var(--exp), var(--coin)); border-radius: var(--r-pill); }
+/* [แก้ตามที่ระบุ] เลข "99/100" ก็ขยายตาม — จาก --fs-xs (11.5px) เป็น --fs-sm (13px) */
+.hud-bar-text {
+  font-size: var(--fs-sm);/* 13px */
+  color: var(--hud-text);
+  font-family: var(--font-display);
+}
+
+@media (max-width: 768px) {
+  .game-top-hud { top: 8px; gap: 6px; }  /* เดิม 68px เว้นใต้ NavBar มือถือ (56px) ที่ลบไปแล้ว */
+  .hud-pill { padding: 5px 10px; font-size: var(--fs-md); }
+  .hud-icon { font-size: 18px; width: 27px; height: 27px; margin: -3px 0; }
+}
+
+/* "+N" / "Level up!" ลอยขึ้นจากแคปซูลเมื่อค่าเพิ่ม (HudDelta.tsx) */
+.hud-delta {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(135deg, var(--exp), var(--coin));
+  color: #4A2C0A;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: hudDeltaFloat 1.6s ease-out forwards;
+}
+.game-top-hud .hud-delta { top: 100%; bottom: auto; } /* HUD ชิดขอบบน — ลอยลงแทนที่จะหลุดจอ */
+@keyframes hudDeltaFloat {
+  0% { opacity: 0; transform: translate(-50%, -4px) scale(.8); }
+  15% { opacity: 1; transform: translate(-50%, 4px) scale(1.05); }
+  80% { opacity: 1; transform: translate(-50%, 10px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, 16px) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-delta { animation: hudDeltaFade 1.6s linear forwards; }
+  @keyframes hudDeltaFade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+}
+
+/* [แก้ตามที่ระบุ] มือถือ: แคปซูลทั้ง 4 อยู่แถวเดียว ย่อตัวอักษร/ไอคอน/ระยะห่างตามความกว้างจอ (vw)
+   แทนการตัดขึ้นแถวใหม่ — ทุกตัวหดได้ (min-width:0) และข้อความไม่ตัดบรรทัด */
+@media (max-width: 520px) {
+  .game-top-hud { width: calc(100% - 12px); gap: clamp(3px, 1.2vw, 6px); }
+  .hud-pill {
+    flex: 0 1 auto; min-width: 0; white-space: nowrap;
+    padding: 3px clamp(5px, 2vw, 10px); gap: clamp(2px, 1vw, 5px);
+    font-size: clamp(11px, 3.5vw, 16px); border-width: 1.5px;
+  }
+  .hud-pill > span { overflow: hidden; text-overflow: ellipsis; }
+  .hud-icon { width: clamp(18px, 6vw, 26px); height: clamp(18px, 6vw, 26px); margin: -2px 0; }
+  .hud-bar-bg { width: clamp(28px, 11vw, 52px); height: 8px; }
+}
+
+/* มือถือเล็ก: 4 แคปซูลเรียงแถวเดียวไม่พอ — ย่อ padding/ไอคอน และซ่อนตัวเลข EXP (แถบยังบอกความคืบหน้า) */
+@media (max-width: 400px) {
+  .game-top-hud { gap: 4px; width: calc(100% - 16px); }
+  .hud-pill { padding: 3px 8px; gap: 4px; font-size: var(--fs-sm); border-width: 1.5px; }
+  .hud-icon { width: 22px; height: 22px; margin: -2px 0; }
+  .hud-bar-bg { width: 44px; height: 8px; }
+  .hud-bar-text { display: none; }
+}
+
+/* สมาร์ทวอทช์/จอเล็กมาก (≤ 300px): เหลือเฉพาะเลเวล + เหรียญ ซ่อน EXP และ streak (ดูต่อได้ในแผงข้อมูลต้นไม้) */
+@media (max-width: 300px) {
+  .game-top-hud { top: 4px; gap: 3px; }
+  .hud-pill { padding: 2px 6px; font-size: var(--fs-xs); box-shadow: 0 2px 0 color-mix(in srgb, var(--hud-edge) 80%, var(--g800)); }
+  .hud-icon { width: 18px; height: 18px; margin: -1px 0; }
+  .hud-pill--exp, .hud-pill--streak { display: none; }
+  .hud-delta { font-size: var(--fs-xs); padding: 0 6px; }
+}
+
+/* ═══════════════════════════════════════════
+   [เพิ่มใหม่] คลัสเตอร์ปุ่มขวา: Tree Stats / Mood / Sound
+   ═══════════════════════════════════════════ */
+.dashboard__right-cluster {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+/* แผงข้อมูลต้นไม้/แจ้งเตือนเปิดอยู่ → ทับ HUD (z 90) แต่ยังต่ำกว่าชั้นโมดัล (500) และแถบเมนูล่าง (1000) */
+.dashboard__right-cluster--panel-open { z-index: 95; }
+.dashboard__right-cluster .dashboard__panel--right {
+  position: static;
+  top: auto; right: auto;
+  /* [แก้ตามที่ระบุ — iPad เลื่อนแผงแจ้งเตือน/ข้อมูลต้นไม้ไม่ได้] เดิมตัวที่เลื่อนคือกล่องนี้ซึ่งตั้ง
+     pointer-events:none (สืบมาจาก .dashboard__panel) — Safari บน iPad ไม่ยอมเลื่อนกล่องแบบนี้ด้วยนิ้ว
+     และกรอบด้านในโดนตัดท้ายจนไม่เห็นขอบล่าง ตอนนี้: กล่องรับนิ้ว + ไม่เลื่อนเอง แต่บีบกรอบให้พอดีความสูง
+     แล้วให้ "เนื้อหาในกรอบ" (.tree-of-life__tooltip-sheet) เลื่อนแทน — ขอบกรอบ/ป้ายหัวข้อ/ขอบล่างอยู่ครบเสมอ */
+  pointer-events: auto;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 190px);
+  max-height: calc(100dvh - 190px);
+}
+.dashboard__right-cluster .dashboard__panel--right > .tree-info-panel { flex: 0 1 auto; min-height: 0; }
+.dashboard__right-cluster .dashboard__panel--right > .tree-info-panel .tree-of-life__tooltip-sheet {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.right-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;/* [แก้ตามที่ระบุ] เดิมใช้ 8px แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่ ทำให้ปุ่มล้นจอออกไปนิดหน่อย
+     เปลี่ยนเป็น 12px ให้เหลือพื้นที่ว่างด้านบน/ล่างเท่ากัน */
+  flex-shrink: 0;
+}
+
+/* [แก้ตามที่ระบุ — เปลี่ยนจากวงกลม 3cm เป็นขนาดตามรูป 2cm] เอา background/border/
+   box-shadow/border-radius วงกลมออกทั้งหมด ให้ปุ่มมีขนาดเท่ารูป/ไอคอนจริงตรงๆ (2cm) แทน —
+   .icon-img (1.1em ใน index.css) overrride เป็น 2cm ตรงๆ ในนี้ ส่วน emoji ล้วน (🌳/🔊/📖)
+   ที่ยังไม่มีไฟล์รูปจริงก็ใช้ font-size 2cm ให้ขนาดสายตาใกล้เคียงกันในกลุ่มปุ่มเดียวกัน */
+/* [Part E — ย่อปุ่ม] 2cm (~75px) → 56px, รูป 2.4cm (~91px) → 66px (สัดส่วน ~1.2x เท่าเดิม ชดเชย
+   ขอบโปร่งใสของ PNG), emoji 1.5cm → 42px — มือถือ 46px/รูป 54px ยังเกินขั้นต่ำช่องกด ~44px */
+.game-icon-btn {
+  width: 56px;
+  height: 56px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px; /* emoji ล้วน (เช่น 🔊) ให้ขนาดสายตาใกล้เคียงรูปจริงในกลุ่มเดียวกัน */
+  transition: transform var(--dur-fast) var(--ease-spring);
+}
+/* [แก้บั๊ก — พบระหว่างตรวจตามที่ระบุ] เดิม 4cm ทั้งที่คอมเมนต์ด้านบนบอกเจตนาไว้เองว่า
+   "ให้ปุ่มมีขนาดเท่ารูป/ไอคอนจริงตรงๆ (2cm)" — ค่าจริงกลับเป็น 2 เท่าของปุ่ม (4cm ในปุ่ม 2cm)
+   วัดจริงในเบราว์เซอร์แล้วยืนยัน: รูปเรนเดอร์ 151px ในปุ่ม 75.6px ทุกปุ่มที่มีรูป (เช็คอิน/
+   แจ้งเตือน/แชร์/เพื่อน) ล้นออกนอกปุ่มเป็นวงกว้าง (overflow ของปุ่มเป็น visible ไม่ถูกตัด)
+   แก้เป็น 2.4cm (ใหญ่กว่าปุ่มเล็กน้อย ~20% ไม่ใช่ 100%) ชดเชยที่ไฟล์ภาพ PNG มีขอบโปร่งใส
+   รอบตัวอยู่แล้ว (เทียบกับอีโมจิที่ตัวอักษรมักเต็มกรอบ font-size มากกว่า) ให้ขนาดที่ "ตา
+   มองเห็น" ของรูปกับอีโมจิใกล้เคียงกันในกลุ่มปุ่มเดียวกัน ไม่ใช่แค่ขนาดกรอบเท่ากันเฉยๆ */
+.game-icon-btn .icon-img { width: 66px; height: 66px; object-fit: contain; }
+.game-icon-btn:hover { transform: scale(1.08); }
+.game-icon-btn:active { transform: scale(.94); }
+
+@media (max-width: 768px) {
+  .dashboard__right-cluster { top: 8px; right: 2px; gap: 2px; }/* [แก้ตามที่ระบุ] เดิมใช้ 8px แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่ ทำให้ปุ่มล้นจอออกไปนิดหน่อย
+     เปลี่ยนเป็น 2px ให้เหลือพื้นที่ว่างด้านบน/ล่างเท่ากัน */
+  /* [แก้ตามที่ระบุ] เดิม font-size 1.2cm (< ปุ่ม 1.5cm) ทำให้อีโมจิดูเล็กกว่ารูปเล็กน้อย ตอนนี้
+     ขยับขึ้นมาเกือบเท่าปุ่ม (1.4cm) ให้ทุกปุ่มในกลุ่มนี้ (ต้นไม้/เช็คอิน/แจ้งเตือน/ปิดเสียง/
+     แชร์/เพื่อน) ดูใหญ่สม่ำเสมอกันบนจอมือถือ ไม่มีปุ่มไหนดูเด่นเล็กกว่าเพื่อน */
+  .game-icon-btn { width: 46px; height: 46px; font-size: 36px; }
+  .game-icon-btn .icon-img { width: 54px; height: 54px; }
+}
+
+/* ═══════════════════════════════════════════
+   [เพิ่มใหม่] ปุ่มลอยมุมล่างจอ: แชร์/เพื่อน (ขวา) + โพสต์ (ซ้าย)
+   ตั้งใจให้อยู่คนละแนวตั้งกับ ActionMenuBar (ซึ่งลอยกึ่งกลางล่างจอเท่านั้น กว้างไม่เต็มจอ)
+   จึงไม่ชนกัน ใช้ .game-icon-btn ตัวเดียวกับคลัสเตอร์ขวาบนเพื่อความสม่ำเสมอของดีไซน์
+   ═══════════════════════════════════════════ */
+.dashboard__corner-actions {
+  position: fixed;
+  /* [แก้ตามที่ระบุ] ทุกขนาดจอ: ปุ่มเพื่อน/แชร์อยู่สูงกว่าแถบเมนูล่าง (ActionMenuBar) เสมอ —
+     ขอบบนของแถบ + วงกลมปุ่มที่เลือกที่ยื่นขึ้นครึ่งวง + ช่องว่าง (เดิมโน้ตบุ๊ก 64px ยังต่ำกว่าขอบบนแถบ) */
+  bottom: calc(var(--action-bar-height) + var(--nav-height, 60px) / 2 + 20px);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;/* [แก้ตามที่ระบุ] เดิมใช้ 8px แต่บนมือถือมีแถบ URL ของเบราว์เซอร์กินพื้นที่ ทำให้ปุ่มล้นจอออกไปนิดหน่อย
+     เปลี่ยนเป็น 2px ให้เหลือพื้นที่ว่างด้านบน/ล่างเท่ากัน */
+  gap: 2px;
+}
+.dashboard__corner-actions--left { left: 16px; }
+.dashboard__corner-actions--right { right: 16px; }
+
+@media (max-width: 768px) {
+  .dashboard__corner-actions { gap: 8px; }
+  .dashboard__corner-actions--left { left: 6px; }
+  .dashboard__corner-actions--right { right: 6px; }
+  /* ขนาดปุ่ม .game-icon-btn ย่อเหลือ 1.5cm บนจอเล็กแล้วที่ media query ของ .game-icon-btn เอง */
+}
+
+/* ═══════════════════════════════════════════
+   [เพิ่มใหม่] โหมดดูต้นไม้ของผู้เล่นคนอื่น (แทน PlayerDetailModal เดิม)
+   ═══════════════════════════════════════════ */
+.dashboard__back-btn {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 60;
+  padding: 10px 18px;
+  border-radius: var(--r-pill);
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-mid);
+  box-shadow: var(--sh-card);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out-soft);
+}
+.dashboard__back-btn:hover { transform: translateX(-3px); }
+/* [แก้ตามที่ระบุ] ไอคอนอย่างเดียว — ปุ่มวงกลม 44px (ขั้นต่ำช่องกดมือถือ) */
+.dashboard__back-btn { width: 48px; height: 48px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.dashboard__back-btn .icon-img { width: 34px; height: 34px; object-fit: contain; }
+
+.dashboard__viewing-name-pill {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 10px 28px;
+  border-radius: var(--r-pill);
+  background: var(--bg-card);
+  border: 1.5px solid var(--g200);
+  box-shadow: var(--sh-card);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  color: var(--g700);
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .dashboard__back-btn { top: 8px; left: 8px; width: 44px; height: 44px; padding: 0; }
+  .dashboard__viewing-name-pill { top: 8px; padding: 8px 18px; font-size: var(--fs-sm); }
+}
+
+/* [แก้ตามที่ระบุ] จอเล็ก/มือถือ: กระดานจัดอันดับ (ซ้าย) และปุ่มฝั่งขวา เริ่มต่ำกว่าแถบคะแนนด้านบน
+   (INTJ Lv / EXP / เหรียญ / streak) ไม่ซ้อนทับกัน — ความสูงแถบคะแนนวัดจริงทุกครั้งที่เปลี่ยน
+   (ขึ้นบรรทัดใหม่ได้บนจอแคบ) แล้วเก็บไว้ที่ --hud-h (ดู Dashboard.tsx) */
+@media (max-width: 768px) {
+  .dashboard__panel--left,
+  .dashboard__right-cluster {
+    top: calc(8px + var(--hud-h, 44px) + 10px);
+  }
+  .dashboard__panel--right { max-height: calc(100vh - var(--hud-h, 44px) - 200px); }
+}
+
+/* [แก้ตามที่ระบุ] หน้าต้นไม้ของเพื่อน: ปุ่มกลับบ้าน + ป้ายชื่อใช้หน้าตาป้ายกระดานจัดอันดับ (.lb-banner)
+   — ที่นี่คุมแค่ตำแหน่ง/ขนาด (สี/ขอบทอง/พื้นเขียวมาจาก .lb-banner ใน leaderboardRow.css) */
+.dashboard__back-btn.lb-banner,
+.dashboard__viewing-name-pill.lb-banner { position: fixed; box-shadow: 0 3px 8px var(--glass-b-30); }
+.dashboard__back-btn.lb-banner { font-size: var(--fs-sm); padding: 6px 16px; gap: 6px; cursor: pointer; }
+.dashboard__back-btn.lb-banner .icon-img { width: 26px; height: 26px; }
+.dashboard__viewing-name-pill.lb-banner { font-size: var(--fs-md); padding: 7px 24px; }
+.player-tree-card { width: min(260px, calc(100vw - 32px)); }
+/* [แก้ตามที่ระบุ] ปุ่มกลับบ้าน: ไม่มีจุดกลม (ปลายม้วนกระดาษ) ซ้าย-ขวาแบบป้าย .lb-banner */
+.dashboard__back-btn.lb-banner::before,
+.dashboard__back-btn.lb-banner::after { content: none; }
+
+
+/* [แก้ตามที่ระบุ] ปุ่มกลับหน้าดูต้นไม้เพื่อน: ไอคอนล้วน ไม่มีพื้น/ขอบ — เงานุ่มรอบตัวไอคอนให้อ่านออกบนทุกฉาก
+   พื้นที่กดยังเป็น 48×48 (มือถือ 44×44) ตาม .dashboard__back-btn */
+.dashboard__back-btn--icon {
+  position: fixed;
+  background: none;
+  border: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+.dashboard__back-btn--icon .icon-img {
+  width: 36px;
+  height: 36px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 6px rgba(255, 255, 255, 0.55));
+}
+
+/* ═══ [แก้ตามที่ระบุ] โพสอิทลอยบนจอหลัก (PostItLayer.tsx) — ลากวางได้ทั่วจอ ═══ */
+.postit-layer { position: fixed; inset: 0; z-index: 45; pointer-events: none; }
+.postit-layer__note {
+  position: absolute;
+  transform: translate(-50%, -50%) rotate(var(--postit-tilt, -3deg));
+  width: clamp(64px, 9vw, 86px);
+  min-height: clamp(52px, 7vw, 68px);
+  padding: 9px 7px 7px;
+  border: none;
+  border-radius: 3px;
+  box-shadow: 0 4px 10px var(--glass-b-30);
+  color: var(--fixed-black);
+  font-family: var(--font-display);
+  font-size: clamp(9.5px, 1.2vw, 12px);
+  line-height: 1.3;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;           /* ลากด้วยนิ้วได้โดยหน้าจอไม่เลื่อนตาม */
+  user-select: none;
+  -webkit-user-select: none;
+  animation: postitLayerIn .6s cubic-bezier(.22,1,.36,1) both;
+  transition: box-shadow .18s ease, transform .18s ease;
+}
+.postit-layer__note::before {
+  content: '';
+  position: absolute; top: -6px; left: 50%;
+  width: 28px; height: 10px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: var(--glass-w-50);
+  border: 1px solid var(--glass-b-8);
+  border-radius: 2px;
+}
+.postit-layer__note:hover { transform: translate(-50%, -50%) rotate(0deg) scale(1.06); box-shadow: 0 8px 18px var(--glass-b-35); }
+.postit-layer__note.is-dragging {
+  cursor: grabbing;
+  transition: none;
+  transform: translate(-50%, -50%) rotate(0deg) scale(1.1);
+  box-shadow: 0 14px 28px var(--glass-b-40);
+}
+@keyframes postitLayerIn {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 4px)) rotate(var(--postit-tilt, -3deg)) scale(.85); }
+  to   { opacity: 1; transform: translate(-50%, -50%) rotate(var(--postit-tilt, -3deg)) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .postit-layer__note { animation: none; } }
+
+/* ═══ [แก้ตามที่ระบุ] ปุ่มข้างหน้า Home (ข้อมูลต้นไม้/เช็คอินรายวัน/แจ้งเตือน/แชร์/เพื่อน/สตอรี่) ให้ "ขนาดที่ตาเห็น"
+   เท่าปุ่มตั้งค่า — ไฟล์ PNG แต่ละรูปมีขอบโปร่งใสไม่เท่ากัน (วัดจริงด้วย sharp: Settings.png เนื้อรูปเต็ม ~83%
+   ของไฟล์ ส่วน tree/Check-in/Notification/Share/Friends.png เนื้อรูปแค่ ~40-50% ของความกว้างไฟล์)
+   ขนาดกล่องเท่ากันเลยทำให้รูปอื่นดูเล็กกว่าครึ่ง — ขยายกล่องรูปแยกต่อไฟล์ให้เนื้อรูปจริงสูง ~52px เท่าตั้งค่า
+   (มือถือ ~43px) รูปล้นกล่องปุ่มได้แต่ไม่รับคลิก (pointer-events:none) ช่องกดยังเป็นขนาดปุ่มเดิม ═══ */
+.game-icon-btn { position: relative; }
+.game-icon-btn .icon-img { pointer-events: none; flex-shrink: 0; }
+/* [อัปเดต 2026-10-18 — รูปชุดใหม่] tree/Notification/Share/Friends.png ใหม่เนื้อรูปเต็มไฟล์ ~86-95% แล้ว
+   (เดิม ~40-50%) จึงลดกล่องรูปลงให้สูงที่ตาเห็น ~50px เท่าปุ่มตั้งค่าเหมือนเดิม · Check-in.png ยังเป็นไฟล์เดิม
+   จับคู่ด้วย [src*="/ชื่อ."] ให้ใช้ได้ทั้ง .png และ .webp */
+.game-icon-btn .icon-img[src*="/tree."]         { width: 64px; height: 64px; }
+.game-icon-btn .icon-img[src*="/Check-in."]     { width: 134px; height: 134px; }
+.game-icon-btn .icon-img[src*="/Notification."] { width: 60px; height: 60px; }
+/* [แก้ตามที่ระบุ] ปุ่มแชร์/เพื่อนเล็กลง ~20% (เดิม 72/100px · มือถือ 60/83px) */
+.game-icon-btn .icon-img[src*="/Share."]        { width: 58px; height: 58px; }
+.game-icon-btn .icon-img[src*="/Friends."]      { width: 80px; height: 80px; }
+.dashboard__corner-actions--left .game-icon-btn { font-size: 50px; }
+@media (max-width: 768px) {
+  .game-icon-btn .icon-img[src*="/tree."]         { width: 53px; height: 53px; }
+  .game-icon-btn .icon-img[src*="/Check-in."]     { width: 111px; height: 111px; }
+  .game-icon-btn .icon-img[src*="/Notification."] { width: 50px; height: 50px; }
+  .game-icon-btn .icon-img[src*="/Share."]        { width: 48px; height: 48px; }
+  .game-icon-btn .icon-img[src*="/Friends."]      { width: 66px; height: 66px; }
+  .dashboard__corner-actions--left .game-icon-btn { font-size: 42px; }
+}
+
+/* ═══ [แก้ตามที่ระบุ] กรอบข้อความเตือนทานเกินแคลอรี่ (OverCalorieNotice.tsx) — ใต้แถบคะแนนด้านบน ═══ */
+.over-calorie-notice {
+  position: fixed;
+  top: calc(16px + var(--hud-h, 44px) + 30px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(360px, calc(100vw - 150px));
+  padding: 24px 16px 12px;
+  border-radius: 18px;
+  text-align: center;
+  pointer-events: none;
+  font-family: var(--font-display);
+}
+.over-calorie-notice__banner { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 13.5px; }
+.over-calorie-notice__text {
+  margin: 0; min-height: 3.2em; display: flex; align-items: center; justify-content: center;
+  font-size: 15.5px; line-height: 1.5; color: var(--lb-card-text);
+}
+@media (max-width: 768px) {
+  .over-calorie-notice { top: calc(8px + var(--hud-h, 44px) + 26px); width: min(320px, calc(100vw - 120px)); }
+  .over-calorie-notice__text { font-size: 14px; }
+}
+
+/* [แก้ตามที่ระบุ] ป้าย "ต้นไม้ของ…" (ด้านบน + การ์ดข้อมูลต้นไม้เพื่อน) — วงรีปลายม้วนสองข้างสีอ่อนลง */
+:is(.dashboard__viewing-name-pill, .player-tree-card .lb-frame__banner)::before,
+:is(.dashboard__viewing-name-pill, .player-tree-card .lb-frame__banner)::after {
+  background: var(--leaf-soft);
+}
+[data-theme="dark"] :is(.dashboard__viewing-name-pill, .player-tree-card .lb-frame__banner)::before,
+[data-theme="dark"] :is(.dashboard__viewing-name-pill, .player-tree-card .lb-frame__banner)::after {
+  background: var(--g600);
+}
+
+/* ═══════════════════════════════════════════
+   [Responsive — มือถือ/สมาร์ทวอทช์]
+   ═══════════════════════════════════════════ */
+/* 100vh บนมือถือรวมแถบ URL ที่ยุบ/ขยายได้ → แผงล้นจอ ใช้ dvh เมื่อเบราว์เซอร์รองรับ */
+@supports (height: 100dvh) {
+  @media (max-width: 768px) {
+    .dashboard__panel--right { max-height: calc(100dvh - var(--hud-h, 44px) - 200px); }
+  }
+  @media (max-width: 480px) {
+    .dashboard__panel--right { max-height: calc(100dvh - var(--hud-h, 44px) - 190px); }
+  }
+}
+
+/* ปุ่มมุมล่างซ้าย/ขวา (โพสต์/แชร์/เพื่อน) ชนกับแถบเมนูล่างบนจอแคบ (แถบกว้าง 5×64 = 320px
+   กินเกือบเต็มจอ 360–414px) → ยกขึ้นไปอยู่เหนือแถบเมนู (รวมวงกลมปุ่มที่เลือกที่ยื่นขึ้นครึ่งวง) */
+/* [แก้ตามที่ระบุ — 1.1/2.2] มือถือ + iPad (≤1024px): ยกปุ่มเพื่อน/แชร์ขึ้นเหนือแถบเมนูล่างเสมอ
+   (เดิมยกเฉพาะ ≤520px — iPad ปุ่มยังชนแถบ) ระยะ = ขอบบนของแถบ + วงกลมปุ่มที่เลือกที่ยื่นขึ้นครึ่งวง + ช่องว่าง */
+@media (max-width: 1024px) {
+  .dashboard__corner-actions {
+    bottom: calc(var(--action-bar-height) + var(--nav-height, 56px) / 2 + 16px);
+  }
+}
+
+/* สมาร์ทวอทช์/จอเล็กมาก */
+@media (max-width: 300px) {
+  .game-icon-btn { width: 36px; height: 36px; font-size: 26px; }
+  .game-icon-btn .icon-img { width: 42px; height: 42px; }
+  .right-action-buttons { gap: 4px; }
+  .dashboard__right-cluster { top: calc(4px + var(--hud-h, 32px) + 6px); }
+  .dashboard__corner-actions { gap: 2px; }
+  .dashboard__back-btn,
+  .dashboard__viewing-name-pill { padding: 4px 10px; font-size: var(--fs-xs); }
+  .dashboard__viewing-name-pill { max-width: calc(100vw - 110px); overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* ═══ [ใหม่ตามที่ระบุ] ป้ายการ์ด ×2 ใต้ HUD — ลอยแยกจากแถวแคปซูล ไม่ดันแถวให้ล้นบนมือถือ ═══ */
+.hud-double {
+  position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 3px 12px 3px 6px; border-radius: var(--r-pill);
+  background: linear-gradient(180deg, #FFE59A, #F7B544); color: #6B3A0B;
+  border: 2px solid #C77A1F; box-shadow: 0 2px 0 #9A5512, 0 0 14px rgba(255, 201, 60, .55);
+  font-family: var(--font-display); font-size: var(--fs-sm); pointer-events: auto;
+}
+.hud-double img { width: 24px; height: 24px; object-fit: contain; margin: -4px 0; }
+@media (max-width: 400px) {
+  .hud-double { font-size: var(--fs-xs); padding: 2px 10px 2px 4px; }
+  .hud-double img { width: 20px; height: 20px; }
+}

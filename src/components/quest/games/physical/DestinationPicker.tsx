@@ -1,0 +1,101 @@
+import { useState, useRef } from 'react'
+import { isMapUnlocked, JOURNEY_MAPS } from '../../../../config/journeyMaps'
+import MapArtImage from './MapArtImage'
+import './DestinationPicker.css'
+
+interface DestinationPickerProps {
+  onPicked: (mapId: string) => void
+  /** เลเวลผู้เล่น — แผนที่ที่ยังไม่ถึงเลเวลปลดล็อกแสดงกุญแจและเลือกไม่ได้ */
+  playerLevel: number
+}
+
+export default function DestinationPicker({ onPicked, playerLevel }: DestinationPickerProps) {
+  const [pickingId, setPickingId] = useState<string | null>(null)
+  
+  // ตัวแปรสำหรับทำระบบลากด้วยเมาส์ (Mouse Drag to Scroll)
+  const sliderRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+  const startX = useRef(0)
+  const scrollLeft = useRef(0)
+  const dragDistance = useRef(0)
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!sliderRef.current) return
+    isDragging.current = true
+    dragDistance.current = 0
+    startX.current = e.pageX - sliderRef.current.offsetLeft
+    scrollLeft.current = sliderRef.current.scrollLeft
+    sliderRef.current.style.scrollSnapType = 'none' // ปิด snap ตอนลากให้สมูท
+  }
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging.current || !sliderRef.current) return
+    e.preventDefault()
+    const x = e.pageX - sliderRef.current.offsetLeft
+    const walk = (x - startX.current) * 1.5 // ความเร็วตอนปัด
+    sliderRef.current.scrollLeft = scrollLeft.current - walk
+    dragDistance.current += Math.abs(walk)
+  }
+
+  const handlePointerUp = () => {
+    isDragging.current = false
+    if (sliderRef.current) {
+      sliderRef.current.style.scrollSnapType = 'x mandatory' // เปิด snap กลับมาเมื่อปล่อยนิ้ว
+    }
+  }
+
+  const handlePick = (id: string) => {
+    // ถ้ายกนิ้ว/เมาส์แล้วพบว่าเป็นการลาก (ไม่ได้ตั้งใจคลิก) ให้ข้ามการเลือกไป
+    if (dragDistance.current > 10) return
+    
+    setPickingId(id)
+    onPicked(id)
+  }
+
+  return (
+    <div className="destination-picker">
+      <div className="destination-picker__header">
+        <h2>เลือกแผนที่เดินวันนี้</h2>
+        <p>1 วัน = 1 ทริป เดินให้ถึงเป้าก้าววันนี้ เปิดกล่องสมบัติระหว่างทาง แล้วรับรางวัลประจำวัน</p>
+      </div>
+      
+      <div 
+        className="destination-picker__slider"
+        ref={sliderRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+      >
+        <div className="destination-picker__track">
+          {JOURNEY_MAPS.map((m) => {
+            const locked = !isMapUnlocked(m, playerLevel)
+            return (
+            <button
+              key={m.id}
+              className={`destination-picker__item ${pickingId === m.id ? 'destination-picker__item--picking' : ''}${locked ? ' destination-picker__item--locked' : ''}`}
+              onClick={() => { if (!locked) handlePick(m.id) }}
+              disabled={pickingId !== null || locked}
+              aria-label={locked ? `${m.name} — ปลดล็อกที่ Lv.${m.unlockLevel}` : undefined}
+            >
+              <div className="destination-picker__img-wrapper">
+                <MapArtImage mapDef={m} className="destination-picker__img" variant="thumb" />
+                {locked && (
+                  <div className="destination-picker__lock">
+                    <span className="destination-picker__lock-icon" aria-hidden="true">🔒</span>
+                    <span>ปลดล็อกที่ Lv.{m.unlockLevel}</span>
+                  </div>
+                )}
+              </div>
+              <div className="destination-picker__info">
+                <span className="destination-picker__order">แผนที่ {m.order}</span>
+                <span className="destination-picker__name">{m.name}</span>
+              </div>
+            </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}

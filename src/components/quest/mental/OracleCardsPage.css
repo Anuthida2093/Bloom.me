@@ -1,0 +1,435 @@
+/* ==========================================
+   ORACLE CARDS PAGE STYLES
+   ========================================== */
+
+/* กรอบเกมหลักแบบขอบเหลี่ยมเต็มพื้นที่ และตั้งค่า Font แบบเดียวกับเควสอื่นๆ */
+.oracle-game-container {
+  position: absolute;
+  inset: 0;
+  z-index: 800;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  overflow: hidden;
+  font-family: 'Nunito', 'Mali', sans-serif; /* ใช้ฟอนต์ Nunito + Mali */
+  background: radial-gradient(circle at 50% 20%, var(--ae-mental-glow) 0%, var(--ae-mental-mid) 60%, var(--ae-mental-deep) 100%);
+  /* [แก้ตามที่ระบุ — 2.5] ไม่มีขอบสีเขียวทุกขนาดจอ */
+  border: none;
+  --lc-shadow-22: rgba(16, 18, 17, 0.878);
+  box-shadow: inset 0 0 25px var(--lc-shadow-22), 0 8px 32px var(--glass-b-40);
+  display: flex;
+  flex-direction: column;
+  --game-accent: var(--g600);
+  --game-accent-bg: var(--glass-w-10);
+}
+
+/* ดาวระยิบระยับ */
+.oracle-page__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.oracle-page__star {
+  position: absolute;
+  z-index: 1;
+  width: 3px;
+  height: 3px;
+  border-radius: 0;
+  background: var(--fixed-white);
+  animation: oracleStarTwinkle 2.4s ease-in-out infinite;
+}
+
+@keyframes oracleStarTwinkle {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+/* ปุ่มปิดมุมขวาบน */
+.oracle-page__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 20;
+  width: 44px;
+  height: 44px;
+  border-radius: 99px;
+  border: 1px solid var(--glass-w-20);
+  background: var(--glass-b-40);
+  color: var(--fixed-white);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.oracle-page__close:hover {
+  background: var(--glass-w-20);
+  transform: scale(1.05);
+}
+
+/* 
+  จัด Layout ให้ต่ำลงมา 95px จาก Navbar 
+  และใช้ gap: 16px (เท่ากับ 4 gap) เพื่อไม่ให้ซ้อนกัน 
+*/
+.oracle-page__content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 95px 24px 24px;
+  gap: 16px;
+  text-align: center;
+  overflow-y: auto;
+}
+
+/* สรุปอารมณ์ */
+.oracle-page__mood-recap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  --lc-bg-16: rgba(9, 20, 15, 0.22);
+  background: var(--lc-bg-16);
+  --lc-border-17: rgba(198, 230, 215, 0.45);
+  border: 1px solid var(--lc-border-17);
+  border-radius: var(--r-pill);
+  padding: 11px 22px;
+  --lc-text-18: #D8F3DC;
+  color: var(--lc-text-18);
+  font-size: 18px; /* ปรับให้พอดีกับฟอนต์ Mali */
+  white-space: nowrap;
+  box-shadow: 0 6px 18px var(--glass-b-30), 0 2px 6px var(--glass-b-20);
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .oracle-page__mood-recap { white-space: normal; max-width: calc(100% - 32px); text-align: center; }
+}
+
+/* หัวข้อหลักทั้งหมด */
+.oracle-page__title,
+.oracle-card__large-title {
+  font-family: 'Fredoka One', 'Mali', sans-serif; /* ใช้ Fredoka One / Mali สำหรับหัวข้อ */
+  font-size: 22px !important;
+  font-weight: 700;
+  color: var(--g400);
+  --lc-c-15: rgba(230, 243, 236, 0.5);
+  text-shadow: 0 0 12px var(--lc-c-15);
+  margin-bottom: 8px;
+}
+
+/* ข้อความบรรยาย */
+.oracle-page__subtitle,
+.oracle-page__desc,
+.oracle-card__typewriter-text,
+.oracle-page__tap-hint,
+.oracle-page__hint {
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-size: 16px !important; /* ปรับลดขนาดเพราะ Mali ตัวใหญ่กว่า Sarabun */
+  color: var(--g200);
+  line-height: 1.6;
+}
+
+/* กองไพ่ Intro */
+.oracle-page__intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.oracle-page__deck {
+  position: relative;
+  width: 140px;
+  height: 195px;
+  border-radius: 10px;
+  border: 2px solid var(--g400);
+  cursor: pointer;
+  background: linear-gradient(160deg, var(--g600), var(--g800));
+  --lc-shadow-14: rgba(198, 230, 215, 0.4);
+  box-shadow: 0 0 35px var(--lc-shadow-14);
+  font-size: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: oracleDeckFloat 3s ease-in-out infinite;
+  margin: 20px 0;
+}
+
+@keyframes oracleDeckFloat {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
+}
+
+.oracle-page__deck-glow {
+  position: absolute;
+  inset: -12px;
+  border-radius: 10px;
+  --lc-bg-13: rgba(198, 230, 215, 0.4);
+  background: radial-gradient(circle, var(--lc-bg-13), transparent 70%);
+  animation: oraclePulse 2s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes oraclePulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.08); }
+}
+
+/* การพัดของไพ่ */
+.oracle-page__spread-view {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.oracle-page__fan {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  height: 260px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.oracle-card {
+  position: absolute;
+  bottom: 10px;
+  width: 110px;
+  height: 165px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  perspective: 1000px;
+  transition: filter 0.2s;
+}
+
+.oracle-card:hover {
+  filter: brightness(1.2);
+  z-index: 50 !important;
+}
+
+.oracle-card__inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px var(--glass-b-50);
+}
+
+.oracle-card__face--back {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  --lc-bg-12: #081C15;
+  background: linear-gradient(160deg, var(--g700), var(--lc-bg-12));
+  border: 2px solid var(--g400);
+  font-size: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* หน้าอ่านคำทำนาย */
+.oracle-page__reading-view {
+  width: 100%;
+  text-align: center;
+  transition: opacity 0.3s ease;
+  max-width: 440px;
+}
+
+/* กรอบสีเขียวของคำทำนาย (ขอบเส้นประ) */
+.oracle-card--large {
+  width: 100%;
+  background: linear-gradient(160deg, var(--g700), var(--g800));
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.oracle-card__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.oracle-card__large-icon {
+  font-size: 52px;
+  margin-bottom: 6px;
+}
+
+.oracle-card__large-body {
+  width: 100%;
+  background: var(--glass-b-35);
+  border-radius: 10px;
+  padding: 16px;
+  min-height: 150px;
+  --lc-border-9: rgba(198, 230, 215, 0.2);
+  border: 1px solid var(--lc-border-9);
+  text-align: left;
+}
+
+.oracle-card__affirmation-block {
+  margin-bottom: 14px;
+}
+
+.oracle-card__mission-block {
+  background: var(--glass-w-7);
+  border: 1px solid var(--lc-border-9);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.oracle-card__mission-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--g300);
+  margin-bottom: 4px;
+  font-family: 'Nunito', 'Mali', sans-serif;
+}
+
+.oracle-card__mission-text {
+  font-size: 15px; /* ปรับลดขนาดลงให้พอดีกับ Mali */
+  color: var(--g100);
+  line-height: 1.6;
+  font-family: 'Nunito', 'Mali', sans-serif;
+}
+
+.oracle-page__caret {
+  animation: oracleCaretBlink 0.8s step-end infinite;
+  color: var(--g400);
+}
+
+@keyframes oracleCaretBlink {
+  50% { opacity: 0; }
+}
+
+.oracle-card__actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 18px;
+  /* เลื่อนหาปุ่มอัตโนมัติ (scrollIntoView) ให้หยุดเหนือแถบเมนูล่าง ไม่ใช่ชิดขอบจอ */
+  scroll-margin-bottom: calc(var(--gpf-safe-bottom, 90px) + 24px);
+}
+.oracle-card__actions .lb-btn { white-space: nowrap; padding-left: 10px; padding-right: 10px; }
+
+.oracle-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 16px; /* ขนาดฟอนต์ปุ่มพอดีๆ */
+  font-family: 'Nunito', 'Mali', sans-serif;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.1s ease;
+}
+
+.oracle-btn:active {
+  transform: scale(0.97);
+}
+
+.oracle-btn--primary {
+  background: linear-gradient(135deg, var(--g500), var(--g700));
+  color: var(--fixed-white);
+  --lc-shadow-8: rgba(82, 183, 136, 0.4);
+  box-shadow: 0 4px 15px var(--lc-shadow-8);
+}
+
+.oracle-btn--ghost {
+  background: var(--glass-w-10);
+  --lc-text-7: #D8F3DC;
+  color: var(--lc-text-7);
+}
+
+/* ═══ [แก้ตามที่ระบุ] ป็อบอัพข้อความไพ่ = ธีมกระดานจัดอันดับ (.lb-card ใน index.css)
+   ตัวหนังสือขาว/ดำเท่านั้น ไล่เข้ม-อ่อน 2 ระดับ (ไม่ใช้เหลือง/ส้ม/แดง) ═══ */
+.oracle-card--large.lb-card {
+  position: relative;
+  background: var(--lb-card-bg);
+  border: 2px solid var(--lb-gold-edge);
+  padding: 30px 22px 22px;
+  color: var(--lb-card-text);
+}
+.oracle-card__banner { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 14px; }
+.oracle-card--large.lb-card .oracle-card__large-title { color: var(--lb-card-text); font-family: var(--font-display); }
+.oracle-card--large.lb-card .oracle-card__large-body {
+  background: color-mix(in srgb, var(--fixed-white) 45%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 60%, transparent);
+}
+[data-theme="dark"] .oracle-card--large.lb-card .oracle-card__large-body { background: color-mix(in srgb, var(--g900) 55%, transparent); }
+.oracle-card--large.lb-card :is(.oracle-card__typewriter-text, .oracle-card__mission-text) { color: var(--lb-card-text); font-family: var(--font-display); }
+.oracle-card--large.lb-card .oracle-card__mission-label { color: var(--lb-card-text-sub); font-family: var(--font-display); }
+.oracle-card--large.lb-card .oracle-card__mission-block {
+  background: color-mix(in srgb, var(--fixed-white) 35%, transparent);
+  border-color: color-mix(in srgb, var(--lb-gold-edge) 50%, transparent);
+}
+[data-theme="dark"] .oracle-card--large.lb-card .oracle-card__mission-block { background: color-mix(in srgb, var(--g900) 40%, transparent); }
+.oracle-card--large.lb-card .oracle-page__caret { color: var(--lb-card-text-sub); }
+
+
+/* [แก้ตามที่ระบุ] ป้าย "วันนี้คุณรู้สึก…" กรอบแบบกระดานจัดอันดับ ห่างขอบบน ~90px
+   และเว้นระยะจากป็อปอัพไพ่มากขึ้น — ป็อปอัพไพ่เลื่อนดูได้แต่ไม่แสดงแถบเลื่อน */
+.oracle-page__content {
+  padding-top: 90px;
+  /* [แก้ตามที่ระบุ] ท้ายป็อปอัพไพ่เคยโดน ActionMenuBar บัง — เว้นล่างให้พ้นแถบเมนู แล้วเลื่อนดูได้ */
+  padding-bottom: calc(var(--gpf-safe-bottom, 90px) + 24px);
+  scrollbar-width: none;
+}
+.oracle-page__reading-view { flex-shrink: 0; }
+.oracle-page__content::-webkit-scrollbar { display: none; }
+/* [แก้ตามที่ระบุ] ป้าย "วันนี้คุณรู้สึก…" เป็นสีม่วง (.lb-banner--purple ใน leaderboardRow.css) */
+.oracle-page__mood-recap.lb-banner {
+  padding: 10px 22px;
+  border-radius: 14px;
+  font-size: 16px;
+  margin-bottom: 26px;
+  font-family: var(--font-display);
+}
+
+/* ═══ กระดาษข้อความไพ่: ม้วนคลี่ลง (grid 0fr → 1fr) กระดาษเรียบ ไม่มีเส้นขอบ/บรรทัด ═══ */
+.oracle-scroll { width: 100%; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.3)); }
+.oracle-scroll__rod {
+  position: relative; z-index: 1; width: calc(100% + 16px); height: 16px; border-radius: 10px;
+  background: linear-gradient(180deg, #b07a43, #8B5A2B 55%, #5e3a17);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+.oracle-scroll__paper {
+  width: 100%; display: grid; grid-template-rows: 0fr; margin: -4px 0;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.55), transparent 60%), #FFF6E0;
+  animation: oracleUnroll 1.1s cubic-bezier(.22, 1, .36, 1) forwards;
+}
+@keyframes oracleUnroll { to { grid-template-rows: 1fr; } }
+.oracle-scroll__inner { overflow: hidden; min-height: 0; padding: 0 18px; }
+.oracle-scroll__inner > :first-child { margin-top: 18px; }
+.oracle-scroll__inner > :last-child { margin-bottom: 18px; }
+.oracle-scroll__text {
+  margin: 0; white-space: pre-line; text-align: left;
+  font-family: var(--font-display); font-size: 16px; line-height: 1.75; color: #4A2C0A;
+}
+.oracle-scroll__mission { margin-top: 14px; padding-top: 10px; animation: oracleInk .45s ease-out both; }
+.oracle-scroll__mission-label { display: block; font-family: var(--font-display); font-size: 13px; font-weight: 700; color: #7a4a12; margin-bottom: 4px; }
+.oracle-scroll__mission-text { margin: 0; font-family: var(--font-display); font-size: 15px; line-height: 1.6; color: #4A2C0A; }
+@keyframes oracleInk { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .oracle-scroll__paper { animation: none; grid-template-rows: 1fr; }
+  .oracle-scroll__mission { animation: none; }
+}
+
+/* [แก้ตามที่ระบุ] รูปหลังไพ่ (Oracle Activation.png) แทนอีโมจิ 🔮 */
+.oracle-card__back-img { width: 78%; height: 78%; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .4)); }
+
+/* [แก้ตามที่ระบุ] รูปบนกองไพ่ (ก่อนกาง) แทนอีโมจิ 🔮 */
+.oracle-page__deck-img { position: relative; width: 82%; height: 82%; object-fit: contain; pointer-events: none; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, .45)); }

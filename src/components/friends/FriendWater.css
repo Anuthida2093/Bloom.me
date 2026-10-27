@@ -1,0 +1,278 @@
+/* ═══════════════════════════════════════════════════════════════
+   FriendWater.css — รดน้ำต้นไม้ให้เพื่อน (ปุ่มหยดน้ำ / บัวรดน้ำ / ป็อบอัพกู้คืน / ป้ายในแชท)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* หยดน้ำ: ชั้นฟ้าทับชั้นเทา — ฟ้าเต็ม (full) / ฟ้าครึ่งล่าง (half) / ไม่มีฟ้า (เทา/ดับ) */
+.fw-drop { display: block; overflow: visible; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.25)); }
+.fw-drop__blue { opacity: 0; transition: opacity 0.7s ease; }
+.fw-drop--full .fw-drop__blue,
+.fw-drop--half .fw-drop__blue { opacity: 1; }
+.fw-drop__level { transition: y 0.7s ease; }
+.fw-drop--dead { opacity: 0.45; }
+.fw-drop--broken { animation: fwBrokenPulse 1.8s ease-in-out infinite; }
+@keyframes fwBrokenPulse { 50% { filter: drop-shadow(0 0 6px rgba(255, 120, 90, 0.75)); } }
+
+/* ตัวเลขจำนวนวัน (ใช้ทั้งปุ่ม/แชท/รายชื่อ) — สีตามสถานะ */
+.fw-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: center;
+  color: #fff;
+  background: #8b939c;
+  transition: background 0.6s ease;
+}
+.fw-count--full { background: #2f8fe8; }
+.fw-count--half { background: linear-gradient(0deg, #2f8fe8 50%, #8b939c 50%); }
+.fw-count--broken { background: #e0704f; }
+.fw-count--dead { background: #6d757e; opacity: 0.8; }
+
+/* ปุ่มหยดน้ำใต้ปุ่มข้อมูลต้นไม้ + ตัวเลขใต้หยด */
+.fw-button { position: relative; flex-direction: column; gap: 0; height: auto; min-height: 56px; padding: 0; }
+.fw-button .fw-count { margin-top: -2px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25); }
+.fw-button__drop { position: relative; display: block; }
+/* รดครบทั้งคู่: หยดน้ำเด้ง 1 ที + วงแสงฟ้า + ประกายกระจาย */
+.fw-button__drop--celebrate { animation: fwBounce 0.9s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes fwBounce {
+  0% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-14px) scale(1.18, 0.9); }
+  55% { transform: translateY(0) scale(0.92, 1.1); }
+  75% { transform: translateY(-4px) scale(1.04); }
+  100% { transform: translateY(0) scale(1); }
+}
+.fw-sparkle { position: absolute; left: 50%; top: 55%; width: 0; height: 0; pointer-events: none; }
+.fw-sparkle b {
+  position: absolute;
+  left: -30px;
+  top: -30px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(140, 215, 255, 0.85), rgba(80, 170, 255, 0.35) 45%, transparent 70%);
+  animation: fwGlow 0.9s ease-out forwards;
+}
+@keyframes fwGlow {
+  0% { transform: scale(0.3); opacity: 0; }
+  35% { opacity: 1; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+.fw-sparkle i {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px;
+  background: #bfeaff;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  transform: rotate(var(--a)) translateY(0) scale(0.3);
+  opacity: 0;
+  animation: fwSparkle 0.9s ease-out var(--d) forwards;
+}
+.fw-sparkle i:nth-child(even) { background: #6cc8ff; width: 6px; height: 6px; margin: -3px; }
+@keyframes fwSparkle {
+  20% { opacity: 1; }
+  100% { transform: rotate(var(--a)) translateY(-38px) scale(1.1); opacity: 0; }
+}
+
+/* บัวรดน้ำเหนือต้นไม้เพื่อน (ตำแหน่งเดียวกับบัวของหน้า Home — โคนต้นกลางจอ สูง 84% ของฉาก) */
+.fw-can {
+  position: absolute;
+  left: calc(50% - 30px);
+  top: calc(84% - 230px);
+  z-index: 40;
+  width: 124px;
+  height: 124px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fw-can__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 14px var(--glass-b-35, rgba(0, 0, 0, 0.35)));
+  transform-origin: 30% 60%;
+  animation: fwCanBob 1.6s ease-in-out infinite;
+  transition: transform 0.45s ease;
+}
+@keyframes fwCanBob {
+  0%, 100% { transform: translateY(0) rotate(4deg); }
+  50% { transform: translateY(-8px) rotate(-3deg); }
+}
+/* เทน้ำ: พวยอยู่ทางซ้ายของรูป → เอียงทวนเข็มให้พวยก้มลง */
+.fw-can--pouring .fw-can__img { animation: none; transform: rotate(-28deg); }
+.fw-can__drops { position: absolute; left: 22px; top: 70px; }
+.fw-can__drop {
+  position: absolute;
+  top: 0;
+  width: 17px;
+  height: 17px;
+  opacity: 0;
+  animation: fwPourDrop 0.8s ease-in infinite;
+}
+@keyframes fwPourDrop {
+  0% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(110px); opacity: 0; }
+}
+@media (max-width: 640px) {
+  .fw-can { width: 104px; height: 104px; left: calc(50% - 25px); top: calc(84% - 200px); }
+  .fw-can__drops { left: 18px; top: 58px; }
+}
+
+/* ป็อบอัพกู้คืนหยดน้ำ */
+.fw-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(10, 20, 30, 0.45);
+}
+.fw-modal {
+  width: min(340px, 100%);
+  padding: 22px 20px 18px;
+  border-radius: 22px;
+  text-align: center;
+  background: var(--bg-card, #fff);
+  color: var(--text, #1d2b22);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.fw-modal h3 { margin: 4px 0 0; font-family: var(--font-display); font-size: 20px; }
+.fw-modal p { margin: 0; font-size: 14px; line-height: 1.5; }
+.fw-modal__warn { color: #c4532f; font-size: 13px !important; }
+.fw-modal__actions { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 8px; }
+.fw-modal__primary,
+.fw-modal__ghost,
+.fw-stats__water {
+  width: 100%;
+  padding: 11px 0;
+  border-radius: 99px;
+  font: inherit;
+  font-family: var(--font-display);
+  font-size: 15px;
+  cursor: pointer;
+}
+.fw-modal__primary,
+.fw-stats__water { border: none; color: #fff; background: linear-gradient(180deg, #5cbcff, #2f8fe8); box-shadow: 0 4px 10px rgba(47, 143, 232, 0.35); }
+.fw-modal__ghost { border: 1.5px solid var(--border-mid, rgba(0, 0, 0, 0.15)); background: none; color: var(--text-sub, #5c6b62); }
+
+/* ปุ่มเพิ่มเพื่อน (แทนปุ่มหยดน้ำ ตอนยังไม่เป็นเพื่อน)
+   [แก้ตามที่ระบุ] วงกลมไอคอนนูน + ป้ายชื่อบรรทัดเดียว line-height เผื่อสระบน/ล่างภาษาไทยไม่ให้ซ้อนกัน */
+.fw-add-friend {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-display);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fw-add-friend__icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, #a8e890 0%, #5cbf55 45%, #2f8a3e 100%);
+  box-shadow: 0 4px 0 #23692f, 0 8px 14px rgba(0, 0, 0, 0.28), inset 0 -4px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.fw-add-friend:hover .fw-add-friend__icon { transform: translateY(-1px) scale(1.04); }
+.fw-add-friend:active .fw-add-friend__icon {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #23692f, 0 3px 6px rgba(0, 0, 0, 0.25), inset 0 -4px 6px rgba(0, 0, 0, 0.15);
+}
+.fw-add-friend__label {
+  white-space: nowrap;
+  padding: 2px 10px 3px;
+  border-radius: 99px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #2b5a2f;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+.fw-add-friend--sent .fw-add-friend__icon {
+  background: radial-gradient(circle at 35% 30%, #dfe5e0 0%, #a9b3ac 50%, #7d877f 100%);
+  box-shadow: 0 4px 0 #5f6862, 0 8px 14px rgba(0, 0, 0, 0.22), inset 0 -4px 6px rgba(0, 0, 0, 0.12);
+}
+.fw-add-friend--sent .fw-add-friend__label { color: #5f6862; }
+
+/* ป้ายหยดน้ำข้างชื่อในห้องแชท + แผงสถานะ */
+.fw-badge-wrap { position: relative; }
+/* ห้องแชท: ชิดมุมขวาบนของแถบหัว — แผงสถานะเปิดชิดขวาไม่ล้นจอ */
+.story-chat__head .fw-badge-wrap { margin-left: auto; }
+.story-chat__head .fw-stats { left: auto; right: 0; }
+.fw-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px 3px 7px;
+  border: 1.5px solid var(--border-mid, rgba(0, 0, 0, 0.12));
+  border-radius: 99px;
+  background: var(--bg-card, #fff);
+  cursor: pointer;
+  font: inherit;
+}
+.fw-badge .fw-count { font-size: 12px; }
+.fw-badge--recover { border-color: #e0704f; }
+.fw-badge__recover,
+.fw-chip__recover { font-size: 11px; font-weight: 700; color: #c4532f; white-space: nowrap; }
+.fw-stats {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 50;
+  width: min(270px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--bg-card, #fff);
+  color: var(--text, #1d2b22);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  border: 1.5px solid var(--border-mid, rgba(0, 0, 0, 0.12));
+  text-align: left;
+}
+.fw-stats__head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.fw-stats__head b { display: block; font-family: var(--font-display); font-size: 15px; }
+.fw-stats__head span { font-size: 12px; color: var(--text-sub, #5c6b62); }
+.fw-stats__rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.fw-stats__rows li { display: flex; justify-content: space-between; gap: 10px; }
+.fw-stats__rows b { white-space: nowrap; text-align: right; }
+.fw-stats__note { margin: 10px 0 0; font-size: 12px; color: var(--text-sub, #5c6b62); }
+.fw-stats__water { margin-top: 12px; padding: 9px 0; font-size: 14px; }
+
+/* วันนี้ใครรดน้ำให้เรา (แผงข้อมูลต้นไม้ของเรา) */
+.fw-today { display: flex; flex-direction: column; gap: 6px; }
+.fw-today__title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--text-sub); }
+.fw-today__empty { margin: 0; font-size: 11px; color: var(--text-muted); }
+.fw-today__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.fw-today__list li {
+  display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+  border-radius: 10px; background: var(--bg); border: 1px solid var(--border); font-size: 12px;
+}
+.fw-today__list b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fw-today__list time { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+
+/* หยดน้ำท้ายแถวรายชื่อแชท */
+.fw-chip { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; }
+.fw-chip .fw-count { font-size: 11px; padding: 0 6px; min-width: 18px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fw-can__img, .fw-can__drop, .fw-button__drop--celebrate, .fw-sparkle i, .fw-sparkle b, .fw-drop--broken { animation: none; }
+  .fw-can__drop { opacity: 0.8; }
+}

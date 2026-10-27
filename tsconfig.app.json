@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode (Vite) */
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* [แก้ TS error] ตัด baseUrl/paths ("@/*" alias) ออก — ไม่มีที่ไหนในโปรเจกต์ใช้ alias
+       นี้จริง (import ทั้งหมดเป็น relative path) และ baseUrl ถูก deprecate ใน TypeScript
+       รุ่นใหม่ (จะเลิกทำงานใน TS 7.0) ตัดทิ้งไปเลยตัดปัญหาแทนที่จะฝืนใช้ ignoreDeprecations */
+
+    /* Type safety — เปิด noImplicitAny เพื่อบังคับให้ทุก prop มี type จริง
+       ตามข้อกำหนด "ห้ามเกิด Type Any หากไม่จำเป็น" */
+    "strict": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"]
+}

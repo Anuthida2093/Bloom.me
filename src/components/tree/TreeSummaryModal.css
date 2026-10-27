@@ -1,0 +1,102 @@
+/* TreeSummaryModal.css — [แก้ตามที่ระบุ] แผงคำอธิบาย MBTI ลอยข้างต้นไม้ (ไม่ใช่ modal
+   กึ่งกลางจอทับต้นไม้แบบเดิม) — ดู TreeSummaryModal.tsx
+
+   [ตำแหน่ง] desktop/tablet (>768px): ลอยชิดขวาจอ กึ่งกลางแนวตั้ง เว้นระยะพ้นคอลัมน์ปุ่ม
+   ลอยขวาบน (.right-action-buttons ที่ top:95px;right:16px กว้าง ~2cm/75px) เพื่อไม่ให้ซ้อน
+   ทับกัน — มือถือ (≤768px) ไม่มีที่ว่างด้านข้างพอ เปลี่ยนเป็นแผ่นลอยชิดขอบล่างแทน (เต็ม
+   ความกว้างลบระยะขอบ) แบบเดียวกับ pattern bottom-sheet ที่ใช้ทั่วระบบ */
+.tree-mbti-panel {
+  position: fixed;
+  top: 50%;
+  right: 110px;
+  transform: translateY(-50%);
+  width: min(320px, calc(100vw - 32px));
+  max-height: calc(100vh - 190px);
+  max-height: calc(100dvh - 190px);
+  overflow-y: auto;
+  animation: treeMbtiPanelInRight .32s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes treeMbtiPanelInRight {
+  from { opacity: 0; transform: translateY(-50%) translateX(16px); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+
+@media (max-width: 768px) {
+  /* [แก้ตามที่ระบุ — พบจากการวัดจริงในเบราว์เซอร์] เดิม +12px เหลือช่องว่างจริงกับ
+     ActionMenuBar แค่ ~2px (วัดจริง: bottom ของแผง 187px vs top ของแถบเมนู 189px ที่จอสูง
+     279px) แทบชนกัน ขยับขึ้นเพิ่มอีกเกือบ 3 เท่า (+32px) ให้เห็นช่องว่างชัดเจนจริงจากขอบจอ */
+  .tree-mbti-panel {
+    top: auto;
+    bottom: calc(var(--gpf-safe-bottom, 100px) + 32px);
+    right: 16px;
+    left: 16px;
+    width: auto;
+    max-height: 50vh;
+    max-height: 50dvh;
+    transform: none;
+    animation-name: treeMbtiPanelInBottom;
+  }
+  @keyframes treeMbtiPanelInBottom {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* หน้าตากรอบ (ขอบไล่เฉด/glow/ปุ่มปิด/ใบไม้ไหว) ย้ายไป common/InfoPopup.css แล้ว
+   — ใช้ร่วมกับป็อบอัพข้อมูลต้นไม้ที่โคนต้น (TreeOfLife.tsx) */
+@media (prefers-reduced-motion: reduce) {
+  .tree-mbti-panel { animation: none; }
+}
+
+/* [แก้ตามที่ระบุ] จอโน้ตบุ๊ก (แผงข้างขวา): แผงข้อมูล MBTI ขึ้นตรงตำแหน่งเดียวกับแผงข้อมูลต้นไม้
+   (ในคลัสเตอร์ขวาบน: ห่างขอบบน 16px, ชิดซ้ายของแถวปุ่มลอย 56px + ช่องว่าง 12px + ขอบ 16px = 84px)
+   จอเล็กยังเป็นแบบเดิม */
+@media (min-width: 769px) {
+  .tree-mbti-panel {
+    top: 16px;
+    right: 84px;
+    transform: none;
+    max-height: calc(100vh - 190px);
+    max-height: calc(100dvh - 190px);
+    animation-name: treeMbtiPanelInSide;
+  }
+  @keyframes treeMbtiPanelInSide {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+}
+
+/* ═══ [แก้ตามที่ระบุ] แผงข้อมูล MBTI — กรอบ/ขอบแบบกระดานจัดอันดับ (พื้นเขียวไล่เฉด ขอบทอง ป้ายหัว) ═══ */
+.tree-mbti-panel { overflow: visible; padding-top: 18px; }
+/* [แก้ตามที่ระบุ] กรอบข้อมูล MBTI ต้องเห็นขอบล่างเสมอ + เลื่อนอ่านได้ (มือถือ/iPad) — เดิมกล่องนอกจำกัดความสูง
+   แต่ overflow:visible กรอบจึงล้นลงไปใต้แถบเมนูจนไม่เห็นขอบล่าง ตอนนี้บีบกรอบให้พอดีความสูงของกล่องนอก
+   แล้วเลื่อนเฉพาะเนื้อหาในกรอบ */
+.tree-mbti-panel { display: flex; flex-direction: column; box-sizing: border-box; }
+.tree-mbti-panel .info-popup { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.tree-mbti-panel .info-popup {
+  padding: 0;
+  border-radius: 20px;
+  background: var(--lb-card-bg);
+  border: 2px solid var(--lb-gold-edge);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--lb-gold-edge) 60%, var(--g800)), 0 14px 32px var(--glass-b-30);
+  animation: none;
+}
+.tree-mbti-panel__banner { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); z-index: 2; white-space: nowrap; }
+.tree-mbti-panel .info-popup__inner {
+  background: transparent;
+  padding: 30px 18px 18px;
+  color: var(--lb-card-text);
+  font-family: var(--font-display);
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; scrollbar-width: none;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.tree-mbti-panel .info-popup__inner::-webkit-scrollbar { display: none; }
+.tree-mbti-panel .info-popup__inner :is(div, p, span) { color: var(--lb-card-text) !important; font-family: var(--font-display) !important; }
+.tree-mbti-panel .info-popup__inner p { color: var(--lb-card-text-sub) !important; }
+.tree-mbti-panel .info-popup__inner > div[style*="border-radius"] {
+  background: color-mix(in srgb, var(--fixed-white) 42%, transparent) !important;
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 55%, transparent) !important;
+}
+[data-theme="dark"] .tree-mbti-panel .info-popup__inner > div[style*="border-radius"] { background: color-mix(in srgb, var(--g900) 45%, transparent) !important; }

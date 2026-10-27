@@ -1,0 +1,59 @@
+/*============================================================================*\
+  RankUpModal.css — [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 8]
+  ────────────────────────────────────────────────────────────────────────────
+  ใช้โทเคนสี/ฟอนต์ของระบบเดิมทั้งหมด (--coin, --text, --text-sub, Fredoka One)
+  ไม่มีสีดิบ ให้กลมกลืนกับ Surface variant="chrome" ที่ครอบอยู่ (ดู RankUpModal.tsx)
+\*============================================================================*/
+
+.rank-up-modal {
+  width: 100%;
+  max-width: 340px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.rank-up-modal__badge {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px var(--glass-b-30));
+  animation: rankUpBadgePop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes rankUpBadgePop {
+  0% { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+  70% { transform: scale(1.12) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.rank-up-modal__title {
+  margin: 0;
+  font-family: 'Fredoka One', 'Nunito', sans-serif;
+  font-size: var(--fs-xl);
+  color: var(--text);
+}
+
+.rank-up-modal__message {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--text-sub);
+  line-height: var(--lh-body);
+}
+
+.rank-up-modal__rank {
+  font-family: 'Fredoka One', 'Nunito', sans-serif;
+  font-weight: 700;
+}
+
+.rank-up-modal__rank--from {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.rank-up-modal__rank--to {
+  color: var(--coin);
+  font-size: 1.15em;
+}

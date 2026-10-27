@@ -1,0 +1,34 @@
+/* พื้นรอระหว่างวาดแผนที่ด้วยโค้ด — เขียวป่านุ่มๆ มีแสงไล่ผ่านช้าๆ (ไม่ใช่จอว่าง) */
+.map-art-image__pending {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(60% 45% at 30% 70%, rgba(150, 208, 105, 0.35), transparent 70%),
+    radial-gradient(50% 40% at 75% 25%, rgba(120, 190, 120, 0.3), transparent 70%),
+    #2f6a3a;
+  overflow: hidden;
+}
+.map-art-image__pending::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.12) 50%, transparent 70%);
+  animation: mapArtPendingSweep 1.6s ease-in-out infinite;
+}
+.map-art-image__pending-label {
+  position: relative;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: clamp(12px, 2.4%, 22px);
+  font-weight: 300;
+  letter-spacing: 0.04em;
+}
+@keyframes mapArtPendingSweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-art-image__pending::after { animation: none; }
+}

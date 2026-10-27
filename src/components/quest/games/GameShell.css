@@ -1,0 +1,471 @@
+/* ═══════════════════════════════════════════════════════════════
+   GameShell.css — ห้องเล่นเควสเต็มกรอบเขียว
+   [กติกาสำคัญ] absolute + inset:0 → ครอบเฉพาะ .gameplay-frame
+   (ซึ่งเป็น position:relative) ไม่ทะลุออกนอกกรอบเขียวเด็ดขาด
+   ═══════════════════════════════════════════════════════════════ */
+
+.game-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  --lc-bg-11: #123528;
+  --lc-bg-12: #0C2A20;
+  --lc-bg-13: #071A14;
+  background: linear-gradient(165deg, var(--lc-bg-11) 0%, var(--lc-bg-12) 55%, var(--lc-bg-13) 100%);
+  --lc-text-14: #EAF4EE;
+  color: var(--lc-text-14);
+  font-family: 'Nunito', 'Mali', sans-serif;
+  --game-accent: var(--g600);
+  --lc-c-15: #D8F3DC;
+  --game-accent-bg: var(--lc-c-15);
+}
+
+.game-shell__scenery {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 45% at 22% 12%, color-mix(in srgb, var(--game-accent) 40%, transparent), transparent 70%),
+    radial-gradient(55% 45% at 82% 88%, color-mix(in srgb, var(--game-accent) 28%, transparent), transparent 72%);
+  opacity: 0.55;
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+/* ── หัวเรื่อง ── */
+.game-shell__header {
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px 58px; /* เว้นซ้าย 58px ให้ปุ่มเต็มจอของ GameplayFrame */
+  border-bottom: 1px solid var(--glass-w-10);
+}
+.game-shell__heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.game-shell__icon {
+  font-size: 30px;
+  filter: drop-shadow(0 4px 10px var(--glass-b-35));
+  flex-shrink: 0;
+}
+.game-shell__title {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 18px;
+  color: var(--fixed-white);
+  line-height: 1.25;
+}
+.game-shell__subtitle {
+  font-size: 11px;
+  --lc-text-10: rgba(234, 244, 238, 0.55);
+  color: var(--lc-text-10);
+}
+.game-shell__close {
+  /* [แก้] มาตรฐานปุ่มปิดทั้งระบบ: วงกลม อย่างน้อย 44x44px (ในนี้วางในแถบหัวด้วย flex
+     แทน position:absolute เพราะไฟล์นี้ใช้ header bar อยู่แล้ว ยังอยู่มุมขวาบนของกรอบเควส
+     เหมือนเดิม แค่ implementation คนละแบบ ไม่ได้ตั้งใจให้ต่างจากหน้าอื่น) */
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 99px;
+  border: none;
+  background: var(--glass-w-14);
+  color: var(--fixed-white);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+.game-shell__close:hover { background: var(--glass-w-28); transform: scale(1.08); }
+.game-shell__close:focus-visible { outline: 2px solid var(--game-accent); outline-offset: 2px; }
+
+/* ── ปุ่ม pill ลอย (fullscreenGame) — [แก้รอบนี้ — feedback รอบ 2] แทนที่แถบหัวบาง 95px เดิม
+   ที่กินพื้นที่ layout เต็มความกว้างจอ — รอบนี้ทำเป็น "ปุ่ม pill ลอยขนาดพอดีตัว" สไตล์เดียวกับ
+   ปุ่ม "เควสด้านการเรียนรู้" (.quest-section-title-pill ใน QuestSection.tsx: พื้นหลังโปร่งแสง
+   ขอบโค้งมนเต็ม ไอคอนเล็กหน้าข้อความ) ตามที่ระบุ — สีพื้นหลัง/เงาที่นี่ใช้โทนกระจกเข้ม
+   (--glass-w-14, เหมือน .game-shell__close ด้านบน) แทน var(--bg-card)/var(--sh-card) ต้นแบบ
+   ตรงๆ เพราะต้นแบบเป็นโทเค็นตามธีมสว่าง/มืดของทั้งแอป ส่วน .game-shell พื้นหลังเข้มตายตัวเสมอ
+   ไม่ผูกกับธีมแอป (ใช้ var(--bg-card) ตรงๆ จะกลายเป็นสีขาวทึบตอนแอปอยู่โหมดสว่าง ขัดกับพื้นหลัง
+   เข้มของ .game-shell) — ปุ่มปิด (✕) แยกเป็นอีกปุ่มต่างหากลอยขวาบน ไม่รวมเข้าไปใน pill เดียวกัน
+   (ตามที่ระบุ) ทั้งสองไม่กินพื้นที่ layout เลย (position:absolute ลอยทับ .game-shell__body ที่
+   ขยายเต็มความสูงจริงด้านล่างนี้แล้ว) */
+.game-shell__pill-header {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 120px);
+  padding: 8px 18px;
+  border-radius: 99px;
+  background: var(--glass-w-14);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.game-shell__pill-icon { font-size: 16px; flex-shrink: 0; }
+.game-shell__pill-title {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 15px;
+  color: var(--fixed-white);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-shell__close--floating {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 20;
+}
+
+/* ── เนื้อหา ── */
+.game-shell__body {
+  position: relative;
+  z-index: 5;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* [แก้บั๊ก — เช็คอินรายวันเลื่อนไม่พ้น ActionMenuBar] เดิม padding-bottom ตายตัว 26px น้อยกว่า
+     ความสูงจริงของแถบเมนูลอย (~100px/~80px มือถือ, z-index:1000 ลอยทับทุกอย่างเสมอ) ปุ่มยืนยัน
+     ล่างสุดของเกมที่เนื้อหายาว (เช่น DailyCheckinGame 5 คำถาม) เลยโดนบังเลื่อนไม่พ้น — ใช้
+     --gpf-safe-bottom (โทเคนกลางใน index.css) แบบเดียวกับ SettingsModal.tsx ที่แก้บั๊กเดียวกัน
+     ไปแล้ว เพิ่ม padding ที่ "เนื้อหาที่ scroll ได้เอง" ตัวนี้โดยตรง (ไม่ลดขนาด .game-shell
+     กล่องนอก ซึ่งจะโชว์พื้นหลังผิดสีที่ขอบล่างแทน เพราะพื้นหลังจริงอยู่ที่ .game-shell เท่านั้น
+     — .game-shell__body โปร่งใส ไม่มีสีพื้นหลังของตัวเอง เพิ่ม padding ตรงนี้จึงยังเห็นพื้นหลัง
+     ไล่สีเขียวเข้มเดิมถูกต้อง ไม่เกิดบั๊กแถบขาวแบบที่เคยเจอกับ .quest-section-root) */
+  /* [แก้ตามที่ระบุ] เลื่อนลงได้อีก (เช่น น้ำพุหล่อเลี้ยงราก) — เผื่อระยะท้ายเพิ่มจาก +24px เป็น +64px
+     ให้ปุ่ม/รูปที่ถ่ายแล้วท้ายเนื้อหาขึ้นมาพ้นแถบเมนูและปุ่มวงกลม "เควส" ที่ยื่นขึ้นจากแถบได้สบาย */
+  padding: 16px 18px calc(var(--gpf-safe-bottom, 100px) + 64px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.game-shell__brief {
+  width: 100%;
+  max-width: 620px;
+  border-radius: 16px;
+  border: 1px dashed var(--glass-w-22);
+  background: var(--glass-w-5);
+  padding: 12px 16px;
+}
+.game-shell__howto {
+  font-size: 12.5px;
+  line-height: 1.8;
+  --lc-text-9: rgba(234, 244, 238, 0.85);
+  color: var(--lc-text-9);
+}
+.game-shell__theory {
+  margin-top: 6px;
+  font-size: 10.5px;
+  --lc-text-8: rgba(234, 244, 238, 0.45);
+  color: var(--lc-text-8);
+  line-height: 1.6;
+}
+
+.game-shell__stage { width: 100%; max-width: 620px; flex: 1; }
+
+/* ── เนื้อหาแบบเต็มจอ (fullscreenGame) — ไม่มี max-width/padding/gap ให้ .game-shell__stage
+   เต็มพื้นที่ที่เหลือทั้งหมดจริง (compound selector กันปัญหาลำดับ CSS กับ .game-shell__body
+   ปกติด้านบนที่ specificity เท่ากัน) ── */
+.game-shell__body.game-shell__body--fullscreen {
+  padding: 0;
+  gap: 0;
+  align-items: stretch;
+  /* auto ไม่ใช่ hidden — จอกว้างแผนที่เต็มพอดีไม่มีอะไรเกิน แต่จอแคบ (breakpoint 520px ใน
+     StepJourneyGame.css) เนื้อหาเรียงต่อกันแนวตั้งอาจสูงเกิน .game-shell__stage ได้ ต้อง scroll
+     ได้แทนที่จะโดนตัดจนกดปุ่มด้านล่างไม่ถึง */
+  overflow-y: auto;
+}
+.game-shell__body--fullscreen .game-shell__stage {
+  max-width: none;
+  /* min-height ไม่ใช่ height ตายตัว — ปล่อยให้สูงเกิน 100% ได้บนจอแคบที่เนื้อหาเรียงต่อกันแนวตั้ง
+     (ดู breakpoint 520px ใน StepJourneyGame.css) แล้วให้ .game-shell__body--fullscreen
+     (overflow-y:auto) เป็นคน scroll แทนการตัดเนื้อหาทิ้ง */
+  min-height: 100%;
+}
+
+/* ── ฉากรับรางวัล ── */
+.game-shell__reward {
+  position: relative;
+  z-index: 5;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 30px 22px;
+}
+.game-shell__reward-drops { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.game-shell__reward-drops img {
+  position: absolute;
+  top: -30px;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  animation: gameShellDrop 1.6s ease-in both;
+}
+@keyframes gameShellDrop {
+  0%   { transform: translateY(0) rotate(0); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translateY(70vh) rotate(220deg); opacity: 0; }
+}
+.game-shell__reward-icon { font-size: 54px; }
+.game-shell__reward-title {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 24px;
+  color: var(--fixed-white);
+  margin: 6px 0 4px;
+}
+.game-shell__reward-text {
+  font-size: 13px;
+  --lc-text-7: rgba(234, 244, 238, 0.72);
+  color: var(--lc-text-7);
+  margin-bottom: 22px;
+  max-width: 340px;
+  line-height: 1.7;
+}
+.game-shell__reward-cards { display: flex; gap: 12px; margin-bottom: 24px; }
+.game-shell__reward-cards div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 110px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: var(--glass-w-10);
+  border: 1px solid var(--glass-w-16);
+  font-size: 10.5px;
+  --lc-text-6: rgba(234, 244, 238, 0.6);
+  color: var(--lc-text-6);
+  animation: gameShellCardPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.game-shell__reward-cards div:nth-child(2) { animation-delay: 0.12s; }
+.game-shell__reward-cards span { font-size: 24px; }
+.game-shell__reward-cards strong {
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-weight: 400;
+  font-size: 20px;
+  color: var(--fixed-white);
+}
+@keyframes gameShellCardPop {
+  from { opacity: 0; transform: translateY(12px) scale(0.8); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.game-shell__claim {
+  min-width: min(220px, 100%);
+  padding: 15px 28px;
+  border: none;
+  border-radius: 99px;
+  background: linear-gradient(135deg, var(--fixed-white), var(--game-accent-bg));
+  --lc-text-5: #0B241B;
+  color: var(--lc-text-5);
+  font-family: 'Fredoka One', 'Mali', sans-serif;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 12px 30px var(--glass-b-35);
+  transition: transform 0.15s ease;
+}
+.game-shell__claim:hover { transform: translateY(-2px); }
+
+/* ── ยืนยันออกกลางคัน ── */
+.game-shell__confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  --lc-bg-4: rgba(5, 18, 13, 0.76);
+  background: var(--lc-bg-4);
+  backdrop-filter: blur(8px);
+}
+.game-shell__confirm-card {
+  width: 100%;
+  max-width: 330px;
+  border-radius: 22px;
+  --lc-bg-3: #12332A;
+  background: var(--lc-bg-3);
+  border: 1px solid var(--glass-w-16);
+  padding: 26px 22px;
+  text-align: center;
+}
+.game-shell__confirm-icon { font-size: 32px; margin-bottom: 8px; }
+.game-shell__confirm-card p {
+  font-size: 13px;
+  line-height: 1.75;
+  --lc-text-2: rgba(234, 244, 238, 0.82);
+  color: var(--lc-text-2);
+  margin-bottom: 18px;
+}
+.game-shell__confirm-actions { display: flex; gap: 8px; }
+.game-shell__confirm-actions button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-w-20);
+  background: var(--glass-w-7);
+  --lc-text-1: rgba(234, 244, 238, 0.82);
+  color: var(--lc-text-1);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.game-shell__confirm-actions .is-primary {
+  background: var(--game-accent);
+  border-color: var(--game-accent);
+  color: var(--fixed-white);
+}
+
+@media (max-width: 520px) {
+  .game-shell__header { padding: 14px 14px 10px 54px; }
+  .game-shell__body { padding: 14px 14px calc(var(--gpf-safe-bottom, 80px) + 56px); }
+  .game-shell__title { font-size: 16px; }
+  .game-shell__pill-header { max-width: calc(100% - 100px); padding: 7px 14px; }
+  .game-shell__pill-title { font-size: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-shell__reward-drops img,
+  .game-shell__reward-cards div { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ธีมสว่าง — [แก้ตามที่ระบุ] หน้าเล่นเควสใช้พื้นเขียวอ่อนสีเดียวกับกรอบกระดานจัดอันดับ
+   ────────────────────────────────────────────────────────────────────────────
+   ดีไซน์เดิมของหน้าเกมเป็นพื้นเขียวเข้ม + ตัวหนังสือขาว + "กระจกขาวโปร่ง" (--glass-w-*) ทั้งชุด
+   ธีมสว่างจึงกลับด้านทั้งชุดในขอบเขต .game-shell เท่านั้น:
+     - พื้น → เขียวอ่อน (--leaf-soft) / ตัวหนังสือ → เข้ม (--n900)
+     - กระจกขาวโปร่ง → เงาเขียวเข้มโปร่งในเปอร์เซ็นต์เดิม (พื้นผิว/เส้นขอบ/ตัวหนังสือจางยังมีระดับเท่าเดิม)
+     - ตัวหนังสือขาวบนพื้นเกม → เข้ม, ส่วนตัวหนังสือขาวบนปุ่มสีเน้น (accent) คงขาวไว้
+   ธีมมืดไม่แตะ — ยังเป็นเขียวเข้ม/ขาวแบบเดิมทุกอย่าง
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root:not([data-theme="dark"]) .game-shell {
+  background: linear-gradient(165deg, var(--leaf-soft) 0%, var(--g100) 55%, var(--leaf-soft-strong) 100%);
+  color: var(--n900);
+  --glass-w-5: color-mix(in srgb, var(--g900) 5%, transparent);
+  --glass-w-6: color-mix(in srgb, var(--g900) 6%, transparent);
+  --glass-w-7: color-mix(in srgb, var(--g900) 7%, transparent);
+  --glass-w-9: color-mix(in srgb, var(--g900) 9%, transparent);
+  --glass-w-10: color-mix(in srgb, var(--g900) 10%, transparent);
+  --glass-w-12: color-mix(in srgb, var(--g900) 12%, transparent);
+  --glass-w-13: color-mix(in srgb, var(--g900) 13%, transparent);
+  --glass-w-14: color-mix(in srgb, var(--g900) 14%, transparent);
+  --glass-w-16: color-mix(in srgb, var(--g900) 16%, transparent);
+  --glass-w-20: color-mix(in srgb, var(--g900) 20%, transparent);
+  --glass-w-22: color-mix(in srgb, var(--g900) 22%, transparent);
+  --glass-w-28: color-mix(in srgb, var(--g900) 28%, transparent);
+  --glass-w-50: color-mix(in srgb, var(--g900) 50%, transparent);
+  --glass-w-55: color-mix(in srgb, var(--g900) 55%, transparent);
+  --glass-w-72: color-mix(in srgb, var(--g900) 72%, transparent);
+  --glass-w-80: color-mix(in srgb, var(--g900) 80%, transparent);
+  --glass-w-85: color-mix(in srgb, var(--g900) 85%, transparent);
+}
+:root:not([data-theme="dark"]) .game-shell :is(
+  .game-shell__title, .game-shell__close, .game-shell__pill-title, .game-shell__reward-title,
+  .game-shell__reward-cards strong, .qg-select, .qg-select option, .qg-ring__value, .qg-stat strong, .qg-title
+) { color: var(--n900); }
+:root:not([data-theme="dark"]) .game-shell :is(
+  .game-shell__subtitle, .game-shell__theory, .game-shell__reward-cards div
+) { color: var(--n900); }
+:root:not([data-theme="dark"]) .game-shell :is(
+  .game-shell__howto, .game-shell__reward-text, .game-shell__confirm-card p, .game-shell__confirm-actions button, .qg-chip
+) { color: var(--n900); }
+:root:not([data-theme="dark"]) .game-shell .qg-chip.is-active,
+:root:not([data-theme="dark"]) .game-shell .game-shell__confirm-actions .is-primary { color: var(--fixed-white); }
+:root:not([data-theme="dark"]) .game-shell .game-shell__confirm-card { background: var(--leaf-soft); }
+:root:not([data-theme="dark"]) .game-shell .qg-select option { background: var(--fixed-white); }
+:root:not([data-theme="dark"]) .game-shell :is(.qg-input, .qg-textarea) { color: var(--n900); }
+:root:not([data-theme="dark"]) .game-shell :is(.qg-input, .qg-textarea)::placeholder { color: color-mix(in srgb, var(--n900) 40%, transparent); }
+:root:not([data-theme="dark"]) .game-shell .qg-tag--warn { color: var(--n900); }
+:root:not([data-theme="dark"]) .game-shell .qg-tag--danger { color: var(--n900); font-weight: 800; }
+:root:not([data-theme="dark"]) .game-shell .qg-tag--ok { color: var(--g800); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   [แก้ตามที่ระบุ] หน้าเล่นเควสทุกเควส — แถบบน (หัวเควส / ป้าย pill ลอย) เขียวเข้มกว่าพื้นด้านล่าง
+   + เส้นขอบสีทอง · ธีมสว่างตัวหนังสือดำทั้งหมด · ธีมมืดตัวหนังสือขาวทั้งหมด
+   ═══════════════════════════════════════════════════════════════════════════ */
+.game-shell {
+  --gs-gold: color-mix(in srgb, var(--coin) 70%, var(--g600));
+  --gs-bar: var(--g800);
+  --gs-bar-text: var(--fixed-white);
+}
+:root:not([data-theme="dark"]) .game-shell {
+  --gs-bar: var(--leaf-soft-strong);
+  --gs-bar-text: var(--n900);
+}
+.game-shell .game-shell__header {
+  background: var(--gs-bar);
+  border-bottom: 2px solid var(--gs-gold);
+  box-shadow: 0 3px 10px var(--glass-b-15);
+}
+.game-shell .game-shell__pill-header {
+  background: var(--gs-bar);
+  border: 2px solid var(--gs-gold);
+  backdrop-filter: none;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--gs-gold) 70%, var(--g800)), 0 6px 14px var(--glass-b-20);
+}
+.game-shell :is(.game-shell__title, .game-shell__subtitle, .game-shell__pill-title) {
+  color: var(--gs-bar-text);
+  font-family: var(--font-display);
+}
+.game-shell :is(.game-shell__confirm-card, .game-shell__reward-cards div) { border-color: var(--gs-gold); }
+
+/* ธีมมืด: ตัวหนังสือรองที่เดิมเป็นขาวจาง → ขาวล้วน */
+[data-theme="dark"] .game-shell :is(
+  .game-shell__subtitle, .game-shell__howto, .game-shell__theory, .game-shell__reward-text,
+  .game-shell__reward-cards div, .game-shell__confirm-card p, .game-shell__confirm-actions button,
+  .qg-chip, .qg-hint, .qg-ring__label, .qg-stat span
+) { color: var(--fixed-white); }
+
+
+/* [แก้ตามที่ระบุ] หน้ารับรางวัลอยู่ในการ์ด .quest-done-card (index.css) — กล่องตัวเลขรางวัลโทนเดียวกับการ์ด */
+.game-shell__reward-card .game-shell__reward-cards div {
+  background: color-mix(in srgb, var(--fixed-white) 45%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--lb-gold-edge) 55%, transparent);
+  color: var(--lb-card-text-sub);
+}
+[data-theme="dark"] .game-shell__reward-card .game-shell__reward-cards div { background: color-mix(in srgb, var(--g900) 45%, transparent); }
+.game-shell__reward-card .game-shell__reward-cards { margin-bottom: 8px; }
+
+/* ═══ [แก้ตามที่ระบุ] ป้ายชื่อเควสลอยกึ่งกลางด้านบน = ป้ายแบบกระดานจัดอันดับเดียวกับหน้าเควส
+   (.quest-section-title-pill) — พื้นเขียวอ่อนไล่เฉด ขอบทอง ปลายม้วนสองข้าง ขนาด/ตำแหน่งเดียวกัน ═══ */
+.game-shell .game-shell__pill-header.lb-banner {
+  top: 14px;
+  max-width: calc(100% - 120px);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--leaf-soft-strong) 0%, var(--leaf-soft-active) 100%);
+  border: 2px solid var(--lb-gold);
+  box-shadow: 0 3px 8px var(--glass-b-30);
+  backdrop-filter: none;
+  color: var(--on-leaf-soft);
+}
+[data-theme="dark"] .game-shell .game-shell__pill-header.lb-banner {
+  background: linear-gradient(180deg, var(--g600) 0%, var(--g800) 100%);
+  color: var(--fixed-white);
+}
+.game-shell .game-shell__pill-header.lb-banner .game-shell__pill-title { color: inherit; font-family: var(--font-display); font-size: inherit; }
+.game-shell .game-shell__pill-header.lb-banner .game-shell__pill-icon { font-size: inherit; }
+/* [แก้ตามที่ระบุ] ก้าวเพื่อสุขภาพ: กดเข้าแผนที่แล้วไม่ต้องมีแถบชื่อเควสด้านบน (มีเฉพาะหน้าเลือกจุดหมาย) */
+.game-shell:has(.step-journey-game__map-canvas) .game-shell__pill-header { display: none; }
+
+/* เควสปกติ (ไม่เต็มจอ) ไม่มีแถบหัวแล้ว — เว้นบนให้ป้ายชื่อเควสลอย ไม่ทับเนื้อหา */
+.game-shell__body:not(.game-shell__body--fullscreen) { padding-top: 64px; }
+
+/* [แก้ตามที่ระบุ] รูปเควสบนป้ายชื่อด้านบน (แทนอีโมจิ) — สูงเท่าบรรทัดป้าย ไม่ดันป้ายให้สูงขึ้น */
+.game-shell__pill-icon { display: inline-flex; align-items: center; }
+.game-shell__pill-icon-img { width: 1.9em; height: 1.9em; object-fit: contain; margin: -0.45em 0; display: block; }

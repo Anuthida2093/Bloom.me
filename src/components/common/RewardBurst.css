@@ -1,0 +1,75 @@
+/* ═══════════════════════════════════════════════════════════════
+   RewardBurst.css — ได้รับรางวัล: รูปใหญ่ + จำนวน + แสงจ้าด้านหลัง ไม่มีกรอบ (RewardBurst.tsx)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* [แก้ตามที่ระบุ] รูปรางวัลและตัวอักษรเล็กลงเล็กน้อย (~15%) */
+.reward-burst {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px 16px calc(var(--gpf-safe-bottom, 90px) + 16px); box-sizing: border-box;
+  background: rgba(6, 14, 10, 0.62);
+  -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
+  font-family: var(--font-display); color: #fff;
+  animation: rewardBurstFade 0.25s ease both;
+}
+@keyframes rewardBurstFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* กากบาทมุมขวาบน — ไม่มีกรอบ/พื้น */
+.reward-burst__x {
+  position: absolute; top: max(14px, env(safe-area-inset-top)); right: 14px;
+  width: 44px; height: 44px; padding: 6px; border: none; background: none; cursor: pointer;
+}
+.reward-burst__x img { width: 100%; height: 100%; object-fit: contain; filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5)); }
+
+.reward-burst__stage {
+  position: relative; flex: 1; width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+}
+
+/* แสงจ้า: รัศมีหมุนช้าๆ + แกนแสงขาวทองกลางจอ */
+.reward-burst__rays, .reward-burst__glow {
+  position: absolute; top: 50%; left: 50%; border-radius: 50%; pointer-events: none;
+}
+.reward-burst__rays {
+  width: min(720px, 170vw); aspect-ratio: 1; transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(from 0deg, rgba(255, 226, 140, 0.55) 0deg 8deg, transparent 8deg 20deg);
+  -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 68%);
+  mask-image: radial-gradient(circle, #000 18%, transparent 68%);
+  animation: rewardBurstSpin 16s linear infinite, rewardBurstFade 0.6s ease-out both;
+}
+.reward-burst__glow {
+  width: min(460px, 110vw); aspect-ratio: 1; transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255, 255, 240, 0.98) 0%, rgba(255, 228, 140, 0.75) 22%, rgba(255, 200, 80, 0.25) 46%, transparent 68%);
+  animation: rewardBurstPulse 2.4s ease-in-out infinite;
+}
+@keyframes rewardBurstSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes rewardBurstPulse { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.95; } 50% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } }
+
+.reward-burst__items { position: relative; z-index: 1; display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 34px; }
+.reward-burst__item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  animation: rewardBurstPop 0.55s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+@keyframes rewardBurstPop { from { opacity: 0; transform: scale(0.3) rotate(-10deg); } to { opacity: 1; transform: none; } }
+.reward-burst__img { width: min(150px, 40vw); height: min(150px, 40vw); object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.4)); }
+.reward-burst__items--multi .reward-burst__img { width: min(118px, 30vw); height: min(118px, 30vw); }
+.reward-burst__emoji { font-size: min(118px, 30vw); line-height: 1; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.4)); }
+.reward-burst__amount {
+  font-size: clamp(28px, 7.5vw, 44px); line-height: 1; letter-spacing: 0.02em;
+  color: #fff7d6; -webkit-text-stroke: 2px #8a5a00; paint-order: stroke fill;
+  text-shadow: 0 4px 0 #8a5a00, 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+.reward-burst__note { position: relative; z-index: 1; margin: 6px 0 0; max-width: 340px; text-align: center; font-size: 15px; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
+
+.reward-burst__ok {
+  position: relative; z-index: 1; min-width: 160px; padding: 12px 32px; border: none; border-radius: 99px; cursor: pointer;
+  font-family: var(--font-display); font-size: 18px; color: #4A2C0A;
+  background: linear-gradient(180deg, #ffe08a, #f5b301);
+  box-shadow: 0 6px 0 #c98a00, 0 12px 22px rgba(0, 0, 0, 0.3), inset 0 2px 0 rgba(255, 255, 255, 0.75);
+  animation: rewardBurstPop 0.45s cubic-bezier(.34, 1.56, .64, 1) 0.35s both;
+}
+.reward-burst__ok:active { transform: translateY(4px); box-shadow: 0 2px 0 #c98a00, inset 0 2px 0 rgba(255, 255, 255, 0.75); }
+
+@media (prefers-reduced-motion: reduce) {
+  .reward-burst, .reward-burst__rays, .reward-burst__glow, .reward-burst__item, .reward-burst__ok { animation: none; }
+}

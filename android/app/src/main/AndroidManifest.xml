@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:roundIcon="@mipmap/ic_launcher_round" android:supportsRtl="true" android:theme="@style/AppTheme">
+
+        <activity android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density" android:name=".MainActivity" android:label="@string/title_activity_main" android:theme="@style/AppTheme.NoActionBarLaunch" android:launchMode="singleTask" android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+
+        </activity>
+
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.fileprovider" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths"/>
+        </provider>
+    </application>
+
+    <!-- Permissions -->
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- [แก้รอบนี้ — เฟส 3] เดิม `npx cap add android` รอบแรกรันก่อนมี android/healthfitness.config.json
+         จึงตกไป fallback "ประกาศทุก permission" ของปลั๊กอิน (ดู README ของ @capacitor/health-fitness) —
+         ตัดเหลือเฉพาะที่ config.json (permissions.STEPS = "Read") ต้องใช้จริงตรงนี้ด้วยมือ เพราะ hook
+         ของปลั๊กอินมีแต่ฟังก์ชัน "เพิ่ม" permission ที่ขาด ไม่มีฟังก์ชัน "ลบ" permission ที่เกินออก
+         (ดู node_modules/@capacitor/health-fitness/hooks/capacitorCopyHealthFitnessConfigs.js) — ถ้า
+         รัน `npx cap sync android` ใหม่ในเครื่องอื่นที่มี config.json อยู่แล้วตั้งแต่ต้น จะไม่เกิดปัญหานี้ -->
+    <uses-permission android:name="android.permission.health.READ_STEPS"/>
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY"/>
+</manifest>

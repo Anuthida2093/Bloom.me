@@ -1,0 +1,13 @@
+.route-fallback {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+}
+.route-fallback__ring {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 2.5px solid var(--border-mid);
+  border-top-color: var(--g600);
+  animation: routeFallbackSpin .8s linear infinite;
+}
+@keyframes routeFallbackSpin { to { transform: rotate(360deg); } }

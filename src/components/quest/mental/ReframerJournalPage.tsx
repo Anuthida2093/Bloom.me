@@ -1,0 +1,148 @@
+import { useState } from 'react'
+import type { MoodEntryData } from '../../../types'
+import { getJournalReflection } from '../../../services/aiSummaryService'
+import { useAppContext } from '../../../context/AppContext'
+import { useLockBodyScroll } from '../../../hooks/useLockBodyScroll'
+import { useEscapeKey } from '../../../hooks/useEscapeKey'
+import IntroVideoSequence from './shared/IntroVideoSequence'
+import ParchmentJournalEditor from './shared/ParchmentJournalEditor'
+import JournalHistoryModal from './shared/JournalHistoryModal'
+import { QUEST_ICONS } from '../../../config/iconAssets'
+
+import './ReframerJournalPage.css'
+import { BADGE_ICONS } from '../../../config/iconAssets'
+
+const C_1 = '#9B59D0'
+const C_2 = '#9B59D0'
+const C_3 = '#9B59D0'
+const C_4 = '#9B59D0'
+/** [เพิ่มตามที่ระบุ — ข้อ 10/11] ปุ่ม "เริ่มเขียน"/"ส่งให้รากไม้อ่าน" ของเควสนี้ ใช้เขียว
+ *  พาสเทลของตัวเอง แทน gradient ส้ม-ม่วง (theme.gold + accent เดิม) ที่ใช้ร่วมกับ Gratitude
+ *  Shield — ให้แต่ละเควสมีสีเป็นของตัวเองตามที่ระบุ */
+
+const QUEST_CODE = 'ment-reframer-journal'
+
+interface ReframerJournalPageProps {
+  moodEntry: MoodEntryData
+  /** [ใหม่] วันนี้ทำเควสนี้ไปแล้วหรือยัง — ส่งมาจาก GameplayFrame (อ้างอิง quest_logs จริง)
+   *  ใช้ตัดสิน 3 อย่าง: ข้ามวิดีโอ intro, แสดงหน้าสรุปแทนหน้าเขียน, และไม่แจกรางวัลซ้ำ */
+  alreadyCompleted: boolean
+  onComplete: () => void
+  onClose: () => void
+}
+
+/**
+ * ReframerJournalPage — [เขียนใหม่ทั้งหมดตามสเปกใหม่] เควส "สมุดบันทึกรากไม้เรืองแสง"
+ * Flow: intro (วิดีโอ Reframer-Journal.mp4 + เสียง Reframer-Journal.mp3 + overlay text
+ * แฟนตาซี) → main (ปุ่ม "ประวัติสมุดบันทึกรากไม้เรืองแสง" มุมบน + ParchmentJournalEditor
+ * ถามคำถาม → เขียนบนกระดาษ parchment แบบ live-sync → AI สะท้อนกลับ → รับรางวัล)
+ * กดปุ่มประวัติเมื่อไหร่ก็ได้ (แม้กำลังเขียนอยู่) เปิด JournalHistoryModal ทับขึ้นมา
+ */
+export default function ReframerJournalPage({ moodEntry, alreadyCompleted, onComplete, onClose }: ReframerJournalPageProps) {
+  useLockBodyScroll()
+  const { journalEntries, handleAddJournalEntry } = useAppContext()
+
+  /* [เปลี่ยน] วิดีโอ intro เล่นเฉพาะรอบแรกของวัน — คนที่แวะกลับมาเขียนเพิ่ม
+     ไม่ควรต้องนั่งรอวิดีโอเดิมซ้ำอีกรอบ */
+  const [showIntro, setShowIntro] = useState(!alreadyCompleted)
+  const [showHistory, setShowHistory] = useState(false)
+
+  /* [ใหม่] กด "เขียนระบายเพิ่ม" จากหน้าสรุป → เขียนต่อได้ เก็บลงประวัติจริง
+     แต่ไม่ได้รางวัลซ้ำ */
+  const [isWritingMore, setIsWritingMore] = useState(false)
+
+  useEscapeKey(() => { if (showHistory) setShowHistory(false); else onClose() })
+
+  const myEntries = journalEntries.filter((e) => e.questCode === QUEST_CODE)
+
+  if (showIntro && !alreadyCompleted) {
+    return (
+      <IntroVideoSequence
+        videoSrc="/assets/videos/quest-mental/Reframer-Journal.mp4"
+        audioSrc="/assets/sounds/Reframer-Journal.mp3"
+        overlayText="ยินดีต้อนรับสู่ ไดอะรี่ของฉัน พื้นที่ส่วนตัวที่คุณเล่าได้ทุกเรื่อง ทั้งวันที่ดีและวันที่ร้าย ความสุขและความทุกข์ ทุกถ้อยคำของคุณมีพลังเสมอ"
+        accent={C_1}
+        onComplete={() => setShowIntro(false)}
+      />
+    )
+  }
+
+  /* [ใหม่] ทำครบแล้วของวันนี้ → แสดงหน้าสรุปก่อน ไม่พาไปเขียนทันที */
+  if (alreadyCompleted && !isWritingMore) {
+    return (
+      <div className="reframer-journal-page reframer-journal-page--done">
+        <div className="reframer-journal-done quest-done-card">
+          <div className="lb-banner quest-done-card__banner">ทำแล้ววันนี้</div>
+          <div className="reframer-journal-done__icon">🌿</div>
+          <h2 className="reframer-journal-done__title">วันนี้คุณบันทึกเรื่องราวแล้ว!</h2>
+          <p className="reframer-journal-done__body">
+            รากไม้ได้รับฟังความรู้สึกของคุณเรียบร้อยแล้ว<br />
+            แต่ถ้ามีเรื่องอยากระบายเพิ่ม สามารถเขียนต่อได้นะ
+            (ข้อความจะถูกเก็บลงประวัติ แต่จะไม่ได้รับรางวัลซ้ำ)
+          </p>
+          <div className="reframer-journal-done__actions">
+            <button className="lb-btn lb-btn--wide" onClick={() => setIsWritingMore(true)}>
+              เขียนเพิ่ม
+            </button>
+            <button className="lb-btn lb-btn--wide" onClick={() => setShowHistory(true)}>
+              ดูประวัติไดอะรี่ของฉัน
+            </button>
+            <button className="lb-btn lb-btn--ghost lb-btn--wide" onClick={onClose}>
+              ปิดหน้าต่าง
+            </button>
+          </div>
+        </div>
+
+        {showHistory && (
+          <JournalHistoryModal
+            theme="mystic"
+            accent={C_2}
+            title="ประวัติไดอะรี่ของฉัน"
+            entries={myEntries}
+            onClose={() => setShowHistory(false)}
+          />
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="reframer-journal-page">
+      <button onClick={onClose} title="ปิด" className="reframer-journal-page__close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
+      {/* [ย้ายตามที่ระบุ — ข้อ 12] ป้ายลอยมุมซ้ายบน "ประวัติสมุดบันทึกรากไม้เรืองแสง" ย้ายไป
+          เป็นการ์ดเปิด modal ที่หน้าโปรไฟล์แล้ว (ดู ProfilePage.tsx) — ลบปุ่มซ้ำจากหน้าเควสนี้ */}
+
+      <ParchmentJournalEditor
+        theme="mystic"
+        accent={C_3}
+        askIconSrc={QUEST_ICONS[QUEST_CODE]}
+        askQuestion={alreadyCompleted
+          ? 'ยังมีเรื่องราวไหนอยากบันทึกเพิ่มอีกไหม? เล่าต่อได้เลยนะ'
+          : 'วันนี้เป็นอย่างไรบ้าง? เรื่องดีหรือเรื่องร้าย ความสุขหรือความทุกข์ บันทึกไว้ที่นี่ได้ทุกเรื่อง'}
+        placeholder="แตะที่กระดาษแล้วเริ่มเล่าเรื่องราวของคุณ..."
+        submitLabel="บันทึก"
+        generateReflection={async (text) => {
+          const res = await getJournalReflection({ moodEntry, journalText: text })
+          return res.reflection
+        }}
+        onSaveEntry={(originalText, aiReframedText) => handleAddJournalEntry({ questCode: QUEST_CODE, originalText, aiReframedText })}
+        onComplete={() => {
+          // [ใหม่] แจกรางวัลเฉพาะรอบแรกของวัน — รอบเขียนเพิ่มเก็บลงประวัติอย่างเดียว
+          if (!alreadyCompleted) onComplete()
+          onClose()
+        }}
+      />
+
+      {showHistory && (
+        <JournalHistoryModal
+          theme="mystic"
+          accent={C_4}
+          title="ประวัติไดอะรี่ของฉัน"
+          entries={myEntries}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
+
+    </div>
+  )
+}

@@ -1,0 +1,392 @@
+/* ═══════════════════════════════════════════════════════════════
+   โหมด 1: กล้องเต็มจอ 100% (รองรับทั้งแนวตั้งมือถือ และแนวนอน Tablet/PC)
+   ═══════════════════════════════════════════════════════════════ */
+.camera-fullscreen-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh; /* [แก้] มือถือ: 100vh สูงกว่าจอที่เห็นจริง (แถบ URL) ปุ่มล่างจึงหลุดจอ */
+  background-color: #000;
+  z-index: 999999; /* เปลี่ยนเป็นเลขเยอะๆ เพื่อให้แน่ใจว่าลอยอยู่บนสุดจริงๆ */
+  display: flex;
+  flex-direction: column;
+}
+
+.camera-fullscreen-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* บังคับให้ภาพขยายเต็มจอโดยไม่ผิดสัดส่วน */
+}
+
+.camera-controls-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 32px 20px 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+}
+
+.camera-shutter-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.6);
+}
+
+.camera-shutter-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.camera-shutter-btn:active {
+  transform: scale(0.9);
+}
+
+.camera-btn-cancel {
+  position: absolute;
+  top: 40px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.2s ease;
+}
+
+.camera-btn-cancel:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   โหมด 2: หน้าพรีวิวการ์ด หลังจากถ่ายเสร็จ
+   ═══════════════════════════════════════════════════════════════ */
+.camera-preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.camera-preview-card {
+  background: var(--glass-w-7, rgba(255, 255, 255, 0.08));
+  border: 1.5px solid var(--glass-w-20, rgba(255, 255, 255, 0.22));
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+}
+
+.camera-preview-image {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  object-fit: contain; /* รักษาอัตราส่วนรูปต้นฉบับ ไม่ให้ภาพที่พรีวิวบิดเบี้ยว */
+  border-radius: 12px;
+  background: #000; 
+}
+
+.camera-preview-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.camera-btn-retake {
+  flex: 1;
+  padding: 12px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--fixed-white, #fff);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.camera-btn-retake:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.camera-btn-save {
+  flex: 1;
+  padding: 12px;
+  border-radius: 99px;
+  background: linear-gradient(135deg, #d36a3f, #c55a30);
+  color: #fff;
+  border: none;
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.2s ease;
+}
+
+.camera-btn-save:hover {
+  filter: brightness(1.1);
+}
+
+.camera-btn-save:active {
+  transform: scale(0.96);
+}/* ═══════════════════════════════════════════════════════════════
+   โหมด 1: กล้องเต็มจอ 100%
+   ═══════════════════════════════════════════════════════════════ */
+.camera-fullscreen-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh; /* [แก้] มือถือ: 100vh สูงกว่าจอที่เห็นจริง (แถบ URL) ปุ่มล่างจึงหลุดจอ */
+  background-color: #000;
+  z-index: 999999; /* ลอยอยู่บนสุดจริงๆ แน่นอน */
+  display: flex;
+  flex-direction: column;
+}
+
+.camera-fullscreen-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* หากเป็นกล้องหน้า ให้กลับซ้าย-ขวาเหมือนกระจก */
+.camera-mirrored {
+  transform: scaleX(-1);
+}
+
+/* ปุ่มกลับซ้ายบน */
+.camera-btn-back-top-left {
+  position: absolute;
+  top: env(safe-area-inset-top, 40px); /* รองรับขอบจอมือถือ */
+  left: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.2s ease;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+
+.camera-btn-back-top-left:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* แถบเครื่องมือด้านล่าง 3 ปุ่ม */
+.camera-controls-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 32px 36px 48px;
+  display: flex;
+  justify-content: space-between; /* กระจาย 3 คอลัมน์ (ซ้าย กลาง ขวา) */
+  align-items: center;
+  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+  box-sizing: border-box;
+}
+
+/* ปุ่มด้านข้าง (แกลเลอรี และ สลับกล้อง) */
+.camera-btn-side {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.camera-btn-side:active {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ปุ่มถ่ายรูป (ตรงกลาง) */
+.camera-shutter-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.6);
+}
+
+.camera-shutter-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.camera-shutter-btn:active {
+  transform: scale(0.9);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   โหมด 2: หน้าพรีวิวการ์ด หลังจากถ่ายเสร็จ
+   ═══════════════════════════════════════════════════════════════ */
+.camera-preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.camera-preview-card {
+  background: var(--glass-w-7, rgba(255, 255, 255, 0.08));
+  border: 1.5px solid var(--glass-w-20, rgba(255, 255, 255, 0.22));
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+}
+
+.camera-preview-image {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #000; 
+}
+
+.camera-preview-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.camera-btn-retake {
+  flex: 1;
+  padding: 12px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--fixed-white, #fff);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.camera-btn-retake:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.camera-btn-save {
+  flex: 1;
+  padding: 12px;
+  border-radius: 99px;
+  background: linear-gradient(135deg, #d36a3f, #c55a30);
+  color: #fff;
+  border: none;
+  font-family: 'Nunito', 'Mali', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.2s ease;
+}
+
+.camera-btn-save:hover {
+  filter: brightness(1.1);
+}
+
+.camera-btn-save:active {
+  transform: scale(0.96);
+}
+
+/* ═══ [แก้ตามที่ระบุ] หน้าตรวจรูปหลังถ่าย = ธีมกระดานจัดอันดับ (.lb-card/.lb-btn ใน index.css) ═══ */
+/* [แก้ตามที่ระบุ] เอาพื้นเขียวผืนใหญ่ด้านหลังออก (โปร่งใส เห็นฉากของเควสเดิม) เหลือการ์ดเล็กแบบกระดานจัดอันดับ
+   เว้นล่างพ้น ActionMenuBar และเลื่อนดูได้ถ้าจอเตี้ย (ไม่แสดงแถบเลื่อน) */
+.camera-preview-container {
+  background: none;
+  overflow-y: auto; scrollbar-width: none;
+  padding: 40px 20px calc(var(--gpf-safe-bottom, 90px) + 16px);
+  align-items: safe center;
+}
+.camera-preview-container::-webkit-scrollbar { display: none; }
+.camera-preview-card.lb-card {
+  position: relative;
+  background: var(--lb-card-bg);
+  border: 2px solid var(--lb-gold-edge);
+  padding: 30px 18px 18px;
+  backdrop-filter: none;
+}
+.camera-preview-card .camera-preview-image { max-height: 50vh; }
+.camera-preview-banner {
+  position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+  font-size: 14px; max-width: calc(100% - 40px); overflow: hidden; text-overflow: ellipsis;
+}
+.camera-preview-card .camera-preview-image { border: 2px solid color-mix(in srgb, var(--lb-gold-edge) 60%, transparent); }
+.camera-preview-card .camera-preview-actions { gap: 12px; }
+.camera-preview-card .camera-preview-actions .lb-btn { flex: 1; }
+/* คำแนะนำลอยบนจอกล้อง */
+.camera-hint {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 5;
+  max-width: calc(100% - 120px); white-space: normal; text-align: center; font-size: 13px;
+}
+
+
+/* [แก้ตามที่ระบุ] ปุ่มแกลเลอรี / สลับกล้อง อยู่ชิดใกล้ปุ่มถ่ายรูปตรงกลาง (ไม่กระจายไปชิดขอบซ้าย-ขวา)
+   ทุกขนาดจอ (จอกล้องลอยทับทุกอย่างรวม ActionMenuBar อยู่แล้ว จึงไม่ต้องเว้นล่างเพิ่ม) */
+.camera-controls-bottom {
+  justify-content: center;
+  gap: 28px;
+  padding: 32px 20px calc(env(safe-area-inset-bottom, 0px) + 48px);
+}

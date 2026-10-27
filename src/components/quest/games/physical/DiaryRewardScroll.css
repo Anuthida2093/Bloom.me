@@ -1,0 +1,130 @@
+/* ═══════════════════════════════════════════════════════════════
+   DiaryRewardScroll.css — กระดาษไดอะรี่ (โทนเดียวกับ "ไดอะรี่ของฉัน" ธีม golden)
+   ม้วนกระดาษคลี่จากบนลงล่าง แล้วบรรทัดรางวัลค่อยๆ ปรากฏ
+   ═══════════════════════════════════════════════════════════════ */
+
+.diary-scroll-overlay {
+  position: absolute; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  /* เว้นล่างเท่าแถบเมนูล่าง (ActionMenuBar) — เลื่อนดูบรรทัดสุดท้าย/ปุ่มได้จนสุดโดยไม่ถูกบัง */
+  padding: 16px 16px calc(var(--gpf-safe-bottom, 90px) + 24px);
+  overflow-y: auto;
+  background: rgba(20, 14, 6, 0.45);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+
+.diary-scroll {
+  --paper: #FFF3D6;
+  --paper-edge: #F0C97A;
+  --ink: #4A2C0A;
+  --rod: #8B5A2B;
+  position: relative;
+  width: min(400px, 100%);
+  margin: auto;
+  display: flex; flex-direction: column; align-items: center;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.35));
+}
+
+.diary-scroll__rod {
+  position: relative; z-index: 2;
+  width: calc(100% + 24px); height: 22px; border-radius: 12px;
+  background: linear-gradient(180deg, #b07a43 0%, var(--rod) 55%, #5e3a17 100%);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+.diary-scroll__rod::before, .diary-scroll__rod::after {
+  content: ''; position: absolute; top: 50%; width: 16px; height: 30px; border-radius: 8px;
+  transform: translateY(-50%); background: #5e3a17;
+}
+.diary-scroll__rod::before { left: -8px; }
+.diary-scroll__rod::after { right: -8px; }
+
+/* กระดาษ: เริ่มม้วนอยู่ (สูง 0) แล้วคลี่ลงด้วย grid-template-rows 0fr → 1fr */
+.diary-scroll__paper {
+  width: 100%;
+  display: grid; grid-template-rows: 0fr;
+  margin: -6px 0;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 31px, rgba(122, 74, 18, 0.12) 31px 32px),
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.6), transparent 60%),
+    var(--paper);
+  border-left: 3px solid var(--paper-edge);
+  border-right: 3px solid var(--paper-edge);
+  box-shadow: inset 0 0 40px rgba(120, 90, 40, 0.18);
+  animation: diaryUnroll 1.1s cubic-bezier(.22, 1, .36, 1) forwards;
+}
+@keyframes diaryUnroll { to { grid-template-rows: 1fr; } }
+.diary-scroll__inner { overflow: hidden; min-height: 0; padding: 0 22px; }
+.diary-scroll--open .diary-scroll__inner { padding: 22px 22px 20px; transition: padding .2s ease; }
+
+.diary-scroll__date { margin: 0; font-size: 12px; color: var(--ink); opacity: 0.7; text-align: right; font-style: italic; }
+.diary-scroll__title {
+  margin: 4px 0 12px; text-align: center;
+  font-family: var(--font-display); font-size: 21px; color: var(--ink);
+}
+
+.diary-scroll__lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.diary-scroll__line {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 32px; color: var(--ink);
+  font-family: var(--font-display); font-size: 15px; line-height: 1.4;
+  opacity: 0; transform: translateX(-8px);
+  animation: diaryInk 0.45s ease-out forwards;
+}
+.diary-scroll__line b { font-weight: 700; }
+.diary-scroll__line--special {
+  padding: 8px 10px; border-radius: 12px;
+  background: linear-gradient(90deg, rgba(255, 209, 102, 0.55), rgba(255, 243, 214, 0));
+  box-shadow: inset 0 0 0 2px rgba(240, 201, 122, 0.9);
+}
+@keyframes diaryInk { to { opacity: 1; transform: none; } }
+.diary-scroll__icon {
+  flex-shrink: 0; width: 30px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 22px;
+}
+.diary-scroll__icon img { width: 30px; height: 30px; object-fit: contain; }
+.diary-scroll__line--special .diary-scroll__icon, .diary-scroll__line--special .diary-scroll__icon img { width: 42px; height: 42px; }
+.diary-scroll__x2 {
+  margin-left: 6px; padding: 0 6px; border-radius: 99px;
+  background: #e85d2a; color: #fff; font-size: 12px;
+}
+
+/* ปุ่มแบบนูนนุ่ม (soft-shaded) ให้ดูกดได้ */
+.diary-scroll__btn {
+  display: block; width: 100%; margin-top: 16px; padding: 13px 18px;
+  border: none; border-radius: 16px; cursor: pointer;
+  font-family: var(--font-display); font-size: 17px; color: #4A2C0A;
+  background: linear-gradient(180deg, #ffe08a 0%, #f5b301 100%);
+  box-shadow: 0 5px 0 #c98a00, 0 10px 18px rgba(0, 0, 0, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.7);
+  opacity: 0; animation: diaryInk 0.45s ease-out forwards;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.diary-scroll__btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 #c98a00, 0 4px 8px rgba(0, 0, 0, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.7); }
+.diary-scroll__btn:disabled { cursor: wait; filter: saturate(0.6); }
+
+@media (max-width: 360px), (max-height: 560px) {
+  .diary-scroll-overlay { align-items: flex-start; padding: 10px; }
+  .diary-scroll--open .diary-scroll__inner { padding: 14px 14px 14px; }
+  .diary-scroll__title { font-size: 18px; }
+  .diary-scroll__line { font-size: 13px; }
+}
+@media (max-width: 300px) {
+  .diary-scroll__rod { height: 16px; }
+  .diary-scroll__icon, .diary-scroll__icon img { width: 22px; height: 22px; font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .diary-scroll__paper { animation: none; grid-template-rows: 1fr; }
+  .diary-scroll__line, .diary-scroll__btn { animation: none; opacity: 1; transform: none; }
+}
+
+/* ปุ่ม "ดูแผนที่" — ปุ่มรองแบบนูนนุ่มสีเขียว */
+.diary-scroll__map-btn {
+  display: block; width: 100%; margin-top: 16px; padding: 11px 18px;
+  border: none; border-radius: 16px; cursor: pointer;
+  font-family: var(--font-display); font-size: 16px; color: #1b4332;
+  background: linear-gradient(180deg, #e9f9ee 0%, #95d5b2 100%);
+  box-shadow: 0 5px 0 #52b788, 0 10px 18px rgba(0, 0, 0, 0.15), inset 0 2px 0 rgba(255, 255, 255, 0.8);
+  opacity: 0; animation: diaryInk 0.45s ease-out forwards;
+}
+.diary-scroll__map-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 #52b788, inset 0 2px 0 rgba(255, 255, 255, 0.8); }
+.diary-scroll__map-btn + .diary-scroll__btn { margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) { .diary-scroll__map-btn { animation: none; opacity: 1; } }

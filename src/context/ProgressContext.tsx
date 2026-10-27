@@ -1,0 +1,312 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  DEFAULT_JOURNAL_ENTRIES,
+  type QuestLogEntry,
+  type MoodEntryData,
+  type JournalEntryRecord,
+  type PostItData,
+  type QuestCategory,
+  type MoodTypeValue,
+} from '../types'
+import { findQuestByCode } from '../config/questCatalog'
+import { queryKeys } from '../services/queryKeys'
+import * as questApi from '../services/api/quest.api'
+import * as moodApi from '../services/api/mood.api'
+import { legacyMoodToColor } from '../config/moodPotion'
+import { API_MODE } from '../services/http'
+import { MOOD_CHECKIN_QUEST_CODE, getMoodCheckinStatus, type MoodCheckinStatus } from '../config/moodCheckinSlots'
+import { useUser } from './UserContext'
+import type { LearningGift } from '../config/learningGift'
+
+/*============================================================================*\
+  ProgressContext — [ไฟล์ใหม่ แยกออกจาก AppContext เดิม]
+  ────────────────────────────────────────────────────────────────────────────
+  รับผิดชอบ: เควส อารมณ์ บันทึก และ "สัญญาณภาพ" ที่ต้นไม้ต้องตอบสนอง
+
+  ต้องอยู่ข้างใน <UserProvider> เพราะการทำเควสสำเร็จกระทบเหรียญ/EXP/stack
+  ของผู้ใช้ด้วย — เรียก applyUserPatch() ส่งผลลัพธ์จากเซิร์ฟเวอร์กลับเข้า cache
+  ของ UserContext ในคำขอเดียว ไม่ต้องยิงซ้ำอีกรอบ
+
+  [คงพฤติกรรมเดิมไว้ครบ] treeGrowthPulse และ hasSoot ยังทำงานเหมือนเดิมทุกอย่าง
+  ส่วนนี้โค้ดเดิมออกแบบไว้ดีอยู่แล้ว (key เปลี่ยนทุกครั้งเพื่อให้เล่นเอฟเฟกต์ซ้ำได้)
+  จึงยกมาทั้งดุ้นโดยไม่แก้ตรรกะ
+\*============================================================================*/
+
+interface ProgressContextValue {
+  questLogs: QuestLogEntry[]
+  moodEntries: MoodEntryData[]
+  journalEntries: JournalEntryRecord[]
+  postIts: PostItData[]
+  completedQuestCount: number
+  /** เช็คอินอารมณ์เช้า/เย็น — รอบปัจจุบันตามเวลาไทย + ทำแล้วหรือยัง (ดู config/moodCheckinSlots.ts) */
+  moodCheckinStatus: MoodCheckinStatus
+  /** การ์ดแลกซื้อที่เพิ่งสุ่มตกจากเควสประจำวัน (เซิร์ฟเวอร์ตัดสิน) — Dashboard โชว์ป็อปอัพ */
+  cardDrop: { itemCode: string; key: number } | null
+  dismissCardDrop: () => void
+  /** [ใหม่] ของขวัญสุ่มเมื่อจบรอบเส้นทางการเรียนรู้ (ครบ 5 ด่าน) — Dashboard โชว์ LearningGiftPopup */
+  learningGift: (LearningGift & { key: number }) | null
+  dismissLearningGift: () => void
+  /** [แก้รอบนี้ — เพิ่ม questCode] เดิมมีแค่ category+key (พอสำหรับต้นไม้เติบโตทั่วไป) — เพิ่ม
+   *  questCode (optional) ให้ผู้ฟัง (Dashboard.tsx) แยกได้ว่า pulse นี้มาจากเควสไหนเจาะจง เช่น
+   *  เควส "สารอาหารแห่งผืนดิน" ต้องเล่นแอนิเมชันบัวรดน้ำเพิ่มเติมจากปุ่มเติบโตทั่วไป */
+  treeGrowthPulse: { category: QuestCategory; key: number; questCode?: string } | null
+  hasSoot: boolean
+  isLoadingProgress: boolean
+
+  handleToggleQuest: (questCode: string, payload?: Record<string, unknown>) => void
+  markIncineratorFailed: () => void
+  /** [แก้ตามที่ระบุ — ขยาย MoodType ให้ครบ 8 อารมณ์] เดิมรับแค่ mood (bucket 3 ค่า) แล้ว
+   *  คำนวณ MoodEntryData.mood เองผ่าน MOOD_TYPE map ที่ปัดเหลือแค่ HAPPY/CALM/SAD เสมอ —
+   *  ตอนนี้รับ subMood (ค่าจริง 1 ใน 8 ตัวที่ผู้ใช้เลือก) มาใช้ตรงๆ แทน
+   *  [แก้รอบนี้ — บั๊กเจอเควสประตูอารมณ์ซ้ำบนจอเล็ก] คืน Promise ที่ resolve ต่อเมื่อ moodEntries
+   *  ใน cache อัปเดตจริงแล้วเท่านั้น (ไม่ใช่แค่ยิง mutate() แบบ fire-and-forget) — ผู้เรียก
+   *  (MentalContext.handleMoodSubmit) ต้อง await ก่อนปิด modal เช็คอิน กัน race condition ที่
+   *  todaysMoodEntry (QuestSection.tsx) ยังเป็น null อยู่ตอนปิด modal ทำให้เจอ MoodGateScreen
+   *  ซ้ำทั้งที่เพิ่งเช็คอินสำเร็จ — เห็นชัดขึ้นมากเมื่อ setTimeout ของ mockDelay() ถูก browser
+   *  throttle (เช่นตอนแท็บถูกมองว่า background ซึ่งมือถือเจอได้ง่ายกว่าเดสก์ท็อป) */
+  handleMoodSubmit: (mood: 'good' | 'neutral' | 'bad', subMood: MoodTypeValue, text: string) => Promise<void>
+  handleAddJournalEntry: (entry: { questCode: string; originalText: string; aiReframedText: string }) => void
+}
+
+const ProgressCtx = createContext<ProgressContextValue | null>(null)
+
+const MOOD_CATEGORY = { good: 'POSITIVE', neutral: 'NEUTRAL', bad: 'NEGATIVE' } as const
+
+export function ProgressProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
+  const { isLoggedIn, applyUserPatch, userData } = useUser()
+
+  const [journalEntries, setJournalEntries] = useState<JournalEntryRecord[]>(DEFAULT_JOURNAL_ENTRIES)
+  /* [แก้บั๊ก — ประวัติไดอะรี่/คำขอบคุณ "เปิดไม่ได้"] เดิมเก็บแค่ใน state → รีเฟรชแล้วหายหมด
+     ประวัติจึงว่างเปล่าเสมอ ตอนนี้เก็บลงเครื่องแยกตามบัญชี (backend ยังไม่มีตาราง journal —
+     ดู docs/DB_CHANGES.md ข้อ 6.2) โหลดใหม่ทุกครั้งที่สลับบัญชี */
+  const journalStorageKey = userData.id ? `bloom.journal.${userData.id}` : null
+  const [loadedJournalKey, setLoadedJournalKey] = useState<string | null>(null)
+  if (journalStorageKey !== loadedJournalKey) {
+    setLoadedJournalKey(journalStorageKey)
+    let stored: JournalEntryRecord[] = DEFAULT_JOURNAL_ENTRIES
+    if (journalStorageKey) {
+      try { stored = JSON.parse(localStorage.getItem(journalStorageKey) ?? '[]') as JournalEntryRecord[] } catch { stored = [] }
+    }
+    setJournalEntries(Array.isArray(stored) ? stored : [])
+  }
+  useEffect(() => {
+    if (!journalStorageKey || loadedJournalKey !== journalStorageKey) return
+    try { localStorage.setItem(journalStorageKey, JSON.stringify(journalEntries.slice(-500))) } catch { /* storage เต็ม/ปิดอยู่ */ }
+  }, [journalEntries, journalStorageKey, loadedJournalKey])
+  const [postIts] = useState<PostItData[]>([])
+  const [treeGrowthPulse, setTreeGrowthPulse] = useState<{ category: QuestCategory; key: number; questCode?: string } | null>(null)
+  const [hasSoot, setHasSoot] = useState(false)
+  const [cardDrop, setCardDrop] = useState<{ itemCode: string; key: number } | null>(null)
+  /** [ใหม่] ของขวัญสุ่มจากการจบรอบเส้นทางการเรียนรู้ (ครบ 5 ด่าน) — แสดงด้วย LearningGiftPopup */
+  const [learningGift, setLearningGift] = useState<(LearningGift & { key: number }) | null>(null)
+  // [ใหม่ — ตามที่ระบุรอบนี้ ข้อ 6] ดู triggerWateringEffect ใน context value ด้านล่าง
+
+  const { data: questLogsData, isLoading: loadingQuests } = useQuery({
+    queryKey: queryKeys.questLogs(),
+    queryFn: questApi.getQuestLogs,
+    enabled: isLoggedIn,
+    staleTime: 15_000,
+  })
+
+  const { data: moodData, isLoading: loadingMood } = useQuery({
+    queryKey: queryKeys.moodEntries(),
+    queryFn: moodApi.getMoodEntries,
+    enabled: isLoggedIn,
+    staleTime: 30_000,
+  })
+
+  const questLogs = useMemo(() => questLogsData ?? [], [questLogsData])
+  const moodEntries = useMemo(() => moodData ?? [], [moodData])
+
+  const completeQuestMutation = useMutation({
+    mutationFn: questApi.completeQuest,
+    // [แก้บั๊ก — นกฮูก/ด่านล็อกไม่ sync ทันที] เดิมไฟล์นี้ไม่มี onMutate เลย — questLogs
+    // (ซึ่ง isCompleted/isLocked ของ LearningQuestMap คำนวณจากมันตรงๆ) จึงรอผลจริงจาก
+    // เซิร์ฟเวอร์เท่านั้น (โหมด mock ก็ยังมี await mockDelay() ~220ms) ก่อนจะอัปเดต ต่างจาก
+    // treeGrowthPulse ด้านล่างที่ "ยิงทันทีโดยไม่รอเซิร์ฟเวอร์" ตามคอมเมนต์เดิมของไฟล์นี้เอง —
+    // ผลคือปิดหน้าเล่นเควสแล้วกลับมาเห็นแผนที่ในเฟรมที่ questLogs ยังเป็นค่าเก่าอยู่ ต้องรอ
+    // re-render อื่นมากระตุ้นซ้ำ (สลับแท็บ/เปิดปิดใหม่) ถึงจะเห็นนกฮูกเดิน/ด่านถัดไปปลดล็อก
+    // เติม onMutate ให้เขียน log ชั่วคราวลง cache "ทันที" (แพทเทิร์นเดียวกับ mbtiMutation/
+    // equipMutation ใน UserContext.tsx) แล้วแทนที่ด้วยของจริงจากเซิร์ฟเวอร์ใน onSuccess —
+    // isCompleted/isLocked จึงเห็นสถานะใหม่ใน re-render เดียวกับที่ setPlayingQuest(null) ทำงาน
+    //
+    // [แก้รอบนี้ — พิสูจน์แล้วว่ายังไม่นิ่งจริง ดู learningQuestMapSync.test.tsx] เดิม onMutate
+    // เป็น async แล้ว `await queryClient.cancelQueries(...)` ก่อนเขียน cache — แม้ cancelQueries
+    // จะ resolve เร็วมาก (ไม่มี query กำลัง fetch อยู่จริง) แต่ทุก `await` ก็ยังบังคับให้โค้ด
+    // หลังจากนั้นไปรันใน microtask ถัดไปเสมอ (ตามสเปก ES2020+) ผลคือ setQueryData เกิดขึ้นคนละ
+    // รีเรนเดอร์กับ setPlayingQuest(null) ที่ handleCompletePlaying เรียกพร้อมกันแบบ synchronous
+    // — เทสต์ยืนยันว่าด่านถัดไป "ยังล็อกอยู่ทันทีที่กด" แล้วค่อยปลดล็อกเองอีก ~25ms ถัดมา (ไม่ใช่
+    // ในเรนเดอร์เดียวกันจริงๆ) ตอนนี้เอา async/await ออกจาก onMutate ทั้งหมด — setQueryData ด้านล่าง
+    // จึงรันแบบ synchronous เป็นส่วนหนึ่งของ call stack เดียวกับ mutate()/setPlayingQuest(null)
+    // ทำให้ React แบตช์เป็นรีเรนเดอร์เดียวจริงๆ ส่วน cancelQueries ยังเรียกอยู่ (กันคำขอ fetch
+    // ที่ค้างอยู่มาทับข้อมูล optimistic ทีหลัง) แต่ไม่ await ผลลัพธ์ของมันอีกต่อไป
+    onMutate: ({ questCode }) => {
+      void queryClient.cancelQueries({ queryKey: queryKeys.questLogs() })
+      const previousLogs = queryClient.getQueryData<QuestLogEntry[]>(queryKeys.questLogs())
+      const def = findQuestByCode(questCode)
+      const category: QuestCategory = def?.category ?? 'KNOWLEDGE'
+      const now = new Date().toISOString()
+      const optimisticId = `optimistic-${questCode}-${Date.now()}`
+      const optimisticLog: QuestLogEntry = {
+        id: optimisticId,
+        status: 'COMPLETED',
+        userId: '',
+        questId: questCode,
+        quest: { id: questCode, code: questCode, category },
+        logDate: now.split('T')[0],
+        completedAt: now,
+      }
+      queryClient.setQueryData<QuestLogEntry[]>(queryKeys.questLogs(), (logs) => {
+        const list = logs ?? []
+        // เควสเล่นซ้ำได้ต่อวัน (maxPerDay) ต้องเพิ่ม log ใหม่เสมอ เควสทั่วไปแทนที่ log เดิม
+        if (def?.maxPerDay) return [...list, optimisticLog]
+        const idx = list.findIndex((l) => l.quest?.code === questCode)
+        if (idx === -1) return [...list, optimisticLog]
+        const next = [...list]
+        next[idx] = { ...next[idx], status: 'COMPLETED', completedAt: now }
+        return next
+      })
+      return { previousLogs, optimisticId }
+    },
+    onError: (_err, _vars, context) => {
+      // คำขอล้มเหลว — ย้อน questLogs กลับไปก่อนหน้า optimistic update (เหมือน mbtiMutation)
+      if (context?.previousLogs) queryClient.setQueryData(queryKeys.questLogs(), context.previousLogs)
+    },
+    onSuccess: ({ user, log, exchangeCard, learningGift: gift }, _vars, context) => {
+      applyUserPatch(user)
+      if (gift) {
+        setLearningGift({ ...gift, key: Date.now() })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.progression })
+      }
+      if (exchangeCard) {
+        setCardDrop({ itemCode: exchangeCard, key: Date.now() })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.progression })
+      }
+      queryClient.setQueryData<QuestLogEntry[]>(queryKeys.questLogs(), (logs) => {
+        const list = logs ?? []
+        // แทนที่ log ชั่วคราวจาก onMutate ด้วยของจริงจากเซิร์ฟเวอร์ (มี id จริงแล้ว)
+        const optimisticIdx = context?.optimisticId ? list.findIndex((l) => l.id === context.optimisticId) : -1
+        if (optimisticIdx !== -1) {
+          const next = [...list]
+          next[optimisticIdx] = log
+          return next
+        }
+        // [แก้รอบนี้ — เควสเล่นซ้ำได้ต่อวัน] จับคู่ด้วย id ไม่ใช่ quest code อีกต่อไป — เควสที่มี
+        // maxPerDay (เช่น phys-pure-water) สร้าง log ใหม่ "ทุกครั้ง" ที่ทำสำเร็จ (คนละ id) จับคู่
+        // ด้วย code แบบเดิมจะทำให้ log ใหม่ไปทับ log เก่าของวันนั้นแทนที่จะเพิ่มเป็นรายการใหม่
+        const idx = list.findIndex((l) => l.id === log.id)
+        if (idx === -1) return [...list, log]
+        const next = [...list]
+        next[idx] = log
+        return next
+      })
+    },
+  })
+
+  const createMoodMutation = useMutation({
+    mutationFn: moodApi.createMoodEntry,
+    onSuccess: (entry) => {
+      queryClient.setQueryData<MoodEntryData[]>(queryKeys.moodEntries(), (list) => [...(list ?? []), entry])
+    },
+  })
+
+  const handleToggleQuest = useCallback((questCode: string, payload?: Record<string, unknown>) => {
+    const def = findQuestByCode(questCode)
+    const category: QuestCategory = def?.category ?? 'KNOWLEDGE'
+    const alreadyDone = questLogs.some((l) => l.quest?.code === questCode && l.status === 'COMPLETED')
+
+    completeQuestMutation.mutate({ questCode, payload })
+
+    // "แรงสั่นสะเทือนแห่งการเติบโต" ยิงทันทีโดยไม่รอเซิร์ฟเวอร์ — ผู้ใช้ต้องเห็นต้นไม้
+    // ตอบสนองในเสี้ยววินาทีที่กด ไม่ใช่หลังเน็ตตอบกลับ (ถ้าคำขอล้มเหลว ตัวเลขจะถูก
+    // ย้อนกลับเองจาก cache แต่เอฟเฟกต์ที่เล่นไปแล้วไม่ทำอันตรายอะไร)
+    // [แก้รอบนี้ — เควสเล่นซ้ำได้ต่อวัน] เควสที่มี maxPerDay (เช่น phys-pure-water) ต้องได้
+    // เอฟเฟกต์ต้นไม้เติบโตทุกครั้งที่เล่นสำเร็จ ไม่ใช่แค่ครั้งแรก — alreadyDone เดิมเช็คแค่
+    // "เคยสำเร็จมาก่อนไหม" ซึ่งใช้ไม่ได้กับเควสที่ตั้งใจให้ทำซ้ำได้
+    // [แก้ตามที่ระบุ] ทำเควสสำเร็จเควสไหนก็ตาม ต้องได้เอฟเฟกต์ที่ต้นไม้ทุกครั้ง (ละอองดาวโปรย + ต้นไม้ขยาย)
+    // หน้าเควสกันการกดทำซ้ำของเควสที่ทำแล้ววันนี้ไว้อยู่แล้ว จึงไม่ต้องกรอง alreadyDone ที่นี่อีก
+    void alreadyDone
+    setTreeGrowthPulse({ category, key: Date.now(), questCode })
+    if (questCode === 'ment-cognitive-incinerator') setHasSoot(false)
+  }, [completeQuestMutation, questLogs])
+
+  const markIncineratorFailed = useCallback(() => setHasSoot(true), [])
+  const dismissCardDrop = useCallback(() => setCardDrop(null), [])
+  const dismissLearningGift = useCallback(() => setLearningGift(null), [])
+
+  // คำนวณตอน render ได้ (ไม่ใช่ Date.now() ใน effect) — เปลี่ยนรอบเช้า→เย็นเห็นผลตอน re-render ถัดไป
+  const moodCheckinStatus = useMemo(() => getMoodCheckinStatus(questLogs), [questLogs])
+
+  const handleMoodSubmit = useCallback(async (mood: 'good' | 'neutral' | 'bad', subMood: MoodTypeValue, text: string) => {
+    const entry = {
+      category: MOOD_CATEGORY[mood] ?? 'NEUTRAL',
+      mood: subMood,
+      note: text || null,
+      // backend เก็บสีน้ำยาต่อ entry ได้แล้ว (mood_entries.colorCode) — ส่งสีตามปุ่มดี/เฉยๆ/ไม่ดี
+      colorCode: legacyMoodToColor(mood),
+    } as const
+    // เช็คอินรอบเช้า/เย็นที่ยังไม่ได้ทำวันนี้ → นับเป็นเควส mood-checkin-morning/evening (ได้รางวัล)
+    // รอบที่ทำไปแล้ว → บันทึกอารมณ์เพิ่มได้ตามเดิมแต่ไม่ได้รางวัลซ้ำ
+    const status = getMoodCheckinStatus(questLogs)
+    const questCode = status.doneThisSlot ? null : MOOD_CHECKIN_QUEST_CODE[status.slot]
+
+    if (questCode && API_MODE === 'live') {
+      // backend สร้าง MoodEntry ให้เองในทรานแซกชันเดียวกับรางวัล — ไม่ POST /mood ซ้ำ แล้วรอ
+      // moodEntries โหลดใหม่ให้เสร็จก่อนคืนค่า (กัน MoodGateScreen เด้งซ้ำ ดูคอมเมนต์ด้านล่าง)
+      const { user, log } = await questApi.completeMoodCheckinQuest({ questCode, ...entry })
+      applyUserPatch(user)
+      queryClient.setQueryData<QuestLogEntry[]>(queryKeys.questLogs(), (logs) => [...(logs ?? []).filter((l) => l.id !== log.id), log])
+      await queryClient.refetchQueries({ queryKey: queryKeys.moodEntries() })
+      return
+    }
+
+    // [แก้รอบนี้] mutateAsync แทน mutate() เฉยๆ — ให้ผู้เรียก await จนกว่า onSuccess (setQueryData
+    // เข้า moodEntries cache) จะทำงานเสร็จจริงก่อน ไม่ใช่แค่ "ยิงแล้วไม่รอ" เหมือนเดิม
+    await createMoodMutation.mutateAsync(entry)
+    if (questCode) {
+      // โหมด mock: เควสเช็คอินไม่ต้องสร้าง MoodEntry ในตัว — บันทึกแยกด้านบนแล้ว
+      await completeQuestMutation.mutateAsync({ questCode }).catch(() => { /* ซ้ำในวันเดียวกัน — ข้าม */ })
+    }
+  }, [createMoodMutation, completeQuestMutation, questLogs, applyUserPatch, queryClient])
+
+  const handleAddJournalEntry = useCallback(
+    (entry: { questCode: string; originalText: string; aiReframedText: string }) => {
+      const firstLine = entry.originalText.trim().split('\n')[0] ?? ''
+      const title = firstLine.length > 40 ? `${firstLine.slice(0, 40)}...` : firstLine || 'บันทึกไม่มีชื่อ'
+      setJournalEntries((entries) => [
+        ...entries,
+        { id: `journal-${Date.now()}`, title, ...entry, createdAt: new Date().toISOString() },
+      ])
+      // [ยังไม่มีที่เก็บฝั่ง backend] ตาราง journal_entries ยังไม่มีใน schema (ดู docs/DB_CHANGES.md
+      // ข้อ 6.2) — ตอนนี้เก็บลงเครื่องแยกตามบัญชีแทน (ดู journalStorageKey ด้านบน)
+    }, [])
+
+  const completedQuestCount = useMemo(
+    () => questLogs.filter((l) => l.status === 'COMPLETED').length,
+    [questLogs],
+  )
+
+  const value = useMemo<ProgressContextValue>(() => ({
+    questLogs, moodEntries, journalEntries, postIts,
+    completedQuestCount, moodCheckinStatus, cardDrop, dismissCardDrop, learningGift, dismissLearningGift, treeGrowthPulse, hasSoot,
+    isLoadingProgress: loadingQuests || loadingMood,
+    handleToggleQuest, markIncineratorFailed, handleMoodSubmit, handleAddJournalEntry,
+  }), [
+    questLogs, moodEntries, journalEntries, postIts,
+    completedQuestCount, moodCheckinStatus, cardDrop, dismissCardDrop, learningGift, dismissLearningGift, treeGrowthPulse, hasSoot, loadingQuests, loadingMood,
+    handleToggleQuest, markIncineratorFailed, handleMoodSubmit, handleAddJournalEntry,
+  ])
+
+  return <ProgressCtx.Provider value={value}>{children}</ProgressCtx.Provider>
+}
+
+// [หมายเหตุ react-refresh/only-export-components] ไฟล์ Context ต้อง export hook คู่กับ
+// Provider component เสมอ — แพทเทิร์นมาตรฐานของ React Context กระทบแค่ Fast Refresh ตอน dev
+// eslint-disable-next-line react-refresh/only-export-components
+export function useProgress(): ProgressContextValue {
+  const ctx = useContext(ProgressCtx)
+  if (!ctx) throw new Error('useProgress ต้องถูกเรียกใช้ภายใน <ProgressProvider> เท่านั้น')
+  return ctx
+}

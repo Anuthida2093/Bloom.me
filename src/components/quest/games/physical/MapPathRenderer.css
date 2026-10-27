@@ -1,0 +1,92 @@
+/* ═══════════════════════════════════════════════════════════════
+   MapPathRenderer.css — พื้นหลัง (ภาพแผนที่จริง) + เส้นทางของ 1 แผนที่ในเควส Step Journey
+   gradient ธรรมชาติเป็น fallback เฉพาะกรณี mapDef.artAsset โหลดไม่ได้ (เซฟตี้เน็ต)
+   ═══════════════════════════════════════════════════════════════ */
+
+.map-path-renderer {
+  /* [แก้รอบนี้] ขนาด (width/height) ตั้งผ่าน inline style เป็น MAP_NATIVE_SIZE ตายตัวเสมอแล้ว
+     (ดู MapPathRenderer.tsx) ไม่ใช้ width:100%/aspect-ratio อีกต่อไป — border-radius/box-shadow
+     ย้ายไปอยู่ที่กล่อง viewport ข้างนอก (.step-journey-game__map-viewport) แทน เพราะกล่องนี้ถูก
+     scale/translate อยู่ตลอดเวลา มุมโค้ง/เงาที่ตั้งไว้ตรงนี้จะขยาย/เลื่อนตามไปด้วยอย่างผิดที่ */
+  position: relative;
+  overflow: hidden;
+  --lc-map-c1: #2D6A4F;
+  --lc-map-c2: #40916C;
+  --lc-map-c3: #6B4226;
+}
+
+.map-path-renderer__fallback-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, var(--lc-map-c1) 0%, var(--lc-map-c2) 48%, var(--lc-map-c3) 100%);
+}
+
+.map-path-renderer__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.map-path-renderer__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.map-path-renderer__path-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.map-path-renderer__path-progress {
+  fill: none;
+  stroke: #ffd166;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.map-path-renderer__flag {
+  position: absolute;
+  font-size: 20px;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+
+/* เส้นทางที่เดินสำเร็จแล้ว (ถึงเป้า / ดูแผนที่ย้อนหลัง) — หนาขึ้น เรืองแสงทอง เห็นชัดบนแผนที่ */
+:is(.is-route-complete, .completed-journey) .map-path-renderer__path-progress {
+  stroke: #ffd166;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 1.2px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 2.5px rgba(255, 170, 0, 0.9));
+}
+:is(.is-route-complete, .completed-journey) .map-path-renderer__path-bg { stroke: rgba(255, 255, 255, 0.55); stroke-width: 3.6; }
+
+/* ═══ [แก้ตามที่ระบุ] จุดบนเส้นทาง — สีฟ้า + เรืองแสงเมื่อนกฮูกไปถึง ═══ */
+.mpr-dot--start { fill: #7CE3A4; stroke: #ffffff; stroke-width: 0.22; filter: drop-shadow(0 0 0.6px rgba(0, 0, 0, 0.35)); }
+.mpr-wp__dot { stroke: #ffffff; stroke-width: 0.18; transition: r .4s ease, fill .4s ease; }
+.mpr-wp--reached .mpr-wp__dot { filter: drop-shadow(0 0 0.8px #8FDBFF) drop-shadow(0 0 1.6px rgba(64, 170, 255, 0.85)); }
+.mpr-wp__glow { animation: mprGlowBreath 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.mpr-wp__ring { fill: none; stroke: #BFEBFF; stroke-width: 0.25; transform-box: fill-box; transform-origin: center; animation: mprArriveRing 1.6s ease-out infinite; }
+.mpr-wp--arrived .mpr-wp__dot { animation: mprArrivePop .6s cubic-bezier(.34, 1.56, .64, 1) both; transform-box: fill-box; transform-origin: center; }
+@keyframes mprGlowBreath { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
+@keyframes mprArriveRing { from { transform: scale(1); opacity: .95; } to { transform: scale(3.2); opacity: 0; } }
+@keyframes mprArrivePop { from { transform: scale(.4); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .mpr-wp__glow, .mpr-wp__ring, .mpr-wp--arrived .mpr-wp__dot { animation: none; }
+}
+
+/* [แก้ตามที่ระบุ] ป้อมทุก 5 จุด — ยังไม่ถึง = หินเทา ธงแดง · ผ่านแล้ว = หินทอง ธงทอง */
+.mpr-fort__wall { fill: #B9A88A; stroke: #4A3A24; stroke-width: 0.22; stroke-linejoin: round; }
+.mpr-fort__door { fill: #4A3A24; }
+.mpr-fort__pole { stroke: #4A3A24; stroke-width: 0.18; }
+.mpr-fort__flag { fill: #E2483C; stroke: #4A3A24; stroke-width: 0.1; }
+.mpr-fort--reached .mpr-fort__wall { fill: #F2D27A; }
+.mpr-fort--reached .mpr-fort__flag { fill: #FFC233; }
+.mpr-fort { filter: drop-shadow(0 0.3px 0.4px rgba(0, 0, 0, 0.45)); }
