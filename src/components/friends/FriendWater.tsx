@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { BADGE_ICONS } from '../../config/iconAssets'
 import { useFriendWater } from '../../hooks/useFriendWater'
@@ -206,6 +206,17 @@ export function AddFriendButton({ requested, onClick, friendName }: { requested:
 export function WaterStreakBadge({ friendId, friendName, onWater }: { friendId: string; friendName: string; onWater: () => void }) {
   const { summary } = useFriendWater(friendId)
   const [open, setOpen] = useState(false)
+  // [แก้ตามที่ระบุ] เลื่อนกล่องสถานะให้อยู่ในจอเสมอ (เว้นขอบ 16px) — หยดน้ำชิดขวาในหัวแชทเดิมทำให้กล่องล้นขอบขวา
+  const statsRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = statsRef.current
+    if (!open || !el) return
+    const gap = 16
+    el.style.transform = ''
+    const rect = el.getBoundingClientRect()
+    const maxLeft = window.innerWidth - gap - rect.width
+    el.style.transform = `translateX(${Math.max(gap, Math.min(rect.left, maxLeft)) - rect.left}px)`
+  }, [open])
   const status = summary?.status ?? 'none'
   const streak = summary?.streak ?? 0
   const needsRecover = status === 'broken'
@@ -228,7 +239,7 @@ export function WaterStreakBadge({ friendId, friendName, onWater }: { friendId: 
         {needsRecover && <span className="fw-badge__recover">กู้คืนหยดน้ำ</span>}
       </button>
       {open && (
-        <div className="fw-stats" role="dialog" aria-label="การรดน้ำให้กัน">
+        <div ref={statsRef} className="fw-stats" role="dialog" aria-label="การรดน้ำให้กัน">
           <div className="fw-stats__head">
             <WaterDrop status={status} size={28} />
             <div>

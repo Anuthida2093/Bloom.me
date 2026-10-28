@@ -82,11 +82,21 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 95px 24px 24px;
+  padding: 95px 24px calc(var(--gpf-safe-bottom, 90px) + env(safe-area-inset-bottom, 0px) + 24px);
   gap: 16px;
   text-align: center;
+  /* [แก้ตามที่ระบุ] เนื้อหายาวกว่าจอมือถือ → เลื่อนลงได้ (รวมปัดนิ้วบน iOS) · เว้นล่างพ้นแถบเมนู */
+  min-height: 0;
+  max-height: 100%;
+  box-sizing: border-box;
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
+/* ไพ่/กระดาษคำทำนายห้ามถูกบีบ ไม่งั้นเนื้อหาด้านล่างถูกตัดหายแทนที่จะเลื่อนได้ */
+.oracle-page__content > * { flex-shrink: 0; }
 
 /* สรุปอารมณ์ */
 .oracle-page__mood-recap {

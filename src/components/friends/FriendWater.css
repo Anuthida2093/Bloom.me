@@ -235,7 +235,8 @@
   left: 0;
   top: calc(100% + 8px);
   z-index: 50;
-  width: min(270px, calc(100vw - 32px));
+  width: min(270px, 90vw, calc(100vw - 32px));
+  box-sizing: border-box;
   padding: 14px;
   border-radius: 16px;
   background: var(--bg-card, #fff);

@@ -149,14 +149,14 @@ export default function SettingsModal({
             <span>{soundEnabled ? t('settings.soundOn') : t('settings.soundOff')}</span>
             <span
               style={{
-                width: 44, height: 24, borderRadius: 99, position: 'relative',
+                width: 52, height: 30, flexShrink: 0, borderRadius: 99, position: 'relative',
                 background: soundEnabled ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s',
               }}
             >
               <span
                 className="settings-toggle-knob"
                 style={{
-                  position: 'absolute', top: 2, left: soundEnabled ? 22 : 2, width: 20, height: 20,
+                  position: 'absolute', top: 3, left: soundEnabled ? 25 : 3, width: 24, height: 24,
                   borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)',
                 }}
               />
@@ -233,14 +233,14 @@ export default function SettingsModal({
             <span>{strictMode ? t('settings.strictOn') : t('settings.strictOff')}</span>
             <span
               style={{
-                width: 44, height: 24, borderRadius: 99, position: 'relative',
+                width: 52, height: 30, flexShrink: 0, borderRadius: 99, position: 'relative',
                 background: strictMode ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s',
               }}
             >
               <span
                 className="settings-toggle-knob"
                 style={{
-                  position: 'absolute', top: 2, left: strictMode ? 22 : 2, width: 20, height: 20,
+                  position: 'absolute', top: 3, left: strictMode ? 25 : 3, width: 24, height: 24,
                   borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)',
                 }}
               />
@@ -281,8 +281,8 @@ export default function SettingsModal({
               }}
             >
               <span>{dailyQuestReminderEnabled ? t('settings.dailyReminderOn') : t('settings.dailyReminderOff')}</span>
-              <span style={{ width: 44, height: 24, borderRadius: 99, position: 'relative', background: dailyQuestReminderEnabled ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s' }}>
-                <span className="settings-toggle-knob" style={{ position: 'absolute', top: 2, left: dailyQuestReminderEnabled ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)' }} />
+              <span style={{ width: 52, height: 30, flexShrink: 0, borderRadius: 99, position: 'relative', background: dailyQuestReminderEnabled ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s' }}>
+                <span className="settings-toggle-knob" style={{ position: 'absolute', top: 3, left: dailyQuestReminderEnabled ? 25 : 3, width: 24, height: 24, borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)' }} />
               </span>
             </button>
 
@@ -308,8 +308,8 @@ export default function SettingsModal({
               }}
             >
               <span>{questUnlockNotifyEnabled ? t('settings.unlockNotifyOn') : t('settings.unlockNotifyOff')}</span>
-              <span style={{ width: 44, height: 24, borderRadius: 99, position: 'relative', background: questUnlockNotifyEnabled ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s' }}>
-                <span className="settings-toggle-knob" style={{ position: 'absolute', top: 2, left: questUnlockNotifyEnabled ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)' }} />
+              <span style={{ width: 52, height: 30, flexShrink: 0, borderRadius: 99, position: 'relative', background: questUnlockNotifyEnabled ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s' }}>
+                <span className="settings-toggle-knob" style={{ position: 'absolute', top: 3, left: questUnlockNotifyEnabled ? 25 : 3, width: 24, height: 24, borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)' }} />
               </span>
             </button>
           </div>
@@ -497,8 +497,8 @@ export default function SettingsModal({
 
         /* [แก้] มาตรฐานปุ่ม/แถวตั้งค่า: สูงอย่างน้อย 44px กดง่ายบนมือถือ */
         .settings-toggle-row {
-          width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between;
-          padding: 12px 16px; border-radius: var(--r-md); cursor: pointer;
+          width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          padding: 12px 16px; text-align: left; border-radius: var(--r-md); cursor: pointer;
           font-family: var(--font-display); font-weight: 700; font-size: var(--fs-md); color: var(--text);
           transition: all .25s cubic-bezier(.34,1.56,.64,1);
         }
@@ -968,8 +968,8 @@ function ProfileSettingsForm({ userData, onSave }: { userData: UserData, accent:
         }}
       >
         <span>{isProfilePrivate ? '🔒 ปิดโปรไฟล์อยู่ คนอื่นดูโปรไฟล์เราไม่ได้' : '🔓 เปิดโปรไฟล์อยู่ คนอื่นดูโปรไฟล์เราได้'}</span>
-        <span style={{ width: 44, height: 24, borderRadius: 99, position: 'relative', background: isProfilePrivate ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s' }}>
-          <span className="settings-toggle-knob" style={{ position: 'absolute', top: 2, left: isProfilePrivate ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)' }} />
+        <span style={{ width: 52, height: 30, flexShrink: 0, borderRadius: 99, position: 'relative', background: isProfilePrivate ? SETTINGS_ON : 'var(--n200)', transition: 'background .25s' }}>
+          <span className="settings-toggle-knob" style={{ position: 'absolute', top: 3, left: isProfilePrivate ? 25 : 3, width: 24, height: 24, borderRadius: '50%', background: 'var(--fixed-white)', boxShadow: '0 1px 3px var(--glass-b-30)' }} />
         </span>
       </button>
 
