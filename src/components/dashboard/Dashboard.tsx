@@ -75,6 +75,7 @@ import HomeSceneRenderer from '../scenery/homeScenes/HomeSceneRenderer'
 import { useHomeWeather } from '../../hooks/useHomeWeather'
 import { computeCalorieTarget, getOverCalorieStreak, getVisibleRocks, MEALS_CHANGED_EVENT, OVER_CALORIE_STREAK_DAYS } from '../../utils/nutrition'
 import { posterOf } from '../../utils/videoPoster'
+import PageTour from '../tour/PageTour'
 const TreeSummaryModal = lazy(() => import('../tree/TreeSummaryModal'))
 // [ใหม่ — ฟีเจอร์สตอรี่] เดิมปุ่มนี้ชื่อ "โพสต์" (📝) เป็น placeholder ล้วนๆ (setInfoAlert
 // เฉยๆ) ตอนนี้เปลี่ยนเป็น "สตอรี่" เปิดหน้า Feed/Search/Activity/Profile ภายในตัวเองจริง
@@ -129,21 +130,22 @@ export default function Dashboard() {
   /* [ใหม่ตามที่ระบุ] รดน้ำต้นไม้ให้เพื่อน (วันละครั้ง คล้ายเติมไฟ — utils/friendWater.ts)
      ปุ่มหยดน้ำใต้ปุ่มข้อมูลต้นไม้ → บัวรดน้ำขึ้นเหนือต้นไม้ → แตะบัว = รดน้ำ → หยดน้ำที่ปุ่มกระเซ็นเป็นสีฟ้า
      waterCanFor = id เพื่อนที่เปิดบัวอยู่ (ดูคนใหม่ = บัวปิดเอง) */
-  const { isFriend, followStatus, toggleFollow } = useSocial()
+  const { isFollowing, toggleFollow } = useSocial()
   const friendWater = useFriendWater(viewingPlayer?.id ?? null)
   const [waterCanFor, setWaterCanFor] = useState<string | null>(null)
   /** ป็อบอัพกู้คืนหยดน้ำ (id เพื่อน) — หยดน้ำดับแต่ยังกู้คืนได้วันนี้ */
   const [recoverFor, setRecoverFor] = useState<string | null>(null)
   /** เปลี่ยนค่า = เอฟเฟกต์ประกายฟ้า + หยดน้ำเด้ง (รดครบทั้งคู่) */
   const [waterCelebrateKey, setWaterCelebrateKey] = useState(0)
-  const waterResultRef = useRef<{ full: boolean; reward: { code: string; streak: number } | null }>({ full: false, reward: null })
+  const waterResultRef = useRef<{ full: boolean; streak: number; reward: { code: string; streak: number } | null }>({ full: false, streak: 0, reward: null })
   /* [แก้ตามที่ระบุ] การ์ดข้อมูลต้นไม้เพื่อนปิดเองเมื่อแตะที่อื่นบนหน้าจอ (ไม่ต้องกดกากบาท) —
      ยกเว้นแตะในการ์ดเอง หรือปุ่มต้นไม้ที่ใช้เปิด/ปิดการ์ด */
   useEffect(() => {
     if (!friendCardOpen || !viewingPlayer) return
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Element | null
-      if (target?.closest('.player-tree-card, .dashboard__friend-card-toggle')) return
+      // แตะในกล่องทัวร์สอนใช้งาน (ข้าม/ถัดไป) ไม่นับว่าแตะนอกการ์ด
+      if (target?.closest('.player-tree-card, .dashboard__friend-card-toggle, #react-joyride-portal')) return
       setShownFriendCardId(null)
     }
     document.addEventListener('pointerdown', onPointerDown)
@@ -222,7 +224,8 @@ export default function Dashboard() {
     if (!showTreeStats && !showNotifications) return
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Element | null
-      if (target?.closest('.dashboard__right-cluster, .tree-of-life__tooltip-screen')) return
+      // แตะในกล่องทัวร์สอนใช้งาน (ข้าม/ถัดไป) ไม่นับว่าแตะนอกแผง — เดิมกดข้ามทัวร์แล้วแผงปิดตามไปด้วย
+      if (target?.closest('.dashboard__right-cluster, .tree-of-life__tooltip-screen, #react-joyride-portal')) return
       setShowTreeStats(false)
       setShowNotifications(false)
     }
@@ -247,6 +250,8 @@ export default function Dashboard() {
   const [infoAlert, setInfoAlert] = useState<string | null>(null)
 
   /** กดปุ่มหยดน้ำ: วันนี้รดแล้ว = แจ้งเฉยๆ · ดับ (กู้คืนได้) = ป็อบอัพกู้คืน · ไม่งั้นเปิด/ปิดบัวรดน้ำ */
+  /** รดน้ำได้เมื่อเราติดตามเขาแล้ว — ไม่ต้องรอเขาติดตามกลับ */
+  const canWaterViewing = !!viewingPlayer && isFollowing(viewingPlayer.id)
   const handleFriendWaterButton = () => {
     if (!viewingPlayer) return
     const s = friendWater.summary
@@ -268,21 +273,15 @@ export default function Dashboard() {
   /** ยังไม่เป็นเพื่อน → ติดตาม (เป็นเพื่อนเมื่อเขาติดตามกลับ) */
   const handleAddFriend = () => {
     if (!viewingPlayer) return
-    const st = followStatus(viewingPlayer.id)
-    if (st === 'following') {
-      setInfoAlert(`ส่งคำขอถึง ${viewingPlayer.username} แล้ว รอเขาติดตามกลับก็จะเป็นเพื่อนกัน แล้วรดน้ำให้กันได้`)
-      return
-    }
     toggleFollow(viewingPlayer.id)
-    setInfoAlert(st === 'followsYou'
-      ? `เป็นเพื่อนกับ ${viewingPlayer.username} แล้ว! รดน้ำต้นไม้ให้กันได้เลย 💧`
-      : `ส่งคำขอเป็นเพื่อนถึง ${viewingPlayer.username} แล้ว รอเขาติดตามกลับนะ`)
+    setInfoAlert(`เพิ่ม ${viewingPlayer.username} แล้ว! แตะหยดน้ำเพื่อรดน้ำให้ได้เลย 💧`)
   }
   const handleFriendPour = async (): Promise<boolean> => {
     try {
       const result = await friendWater.water()
       waterResultRef.current = {
         full: result.summary.status === 'full',
+        streak: result.summary.streak,
         reward: result.rewardCardItemCode ? { code: result.rewardCardItemCode, streak: result.summary.streak } : null,
       }
       return true
@@ -294,12 +293,14 @@ export default function Dashboard() {
   const handleFriendPourDone = (poured: boolean) => {
     setWaterCanFor(null)
     if (!poured) return
-    const { full, reward } = waterResultRef.current
-    waterResultRef.current = { full: false, reward: null }
+    const { full, streak, reward } = waterResultRef.current
+    waterResultRef.current = { full: false, streak: 0, reward: null }
     if (full) setWaterCelebrateKey((k) => k + 1)
-    if (reward) {
-      setInfoAlert(`รดน้ำให้กันครบ ${reward.streak} วัน! ได้รับ${exchangeCardLabel(reward.code)} 1 ใบ (เพื่อนก็ได้สุ่มการ์ดด้วยนะ)`)
-    }
+    // [แก้ตามที่ระบุ] บอกผลทุกครั้งหลังรด — เดิมรดสำเร็จแล้วเงียบ เห็นแค่สีหยดน้ำเปลี่ยน ผู้ใช้ไม่แน่ใจว่ารดแล้ว
+    const name = viewingPlayer?.username ?? 'เพื่อน'
+    if (reward) setInfoAlert(`รดน้ำให้กันครบ ${reward.streak} วัน! ได้รับ${exchangeCardLabel(reward.code)} 1 ใบ (เพื่อนก็ได้สุ่มการ์ดด้วยนะ)`)
+    else if (full) setInfoAlert(`รดน้ำให้กันครบทั้งคู่แล้ว 💧 ต่อเนื่อง ${streak} วัน`)
+    else setInfoAlert(`รดน้ำให้ ${name} แล้ว 💧 ถ้าเขารดกลับวันนี้ จะเริ่มนับวันต่อเนื่อง`)
   }
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -632,6 +633,8 @@ export default function Dashboard() {
     <div className={`dashboard${introPhase === 'play' ? ' dashboard--intro' : introPhase === 'reveal' ? ' dashboard--intro-reveal' : ''}`}>
       {/* นัดทบทวน "แคปซูลเวลา" ที่ถึงเวลาแล้ว — เด้งทันทีหลังล็อกอิน (เฉพาะบัญชีจริง ไม่ใช่ guest) */}
       <CardDropPopup />
+      {/* ทัวร์หน้า Home — รอฉากรับต้นกล้า (PlantIntro) และโมดัลทุกตัวปิดก่อน ไม่ไปทับกัน */}
+      <PageTour tourId="home" enabled={!introPhase && !anyModalOpen && !hideHomeChrome} delayMs={1200} />
       <LearningGiftPopup />
       {showDustPouch && <SpecialDustPouch onClose={() => setShowDustPouch(false)} />}
       {calorieReward.rewarded && (
@@ -684,13 +687,13 @@ export default function Dashboard() {
       {/* ═══ HUD แคปซูลกลางจอ ชิดขอบบน (แบบ V1) ═══ */}
       {!hideHomeChrome && (isLoggedIn || isGuest) && (
         <div className="game-top-hud" ref={hudRef}>
-          <div className="hud-pill hud-pill--level">
+          <div className="hud-pill hud-pill--level" data-tour="home-level">
             {/* รูปเลเวล = Seed.png (EXP.png ใช้กับแถบ EXP ข้างๆ) */}
             <img src={BADGE_ICONS.seed} className="icon-img hud-icon" alt="" />
             <span>{userData.mbtiType} Lv.{userData.level}</span>
             <HudDelta value={userData.level} ready={!isLoadingUser} format={() => 'Level up!'} />
           </div>
-          <div className="hud-pill hud-pill--exp" title={`EXP ${expIntoLevel}/${EXP_PER_LEVEL}`}>
+          <div className="hud-pill hud-pill--exp" data-tour="home-exp" title={`EXP ${expIntoLevel}/${EXP_PER_LEVEL}`}>
             <img src={BADGE_ICONS.exp} className="icon-img hud-icon" alt="" />
             <div className="hud-bar-container">
               <div className="hud-bar-bg">
@@ -699,12 +702,12 @@ export default function Dashboard() {
               <span className="hud-bar-text">{expIntoLevel}/{EXP_PER_LEVEL}</span>
             </div>
           </div>
-          <div className="hud-pill">
+          <div className="hud-pill" data-tour="home-coins">
             <img src={BADGE_ICONS.coins} className="icon-img hud-icon" alt="" />
             <span>{userData.coins.toLocaleString()}</span>
             <HudDelta value={userData.coins} ready={!isLoadingUser} />
           </div>
-          <div className="hud-pill hud-pill--streak">
+          <div className="hud-pill hud-pill--streak" data-tour="home-streak">
             <img src={BADGE_ICONS.streak} className="icon-img hud-icon" alt="" />
             <span>{userData.streak}d</span>
           </div>
@@ -730,10 +733,11 @@ export default function Dashboard() {
           <>
             {/* [แก้ตามที่ระบุ] ปุ่มกลับบ้านเหลือแค่ไอคอน Return — ข้อความ "กลับบ้าน" ชนป้ายชื่อต้นไม้เพื่อนบนจอเล็ก */}
             {/* [แก้ตามที่ระบุ] หน้าดูต้นไม้เพื่อน: ปุ่มกลับเป็นไอคอนล้วน (ไม่มีกรอบ/พื้น) — ปุ่มโหมดดูต้นไม้ของฉันยังเป็นป้ายเดิม */}
-            <button className="dashboard__back-btn dashboard__back-btn--icon" onClick={() => setViewingPlayer(null)} aria-label="กลับบ้าน" title="กลับบ้าน">
+            <PageTour tourId="friendTree" enabled={!anyModalOpen && waterCanFor === null && recoverFor === null} />
+            <button className="dashboard__back-btn dashboard__back-btn--icon" data-tour="friend-back" onClick={() => setViewingPlayer(null)} aria-label="กลับบ้าน" title="กลับบ้าน">
               <img src={BADGE_ICONS.back} className="icon-img" alt="" />
             </button>
-            <div className="dashboard__viewing-name-pill lb-banner">ต้นไม้ของ {viewingPlayer.username}</div>
+            <div className="dashboard__viewing-name-pill lb-banner" data-tour="friend-name">ต้นไม้ของ {viewingPlayer.username}</div>
             <ErrorBoundary scope="ต้นไม้">
               <TreeOfLife
                 userSeed={viewingPlayer.id}
@@ -754,7 +758,7 @@ export default function Dashboard() {
             </ErrorBoundary>
           </>
         ) : (
-          <div ref={treeCaptureRef} className="dashboard__tree-capture-target">
+          <div ref={treeCaptureRef} className="dashboard__tree-capture-target" data-tour="home-tree">
             <ErrorBoundary scope="ต้นไม้">
               <TreeOfLife
                 userSeed={userData.id || null}
@@ -816,7 +820,7 @@ export default function Dashboard() {
 
       {/* ═══ ปุ่มลอยซ้าย: Leaderboard (คงของ V2 เดิม) ═══ */}
       {!hideHomeChrome && (
-        <div className="dashboard__panel dashboard__panel--left">
+        <div className="dashboard__panel dashboard__panel--left" data-tour={leaderboardCollapsed ? undefined : 'home-leaderboard'}>
           <LeaderboardPanel
             collapsed={leaderboardCollapsed}
             onToggle={() => setLeaderboardCollapsed((c) => !c)}
@@ -845,14 +849,16 @@ export default function Dashboard() {
             <div className="right-action-buttons">
               <button
                 className="game-icon-btn tree-info-btn dashboard__friend-card-toggle"
+                data-tour="friend-card"
                 onClick={() => setShownFriendCardId((id) => (id === viewingPlayer.id ? null : viewingPlayer.id))}
                 title={`ข้อมูลต้นไม้ของ ${viewingPlayer.username}`}
                 aria-label={`ข้อมูลต้นไม้ของ ${viewingPlayer.username}`}
               >
                 <img src={BADGE_ICONS.tree} className="icon-img" alt="" />
               </button>
-              {/* [ใหม่ตามที่ระบุ] เพื่อน → ปุ่มหยดน้ำ + จำนวนวันที่รดน้ำให้กัน · ยังไม่เป็นเพื่อน → ปุ่มเพิ่มเพื่อน */}
-              {isFriend(viewingPlayer.id) ? (
+              {/* [แก้ตามที่ระบุ] เราติดตามแล้ว (เพื่อนติดตามกลับหรือยังก็ได้) → ปุ่มหยดน้ำ รดได้ทันที
+                  วันต่อเนื่องนับเฉพาะวันที่รดให้กันทั้งคู่ (utils/friendWater.ts) · ยังไม่ติดตาม → ปุ่มเพิ่มเพื่อน */}
+              {canWaterViewing ? (
                 <WaterDropButton
                   summary={friendWater.summary}
                   friendName={viewingPlayer.username}
@@ -861,7 +867,7 @@ export default function Dashboard() {
                 />
               ) : (
                 <AddFriendButton
-                  requested={followStatus(viewingPlayer.id) === 'following'}
+                  requested={false}
                   friendName={viewingPlayer.username}
                   onClick={handleAddFriend}
                 />
@@ -903,6 +909,7 @@ export default function Dashboard() {
               {(isLoggedIn || isGuest) && (
                 <button
                   className="game-icon-btn"
+                  data-tour="home-settings"
                   onClick={() => { setSettingsInitialSubModal(null); openMainPanel('settings') }}
                   title={t('home.settings')}
                   aria-label={t('home.settings')}
@@ -912,10 +919,10 @@ export default function Dashboard() {
               )}
               {/* [ย้ายตามที่ระบุ] ปุ่มข้อมูลต้นไม้ — อยู่ก่อนปุ่มเช็คอินอารมณ์รายวัน (เดิมเปิดข้อมูลต้นไม้
                   จากการกดโคนต้นไม้ ตอนนี้เปิดจากปุ่มนี้แทน รวมกับสถานะต้นไม้ในแผงเดียว) */}
-              <button className="game-icon-btn tree-info-btn" onClick={() => { setShowTreeStats((v) => !v); setShowNotifications(false) }} title={t('home.treeInfo')} aria-label={t('home.treeInfo')}>
+              <button className="game-icon-btn tree-info-btn" data-tour="home-tree-info" onClick={() => { setShowTreeStats((v) => !v); setShowNotifications(false) }} title={t('home.treeInfo')} aria-label={t('home.treeInfo')}>
                 <img src={BADGE_ICONS.tree} className="icon-img" alt="" />
               </button>
-              <button className="game-icon-btn mood-btn" onClick={() => openModal('moodCheckin')} title={t('home.moodCheckin')}>
+              <button className="game-icon-btn mood-btn" data-tour="home-mood" onClick={() => openModal('moodCheckin')} title={t('home.moodCheckin')}>
                 <img src={BADGE_ICONS.checkin} className="icon-img" alt="" />
               </button>
               {/* [เพิ่มตามที่ระบุ — ปุ่มแจ้งเตือนใหม่] แทรกระหว่างเช็คอินรายวันกับปิดเสียง
@@ -923,6 +930,7 @@ export default function Dashboard() {
                   Story ทำตอนเปิดหน้ากิจกรรม */}
               <button
                 className="game-icon-btn notif-btn"
+                data-tour="home-notif"
                 style={{ position: 'relative' }}
                 onClick={() => {
                   setShowNotifications((v) => {
@@ -951,11 +959,12 @@ export default function Dashboard() {
           setInfoAlert "เร็วๆ นี้") */}
       {!hideHomeChrome && (
         <div className="dashboard__corner-actions dashboard__corner-actions--right">
-          <button className="game-icon-btn" onClick={handleShare} title="แชร์">
+          <button className="game-icon-btn" data-tour="home-share" onClick={handleShare} title="แชร์">
             <img src={BADGE_ICONS.share} className="icon-img" alt="" />
           </button>
           <button
             className="game-icon-btn"
+            data-tour="home-friends"
             onClick={() => openMainPanel('friends')}
             title="เพื่อน"
           >

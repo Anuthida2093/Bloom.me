@@ -7,6 +7,7 @@ import { RANK_CATEGORIES, type LeaderboardPlayer, type RankCategory } from '../.
 import { useLeaderboard } from '../../hooks/useLeaderboard';
 import { BADGE_ICONS, RANK_CATEGORY_ICONS } from '../../config/iconAssets';
 import './leaderboardRow.css';
+import PageTour from '../tour/PageTour'
 
 const C_1 = '#FFF9C4'
 const C_2 = '#FFF0A0'
@@ -112,6 +113,7 @@ export default function Leaderboard({ onClose = () => {}, myMbti = 'INFP', myNam
             </div>
           </div>
 
+          <PageTour tourId="leaderboard" />
           <button className="popup-close"
             onClick={onClose}
             style={{

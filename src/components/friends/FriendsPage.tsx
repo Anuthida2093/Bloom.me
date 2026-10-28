@@ -5,6 +5,7 @@ import { useSocial } from '../../context/SocialContext'
 import { MOCK_LEADERBOARD_PLAYERS, type LeaderboardPlayer } from '../../config/leaderboardData'
 import './FriendsPage.css'
 import { BADGE_ICONS } from '../../config/iconAssets'
+import PageTour from '../tour/PageTour'
 
 /*============================================================================*\
   FriendsPage — [ไฟล์ใหม่ — ข้อ B] หน้า "เพื่อน" เปิดจากปุ่มมุมขวาล่างของ Dashboard (👥)
@@ -76,6 +77,7 @@ export default function FriendsPage({ onBack, onViewPlayer }: FriendsPageProps) 
 
   return (
     <div className="friends-page">
+      <PageTour tourId="friends" />
       <div className="friends-page__head">
         <button className="friends-page__back" onClick={onBack} aria-label="กลับ"><img src={BADGE_ICONS.back} className="icon-img" alt="" /></button>
         <h1 className="friends-page__title">เพื่อน</h1>
@@ -109,7 +111,7 @@ export default function FriendsPage({ onBack, onViewPlayer }: FriendsPageProps) 
         </div>
       </div>
 
-      <div className="friends-page__controls">
+      <div className="friends-page__controls" data-tour="friends-search">
         <input
           className="friends-page__search"
           type="text"

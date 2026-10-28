@@ -10,6 +10,7 @@ import { QUEST_ICONS } from '../../../config/iconAssets'
 
 import './GratitudeShieldPage.css'
 import { BADGE_ICONS } from '../../../config/iconAssets'
+import PageTour from '../../tour/PageTour'
 
 const C_1 = '#FFB020'
 const C_2 = '#FFB020'
@@ -118,7 +119,8 @@ export default function GratitudeShieldPage({ alreadyCompleted, onComplete, onCl
   return (
     <div className="gratitude-shield-page">
       {/* ปุ่มปิดหน้าจอหลัก (มุมขวาบน) */}
-      <button onClick={onClose} title="ปิด" className="gratitude-shield-page__close">
+      <PageTour tourId="quest:ment-gratitude-shield" />
+      <button onClick={onClose} title="ปิด" className="gratitude-shield-page__close" data-tour="quest-close">
         <img src={BADGE_ICONS.close} className="icon-img" alt="" />
       </button>
 

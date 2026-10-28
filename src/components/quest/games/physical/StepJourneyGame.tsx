@@ -46,6 +46,7 @@ import { createProgressTracker } from '../../../../utils/progressTracker'
 import { generatedArtSize, isMapArtReady, stopMapArtListener, warmMapArt } from './mapArtLoader'
 import { stopMapArtProgress } from './mapgen/renderMapArt'
 import { readJourneySnapshot, writeJourneySnapshot } from './stepQuestWarmup'
+import { appStorage } from '../../../../utils/testerSession'
 import '../games.css'
 import './StepJourneyGame.css'
 import '../../../leaderboard/leaderboardRow.css'
@@ -98,10 +99,10 @@ export default function StepJourneyGame({ finish, exit }: QuestGameProps) {
   /** แถบด้านขวา (สถิติ + ปุ่มซิงค์ก้าว) เปิด/ปิดได้ — จำค่าไว้ในเครื่อง เปิดเควสครั้งหน้าคงสถานะเดิม
    *  [แก้ตามที่ระบุ] ค่าเริ่มต้น = ปิด (เห็นแค่ปุ่มรูป OwlAvatar) แบบเดียวกับแผงข้อมูลต้นไม้ ทุกขนาดจอ */
   const [panelOpen, setPanelOpen] = useState(() => {
-    try { return localStorage.getItem(PANEL_OPEN_KEY) === '1' } catch { return false }
+    try { return appStorage.getItem(PANEL_OPEN_KEY) === '1' } catch { return false }
   })
   const togglePanel = () => setPanelOpen((open) => {
-    try { localStorage.setItem(PANEL_OPEN_KEY, open ? '0' : '1') } catch { /* storage ปิดอยู่ */ }
+    try { appStorage.setItem(PANEL_OPEN_KEY, open ? '0' : '1') } catch { /* storage ปิดอยู่ */ }
     return !open
   })
   const [todaySteps, setTodaySteps] = useState(0)

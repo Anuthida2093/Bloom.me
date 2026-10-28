@@ -6,6 +6,7 @@ import { calculateStepReward } from '../config/stepGoalByBmi'
 import type { StepChestReward } from '../config/stepChest'
 import { getJourneyDaySteps, resetStepJourneyDays } from '../utils/stepJourneyDays'
 import { bangkokTimeOn } from '../utils/progression'
+import { appStorage } from '../utils/testerSession'
 
 /*============================================================================*\
   stepSettlement.ts — ปิดรอบเควสก้าวเพื่อสุขภาพของ "วันที่ผ่านไปแล้ว" แบบ lazy ตอนเปิดแอปครั้งถัดไป
@@ -45,14 +46,14 @@ const recordsKey = (userId: string) => `bloom:step-settlements:${userId}`
 export function readStepSettlements(userId: string): StepSettlementRecord[] {
   if (!userId) return []
   try {
-    const raw = window.localStorage.getItem(recordsKey(userId))
+    const raw = appStorage.getItem(recordsKey(userId))
     return raw ? (JSON.parse(raw) as StepSettlementRecord[]) : []
   } catch { return [] }
 }
 
 function saveStepSettlement(userId: string, record: StepSettlementRecord) {
   const list = [record, ...readStepSettlements(userId).filter((r) => r.date !== record.date)].slice(0, MAX_RECORDS)
-  try { window.localStorage.setItem(recordsKey(userId), JSON.stringify(list)) } catch { /* storage ปิด */ }
+  try { appStorage.setItem(recordsKey(userId), JSON.stringify(list)) } catch { /* storage ปิด */ }
   window.dispatchEvent(new CustomEvent(STEP_SETTLED_EVENT))
 }
 

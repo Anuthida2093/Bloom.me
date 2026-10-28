@@ -22,6 +22,7 @@ import PostListPage from './PostListPage'
 import PostCard from './PostCard'
 import './Story.css'
 import { BADGE_ICONS } from '../../config/iconAssets'
+import PageTour from '../tour/PageTour'
 
 /*============================================================================*\
   StoryOverlay — [แก้รอบนี้] หน้าหลักของฟีเจอร์ "สตอรี่"
@@ -124,6 +125,7 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
 
   return (
     <div className="story-overlay">
+      <PageTour tourId="story" />
       <StoryHeader
         query={searchQuery}
         searchFocused={searchFocused}
@@ -187,7 +189,7 @@ export default function StoryOverlay({ onClose, onViewTree, onEditProfile, initi
           <StorySidebar onNavigate={handleNavigate} active={viewProfileTarget ? undefined : view} />
         </div>
 
-        {view !== 'chat' && <button className="story-compose-fab" title="สร้างสตอรี่ใหม่" onClick={() => setShowCompose(true)}>+</button>}
+        {view !== 'chat' && <button className="story-compose-fab" data-tour="story-compose" title="สร้างสตอรี่ใหม่" onClick={() => setShowCompose(true)}>+</button>}
       </div>
 
       {showCompose && <ComposeStoryModal onClose={() => setShowCompose(false)} />}

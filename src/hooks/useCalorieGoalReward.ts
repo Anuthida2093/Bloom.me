@@ -3,6 +3,7 @@ import { useAppContext } from '../context/AppContext'
 import { computeCalorieTarget, loadMeals, MEALS_CHANGED_EVENT, totalCalories } from '../utils/nutrition'
 import { isQuestDoneNow } from '../utils/questCompletion'
 import { findQuestByCode } from '../config/questCatalog'
+import { appStorage } from '../utils/testerSession'
 
 /*============================================================================*\
   useCalorieGoalReward — เควส "แคลอรี่ตาม BMI": ตั้งแต่ 18:00 ของวัน ถ้าบันทึกมื้ออาหารวันนี้ได้แคลอรี่
@@ -35,8 +36,8 @@ export function useCalorieGoalReward(enabled: boolean) {
       if (target === null || totalCalories(loadMeals(u.id, now)) < target) return
       if (isQuestDoneNow(logs, QUEST_CODE, now)) return
       try {
-        if (window.localStorage.getItem(flagKey(u.id, now))) return
-        window.localStorage.setItem(flagKey(u.id, now), '1')
+        if (appStorage.getItem(flagKey(u.id, now))) return
+        appStorage.setItem(flagKey(u.id, now), '1')
       } catch { return }
       complete(QUEST_CODE, { calorieGoalMet: true, calorieTarget: target, autoAwardedAt: now.toISOString() })
       const def = findQuestByCode(QUEST_CODE)

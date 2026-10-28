@@ -13,6 +13,7 @@ import './OracleCardsPage.css'
 import '../../leaderboard/leaderboardRow.css'
 
 import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
+import PageTour from '../../tour/PageTour'
 
 /** กระดาษข้อความไพ่คลี่จนสุด (ms) — ต้องตรงกับแอนิเมชัน oracleUnroll ใน OracleCardsPage.css */
 const ORACLE_UNROLL_MS = 1100
@@ -106,7 +107,8 @@ export default function OracleCardsPage({ moodEntry, onComplete, onClose }: Orac
 
   return (
     <div className="oracle-game-container">
-      <button onClick={handleClose} title="ปิด" className="oracle-page__close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
+      <PageTour tourId="quest:ment-oracle-activation" />
+      <button onClick={handleClose} title="ปิด" className="oracle-page__close" data-tour="quest-close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       <div className="oracle-page__bg" />
       {Array.from({ length: 25 }).map((_, i) => (

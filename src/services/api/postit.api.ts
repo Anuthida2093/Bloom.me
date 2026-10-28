@@ -1,4 +1,4 @@
-import { http, API_MODE, mockDelay } from '../http'
+import { http, isMockMode, mockDelay } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import type { PostItData } from '../../types'
 import { MAX_PAGE_SIZE, type Paginated } from './adapters'
@@ -18,13 +18,13 @@ export interface CreatePostItPayload {
 }
 
 export async function getPostIts(): Promise<PostItData[]> {
-  if (API_MODE === 'mock') { await mockDelay(80); return getDb().postIts }
+  if (isMockMode()) { await mockDelay(80); return getDb().postIts }
   const res = await http.get<Paginated<PostItData>>(`/postit/me?pageSize=${MAX_PAGE_SIZE}`)
   return res.data
 }
 
 export async function createPostIt(payload: CreatePostItPayload): Promise<PostItData> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay(80)
     const db = getDb()
     const postIt: PostItData = {
@@ -51,7 +51,7 @@ export async function createPostIt(payload: CreatePostItPayload): Promise<PostIt
 /** [เพิ่มตามที่ระบุ] ลากโพสอิทไปวางที่ไหนก็ได้บนจอ — บันทึกตำแหน่งใหม่ (% ของจอ)
  *  live: PATCH /api/postit/:id { positionX, positionY } (backend รับเป็นจำนวนเต็ม) */
 export async function updatePostItPosition(id: string, positionX: number, positionY: number): Promise<void> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     updateDb((d) => {
       d.postIts = (d.postIts ?? []).map((p) => (p.id === id ? { ...p, positionX, positionY } : p))
     })
@@ -62,7 +62,7 @@ export async function updatePostItPosition(id: string, positionX: number, positi
 
 /** [เพิ่มตามที่ระบุ] เก็บโพสอิทเข้าประวัติ = เอาออกจากต้นไม้ — live: DELETE /api/postit/:id */
 export async function deletePostIt(id: string): Promise<void> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     updateDb((d) => { d.postIts = (d.postIts ?? []).filter((p) => p.id !== id) })
     return
   }

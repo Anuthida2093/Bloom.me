@@ -1,4 +1,4 @@
-import { http, API_MODE, mockDelay } from '../http'
+import { http, isMockMode, mockDelay } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import type { BrainDumpRecord } from '../../types.mental'
 import { MAX_PAGE_SIZE, type Paginated } from './adapters'
@@ -47,7 +47,7 @@ export async function saveBrainDumpSession(input: SaveBrainDumpInput): Promise<B
     recalledTopics: input.recalledTopics,
     missedTopics: input.missedTopics,
   }
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay(80)
     updateDb((d) => { d.brainDumps = [record, ...(d.brainDumps ?? [])].slice(0, 200) })
     return record
@@ -70,7 +70,7 @@ export async function saveBrainDumpSession(input: SaveBrainDumpInput): Promise<B
 }
 
 export async function getBrainDumpSessions(): Promise<BrainDumpRecord[]> {
-  if (API_MODE === 'mock') { await mockDelay(80); return getDb().brainDumps ?? [] }
+  if (isMockMode()) { await mockDelay(80); return getDb().brainDumps ?? [] }
   const res = await http.get<Paginated<{ id: string; createdAt: string; topic: string | null; transcriptText: string | null; durationSec: number }>>(
     `/brain-dump/me?pageSize=${MAX_PAGE_SIZE}`,
   )

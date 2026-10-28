@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { appStorage } from '../utils/testerSession'
 
 /*============================================================================*\
   usePersistentState — [ไฟล์ใหม่] state ที่รอดจากการรีเฟรชหน้า
@@ -17,7 +18,7 @@ export function usePersistentState<T>(key: string, initialValue: T) {
 
   const [value, setValue] = useState<T>(() => {
     try {
-      const raw = window.localStorage.getItem(storageKey)
+      const raw = appStorage.getItem(storageKey)
       return raw !== null ? (JSON.parse(raw) as T) : initialValue
     } catch {
       // โหมดส่วนตัวของ Safari โยน error ตอนเขียน localStorage — ต้องไม่ทำให้แอปพัง
@@ -28,12 +29,12 @@ export function usePersistentState<T>(key: string, initialValue: T) {
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return }
     try {
-      window.localStorage.setItem(storageKey, JSON.stringify(value))
+      appStorage.setItem(storageKey, JSON.stringify(value))
     } catch { /* เขียนไม่ได้ก็ปล่อยผ่าน ไม่ใช่เรื่องคอขาดบาดตาย */ }
   }, [storageKey, value])
 
   const clear = useCallback(() => {
-    try { window.localStorage.removeItem(storageKey) } catch { /* noop */ }
+    try { appStorage.removeItem(storageKey) } catch { /* noop */ }
     setValue(initialValue)
   }, [storageKey, initialValue])
 

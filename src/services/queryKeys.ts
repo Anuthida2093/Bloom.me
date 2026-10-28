@@ -20,4 +20,5 @@ export const queryKeys = {
   activity: ['activity'] as const,
   socialSearch: (query: string) => ['social-search', query] as const,
   friendWater: (friendId: string) => ['friend-water', friendId] as const,
+  wateredMeToday: ['friend-water', 'watered-me-today'] as const,
 } as const

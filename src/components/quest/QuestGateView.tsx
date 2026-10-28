@@ -6,6 +6,7 @@ import { useAppContext } from '../../context/AppContext'
 import { computeCalorieTarget, loadMeals, totalCalories, MEALS_CHANGED_EVENT } from '../../utils/nutrition'
 import { useStepHistory } from '../../hooks/useProgression'
 import { localDateKey } from '../../services/api/progression.api'
+import PageTour from '../tour/PageTour'
 
 const STEP_JOURNEY_QUEST_CODE = 'phys-vitality-steps'
 
@@ -88,6 +89,7 @@ export default function QuestGateView({
 
   return (
     <div className="quest-gate-view" style={{ background: theme.bg }}>
+      <PageTour tourId={category === 'mental' ? 'zone:mental' : 'zone:physical'} />
       {/* [ใหม่ — ตามที่ระบุ] ดาวกระพริบลอย — โครงสร้างเอฟเฟกต์เดียวกับที่หมวดสุขภาพจิตใช้อยู่แล้ว
           ในหน้าเควสไพ่ทิพย์ (ดู .oracle-page__star ใน OracleCardsPage.css) แต่ยกมาใช้ที่ระดับ
           หน้าประตูเควส (QuestGateView) ทั้ง 2 หมวดเลย เพราะเดิมหน้านี้ (ต่างจาก OracleCardsPage)
@@ -108,7 +110,7 @@ export default function QuestGateView({
         ))}
       </div>
 
-      <div className="quest-gate-view__list">
+      <div className="quest-gate-view__list" data-tour="gate-list">
         {quests.map((q) => {
           const locked = isLocked(q)
           // [แก้บั๊ก — ตามที่ระบุ] เดิม done = isCompleted(q.code) ตรงๆ — สำหรับเควสทั่วไปถูกต้อง
@@ -193,6 +195,7 @@ export default function QuestGateView({
           <button
             type="button"
             className="quest-gate-view__safety-banner quest-gate-view__screening-banner"
+            data-tour="gate-screening"
             onClick={onOpenScreening}
             title="แบบประเมินสุขภาพใจ 5 ข้อ"
           >
@@ -212,6 +215,7 @@ export default function QuestGateView({
           <button
             type="button"
             className="quest-gate-view__safety-banner"
+            data-tour="gate-safety"
             onClick={onOpenSafetyNet}
             title="ศูนย์ช่วยเหลือด้านสุขภาพจิต"
           >

@@ -1,3 +1,4 @@
+import { appStorage } from '../utils/testerSession'
 /*============================================================================*\
   learningDomains.ts — หมวด/วิชาของเควส "ผสมเกสรข้ามศาสตร์" (ใช้ร่วมกับปฏิทินป่าแห่งสิบปี)
   ────────────────────────────────────────────────────────────────────────────
@@ -25,7 +26,7 @@ export function customDomainId(name: string): string {
 
 export function loadCustomDomains(userId: string): LearningDomain[] {
   try {
-    const names = JSON.parse(window.localStorage.getItem(storageKey(userId)) ?? '[]') as string[]
+    const names = JSON.parse(appStorage.getItem(storageKey(userId)) ?? '[]') as string[]
     return Array.isArray(names) ? names.map((n) => ({ id: customDomainId(n), label: n, emoji: '📘' })) : []
   } catch { return [] }
 }
@@ -36,13 +37,13 @@ export function addCustomDomain(userId: string, rawName: string): LearningDomain
   const current = loadCustomDomains(userId)
   const taken = [...BASE_DOMAINS, ...current].some((d) => d.label.toLowerCase() === name.toLowerCase())
   if (!name || taken) return current
-  try { window.localStorage.setItem(storageKey(userId), JSON.stringify([...current.map((d) => d.label), name])) } catch { /* storage ปิด */ }
+  try { appStorage.setItem(storageKey(userId), JSON.stringify([...current.map((d) => d.label), name])) } catch { /* storage ปิด */ }
   return loadCustomDomains(userId)
 }
 
 export function removeCustomDomain(userId: string, id: string): LearningDomain[] {
   const rest = loadCustomDomains(userId).filter((d) => d.id !== id)
-  try { window.localStorage.setItem(storageKey(userId), JSON.stringify(rest.map((d) => d.label))) } catch { /* storage ปิด */ }
+  try { appStorage.setItem(storageKey(userId), JSON.stringify(rest.map((d) => d.label))) } catch { /* storage ปิด */ }
   return rest
 }
 

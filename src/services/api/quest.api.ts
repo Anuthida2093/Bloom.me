@@ -1,4 +1,4 @@
-import { http, API_MODE, ApiError, mockDelay } from '../http'
+import { http, isMockMode, ApiError, mockDelay } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import { ALL_QUESTS, findQuestByCode, type QuestDef } from '../../config/questCatalog'
 import { crossGrowthMultiplier, isSeriousMode } from '../../config/crossGrowth'
@@ -96,7 +96,7 @@ export async function getQuests(): Promise<QuestWithStatus[]> {
 }
 
 export async function getQuestLogs(): Promise<QuestLogEntry[]> {
-  if (API_MODE === 'mock') { await mockDelay(120); return getDb().questLogs }
+  if (isMockMode()) { await mockDelay(120); return getDb().questLogs }
   // backend: GET /api/quests/logs/me (แบ่งหน้า)
   const res = await http.get<Paginated<Record<string, unknown>>>(`/quests/logs/me?pageSize=${MAX_PAGE_SIZE}`)
   return res.data.map(toQuestLogEntry)
@@ -105,7 +105,7 @@ export async function getQuestLogs(): Promise<QuestLogEntry[]> {
 export async function completeQuest(input: CompleteQuestPayload): Promise<CompleteQuestResult> {
   const { questCode, payload } = input
 
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     const def = findQuestByCode(questCode) ?? MOOD_CHECKIN_QUESTS.find((q) => q.code === questCode)
     const category = def?.category ?? guessCategory(questCode)

@@ -10,6 +10,7 @@ import {
 } from '../components/auth/authStyles'
 import { ApiError } from '../services/http'
 import { validatePasswordStrength } from '../utils/mockAuth'
+import { TESTER_REGISTER_DEFAULTS, isTesterCredentials } from '../utils/testerSession'
 import type { Gender } from '../types'
 import { BADGE_ICONS } from '../config/iconAssets'
 
@@ -33,19 +34,21 @@ export default function Register() {
   const navigate = useNavigate()
   const { registerUser } = useAppContext()
 
-  const [email, setEmail] = useState('')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [birthDate, setBirthDate] = useState('')
+  // [ช่วงทดสอบ UI] กรอกบัญชีทดสอบไว้ให้ครบทุกช่อง — กด "สมัครสมาชิก" ได้ทันที
+  // บัญชีนี้ไม่ถูกสร้างจริง เริ่มเกมใหม่ในแท็บนี้แล้วไปหน้าเลือก MBTI (ดู utils/testerSession.ts)
+  const [email, setEmail] = useState(TESTER_REGISTER_DEFAULTS.email)
+  const [username, setUsername] = useState(TESTER_REGISTER_DEFAULTS.username)
+  const [password, setPassword] = useState(TESTER_REGISTER_DEFAULTS.password)
+  const [birthDate, setBirthDate] = useState(TESTER_REGISTER_DEFAULTS.birthDate)
   /** [ใหม่] เพศ — ต้องเลือกตั้งแต่สมัคร (บังคับกรอก ดู <select required> ด้านล่าง) ใช้คำนวณ
    *  ชุดภาพ "รูปร่างของคุณ" ตั้งแต่เข้าเกมครั้งแรก ไม่ต้องรอไปตั้งทีหลังในหน้าตั้งค่าโปรไฟล์
    *  (ดู getBodyTypeImagePath ใน bodyTypeAssets.ts) — ค่าเริ่มต้นเป็นสตริงว่าง (ไม่ใช่ Gender
    *  ที่ถูกต้อง) ตั้งใจให้ browser validation บล็อกการ submit จนกว่าจะเลือกจริง ไม่ปล่อยผ่าน
    *  ด้วยค่า default เงียบๆ แบบที่ทำในหน้าตั้งค่าโปรไฟล์ (ที่นั่น fallback ได้เพราะเป็น user
    *  เดิมที่มีบัญชีอยู่แล้ว แต่ตรงนี้คือจุดตั้งค่าครั้งแรก) */
-  const [gender, setGender] = useState<'' | Gender>('')
-  const [height, setHeight] = useState('')
-  const [weight, setWeight] = useState('')
+  const [gender, setGender] = useState<'' | Gender>(TESTER_REGISTER_DEFAULTS.gender)
+  const [height, setHeight] = useState(TESTER_REGISTER_DEFAULTS.height)
+  const [weight, setWeight] = useState(TESTER_REGISTER_DEFAULTS.weight)
   const [emailError, setEmailError] = useState<ReactNode>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -56,7 +59,8 @@ export default function Register() {
     setEmailError(null)
     setPasswordError(null)
 
-    const passwordIssue = validatePasswordStrength(password)
+    // บัญชีทดสอบใช้รหัส 123456 ได้ — ยกเว้นกฎรหัสผ่านให้บัญชีนี้บัญชีเดียว
+    const passwordIssue = isTesterCredentials(email, password) ? null : validatePasswordStrength(password)
     if (passwordIssue) { setPasswordError(passwordIssue); return }
 
     setIsSubmitting(true)

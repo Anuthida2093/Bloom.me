@@ -61,7 +61,7 @@ export default function ActionMenuBar({
     // [1.5] เปิดเมนูเควส = กำลังจะเลือกหมวด → ดึงวิดีโอแผนที่เควสการเรียนรู้ (ไฟล์ใหญ่สุด) มารอในแคช
     prefetchAsset(LEARNING_MAP_VIDEO)
     const onPointerDown = (e: PointerEvent) => {
-      if ((e.target as Element | null)?.closest('.action-menu-container')) return
+      if ((e.target as Element | null)?.closest('.action-menu-container, #react-joyride-portal')) return
       setShowQuestMenu(false)
     }
     document.addEventListener('pointerdown', onPointerDown)
@@ -119,7 +119,7 @@ export default function ActionMenuBar({
         <div className="nav-indicator" />
         <ul>
           {NAV_ITEMS.map((item) => (
-            <li key={item.key} className={active === item.key ? 'active' : ''}>
+            <li key={item.key} className={active === item.key ? 'active' : ''} data-tour={`nav-${item.key}`}>
               {/* role="button" → ได้ยินเสียงคลิกกลางของระบบ (AudioContext) เหมือนปุ่มอื่น */}
               <a role="button" tabIndex={0} onClick={() => handleClick(item.key)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(item.key) } }}>
                 <span className={`nav-icon nav-icon--${item.key}`}>

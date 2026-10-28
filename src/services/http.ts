@@ -1,3 +1,4 @@
+import { appStorage, isTesterSession } from '../utils/testerSession'
 /*============================================================================*\
   http.ts — [ไฟล์ใหม่] ตัวห่อ fetch กลางของทั้งแอป
   ────────────────────────────────────────────────────────────────────────────
@@ -19,6 +20,13 @@
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 export const API_MODE: 'mock' | 'live' = (import.meta.env.VITE_API_MODE as 'mock' | 'live') ?? 'mock'
+
+/** ใช้ข้อมูลจำลองอยู่หรือไม่ — บัญชีทดสอบ (tester@bloom.me) ใช้ข้อมูลจำลองใน sessionStorage เสมอ
+ *  แม้ตั้ง VITE_API_MODE=live ไว้ ไม่มีคำขอไหนของผู้ทดสอบไปถึง database จริง (ดู utils/testerSession.ts)
+ *  ตัดสินทุกครั้งที่เรียก ห้าม cache ไว้ใน const เพราะสถานะ tester เปลี่ยนตอนล็อกอิน/ออกจากระบบ */
+export function isMockMode(): boolean {
+  return API_MODE === 'mock' || isTesterSession()
+}
 
 const TIMEOUT_MS = 15_000
 const TOKEN_KEY = 'bloom:auth-token'
@@ -42,13 +50,13 @@ export class ApiError extends Error {
 }
 
 export function getAuthToken(): string | null {
-  try { return window.localStorage.getItem(TOKEN_KEY) } catch { return null }
+  try { return appStorage.getItem(TOKEN_KEY) } catch { return null }
 }
 
 export function setAuthToken(token: string | null) {
   try {
-    if (token) window.localStorage.setItem(TOKEN_KEY, token)
-    else window.localStorage.removeItem(TOKEN_KEY)
+    if (token) appStorage.setItem(TOKEN_KEY, token)
+    else appStorage.removeItem(TOKEN_KEY)
   } catch { /* โหมดส่วนตัวเขียนไม่ได้ — ปล่อยผ่าน */ }
 }
 

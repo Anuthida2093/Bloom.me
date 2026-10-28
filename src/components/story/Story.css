@@ -838,3 +838,6 @@ button.story-tag { cursor: pointer; font-family: inherit; }
 
 /* [แก้ตามที่ระบุ] ตัวนับแฮชแท็ก (สูงสุด 5) */
 .story-compose-tags__count { font-weight: 400; opacity: .7; margin-left: 6px; font-size: .85em; }
+
+/* [แก้ตามที่ระบุ] หยดน้ำ + จำนวนวันที่รดน้ำให้กัน ชิดมุมบนขวาของหัวห้องแชท */
+.story-chat__head .fw-badge-wrap { margin-left: auto; }

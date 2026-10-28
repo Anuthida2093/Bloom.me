@@ -13,6 +13,8 @@ import { ApiError } from '../../services/http'
 import { validatePasswordStrength } from '../../utils/mockAuth'
 import { useLanguage } from '../../context/LanguageContext'
 import HomeBackgroundPicker from './HomeBackgroundPicker'
+import PageTour from '../tour/PageTour'
+import { resetTours } from '../../utils/tourProgress'
 
 const C_1 = 'rgba(116,198,157,.35)'
 const C_2 = 'rgba(116,198,157,.2)'
@@ -119,6 +121,7 @@ export default function SettingsModal({
 
   return (
     <Overlay onClose={onClose} accent={theme.accent}>
+      <PageTour tourId="settings" />
       {/* [แก้ตามที่ระบุ] แถบหัวสีสันมีชีวิตชีวา แทนหัวข้อลอยเดี่ยวๆ บนพื้นขาว */}
       <div
         className="settings-hero"
@@ -316,6 +319,10 @@ export default function SettingsModal({
             (เดิมเป็นโซนอันตรายแยกท้ายหน้า) — กดแล้วเตือนผลที่ตามมาก่อน แล้วพิมพ์ยืนยันอีกชั้น */}
         <Section label={t('settings.manageAccount')} index={8} accent={theme.accent} full>
           <div className="settings-account-grid">
+            {/* ล้างสถานะ "ดูแล้ว" ของทัวร์ทุกหน้า แล้วปิดหน้าตั้งค่า → ทัวร์หน้า Home เล่นใหม่ทันที */}
+            <div data-tour="settings-replay-tour">
+              <SettingBtn icon="🧭" label="ดูวิธีใช้งานอีกครั้ง" onClick={() => { resetTours(userData.id); onClose?.() }} accent={theme.accent} />
+            </div>
             <SettingBtn icon="🗑️" label={t('settings.deactivateOrDelete')} onClick={() => setDeleteStep(1)} accent={theme.accent} />
           </div>
         </Section>

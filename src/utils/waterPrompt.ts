@@ -1,3 +1,4 @@
+import { appStorage } from './testerSession'
 /*============================================================================*\
   waterPrompt.ts — ธง "ได้หยดน้ำใหม่ที่ยังไม่ได้เห็น" (one-shot) สำหรับแอนิเมชันบัวรดน้ำหน้า Home
   ────────────────────────────────────────────────────────────────────────────
@@ -12,15 +13,15 @@ const key = (userId: string) => `bloom:water-unseen:${userId}`
 
 export function markNewWaterDrop(userId: string): void {
   if (!userId) return
-  try { window.localStorage.setItem(key(userId), '1') } catch { /* storage ปิด */ }
+  try { appStorage.setItem(key(userId), '1') } catch { /* storage ปิด */ }
 }
 
 /** คืน true ครั้งเดียวต่อหยดน้ำใหม่ แล้วล้างธงทันที */
 export function takeNewWaterDrop(userId: string): boolean {
   if (!userId) return false
   try {
-    if (window.localStorage.getItem(key(userId)) !== '1') return false
-    window.localStorage.removeItem(key(userId))
+    if (appStorage.getItem(key(userId)) !== '1') return false
+    appStorage.removeItem(key(userId))
     return true
   } catch { return false }
 }
@@ -28,7 +29,7 @@ export function takeNewWaterDrop(userId: string): boolean {
 /** ดูว่ามีหยดน้ำใหม่ที่ยังไม่ได้เห็นไหม (ไม่ล้างธง) */
 export function hasNewWaterDrop(userId: string): boolean {
   if (!userId) return false
-  try { return window.localStorage.getItem(key(userId)) === '1' } catch { return false }
+  try { return appStorage.getItem(key(userId)) === '1' } catch { return false }
 }
 
 /** [แก้ตามที่ระบุ] ได้รางวัลหยดน้ำ → Dashboard ปิดทุกหน้าที่เปิดอยู่ กลับหน้า Home แล้วเล่นบัวรดน้ำต้นไม้ทันที */

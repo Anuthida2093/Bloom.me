@@ -9,6 +9,8 @@ import { LEARNING_MAP_VIDEO } from '../../../utils/prefetchAsset'
 import { posterOf } from '../../../utils/videoPoster'
 import GameLoadingScreen from '../../common/GameLoadingScreen'
 import { useMediaLoadProgress } from '../../../hooks/useMediaLoadProgress'
+import { appStorage } from '../../../utils/testerSession'
+import PageTour from '../../tour/PageTour'
 
 const C_13 = '#4B5563'
 const C_14 = '#374151'
@@ -382,12 +384,12 @@ export default function LearningQuestMap({
    *  [แก้ตามที่ระบุ] บนโทรศัพท์เริ่มแบบปิดทุกครั้งที่เข้าหน้า (ไม่อ่านค่าที่จำไว้) */
   const [sideOpen, setSideOpen] = useState(() => {
     if (window.matchMedia('(max-width: 768px)').matches) return false
-    try { return localStorage.getItem(SIDE_OPEN_KEY) === '1' } catch { return false }
+    try { return appStorage.getItem(SIDE_OPEN_KEY) === '1' } catch { return false }
   })
   const toggleSide = () => {
     const next = !sideOpen
     setSideOpen(next)
-    try { localStorage.setItem(SIDE_OPEN_KEY, next ? '1' : '0') } catch { /* storage ปิดอยู่ */ }
+    try { appStorage.setItem(SIDE_OPEN_KEY, next ? '1' : '0') } catch { /* storage ปิดอยู่ */ }
   }
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
 
@@ -837,6 +839,7 @@ export default function LearningQuestMap({
       onClickCapture={handleClickCapture}
     >
       <GameLoadingScreen loading={!media.ready} progress={media.progress} hint="กำลังโหลดแผนที่การเรียนรู้…" />
+      <PageTour tourId="zone:knowledge" enabled={media.ready && !selectedQuestCode} />
       {/* [ใหม่ — pan/zoom] เลเยอร์เดียวที่ถูก pan/zoom ร่วมกัน ขนาดคงที่เท่าเฟรมวิดีโอต้นฉบับ
           (VIDEO_NATIVE_WIDTH×HEIGHT) — พื้นหลัง+โหนดเควสทั้งหมดอยู่ในนี้ ตำแหน่ง % เดิมของ
           โหนด (FIXED_NODE_POSITIONS) จึงใช้ตรงๆ ได้โดยไม่ต้องแปลงพิกัดแบบเดิมอีก */}
@@ -939,6 +942,7 @@ export default function LearningQuestMap({
         <button
           type="button"
           className="learning-quest-map__side-toggle"
+          data-tour="learning-side-toggle"
           onClick={toggleSide}
           onPointerDown={(e) => e.stopPropagation()}
           aria-expanded={sideOpen}

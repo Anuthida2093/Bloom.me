@@ -11,6 +11,8 @@ import { useUser } from '../../../context/UserContext'
 import { hasNewWaterDrop, requestHomeWatering } from '../../../utils/waterPrompt'
 import './GameShell.css'
 import '../../leaderboard/leaderboardRow.css'
+import type { TourId } from '../../../config/tourSteps'
+import PageTour from '../../tour/PageTour'
 
 /*============================================================================*\
   GameShell — "ห้องเล่นเควสเต็มกรอบเขียว"   [แทนที่การ์ดเล็กกลางจอแบบเดิม]
@@ -133,11 +135,12 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
   return (
     <div className={`game-shell game-shell--${quest.code}`} style={{ '--game-accent': accent, '--game-accent-bg': accentBg } as React.CSSProperties}>
       <div className="game-shell__scenery" aria-hidden="true" />
+      <PageTour tourId={`quest:${quest.code}` as TourId} enabled={stage === 'playing'} />
 
       {/* [แก้ตามที่ระบุ] ทุกเควสใช้ป้ายชื่อเควสลอยกึ่งกลางด้านบนแบบกระดานจัดอันดับ (เหมือนป้ายหน้าเควส)
           แทนแถบหัวเต็มความกว้างแบบเดิม — ปุ่มปิดลอยมุมขวาบน */}
       {/* [แก้ตามที่ระบุ] ฟื้นฟูหน้าดิน / คลิปกล่อมนอน → ป้ายโทนฟ้า ตัวหนังสือสีน้ำเงิน */}
-      <div className={`game-shell__pill-header lb-banner top-center-pill${quest.code === 'phys-soil-restoration' ? ' lb-banner--sky' : ''}`}>
+      <div data-tour="quest-title" className={`game-shell__pill-header lb-banner top-center-pill${quest.code === 'phys-soil-restoration' ? ' lb-banner--sky' : ''}`}>
         {/* [แก้ตามที่ระบุ] ใช้รูปของเควสนั้นแทนอีโมจิ (ไม่มีรูป เช่น ป่าแห่งสิบปี → อีโมจิเดิม) */}
         <span className="game-shell__pill-icon" aria-hidden="true">
           {QUEST_ICONS[quest.code] ? <img src={QUEST_ICONS[quest.code]} alt="" className="game-shell__pill-icon-img" /> : quest.icon}
@@ -146,6 +149,7 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
       </div>
       <button
         className="game-shell__close game-shell__close--floating"
+        data-tour="quest-close"
         onClick={requestClose}
         title="ปิด"
         aria-label={`ปิดเควส ${quest.titleTh}`}
@@ -162,7 +166,7 @@ export default function GameShell({ quest, accent, accentBg, onComplete, onClose
             </div>
           )}
 
-          <div className="game-shell__stage">
+          <div className="game-shell__stage" data-tour="quest-stage">
             {children({ finish, accent, accentBg, strictMode: settings.strictMode, skip, exit: requestClose, finishAndClose })}
           </div>
         </div>

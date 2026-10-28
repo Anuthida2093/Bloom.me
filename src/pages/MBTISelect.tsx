@@ -6,6 +6,7 @@ import MiniTree from '../components/tree/MiniTree'
 import SceneBackground from '../components/layout/SceneBackground'
 import { BADGE_ICONS } from '../config/iconAssets'
 import { speciesOf } from '../components/tree/procedural/species'
+import PageTour from '../components/tour/PageTour'
 
 const MBTI_ORDER: MbtiType[] = [
   'INTJ', 'INTP', 'ENTJ', 'ENTP',
@@ -37,6 +38,7 @@ export default function MBTISelect() {
   return (
     <div style={{ minHeight: '100vh', position: 'relative', padding: '48px 20px', overflow: 'hidden' }}>
       <SceneBackground />
+      <PageTour tourId="mbti" enabled={!selected} />
 
       {/* [แก้ตามที่ระบุ] ปุ่มกลับ มุมซ้ายบน — ย้อนกลับหน้าก่อนหน้า (ไม่มีประวัติ = กลับหน้าหลัก) · แสดงเฉพาะแล็ปท็อป */}
       <button
@@ -59,6 +61,7 @@ export default function MBTISelect() {
         {/* ลิงก์ทำแบบทดสอบฟรีสำหรับคนที่ยังไม่รู้ MBTI ตัวเอง — เปิดแท็บใหม่ ไม่ทิ้งหน้าเลือก */}
         <p className="mbti-select-fade-in" style={{ fontSize: 13, marginBottom: 28, animationDelay: '120ms' }}>
           <a
+            data-tour="mbti-test-link"
             href="https://www.16personalities.com/"
             target="_blank"
             rel="noopener noreferrer"
@@ -76,6 +79,7 @@ export default function MBTISelect() {
             return (
               <button
                 key={mbti}
+                data-tour={mbti === MBTI_ORDER[0] ? 'mbti-card' : undefined}
                 type="button"
                 onClick={() => handleSelect(mbti)}
                 disabled={!!selected}

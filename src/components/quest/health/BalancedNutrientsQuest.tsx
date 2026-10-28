@@ -14,6 +14,7 @@ import '../../leaderboard/leaderboardRow.css'
 import './BalancedNutrientsQuest.css'
 import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
 import { computeCalorieTarget, loadMeals, saveMeals, totalCalories, type MealLog } from '../../../utils/nutrition'
+import PageTour from '../../tour/PageTour'
 
 const QUEST_CODE = 'phys-balanced-nutrients'
 interface BalancedNutrientsConfig {
@@ -245,7 +246,8 @@ export default function BalancedNutrientsQuest({ onComplete, onClose }: Balanced
   return (
     <div className="balanced-nutrients">
       {/* [แก้ตามที่ระบุ] เปิดหน้าเลือกเมนูอยู่ → มีกากบาทแค่บนป็อปอัพ (ซ่อนกากบาทของหน้าเควสด้านหลัง) */}
-      {!pendingPhoto && <button onClick={onClose} title="ปิด" className="balanced-nutrients__close" aria-label="ปิดเควสแคลอรี่ตาม BMI"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>}
+      <PageTour tourId="quest:phys-balanced-nutrients" />
+      {!pendingPhoto && <button onClick={onClose} title="ปิด" className="balanced-nutrients__close" data-tour="quest-close" aria-label="ปิดเควสแคลอรี่ตาม BMI"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>}
 
       {/* [แก้ตามที่ระบุ] ป้ายชื่อเควสลอยกึ่งกลางด้านบนแบบกระดานจัดอันดับ เหมือนเควสอื่น (GameShell) */}
       {!cameraOpen && !pendingPhoto && (

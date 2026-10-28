@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { appStorage } from './testerSession'
 
 /*============================================================================*\
   savedPosts.ts — [ใหม่ตามที่ระบุ] "บันทึกโพสต์" (ไอคอนบุ๊กมาร์กขวาสุดของแถวไอคอน แบบ IG)
@@ -11,7 +12,7 @@ const CHANGED = 'bloom:saved-posts-changed'
 
 function load(userId: string): string[] {
   try {
-    const raw = localStorage.getItem(KEY(userId))
+    const raw = appStorage.getItem(KEY(userId))
     return raw ? (JSON.parse(raw) as string[]) : []
   } catch { return [] }
 }
@@ -40,7 +41,7 @@ export function useSavedPost(userId: string, postId: string): [boolean, () => vo
   const toggle = useCallback(() => {
     const list = load(userId)
     const next = list.includes(postId) ? list.filter((id) => id !== postId) : [postId, ...list]
-    try { localStorage.setItem(KEY(userId), JSON.stringify(next)) } catch { /* storage ปิด — สลับแค่บนจอ */ }
+    try { appStorage.setItem(KEY(userId), JSON.stringify(next)) } catch { /* storage ปิด — สลับแค่บนจอ */ }
     setSaved(next.includes(postId))
     window.dispatchEvent(new CustomEvent(CHANGED))
   }, [userId, postId])

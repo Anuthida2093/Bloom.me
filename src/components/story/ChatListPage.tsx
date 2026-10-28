@@ -82,6 +82,8 @@ export default function ChatListPage({ onBack, onOpenChat }: ChatListPageProps) 
               <button key={p.id} className="story-chat-new__item" onClick={() => onOpenChat(p.id, p.username)}>
                 <div className="story-avatar">{p.username.trim().charAt(0).toUpperCase()}</div>
                 <span>{p.username}</span>
+                {/* เพื่อนที่รดน้ำให้กันแล้วแต่ยังไม่เคยแชท — โชว์หยดน้ำ+จำนวนวันใต้ชื่อด้วย */}
+                <WaterStreakChip friendId={p.id} />
               </button>
             ))}
           </div>

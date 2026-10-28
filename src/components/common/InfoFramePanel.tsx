@@ -12,6 +12,8 @@ interface InfoFramePanelProps {
   onClose: () => void
   children: ReactNode
   className?: string
+  /** จุดไฮไลท์ของทัวร์สอนใช้งาน (ดู config/tourSteps.ts) */
+  tourTarget?: string
 }
 
 /**
@@ -21,12 +23,12 @@ interface InfoFramePanelProps {
  * สว่าง = เขียวอ่อน/ตัวหนังสือดำ, มืด = เขียวเข้ม/ตัวหนังสือขาวทั้งหมด (ดู TreeOfLife.css)
  * จอกว้าง: อยู่ในคอลัมน์ขวา / จอเล็ก ≤768px: เต็มจอแบบหน้าตั้งค่า (portal ไป body ใต้แถบเมนูล่าง)
  */
-export default function InfoFramePanel({ banner, onClose, children, className = '' }: InfoFramePanelProps) {
+export default function InfoFramePanel({ banner, onClose, children, className = '', tourTarget }: InfoFramePanelProps) {
   const fullscreen = useMediaQuery('(max-width: 768px)')
   const { t } = useLanguage()
 
   const panel = (
-    <div className={`tree-of-life__tooltip tree-info-panel lb-frame ${className}`} onClick={(e) => e.stopPropagation()}>
+    <div className={`tree-of-life__tooltip tree-info-panel lb-frame ${className}`} data-tour={tourTarget} onClick={(e) => e.stopPropagation()}>
       <div className="lb-frame__banner">{banner}</div>
       <button className="tree-of-life__tooltip-close" title={t('common.close')} aria-label={t('common.close')} onClick={onClose}>
         <img src={BADGE_ICONS.close} className="icon-img" alt="" />

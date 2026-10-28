@@ -8,6 +8,7 @@ import './IncineratorPage.css'
 import '../../leaderboard/leaderboardRow.css'
 import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
 import { posterOf } from '../../../utils/videoPoster'
+import PageTour from '../../tour/PageTour'
 
 type Stage = 'ask' | 'write' | 'reading' | 'crumpling' | 'drag' | 'burning' | 'done'
 
@@ -223,7 +224,8 @@ export default function IncineratorPage({ onComplete, onFail, onClose }: Inciner
   return (
     <div className="incinerator-frame">
       <div className="incinerator-frame__ambient-bg" />
-      <button onClick={requestClose} title="ปิด" className="incinerator-frame__close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
+      <PageTour tourId="quest:ment-cognitive-incinerator" />
+      <button onClick={requestClose} title="ปิด" className="incinerator-frame__close" data-tour="quest-close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       <AnimatePresence mode="wait">
         {stage === 'ask' && (

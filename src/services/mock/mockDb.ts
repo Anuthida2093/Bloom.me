@@ -13,6 +13,7 @@ import type { JourneyRecord } from '../../types.journey'
 import type { StepChestReward } from '../../config/stepChest'
 import type { BrainDumpRecord } from '../../types.mental'
 import { MOCK_USER_PROFILE } from './mockData'
+import { appStorage } from '../../utils/testerSession'
 
 /*============================================================================*\
   mockDb.ts — [ไฟล์ใหม่] ข้อมูลจำลองสำหรับโหมด VITE_API_MODE=mock
@@ -302,7 +303,9 @@ export function switchActiveAccount(
   accountId: string,
   userSeed: Partial<UserData> = {},
 ): UserData {
-  if (db.activeAccountId && db.activeAccountId !== accountId) {
+  // [แก้บั๊ก] เซฟมิเรอร์เข้า profiles ทุกครั้ง รวมกรณีล็อกอินบัญชีเดิมซ้ำ — เดิมข้ามกรณีนี้
+  // แล้วไปโหลดสแนปช็อตเก่าตอนสมัคร/ล็อกอินครั้งก่อนทับ ความคืบหน้าหลังจากนั้นหายหมด
+  if (db.activeAccountId) {
     db.profiles[db.activeAccountId] = snapshotActiveProfile(db)
   }
   const existing = db.profiles[accountId]
@@ -319,7 +322,7 @@ export function switchActiveAccount(
 
 function read(): MockDb {
   try {
-    const raw = window.localStorage.getItem(STORE_KEY)
+    const raw = appStorage.getItem(STORE_KEY)
     if (!raw) return structuredClone(EMPTY_DB)
     const db = { ...structuredClone(EMPTY_DB), ...(JSON.parse(raw) as Partial<MockDb>) }
     // [ใหม่] db.user จาก JSON.parse (ถ้ามี) แทนที่ EMPTY_DB.user ทั้งก้อนแบบ shallow (ไม่ merge
@@ -333,7 +336,7 @@ function read(): MockDb {
 }
 
 function write(db: MockDb) {
-  try { window.localStorage.setItem(STORE_KEY, JSON.stringify(db)) } catch { /* noop */ }
+  try { appStorage.setItem(STORE_KEY, JSON.stringify(db)) } catch { /* noop */ }
 }
 
 /** อ่านสำเนาปัจจุบัน (อ่านอย่างเดียว ห้ามแก้ object ที่คืนไปตรงๆ) */
@@ -350,5 +353,5 @@ export function updateDb(mutator: (db: MockDb) => void): MockDb {
 }
 
 export function resetDb() {
-  try { window.localStorage.removeItem(STORE_KEY) } catch { /* noop */ }
+  try { appStorage.removeItem(STORE_KEY) } catch { /* noop */ }
 }
