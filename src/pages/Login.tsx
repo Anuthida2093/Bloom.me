@@ -10,6 +10,7 @@ import {
 } from '../components/auth/authStyles'
 import { ApiError } from '../services/http'
 import { BADGE_ICONS } from '../config/iconAssets'
+import { TESTER_EMAIL, TESTER_PASSWORD } from '../utils/testerSession'
 
 /**
  * Login — หน้ากรอกเข้าสู่ระบบ (route "/login")
@@ -39,8 +40,9 @@ const LOCKOUT_MS = 3000
 export default function Login() {
   const navigate = useNavigate()
   const { loginWithUsername } = useAppContext()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+  // [ช่วงทดสอบ UI] กรอกบัญชีทดสอบไว้ให้ — กด "เข้าสู่ระบบ" ได้ทันที (ข้อมูลแยกต่อแท็บ ดู utils/testerSession.ts)
+  const [username, setUsername] = useState(TESTER_EMAIL)
+  const [password, setPassword] = useState(TESTER_PASSWORD)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
@@ -52,9 +54,10 @@ export default function Login() {
     setErrorMessage(null)
     setIsSubmitting(true)
     try {
-      await loginWithUsername(username, password)
+      const user = await loginWithUsername(username, password)
       failedAttempts.current = 0
-      navigate('/dashboard')
+      // ยังไม่เคยเลือก MBTI (เช่น บัญชีทดสอบที่เพิ่งเริ่มในแท็บนี้) → ต้องเลือกก่อนถึงจะมีต้นไม้
+      navigate(user.mbtiType ? '/dashboard' : '/mbti')
     } catch (err) {
       failedAttempts.current += 1
       setErrorMessage(err instanceof ApiError ? err.userMessage : 'เข้าสู่ระบบไม่สำเร็จ ลองอีกครั้ง')
@@ -74,13 +77,14 @@ export default function Login() {
     <AuthLayout title="เข้าสู่ระบบ" subtitle="ยินดีต้อนรับกลับมา 🌱" logoFallback="🔑" maxWidth={400} videoSrc={VIDEO_SRC} footer={<AppFeaturesFooter />}>
       <form className="auth-card" onSubmit={handleSubmit} style={{ ...authCardStyle, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <label style={authLabelStyle}>
-          ชื่อผู้ใช้
+          ชื่อผู้ใช้หรืออีเมล
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             onFocus={handleAuthFieldFocus}
             onBlur={handleAuthFieldBlur}
-            placeholder="ชื่อผู้ใช้ของคุณ"
+            placeholder="ชื่อผู้ใช้หรืออีเมลของคุณ"
+            autoComplete="username"
             required
             style={authFieldStyle}
           />

@@ -12,6 +12,7 @@ import {
 import type { PendingScreening, ScreeningAnswer } from '../../../types.mental'
 import './ScreeningPage.css'
 import { BADGE_ICONS } from '../../../config/iconAssets'
+import PageTour from '../../tour/PageTour'
 
 const C_1 = '#9B8FD8'
 
@@ -83,6 +84,7 @@ export default function ScreeningPage({ pending, onFinished, onOpenSafetyNet, on
   return (
     <div className="screening" style={{ '--risk-accent': stage === 'result' ? plan.accent: C_1 } as React.CSSProperties}>
       <div className="screening__glow" aria-hidden="true" />
+      <PageTour tourId="screening" />
 
       {stage !== 'result' && (
         <button className="screening__close" onClick={onDismiss} title="ปิด"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>

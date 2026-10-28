@@ -1,4 +1,4 @@
-import { http, API_MODE, mockDelay } from '../http'
+import { http, isMockMode, mockDelay } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import type { MoodEntryData, MoodCategory, MoodTypeValue } from '../../types'
 import type { MoodColorCode } from '../../types.mental'
@@ -23,14 +23,14 @@ export interface CreateMoodPayload {
 }
 
 export async function getMoodEntries(): Promise<MoodEntryData[]> {
-  if (API_MODE === 'mock') { await mockDelay(120); return getDb().moodEntries }
+  if (isMockMode()) { await mockDelay(120); return getDb().moodEntries }
   // backend: GET /api/mood/me (แบ่งหน้า ใหม่สุดก่อน)
   const res = await http.get<Paginated<MoodEntryData>>(`/mood/me?pageSize=${MAX_PAGE_SIZE}`)
   return res.data
 }
 
 export async function createMoodEntry(payload: CreateMoodPayload): Promise<MoodEntryData> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     const entry: MoodEntryData = {
       id: `local-${Date.now()}`,

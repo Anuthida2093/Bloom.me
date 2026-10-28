@@ -1,4 +1,4 @@
-import { http, API_MODE } from '../http'
+import { http, isMockMode } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import { MOCK_LEADERBOARD_PLAYERS } from '../../config/leaderboardData'
 import { ALL_QUESTS } from '../../config/questCatalog'
@@ -43,7 +43,7 @@ export interface ProgressEvent {
 }
 
 export async function getRecentProgressEvents(since: string | null): Promise<ProgressEvent[]> {
-  if (API_MODE === 'mock') return mockRecentEvents()
+  if (isMockMode()) return mockRecentEvents()
   const query = since ? `?since=${encodeURIComponent(since)}` : ''
   return http.get<ProgressEvent[]>(`/activity/recent${query}`)
 }

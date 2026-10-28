@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { appStorage } from './testerSession'
 
 /*============================================================================*\
   chatStore.ts — [ใหม่ตามที่ระบุ] แชทกับเพื่อนในหน้าสตอรี่ (รวมถึงโพสต์ที่ "แชร์ให้เพื่อน")
@@ -32,7 +33,7 @@ let cache: ChatState = {}
 const keyOf = (uid: string) => `bloom.chat.${uid || 'guest'}`
 
 function load(uid: string): ChatState {
-  try { return JSON.parse(localStorage.getItem(keyOf(uid)) ?? '{}') as ChatState } catch { return {} }
+  try { return JSON.parse(appStorage.getItem(keyOf(uid)) ?? '{}') as ChatState } catch { return {} }
 }
 
 function ensureUser(uid: string) {
@@ -40,7 +41,7 @@ function ensureUser(uid: string) {
 }
 
 function save() {
-  try { localStorage.setItem(keyOf(currentUser), JSON.stringify(cache)) } catch { /* storage เต็ม/ปิดอยู่ — ยังใช้ได้ในรอบนี้ */ }
+  try { appStorage.setItem(keyOf(currentUser), JSON.stringify(cache)) } catch { /* storage เต็ม/ปิดอยู่ — ยังใช้ได้ในรอบนี้ */ }
   listeners.forEach((l) => l())
 }
 

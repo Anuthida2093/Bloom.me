@@ -54,7 +54,8 @@ interface UserContextValue {
   setMbtiType: (mbti: MbtiType) => void
   setLoggedIn: (loggedIn: boolean, guest: boolean) => void
   /** คืน Promise เพื่อให้หน้า Login จับ error ได้เอง (เช่น รหัสผ่านผิด) แล้วโชว์ข้อความใต้ฟอร์ม */
-  loginWithUsername: (username: string, password: string) => Promise<void>
+  /** ช่อง username รับได้ทั้งชื่อผู้ใช้และอีเมล — คืนโปรไฟล์ให้หน้า Login ตัดสินว่าต้องไปเลือก MBTI ก่อนไหม */
+  loginWithUsername: (username: string, password: string) => Promise<UserData>
   /** คืน Promise เพื่อให้หน้า Register จับ error ได้เอง (เช่น อีเมลซ้ำ) แล้วโชว์ข้อความใต้ฟอร์ม */
   registerUser: (data: { email: string; username: string; password: string; birthDate: string; gender: Gender; height: number; weight: number }) => Promise<void>
   /** [เพิ่มรอบนี้ — ข้อ 4] เปลี่ยนรหัสผ่านจากหน้าตั้งค่า ต้องกรอกรหัสเดิมให้ถูกก่อน */
@@ -221,7 +222,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const setMbtiType = useCallback((mbti: MbtiType) => { mbtiMutation.mutate(mbti) }, [mbtiMutation])
   const loginWithUsername = useCallback(
-    (username: string, password: string) => loginMutation.mutateAsync({ username, password }).then(() => {}),
+    (username: string, password: string) => loginMutation.mutateAsync({ username, password }),
     [loginMutation])
   const registerUser = useCallback(
     (data: { email: string; username: string; password: string; birthDate: string; gender: Gender; height: number; weight: number }) =>

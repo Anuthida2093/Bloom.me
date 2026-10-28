@@ -1,4 +1,4 @@
-import { http, API_MODE, mockDelay } from '../http'
+import { http, isMockMode, mockDelay } from '../http'
 import { MOCK_LEADERBOARD_PLAYERS, type LeaderboardPlayer, type RankCategory } from '../../config/leaderboardData'
 import type { MbtiType } from '../../types'
 
@@ -22,7 +22,7 @@ const CATEGORY_TO_TYPE: Record<RankCategory, string> = {
 const FALLBACK_MBTI: MbtiType = 'INFP'
 
 export async function getLeaderboard(category: RankCategory): Promise<LeaderboardPlayer[]> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay(100)
     return MOCK_LEADERBOARD_PLAYERS
   }

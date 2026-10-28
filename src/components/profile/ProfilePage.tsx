@@ -34,6 +34,7 @@ import DoubleCardTile from './DoubleCardTile'
 import CategoryFilter from '../shop/CategoryFilter'
 import './ProfileTokens.css'
 import HealthSummary from './HealthSummary'
+import PageTour from '../tour/PageTour'
 
 /*============================================================================*\
   ProfilePage — [ไฟล์ใหม่] หน้าโปรไฟล์เต็มจอ เปิดจากปุ่ม "โปรไฟล์" ใน ActionMenuBar
@@ -220,9 +221,11 @@ export default function ProfilePage({
   return (
     // [แก้ตามที่ระบุ] ทั้งหน้าใช้ฟอนต์เดียวกับหน้า Welcome/กระดานจัดอันดับ (--font-display)
     <div className="profile-page" style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--bg)', overflowY: 'auto', fontFamily: 'var(--font-display)' }}>
+      <PageTour tourId="profile" />
       <button
         onClick={onClose}
         title="ปิด"
+        data-tour="quest-close"
         style={{
           position: 'fixed', top: 14, right: 14, zIndex: 20, width: 44, height: 44, borderRadius: 99,
           border: 'none', background: 'var(--bg-card)', boxShadow: 'var(--sh-card)', color: 'var(--text)',
@@ -245,7 +248,7 @@ export default function ProfilePage({
         <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
 
           {/* ═══ โซนซ้าย: คลังไอเทม ═══ */}
-          <div className="card profile-card--inventory" style={{ padding: 22, maxHeight: 640, overflowY: 'auto' }}>
+          <div className="card profile-card--inventory" data-tour="profile-inventory" style={{ padding: 22, maxHeight: 640, overflowY: 'auto' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-xl)', color: 'var(--heading-accent)', marginBottom: 4 }}>{t('profile.inventory')}</div>
             <p className="profile-section-hint">กดไอเทมเพื่อวางบนต้นไม้ กดซ้ำเพื่อถอด</p>
 

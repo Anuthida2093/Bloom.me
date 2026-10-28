@@ -1,3 +1,4 @@
+import { appStorage } from './testerSession'
 /*============================================================================*\
   postitArchive.ts — [ใหม่ตามที่ระบุ] โพสอิทที่ผู้ใช้กด "เก็บเข้าประวัติ" (เอาออกจากต้นไม้)
   ────────────────────────────────────────────────────────────────────────────
@@ -20,7 +21,7 @@ const keyOf = (userId: string) => `bloom.postitArchive.${userId || 'guest'}`
 
 export function loadPostItArchive(userId: string): ArchivedPostIt[] {
   try {
-    const raw = JSON.parse(localStorage.getItem(keyOf(userId)) ?? '[]') as ArchivedPostIt[]
+    const raw = JSON.parse(appStorage.getItem(keyOf(userId)) ?? '[]') as ArchivedPostIt[]
     return Array.isArray(raw) ? raw : []
   } catch { return [] }
 }
@@ -28,6 +29,6 @@ export function loadPostItArchive(userId: string): ArchivedPostIt[] {
 export function addToPostItArchive(userId: string, item: ArchivedPostIt): void {
   try {
     const next = [item, ...loadPostItArchive(userId).filter((p) => p.id !== item.id)].slice(0, 500)
-    localStorage.setItem(keyOf(userId), JSON.stringify(next))
+    appStorage.setItem(keyOf(userId), JSON.stringify(next))
   } catch { /* พื้นที่เต็ม/ปิดอยู่ */ }
 }

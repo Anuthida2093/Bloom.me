@@ -92,6 +92,8 @@ export const th = {
   'stats.level': 'เลเวล',
   'stats.tree': 'ต้นไม้',
   'stats.moodTitle': 'เช็คอินอารมณ์',
+  'stats.wateredToday': 'วันนี้ใครรดน้ำให้คุณ',
+  'stats.wateredNone': 'ยังไม่มีใครรดน้ำให้วันนี้',
   'stats.moodSub': 'รดน้ำต้นไม้ประจำวัน',
   'checkin.banner': 'เช็คอินอารมณ์รายวัน',
   'checkin.greeting': 'สวัสดีตอนเช้า!',

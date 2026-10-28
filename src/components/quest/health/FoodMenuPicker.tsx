@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { FOOD_ITEMS, FOOD_CATEGORY_LABEL, matchesFood, type FoodCategory, type FoodItem } from '../../../config/foodCalories'
 import { BADGE_ICONS } from '../../../config/iconAssets'
 import type { MealItem } from '../../../utils/nutrition'
+import { appStorage } from '../../../utils/testerSession'
 import '../../leaderboard/leaderboardRow.css'
 
 /*============================================================================*\
@@ -44,10 +45,10 @@ const normalize = (t: string) => t.toLowerCase().replace(/\s+/g, '')
 const fmtQty = (q: number) => (Number.isInteger(q) ? String(q) : q.toFixed(1))
 
 function readJson<T>(key: string, fallback: T): T {
-  try { return (JSON.parse(localStorage.getItem(key) ?? 'null') as T) ?? fallback } catch { return fallback }
+  try { return (JSON.parse(appStorage.getItem(key) ?? 'null') as T) ?? fallback } catch { return fallback }
 }
 function writeJson(key: string, value: unknown): void {
-  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* พื้นที่เต็ม/ปิดอยู่ */ }
+  try { appStorage.setItem(key, JSON.stringify(value)) } catch { /* พื้นที่เต็ม/ปิดอยู่ */ }
 }
 
 export default function FoodMenuPicker({ photo, userId, onConfirm, onBack }: FoodMenuPickerProps) {

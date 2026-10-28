@@ -8,6 +8,7 @@ import BreathingVisual, { type BreathingVisualMode } from '../shared/BreathingVi
 import type { QuestPlayPayload } from '../../../types.mental'
 import './MindfulAnchorPage.css'
 import { BADGE_ICONS, QUEST_ICONS } from '../../../config/iconAssets'
+import PageTour from '../../tour/PageTour'
 
 const C_1 = '#7FE7D9'
 const C_2 = 'rgba(127,231,217,.55)'
@@ -169,7 +170,8 @@ export default function MindfulAnchorPage({ onComplete, onClose }: MindfulAnchor
         ))}
       </div>
 
-      <button onClick={requestClose} className="mindful-anchor__close" title="ปิด" aria-label="ปิดเควสทอดสมอใจ"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
+      <PageTour tourId="quest:ment-mindful-anchor" />
+      <button onClick={requestClose} className="mindful-anchor__close" data-tour="quest-close" title="ปิด" aria-label="ปิดเควสทอดสมอใจ"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       {/* ── ฉากที่ 1: เกริ่นนำ อธิบายวิธีเล่นและทฤษฎี ── */}
       {stage === 'intro' && (

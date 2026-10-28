@@ -15,6 +15,7 @@ export function useFriendWater(friendId: string | null) {
     mutationFn: () => waterFriend(friendId!),
     onSuccess: (result) => {
       queryClient.setQueryData(queryKeys.friendWater(friendId!), result.summary)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wateredMeToday })
       // ได้การ์ดแลกซื้อ (ครบหลักร้อยวัน) → กระเป๋าการ์ดเปลี่ยน
       if (result.rewardCardItemCode) void queryClient.invalidateQueries({ queryKey: queryKeys.progression })
     },

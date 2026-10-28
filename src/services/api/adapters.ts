@@ -1,5 +1,6 @@
 import { ApiError } from '../http'
 import { DEFAULT_USER_DATA, type ActivityItem, type Gender, type InventoryItem, type MbtiType, type PostCommentData, type PostData, type QuestLogEntry, type UserData } from '../../types'
+import { appStorage } from '../../utils/testerSession'
 
 /*============================================================================*\
   adapters.ts — แปลง response ของ backend จริง (repo bloom-me-project, Express + Prisma)
@@ -44,7 +45,7 @@ export function getLocalExtras(userId: string): LocalUserExtras {
     isProfilePrivate: DEFAULT_USER_DATA.isProfilePrivate,
   }
   try {
-    const raw = window.localStorage.getItem(EXTRAS_KEY(userId))
+    const raw = appStorage.getItem(EXTRAS_KEY(userId))
     return raw ? { ...fallback, ...(JSON.parse(raw) as Partial<LocalUserExtras>) } : fallback
   } catch {
     return fallback
@@ -53,7 +54,7 @@ export function getLocalExtras(userId: string): LocalUserExtras {
 
 export function setLocalExtras(userId: string, patch: Partial<LocalUserExtras>) {
   try {
-    window.localStorage.setItem(EXTRAS_KEY(userId), JSON.stringify({ ...getLocalExtras(userId), ...patch }))
+    appStorage.setItem(EXTRAS_KEY(userId), JSON.stringify({ ...getLocalExtras(userId), ...patch }))
   } catch { /* storage ปิดอยู่ — ค่าเสริมหายเมื่อรีเฟรช ไม่กระทบข้อมูลหลัก */ }
 }
 

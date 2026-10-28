@@ -1,9 +1,13 @@
-import { http, API_MODE, ApiError, mockDelay, setAuthToken } from '../http'
+import { http, isMockMode, ApiError, mockDelay, setAuthToken } from '../http'
 import { getDb, updateDb, resetDb, switchActiveAccount } from '../mock/mockDb'
 import { DEFAULT_USER_DATA, type UserData, type MbtiType, type Gender } from '../../types'
 import { computeBmi, computeBodyType } from '../../utils/bmi'
 import { hashPasswordMock, verifyPasswordMock, generateMockResetToken } from '../../utils/mockAuth'
 import { setLocalExtras, toProfilePatchBody, toUserData } from './adapters'
+import {
+  TESTER_ACCOUNT_ID, TESTER_SEED_FRIEND_ID, TESTER_EMAIL, TESTER_PASSWORD, TESTER_USERNAME, TESTER_REGISTER_DEFAULTS,
+  endTesterSession, isTesterCredentials, isTesterSession, startTesterSession,
+} from '../../utils/testerSession'
 
 /** อายุของโทเคนกู้รหัสผ่านจำลอง — ของจริง backend มักตั้ง 15-60 นาที */
 const RESET_TOKEN_TTL_MS = 30 * 60_000
@@ -12,7 +16,7 @@ const RESET_TOKEN_TTL_MS = 30 * 60_000
   user.api.ts — [ไฟล์ใหม่] ทุกคำขอที่เกี่ยวกับผู้ใช้
   ────────────────────────────────────────────────────────────────────────────
   ทุกฟังก์ชันในไฟล์นี้มีโครงเดียวกันหมด:
-      if (API_MODE === 'mock') { ...ทำกับข้อมูลจำลอง... }
+      if (isMockMode()) { ...ทำกับข้อมูลจำลอง... }
       return http.xxx(...)      ← ของจริง
   ทำให้ตอนสลับไป live รู้ทันทีว่าต้องเช็คอะไรบ้าง และไม่มี logic ซ่อนอยู่ที่อื่น
 \*============================================================================*/
@@ -23,11 +27,45 @@ export interface RegisterPayload {
   birthDate: string; gender: Gender; height: number; weight: number
 }
 
+/** ข้อมูลร่างกายตั้งต้นของบัญชีทดสอบ (ตรงกับค่าที่กรอกไว้ในหน้าสมัคร) */
+function testerBodySeed(): Partial<UserData> {
+  const height = Number(TESTER_REGISTER_DEFAULTS.height)
+  const weight = Number(TESTER_REGISTER_DEFAULTS.weight)
+  const bmi = computeBmi(height, weight)
+  return {
+    birthDate: TESTER_REGISTER_DEFAULTS.birthDate, gender: TESTER_REGISTER_DEFAULTS.gender,
+    height, weight, bmi, bodyType: computeBodyType(bmi),
+  }
+}
+
+/** เข้า tester session — ทำงานกับ mockDb ใน sessionStorage ล้วนๆ ไม่ยิง API และไม่แตะบัญชีจริง
+ *  fresh = เริ่มใหม่หมด (กดสมัคร) / ไม่ fresh = เล่นต่อจากที่ค้างไว้ในแท็บนี้ (กดเข้าสู่ระบบ) */
+async function enterTesterSession(seed: Partial<UserData>, fresh: boolean): Promise<UserData> {
+  startTesterSession() // ต้องมาก่อนทุกอย่าง — appStorage/isMockMode จะสลับไป sessionStorage/mock ทันที
+  await mockDelay()
+  if (fresh) resetDb()
+  const passwordHash = await hashPasswordMock(TESTER_PASSWORD)
+  setAuthToken('tester-token')
+  const db = updateDb((d) => {
+    const hasAccount = d.accounts.some((a) => a.id === TESTER_ACCOUNT_ID)
+    if (!hasAccount) {
+      d.accounts.push({ id: TESTER_ACCOUNT_ID, email: TESTER_EMAIL, username: TESTER_USERNAME, passwordHash, createdAt: new Date().toISOString() })
+    }
+    // บัญชีทดสอบใหม่เริ่มแบบยังไม่มี MBTI เสมอ (ค่ากลางของบัญชีใหม่คือ INFP) → ต้องผ่านหน้าเลือก MBTI ก่อน
+    switchActiveAccount(d, TESTER_ACCOUNT_ID, hasAccount ? {} : { email: TESTER_EMAIL, username: TESTER_USERNAME, mbtiType: null, ...testerBodySeed(), ...seed })
+    if (!hasAccount) d.following = [TESTER_SEED_FRIEND_ID]
+  })
+  return db.user
+}
+
 export async function login(payload: LoginPayload): Promise<UserData> {
-  if (API_MODE === 'mock') {
+  if (isTesterCredentials(payload.username, payload.password)) return enterTesterSession({}, false)
+  endTesterSession() // บัญชีจริงล็อกอินในแท็บที่เคยเป็น tester → ล้างข้อมูลทดสอบ กลับไปใช้ localStorage
+  if (isMockMode()) {
     await mockDelay()
+    // ช่องแรกของหน้า Login รับได้ทั้งชื่อผู้ใช้และอีเมล
     const usernameLower = payload.username.trim().toLowerCase()
-    const account = getDb().accounts.find((a) => a.username.trim().toLowerCase() === usernameLower)
+    const account = getDb().accounts.find((a) => a.username.trim().toLowerCase() === usernameLower || a.email === usernameLower)
     // [ตามที่ระบุ] ข้อความ error เดียวกันไม่ว่าจะพิมพ์ username ผิดหรือรหัสผ่านผิด — มาตรฐาน
     // ความปลอดภัยจริงเพื่อไม่บอกผู้โจมตีว่า "username นี้มีอยู่ในระบบ" ผ่าน error message
     // ที่ต่างกัน (backend จริงต้องทำแบบเดียวกันนี้)
@@ -51,7 +89,15 @@ export async function login(payload: LoginPayload): Promise<UserData> {
 }
 
 export async function register(payload: RegisterPayload): Promise<UserData> {
-  if (API_MODE === 'mock') {
+  if (isTesterCredentials(payload.email, payload.password)) {
+    const bmi = payload.height > 0 && payload.weight > 0 ? computeBmi(payload.height, payload.weight) : null
+    return enterTesterSession({
+      username: payload.username || TESTER_USERNAME, birthDate: payload.birthDate || null, gender: payload.gender,
+      height: payload.height, weight: payload.weight, bmi, bodyType: bmi ? computeBodyType(bmi) : null,
+    }, true)
+  }
+  endTesterSession()
+  if (isMockMode()) {
     await mockDelay()
     const emailLower = payload.email.trim().toLowerCase()
     // [ตามที่ระบุ — ข้อ 1] กันสมัครซ้ำ เทียบแบบ case-insensitive ("A@x.com" ถือว่าซ้ำกับ
@@ -108,7 +154,8 @@ export async function register(payload: RegisterPayload): Promise<UserData> {
 
 export async function logout(): Promise<void> {
   setAuthToken(null)
-  if (API_MODE === 'mock') return
+  if (isTesterSession()) { endTesterSession(); return } // ข้อมูลทดสอบของแท็บนี้ทิ้งทั้งหมด
+  if (isMockMode()) return
   await http.post<void>('/auth/logout')
 }
 
@@ -126,7 +173,7 @@ export interface RequestPasswordResetResult {
 }
 
 export async function requestPasswordReset(email: string): Promise<RequestPasswordResetResult> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     const emailLower = email.trim().toLowerCase()
     const account = getDb().accounts.find((a) => a.email === emailLower)
@@ -147,7 +194,7 @@ export async function requestPasswordReset(email: string): Promise<RequestPasswo
 }
 
 export async function resetPassword(payload: { token: string; newPassword: string }): Promise<void> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     const db = getDb()
     const entry = db.passwordResetTokens.find((t) => t.token === payload.token)
@@ -168,7 +215,7 @@ export async function resetPassword(payload: { token: string; newPassword: strin
 }
 
 export async function changePassword(payload: { currentPassword: string; newPassword: string }): Promise<void> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     const db = getDb()
     const account = db.accounts.find((a) => a.email === db.user.email.trim().toLowerCase())
@@ -190,7 +237,7 @@ export async function changePassword(payload: { currentPassword: string; newPass
  * โหมด live: backend (DELETE /api/users/me) บังคับยืนยันด้วยรหัสผ่านปัจจุบันใน body
  * [แก้บั๊ก] เดิมล้าง token ก่อนยิงคำขอ → คำขอไปโดยไม่มี Authorization ได้ 401 เสมอ — ล้างหลังลบสำเร็จ */
 export async function deleteAccount(password?: string): Promise<void> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     // [แก้ตามที่ระบุ] ต้องยืนยันรหัสผ่านก่อนเสมอ (เหมือน backend จริง) จึงจะถือว่าลบสำเร็จ
     if (!password) throw new ApiError(400, 'กรุณากรอกรหัสผ่านเพื่อยืนยันการลบบัญชี')
     await mockDelay()
@@ -201,6 +248,7 @@ export async function deleteAccount(password?: string): Promise<void> {
     }
     setAuthToken(null)
     resetDb()
+    endTesterSession()
     return
   }
   if (!password) throw new ApiError(400, 'กรุณากรอกรหัสผ่านเพื่อยืนยันการลบบัญชี')
@@ -209,7 +257,7 @@ export async function deleteAccount(password?: string): Promise<void> {
 }
 
 export async function getMe(): Promise<UserData> {
-  if (API_MODE === 'mock') { await mockDelay(120); return getDb().user }
+  if (isMockMode()) { await mockDelay(120); return getDb().user }
   cachedMe = toUserData(await http.get<Record<string, unknown>>('/users/me'))
   return cachedMe
 }
@@ -222,7 +270,7 @@ export async function getCachedMe(): Promise<UserData> {
 }
 
 export async function updateMbti(mbtiType: MbtiType): Promise<UserData> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     return updateDb((d) => { d.user = { ...d.user, mbtiType } }).user
   }
@@ -230,7 +278,7 @@ export async function updateMbti(mbtiType: MbtiType): Promise<UserData> {
 }
 
 export async function updateProfile(patch: Partial<UserData>): Promise<UserData> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     return updateDb((d) => {
       const next = { ...d.user, ...patch }

@@ -1,4 +1,5 @@
 import type { Gender } from '../types'
+import { appStorage } from './testerSession'
 
 /*============================================================================*\
   nutrition.ts — ตัวคำนวณ/ที่เก็บข้อมูลของเควส "แคลอรี่ตาม BMI" ที่ใช้ร่วมกันหลายหน้า
@@ -89,14 +90,14 @@ export function mealsStorageKey(userId: string, date: Date = new Date()): string
 
 export function loadMeals(userId: string, date: Date = new Date()): MealLog[] {
   try {
-    const raw = JSON.parse(localStorage.getItem(mealsStorageKey(userId, date)) ?? '[]') as MealLog[]
+    const raw = JSON.parse(appStorage.getItem(mealsStorageKey(userId, date)) ?? '[]') as MealLog[]
     return Array.isArray(raw) ? raw : []
   } catch { return [] }
 }
 
 export function saveMeals(userId: string, meals: MealLog[], date: Date = new Date()): void {
   try {
-    localStorage.setItem(mealsStorageKey(userId, date), JSON.stringify(meals))
+    appStorage.setItem(mealsStorageKey(userId, date), JSON.stringify(meals))
     window.dispatchEvent(new CustomEvent(MEALS_CHANGED_EVENT))
   } catch { /* พื้นที่เต็ม — ยังใช้ได้ในรอบนี้ */ }
 }

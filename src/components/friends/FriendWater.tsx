@@ -4,6 +4,7 @@ import { BADGE_ICONS } from '../../config/iconAssets'
 import { useFriendWater } from '../../hooks/useFriendWater'
 import type { FriendWaterSummary, WaterStatus } from '../../utils/friendWater'
 import './FriendWater.css'
+import PageTour from '../tour/PageTour'
 
 /*============================================================================*\
   FriendWater — [ใหม่ตามที่ระบุ] รดน้ำต้นไม้ให้เพื่อน (คล้ายระบบเติมไฟ — กติกาที่ utils/friendWater.ts)
@@ -77,7 +78,7 @@ export function WaterDropButton({ summary, friendName, onClick, celebrateKey }: 
   const streak = summary?.streak ?? 0
   const label = `${STATUS_LABEL[status]} · รดน้ำให้ ${friendName} ต่อเนื่อง ${streak} วัน`
   return (
-    <button type="button" className="game-icon-btn fw-button" onClick={onClick} title={label} aria-label={label}>
+    <button type="button" className="game-icon-btn fw-button" data-tour="friend-water" onClick={onClick} title={label} aria-label={label}>
       <span key={celebrateKey} className={`fw-button__drop${celebrateKey ? ' fw-button__drop--celebrate' : ''}`}>
         <WaterDrop status={status} size={38} />
         {celebrateKey > 0 && (
@@ -119,10 +120,13 @@ export function FriendWaterCan({ open, onPour, onDone }: FriendWaterCanProps) {
 
   return (
     <AnimatePresence>
+      {/* ครั้งแรกที่บัวโผล่ บอกให้แตะบัว — รอแอนิเมชันเด้งลงเสร็จก่อนวัดตำแหน่ง */}
+      {open && !pouring && <PageTour key="tour" tourId="friendWaterCan" delayMs={900} />}
       {open && (
         <motion.button
           type="button"
           className={`fw-can${pouring ? ' fw-can--pouring' : ''}`}
+          data-tour="friend-water-can"
           onClick={handleClick}
           aria-label="บัวรดน้ำ — แตะเพื่อรดน้ำให้ต้นไม้ของเพื่อน"
           initial={{ opacity: 0, y: -30, scale: 0.7 }}
@@ -130,7 +134,9 @@ export function FriendWaterCan({ open, onPour, onDone }: FriendWaterCanProps) {
           exit={{ opacity: 0, y: -20, scale: 0.8 }}
           transition={{ type: 'spring', stiffness: 260, damping: 18 }}
         >
+          <span className="fw-can__halo" aria-hidden="true" />
           <img src={BADGE_ICONS.wateringCan} alt="" className="fw-can__img" draggable={false} />
+          {!pouring && <span className="fw-can__hint">แตะเพื่อรดน้ำ</span>}
           {pouring && (
             <span className="fw-can__drops" aria-hidden="true">
               {Array.from({ length: 9 }, (_, i) => (
@@ -175,7 +181,7 @@ export function RecoverWaterPopup({ open, friendName, streak, onRecover, onClose
 export function AddFriendButton({ requested, onClick, friendName }: { requested: boolean; onClick: () => void; friendName: string }) {
   const label = requested ? `ส่งคำขอเป็นเพื่อนถึง ${friendName} แล้ว รอติดตามกลับ` : `เพิ่ม ${friendName} เป็นเพื่อน`
   return (
-    <button type="button" className={`fw-add-friend${requested ? ' fw-add-friend--sent' : ''}`} onClick={onClick} title={label} aria-label={label}>
+    <button type="button" className={`fw-add-friend${requested ? ' fw-add-friend--sent' : ''}`} data-tour="friend-add" onClick={onClick} title={label} aria-label={label}>
       {/* [แก้ตามที่ระบุ] ไอคอนคน+ วาดด้วย SVG ในวงกลม + ป้ายชื่อบรรทัดเดียว (เดิมสระ/วรรณยุกต์ซ้อนกันตอนขึ้นบรรทัดใหม่) */}
       <span className="fw-add-friend__icon" aria-hidden="true">
         {requested ? (
@@ -243,10 +249,10 @@ export function WaterStreakBadge({ friendId, friendName, onWater }: { friendId: 
   )
 }
 
-/** หยดน้ำ+จำนวนวันท้ายแถวรายชื่อแชท — เฉพาะเพื่อนที่เราเคยรดน้ำให้ */
+/** หยดน้ำ+จำนวนวันท้ายแถวรายชื่อแชท — เฉพาะคนที่เคยรดน้ำให้กันแล้ว (ฝ่ายใดฝ่ายหนึ่งก็ได้) */
 export function WaterStreakChip({ friendId }: { friendId: string }) {
   const { summary } = useFriendWater(friendId)
-  if (!summary || summary.myTotal === 0) return null
+  if (!summary || summary.myTotal + summary.theirTotal === 0) return null
   const recover = summary.status === 'broken'
   return (
     <span className={`fw-chip${recover ? ' fw-chip--recover' : ''}`} title={STATUS_LABEL[summary.status]}>

@@ -8,6 +8,7 @@ import FadeInText from '../welcome/FadeInText'
 import { useLanguage } from '../../context/LanguageContext'
 import { EVENING_CHECKIN_START_HOUR, type MoodCheckinStatus } from '../../config/moodCheckinSlots'
 import '../leaderboard/leaderboardRow.css'
+import PageTour from '../tour/PageTour'
 
 const C_1 = '#D8F3DC'
 const C_2 = '#FBF4EC'
@@ -156,6 +157,7 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {}, ch
 
   return (
     <div className="mood-checkin-backdrop">
+      <PageTour tourId="moodCheckin" />
       {/* อิโมจิลอยตัวพื้นหลัง — ตกแต่งเบาๆ ให้บรรยากาศดูมีชีวิตชีวาไม่นิ่งทื่อ */}
       {FLOATING_DECOR.map((d, i) => (
         <span
@@ -209,6 +211,7 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {}, ch
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => { setText(e.target.value); setMood(null); setSubMood(null); setAiResult(null) }}
               placeholder={t('checkin.placeholder')}
               rows={4}
+              data-tour="mood-text"
               className="mood-checkin-textarea"
             />
             <button
@@ -245,7 +248,7 @@ export default function MoodCheckIn({ onSubmit = () => {}, onSkip = () => {}, ch
             <div className="mood-checkin-label">
               {mood ? t('checkin.aiOrPick') : t('checkin.pick')}
             </div>
-            <div className="mood-checkin-mood-grid">
+            <div className="mood-checkin-mood-grid" data-tour="mood-grid">
               {ALL_MOOD_VALUES.map((value) => {
                 const info = MOOD_TYPE_INFO[value]
                 const style = CATEGORY_STYLE[categoryOfMood(value)]

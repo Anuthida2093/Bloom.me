@@ -3,6 +3,7 @@ import { BADGE_ICONS } from '../../config/iconAssets'
 import InfoFramePanel from '../common/InfoFramePanel'
 import FadeInText from '../welcome/FadeInText'
 import { useLanguage } from '../../context/LanguageContext'
+import PageTour from '../tour/PageTour'
 
 interface NotificationPanelProps {
   items: NotificationItem[]
@@ -36,9 +37,11 @@ export default function NotificationPanel({ items, onOpenQuest, onOpenPost, onCl
   return (
     <InfoFramePanel
       className="notification-panel"
+      tourTarget="notification-panel"
       banner={<><img src={BADGE_ICONS.notification} className="icon-img" alt="" /> {t('home.notifications')}</>}
       onClose={onClose}
     >
+      <PageTour tourId="notifications" />
       {items.length === 0 ? (
         <div className="notification-panel__empty">{t('notif.empty')}</div>
       ) : (

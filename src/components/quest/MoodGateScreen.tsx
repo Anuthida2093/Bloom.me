@@ -1,6 +1,7 @@
 import { useEscapeKey } from '../../hooks/useEscapeKey'
 import { BADGE_ICONS } from '../../config/iconAssets'
 import '../leaderboard/leaderboardRow.css'
+import PageTour from '../tour/PageTour'
 
 interface MoodGateScreenProps {
   title: string
@@ -33,6 +34,7 @@ export default function MoodGateScreen({ title, icon, iconImg, onRequestMoodChec
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
       }}
     >
+      <PageTour tourId="moodGate" />
       <button
         onClick={onClose}
         title="ปิด"

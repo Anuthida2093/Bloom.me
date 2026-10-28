@@ -92,6 +92,8 @@ export const en: Record<TranslationKey, string> = {
   'stats.level': 'Level',
   'stats.tree': 'Tree',
   'stats.moodTitle': 'Mood check-in',
+  'stats.wateredToday': 'Watered you today',
+  'stats.wateredNone': 'No one has watered your tree today',
   'stats.moodSub': 'Water your tree today',
   'checkin.banner': 'Daily mood check-in',
   'checkin.greeting': 'Good morning!',

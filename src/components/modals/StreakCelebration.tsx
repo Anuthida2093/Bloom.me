@@ -79,7 +79,7 @@ export default function StreakCelebration({ days, inventoryData = [], onClaim = 
   }
 
   return (
-    <div style={{
+    <div data-tour-block style={{
       position: 'fixed', inset: 0, zIndex: 900,
       background: BG_1,
       backdropFilter: 'blur(8px)',

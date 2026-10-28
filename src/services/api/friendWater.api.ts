@@ -1,10 +1,11 @@
-import { http, API_MODE, ApiError, mockDelay } from '../http'
+import { http, isMockMode, ApiError, mockDelay } from '../http'
 import { getDb, updateDb, emptyProgression, type MockDb } from '../mock/mockDb'
 import { pickRandomExchangeItem } from '../../config/exchangeItems'
 import { bangkokDateString } from '../../utils/progression'
 import {
   emptyFriendWater, pendingWaterReward, summarizeFriendWater, type FriendWaterRecord, type FriendWaterSummary,
 } from '../../utils/friendWater'
+import { MOCK_LEADERBOARD_PLAYERS } from '../../config/leaderboardData'
 
 /*============================================================================*\
   friendWater.api — รดน้ำต้นไม้ให้เพื่อน (ดูกติกาที่ utils/friendWater.ts)
@@ -37,8 +38,15 @@ function recordOf(d: MockDb, friendId: string): FriendWaterRecord {
   return (all[friendId] ??= emptyFriendWater())
 }
 
-/** เพื่อนจำลองรดกลับ: ทุกวันตั้งแต่วันแรกที่เรารด ถึงวันนี้ (วันนี้เฉพาะหลังเรารดแล้ว) */
-function simulateFriend(rec: FriendWaterRecord, friendId: string, now: Date) {
+/** ผู้เล่นจำลองที่ติดตามเราอยู่ (กิจกรรม "เริ่มติดตามคุณ") — คนที่ยังไม่ติดตามกลับจะไม่รดน้ำให้เรา */
+function followsMe(d: MockDb, friendId: string): boolean {
+  return d.activity.some((a) => a.type === 'NEW_FOLLOWER' && a.actorId === friendId)
+}
+
+/** เพื่อนจำลองรดกลับ: ทุกวันตั้งแต่วันแรกที่เรารด ถึงวันนี้ (วันนี้เฉพาะหลังเรารดแล้ว)
+ *  เฉพาะคนที่ติดตามเราอยู่ — เรารดให้คนที่ยังไม่ติดตามกลับได้ (หยดน้ำฟ้าครึ่ง) แต่ยังไม่นับวันต่อเนื่อง */
+function simulateFriend(d: MockDb, rec: FriendWaterRecord, friendId: string, now: Date) {
+  if (!followsMe(d, friendId)) return
   const firstMine = Object.keys(rec.mine).sort()[0]
   if (!firstMine) return
   const today = bangkokDateString(now)
@@ -56,7 +64,7 @@ function simulateFriend(rec: FriendWaterRecord, friendId: string, now: Date) {
 
 /** GET /friends/:friendId/water */
 export async function getFriendWater(friendId: string): Promise<FriendWaterSummary> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay(60)
     const now = new Date()
     let summary!: FriendWaterSummary
@@ -64,7 +72,7 @@ export async function getFriendWater(friendId: string): Promise<FriendWaterSumma
     if (getDb().progression?.friendWater?.[friendId]) {
       updateDb((d) => {
         const rec = recordOf(d, friendId)
-        simulateFriend(rec, friendId, now)
+        simulateFriend(d, rec, friendId, now)
         summary = summarizeFriendWater(friendId, rec, now)
       })
     } else {
@@ -77,7 +85,7 @@ export async function getFriendWater(friendId: string): Promise<FriendWaterSumma
 
 /** POST /friends/:friendId/water — รดน้ำให้เพื่อน (วันละครั้ง) */
 export async function waterFriend(friendId: string): Promise<WaterFriendResult> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     const now = new Date()
     const today = bangkokDateString(now)
@@ -88,7 +96,7 @@ export async function waterFriend(friendId: string): Promise<WaterFriendResult> 
     updateDb((d) => {
       const rec = recordOf(d, friendId)
       rec.mine[today] = now.toISOString()
-      simulateFriend(rec, friendId, now)
+      simulateFriend(d, rec, friendId, now)
       let rewardCardItemCode: string | null = null
       const rewardKey = pendingWaterReward(rec, now)
       if (rewardKey && d.progression) {
@@ -101,4 +109,31 @@ export async function waterFriend(friendId: string): Promise<WaterFriendResult> 
     return result
   }
   return http.post<WaterFriendResult>(`/friends/${encodeURIComponent(friendId)}/water`, {})
+}
+
+/** คนที่รดน้ำให้เราวันนี้ — ใช้ในแผงข้อมูลต้นไม้ */
+export interface WateredMeToday {
+  friendId: string
+  username: string
+  /** เวลาที่รด (ISO) */
+  at: string
+}
+
+/** GET /friends/water/today — วันนี้ใครรดน้ำให้เราบ้าง (ใหม่ล่าสุดก่อน)
+ *  backend ยังไม่มี endpoint นี้ — ข้อเสนอ: คืนแถว friend_waters ของวันนี้ (เวลาไทย) ที่ปลายทางคือเรา + ชื่อผู้รด */
+export async function getWateredMeToday(): Promise<WateredMeToday[]> {
+  if (isMockMode()) {
+    await mockDelay(60)
+    const today = bangkokDateString()
+    const all = getDb().progression?.friendWater ?? {}
+    return Object.entries(all)
+      .filter(([, rec]) => rec.theirs[today])
+      .map(([friendId, rec]) => ({
+        friendId,
+        username: MOCK_LEADERBOARD_PLAYERS.find((p) => p.id === friendId)?.username ?? 'เพื่อน',
+        at: rec.theirs[today],
+      }))
+      .sort((a, b) => b.at.localeCompare(a.at))
+  }
+  return http.get<WateredMeToday[]>('/friends/water/today')
 }

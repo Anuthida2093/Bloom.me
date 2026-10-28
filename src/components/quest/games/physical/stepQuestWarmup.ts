@@ -1,5 +1,6 @@
 import type { JourneyRecord } from '../../../../types.journey'
 import { mapDefById, warmMapArt, warmPickerThumbs } from './mapArtLoader'
+import { appStorage } from '../../../../utils/testerSession'
 
 /*============================================================================*\
   stepQuestWarmup — เตรียมเควสก้าวเพื่อสุขภาพล่วงหน้าก่อนผู้เล่นแตะ
@@ -14,7 +15,7 @@ const SNAPSHOT_KEY = 'bloom.stepJourney.snapshot'
 
 export function readJourneySnapshot(userId: string | null | undefined): JourneyRecord | null {
   try {
-    const raw = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) ?? 'null') as { userId: string; journey: JourneyRecord } | null
+    const raw = JSON.parse(appStorage.getItem(SNAPSHOT_KEY) ?? 'null') as { userId: string; journey: JourneyRecord } | null
     if (!raw || (userId && raw.userId !== userId)) return null
     // ทริปเมื่อวานไม่ใช้วาดก่อน (วันใหม่ต้องเลือกแผนที่ใหม่)
     if (new Date(raw.journey.deadlineAt).getTime() < Date.now() || raw.journey.status !== 'IN_PROGRESS') return null
@@ -26,8 +27,8 @@ export function readJourneySnapshot(userId: string | null | undefined): JourneyR
 
 export function writeJourneySnapshot(userId: string | null | undefined, journey: JourneyRecord | null) {
   try {
-    if (!journey || !userId) localStorage.removeItem(SNAPSHOT_KEY)
-    else localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({ userId, journey }))
+    if (!journey || !userId) appStorage.removeItem(SNAPSHOT_KEY)
+    else appStorage.setItem(SNAPSHOT_KEY, JSON.stringify({ userId, journey }))
   } catch { /* storage ปิดอยู่ */ }
 }
 

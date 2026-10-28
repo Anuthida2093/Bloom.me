@@ -326,7 +326,7 @@ ${lockReason}` }); return }
           {specialQuest ? specialQuest.titleTh : t(`questZone.${activeTab}`)}
         </span>
       </div>
-      <button onClick={onClose} title="ปิด" className="quest-section-close-btn"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
+      <button onClick={onClose} title="ปิด" className="quest-section-close-btn" data-tour="quest-section-close"><img src={BADGE_ICONS.close} className="icon-img" alt="" /></button>
 
       <QuestRewardCelebration data={celebration} onDone={() => setCelebration(null)} />
       <GameAlert open={questNotice !== null} icon={questNotice?.icon} iconImg={questNotice?.iconImg} title={questNotice?.title} message={questNotice?.message ?? ''} onClose={() => setQuestNotice(null)} />

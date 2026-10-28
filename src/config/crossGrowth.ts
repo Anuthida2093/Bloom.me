@@ -1,4 +1,5 @@
 import type { QuestCategory, QuestLogEntry } from '../types'
+import { appStorage } from '../utils/testerSession'
 
 /*============================================================================*\
   crossGrowth — ทั้ง 3 ด้านมีผลต่อกันเล็กน้อย (กันไม่ให้ทำด้านเดียวจนขาดสมดุล)
@@ -38,7 +39,7 @@ export function crossPenalty(daysSinceSourceQuest: number | null): number {
  *  [backend จริง] เซิร์ฟเวอร์ต้องรู้โหมดของผู้ใช้เอง — ดู docs/DB_CHANGES.md ข้อ 10 */
 export function isSeriousMode(): boolean {
   try {
-    const raw = window.localStorage.getItem('bloom:settings')
+    const raw = appStorage.getItem('bloom:settings')
     return raw ? (JSON.parse(raw) as { strictMode?: boolean }).strictMode === true : false
   } catch {
     return false

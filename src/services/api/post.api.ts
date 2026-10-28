@@ -1,8 +1,9 @@
-import { http, API_MODE, mockDelay, ApiError } from '../http'
+import { http, isMockMode, mockDelay, ApiError } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import type { PostData, PostCommentData, MoodTypeValue } from '../../types'
 import { notSupportedYet, toCommentData, toPostData } from './adapters'
 import { getCachedMe } from './user.api'
+import { appStorage } from '../../utils/testerSession'
 
 /** โหมด live: ดึงโพสต์เดียวจากฟีด (backend ยังไม่มี GET /posts/:id) */
 async function fetchFeedPost(postId: string): Promise<PostData> {
@@ -57,7 +58,7 @@ function withRepostDefaults(post: PostData, myUserId: string): PostData {
  *  สตอรี่เป็นสาธารณะ ใครโพสต์ก็เห็นในฟีดหลักได้หมด follow ใช้แค่กับหน้า "เพื่อน" กับการ
  *  แจ้งเตือน (ดู FriendsListPanel.tsx/SocialContext.tsx) ไม่ใช่ตัวกรองฟีดนี้ */
 export async function getFeedPosts(): Promise<PostData[]> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay(150)
     const myUserId = getDb().user.id
     // ใหม่สุดก่อนเสมอ (เหมือนฟีดจริง) — mockDb เก็บเป็น array ที่ unshift ตอนโพสต์ใหม่อยู่แล้ว
@@ -91,24 +92,24 @@ export interface CreatePostPayload {
 const POST_EXTRAS_KEY = 'bloom.postExtras'
 type PostExtras = { imageUrls?: string[]; tags?: string[] }
 function readPostExtras(): Record<string, PostExtras> {
-  try { return JSON.parse(localStorage.getItem(POST_EXTRAS_KEY) ?? '{}') as Record<string, PostExtras> } catch { return {} }
+  try { return JSON.parse(appStorage.getItem(POST_EXTRAS_KEY) ?? '{}') as Record<string, PostExtras> } catch { return {} }
 }
 function rememberPostExtras(postId: string, extras: PostExtras): void {
-  try { localStorage.setItem(POST_EXTRAS_KEY, JSON.stringify({ ...readPostExtras(), [postId]: extras })) } catch { /* storage เต็ม/ปิดอยู่ */ }
+  try { appStorage.setItem(POST_EXTRAS_KEY, JSON.stringify({ ...readPostExtras(), [postId]: extras })) } catch { /* storage เต็ม/ปิดอยู่ */ }
 }
 
 /* ความรู้สึกของโพสต์ (โหมด live) — backend ยังไม่มีคอลัมน์ mood ใน posts จึงเก็บในเครื่อง
    ผูกกับ id โพสต์ ให้คนโพสต์เห็นป้ายความรู้สึกของตัวเอง (เพิ่มคอลัมน์แล้วค่อยส่งขึ้นเซิร์ฟเวอร์แทน) */
 const POST_MOOD_KEY = 'bloom.postMoods'
 function readPostMoods(): Record<string, MoodTypeValue> {
-  try { return JSON.parse(localStorage.getItem(POST_MOOD_KEY) ?? '{}') as Record<string, MoodTypeValue> } catch { return {} }
+  try { return JSON.parse(appStorage.getItem(POST_MOOD_KEY) ?? '{}') as Record<string, MoodTypeValue> } catch { return {} }
 }
 function rememberPostMood(postId: string, mood: MoodTypeValue): void {
-  try { localStorage.setItem(POST_MOOD_KEY, JSON.stringify({ ...readPostMoods(), [postId]: mood })) } catch { /* storage ปิดอยู่ */ }
+  try { appStorage.setItem(POST_MOOD_KEY, JSON.stringify({ ...readPostMoods(), [postId]: mood })) } catch { /* storage ปิดอยู่ */ }
 }
 
 export async function createPost(payload: CreatePostPayload): Promise<PostData> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     const db = getDb()
     const post: PostData = {
@@ -148,7 +149,7 @@ export async function createPost(payload: CreatePostPayload): Promise<PostData> 
 /** [แก้รอบนี้ — ข้อ 10] ต้องเก็บ "ใครกดไลค์" จริง ไม่ใช่แค่ +1/-1 ตัวเลข เพื่อให้กดดู
  *  รายชื่อคนไลค์ได้ — likedBy คือแหล่งความจริง likeCount/likedByMe derive ตามเสมอ */
 export async function toggleLikePost(postId: string): Promise<PostData> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay(120)
     let updated: PostData | undefined
     updateDb((d) => {
@@ -174,7 +175,7 @@ export async function toggleLikePost(postId: string): Promise<PostData> {
  *  [ตัดออกจาก UI เฟสนี้ตามที่ตกลง — ข้อ 12] เก็บฟังก์ชันนี้ไว้ใช้งานได้เต็มรูปแบบเผื่อกลับมา
  *  เปิดใช้อีกเฟสหน้า ไม่มีปุ่มไหนในหน้าจอเรียกใช้แล้วตอนนี้ */
 export async function toggleRepost(postId: string): Promise<PostData> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay(120)
     let updated: PostData | undefined
     updateDb((d) => {
@@ -200,7 +201,7 @@ export interface UpdatePostPayload {
   isAnonymous?: boolean
 }
 export async function updatePost(postId: string, patch: UpdatePostPayload): Promise<PostData> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     let updated: PostData | undefined
     updateDb((d) => {
@@ -224,7 +225,7 @@ export interface AddCommentPayload {
 }
 
 export async function addComment(input: AddCommentPayload): Promise<PostData> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     let updated: PostData | undefined
     updateDb((d) => {
@@ -251,6 +252,6 @@ export async function addComment(input: AddCommentPayload): Promise<PostData> {
 
 /** รายงานโพสต์ไม่เหมาะสม — backend: POST /api/posts/:id/report (กดซ้ำได้ 409) */
 export async function reportPost(postId: string, reason?: string): Promise<void> {
-  if (API_MODE === 'mock') { await mockDelay(120); return }
+  if (isMockMode()) { await mockDelay(120); return }
   await http.post(`/posts/${postId}/report`, reason ? { reason } : {})
 }

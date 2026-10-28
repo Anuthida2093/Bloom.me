@@ -7,6 +7,7 @@
 \*============================================================================*/
 
 import { bangkokDateString } from './progression'
+import { appStorage } from './testerSession'
 
 const KEY = 'bloom.stepJourney.days'
 
@@ -25,15 +26,15 @@ function todayKey(): string {
 
 function read(): JourneyDaysState | null {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = appStorage.getItem(KEY)
     return raw ? (JSON.parse(raw) as JourneyDaysState) : null
   } catch { return null }
 }
 
 function write(state: JourneyDaysState | null): void {
   try {
-    if (state) localStorage.setItem(KEY, JSON.stringify(state))
-    else localStorage.removeItem(KEY)
+    if (state) appStorage.setItem(KEY, JSON.stringify(state))
+    else appStorage.removeItem(KEY)
   } catch { /* storage ปิดอยู่ */ }
 }
 

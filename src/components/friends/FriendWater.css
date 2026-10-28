@@ -261,3 +261,33 @@
   .fw-can__img, .fw-can__drop, .fw-button__drop--celebrate, .fw-sparkle i, .fw-sparkle b, .fw-drop--broken { animation: none; }
   .fw-can__drop { opacity: 0.8; }
 }
+
+/* [แก้ตามที่ระบุ] บัวรดน้ำกลืนไปกับใบไม้ ผู้ใช้ไม่รู้ว่าต้องแตะ → วงแสงด้านหลัง + ป้าย "แตะเพื่อรดน้ำ" */
+.fw-can__halo {
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 252, 230, 0.95) 0%, rgba(190, 235, 255, 0.55) 45%, transparent 70%);
+  animation: fwCanHalo 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+.fw-can__img { position: relative; }
+.fw-can__hint {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  margin-top: 2px;
+  white-space: nowrap;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: #1f4f7a;
+  background: #EAF7FF;
+  border: 2px solid #8FD0F5;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+@keyframes fwCanHalo { 0%, 100% { transform: scale(0.92); opacity: 0.85; } 50% { transform: scale(1.08); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .fw-can__halo { animation: none; } }

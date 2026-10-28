@@ -29,4 +29,6 @@ export const Z_INDEX = {
   cameraFullscreen: 800,
   /** ฉลองครบ streak (สูงสุด ต้องเห็นชัดกว่าทุกอย่าง) */
   celebration: 900,
+  /** ทัวร์สอนใช้งาน (PageTour) — ต้องอยู่เหนือทุกหน้าที่มันชี้ */
+  tour: 1000,
 } as const

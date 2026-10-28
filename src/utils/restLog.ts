@@ -1,3 +1,4 @@
+import { appStorage } from './testerSession'
 /*============================================================================*\
   restLog.ts — เวลาพักผ่อนของ "ผู้พิทักษ์การพักผ่อน" (เก็บในเครื่องแยกตามบัญชี)
   ────────────────────────────────────────────────────────────────────────────
@@ -18,7 +19,7 @@ const MAX_SESSIONS = 200
 
 export function loadRestSessions(userId: string): RestSession[] {
   try {
-    const raw = window.localStorage.getItem(key(userId))
+    const raw = appStorage.getItem(key(userId))
     return raw ? (JSON.parse(raw) as RestSession[]) : []
   } catch { return [] }
 }
@@ -29,7 +30,7 @@ export function startRest(userId: string, minutes: number, now: Date = new Date(
   const list = loadRestSessions(userId)
   if (activeRest(list, now.getTime())) return
   try {
-    window.localStorage.setItem(key(userId), JSON.stringify([...list, { startedAt: now.toISOString(), minutes }].slice(-MAX_SESSIONS)))
+    appStorage.setItem(key(userId), JSON.stringify([...list, { startedAt: now.toISOString(), minutes }].slice(-MAX_SESSIONS)))
     window.dispatchEvent(new CustomEvent(REST_LOG_CHANGED_EVENT))
   } catch { /* storage ปิด */ }
 }

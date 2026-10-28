@@ -1,4 +1,4 @@
-import { http, API_MODE, ApiError, mockDelay } from '../http'
+import { http, isMockMode, ApiError, mockDelay } from '../http'
 import { getDb, updateDb, emptyProgression, type MockDb, type MockProgression } from '../mock/mockDb'
 import type { InventoryItem, UserData } from '../../types'
 import {
@@ -111,7 +111,7 @@ function addCard(p: MockProgression, itemCode: string) {
 
 /** GET /api/progression/me */
 export async function getProgression(): Promise<ProgressionSummary> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay(80)
     let summary!: ProgressionSummary
     updateDb((d) => { summary = summarize(ensure(d)) })
@@ -125,7 +125,7 @@ export async function getProgression(): Promise<ProgressionSummary> {
 export async function recordStepDay(
   date: string, steps: number, goal: number, trip?: { mapId: string; journeyId: string },
 ): Promise<ProgressionSummary> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay(60)
     let summary!: ProgressionSummary
     updateDb((d) => {
@@ -147,7 +147,7 @@ export async function recordStepDay(
 
 /** GET /api/steps/days — วันที่มีบันทึกก้าว (ใหม่สุดก่อน) */
 export async function getStepHistory(): Promise<StepDayRecord[]> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay(60)
     const p = getDb().progression
     if (!p) return []
@@ -195,7 +195,7 @@ export function mockRollLearningGift(d: MockDb, rollKey: string): LearningGift {
 /** POST /api/quests/know-deep-root/bonus — จดจ่อครบ 3 รอบไม่กดข้าม: การ์ด (หลังปลดล็อก) หรือเหรียญโบนัส
  *  rollKey กันสุ่มซ้ำ (วันที่ + รอบการเรียนรู้) */
 export async function claimDeepRootBonus(rollKey: string): Promise<BonusRollResult> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     let result!: BonusRollResult
     updateDb((d) => {
@@ -219,7 +219,7 @@ export async function claimDeepRootBonus(rollKey: string): Promise<BonusRollResu
  *  เปิดซ้ำได้ผลเดิม (alreadyOpened) · error: 400 GOAL_NOT_MET
  *  ข้อยกเว้น: WATER_DROPS — หยดน้ำยังเป็นข้อมูลฝั่งหน้าเว็บเท่านั้น (backend ไม่มี) ผู้เรียกบวกเองเมื่อ !alreadyOpened */
 export async function openStepChest(date: string): Promise<OpenStepChestResult> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     const day = getDb().progression?.stepDays[date]
     if (!day?.goalMet) throw new ApiError(400, 'วันนั้นยังเดินไม่ถึงเป้า', { error: { code: 'GOAL_NOT_MET' } })
@@ -266,7 +266,7 @@ export interface UseSpecialDustResult {
 /** POST /api/progression/special-dust/use — [ใหม่] ใช้ผงพิเศษ 1 ถุง → ต้นไม้ +1-2 EXP (เซิร์ฟเวอร์สุ่ม)
  *  error: 400 NO_SPECIAL_DUST (ไม่มีผงเหลือ) */
 export async function consumeSpecialDust(): Promise<UseSpecialDustResult> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     if ((getDb().progression?.specialDust ?? 0) < 1) {
       throw new ApiError(400, 'ไม่มีผงพิเศษเหลือแล้ว', { error: { code: 'NO_SPECIAL_DUST' } })
@@ -296,7 +296,7 @@ export interface UseDoubleCardResult {
  *  (นับจากเวลาเซิร์ฟเวอร์ตอนกดใช้) · error: 400 NO_DOUBLE_CARD (ไม่มีการ์ด) / 409 DOUBLE_ALREADY_ACTIVE
  *  (ยังมีการ์ดใบก่อนทำงานอยู่ — ไม่ซ้อนเวลา กันเสียการ์ดฟรี) */
 export async function consumeDoubleCard(): Promise<UseDoubleCardResult> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     const p = getDb().progression
     if ((p?.doubleCards ?? 0) < 1) {
@@ -327,7 +327,7 @@ export function mockHasDoubleReward(d: MockDb): boolean {
 export async function exchangeItem(itemCode: string, price: number): Promise<ExchangeResult> {
   const req = EXCHANGE_REQUIREMENTS[itemCode]
   if (!req) throw new ApiError(400, 'ไอเทมนี้ไม่ต้องใช้การ์ดแลกซื้อ')
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     const current = getDb()
     if (current.inventory.some((i) => i.shopItemId === itemCode)) {

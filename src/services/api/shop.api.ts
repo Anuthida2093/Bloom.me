@@ -1,4 +1,4 @@
-import { http, API_MODE, ApiError, mockDelay } from '../http'
+import { http, isMockMode, ApiError, mockDelay } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import type { InventoryItem, UserData } from '../../types'
 import { toInventoryItem } from './adapters'
@@ -21,7 +21,7 @@ export type ShopCatalog = Record<ShopCategoryId, MockShopItem[]>
  *  live: ราคา/สถานะเปิดขายมาจาก backend (จับคู่ด้วย ShopItem.code) — ชื่อไทย/อีโมจิ/ป้ายความหายากยังใช้ของหน้าเว็บ
  *        (backend ไม่มีฟิลด์เหล่านี้) ไอเทมที่ backend ไม่มี code ตรงกันยังแสดงด้วยราคาในชุดจำลอง */
 export async function getShopItems(): Promise<ShopCatalog> {
-  if (API_MODE === 'mock') { await mockDelay(80); return MOCK_SHOP_ITEMS }
+  if (isMockMode()) { await mockDelay(80); return MOCK_SHOP_ITEMS }
   const rows = await http.get<{ code?: string | null; price: number; isActive?: boolean }[]>('/shop')
   const byCode = new Map(rows.filter((r) => r.code).map((r) => [r.code as string, r]))
   const merge = (list: MockShopItem[]) => list
@@ -31,7 +31,7 @@ export async function getShopItems(): Promise<ShopCatalog> {
 }
 
 export async function getInventory(): Promise<InventoryItem[]> {
-  if (API_MODE === 'mock') { await mockDelay(120); return getDb().inventory }
+  if (isMockMode()) { await mockDelay(120); return getDb().inventory }
   const raw = await http.get<Record<string, unknown>[]>('/shop/inventory/me')
   return raw.map(toInventoryItem)
 }
@@ -40,7 +40,7 @@ export async function getInventory(): Promise<InventoryItem[]> {
 export const INSUFFICIENT_COINS_MESSAGE = 'จำนวนเหรียญของคุณไม่เพียงพอ'
 
 export async function buyItem(shopItemId: string, price: number): Promise<BuyResult> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay()
     // ตรงกับ backend: เหรียญไม่พอ → 400 INSUFFICIENT_COINS (ไม่ใช่เงียบแล้วคืนผลเหมือนซื้อสำเร็จ)
     const current = getDb()
@@ -65,7 +65,7 @@ export async function buyItem(shopItemId: string, price: number): Promise<BuyRes
 }
 
 export async function toggleEquip(shopItemId: string): Promise<InventoryItem[]> {
-  if (API_MODE === 'mock') {
+  if (isMockMode()) {
     await mockDelay(120)
     return updateDb((d) => {
       d.inventory = d.inventory.map((i) =>

@@ -104,6 +104,7 @@ export default function LeaderboardPanel({
         title={collapsed ? t('lb.expand') : t('lb.collapse')}
         aria-label={collapsed ? t('lb.expand') : t('lb.collapse')}
         className="lb-toggle"
+        data-tour={collapsed ? 'home-leaderboard-toggle' : undefined}
         style={{
           top: 24,
           left: collapsed ? 0 : '100%',

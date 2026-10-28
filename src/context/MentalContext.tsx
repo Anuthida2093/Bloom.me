@@ -18,6 +18,7 @@ import * as postItApi from '../services/api/postit.api'
 import { getMe } from '../services/api/user.api'
 import { useProgress } from './ProgressContext'
 import { useUI } from './UIContext'
+import { appStorage } from '../utils/testerSession'
 
 const C_1 = '#fde68a'
 
@@ -101,7 +102,7 @@ const MentalCtx = createContext<MentalContextValue | null>(null)
 function readFeedbackLogs(key: string | null): QuestFeedbackRecord[] {
   if (!key) return []
   try {
-    const raw = window.localStorage.getItem(key)
+    const raw = appStorage.getItem(key)
     return raw ? (JSON.parse(raw) as QuestFeedbackRecord[]) : []
   } catch { return [] }
 }
@@ -125,7 +126,7 @@ export function MentalProvider({ children }: { children: ReactNode }) {
   const questFeedbackLogs = feedbackState.logs
   useEffect(() => {
     if (!feedbackState.key) return
-    try { window.localStorage.setItem(feedbackState.key, JSON.stringify(feedbackState.logs.slice(-500))) } catch { /* storage เต็ม/ปิด */ }
+    try { appStorage.setItem(feedbackState.key, JSON.stringify(feedbackState.logs.slice(-500))) } catch { /* storage เต็ม/ปิด */ }
   }, [feedbackState])
   const [learningCheckins, setLearningCheckins] = useState<LearningCheckinRecord[]>([])
   const [postIts, setPostIts] = useState<PostItData[]>([])

@@ -1,3 +1,4 @@
+import { appStorage } from './testerSession'
 /*============================================================================*\
   timeCapsules.ts — นัดทบทวนจากเควส "แคปซูลเวลา" (know-content-review)
   ────────────────────────────────────────────────────────────────────────────
@@ -29,14 +30,14 @@ function key(userId: string): string {
 
 export function loadTimeCapsules(userId: string): TimeCapsule[] {
   try {
-    const raw = window.localStorage.getItem(key(userId))
+    const raw = appStorage.getItem(key(userId))
     return raw ? (JSON.parse(raw) as TimeCapsule[]) : []
   } catch { return [] }
 }
 
 function save(userId: string, list: TimeCapsule[]): void {
   try {
-    window.localStorage.setItem(key(userId), JSON.stringify(list))
+    appStorage.setItem(key(userId), JSON.stringify(list))
     window.dispatchEvent(new CustomEvent(TIME_CAPSULES_CHANGED_EVENT))
   } catch { /* storage เต็ม/ปิด — ยังมีสำเนาใน payload ของ quest log */ }
 }

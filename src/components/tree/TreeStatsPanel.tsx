@@ -11,6 +11,8 @@ import TreeInfoPanel from './TreeInfoPanel'
 import { visualLevelPct } from '../../utils/progression'
 import { useLanguage } from '../../context/LanguageContext'
 import { BADGE_ICONS, QUEST_TAB_ICONS } from '../../config/iconAssets'
+import PageTour from '../tour/PageTour'
+import WateredTodayList from './WateredTodayList'
 
 const C_3 = '#8B6000'
 
@@ -78,7 +80,10 @@ export default function TreeStatsPanel({
       daysSinceLastKnowledgeQuest={daysSinceLastKnowledgeQuest}
       onClose={onClose}
     >
-      <div className="tree-stats-panel" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="tree-stats-panel" data-tour="tree-stats" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <PageTour tourId="treeStats" />
+        {/* [ใหม่ตามที่ระบุ] วันนี้ใครรดน้ำให้เรา — วางบนสุดให้เห็นทันทีไม่ต้องเลื่อน */}
+        <WateredTodayList />
         {/* EXP */}
         <div className="tree-stats-panel__section" style={{ animationDelay: '60ms' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 800, color: 'var(--text-sub)', marginBottom: 5 }}>

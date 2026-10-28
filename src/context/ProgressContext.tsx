@@ -14,10 +14,11 @@ import { queryKeys } from '../services/queryKeys'
 import * as questApi from '../services/api/quest.api'
 import * as moodApi from '../services/api/mood.api'
 import { legacyMoodToColor } from '../config/moodPotion'
-import { API_MODE } from '../services/http'
+import { isMockMode } from '../services/http'
 import { MOOD_CHECKIN_QUEST_CODE, getMoodCheckinStatus, type MoodCheckinStatus } from '../config/moodCheckinSlots'
 import { useUser } from './UserContext'
 import type { LearningGift } from '../config/learningGift'
+import { appStorage } from '../utils/testerSession'
 
 /*============================================================================*\
   ProgressContext — [ไฟล์ใหม่ แยกออกจาก AppContext เดิม]
@@ -87,13 +88,13 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     setLoadedJournalKey(journalStorageKey)
     let stored: JournalEntryRecord[] = DEFAULT_JOURNAL_ENTRIES
     if (journalStorageKey) {
-      try { stored = JSON.parse(localStorage.getItem(journalStorageKey) ?? '[]') as JournalEntryRecord[] } catch { stored = [] }
+      try { stored = JSON.parse(appStorage.getItem(journalStorageKey) ?? '[]') as JournalEntryRecord[] } catch { stored = [] }
     }
     setJournalEntries(Array.isArray(stored) ? stored : [])
   }
   useEffect(() => {
     if (!journalStorageKey || loadedJournalKey !== journalStorageKey) return
-    try { localStorage.setItem(journalStorageKey, JSON.stringify(journalEntries.slice(-500))) } catch { /* storage เต็ม/ปิดอยู่ */ }
+    try { appStorage.setItem(journalStorageKey, JSON.stringify(journalEntries.slice(-500))) } catch { /* storage เต็ม/ปิดอยู่ */ }
   }, [journalEntries, journalStorageKey, loadedJournalKey])
   const [postIts] = useState<PostItData[]>([])
   const [treeGrowthPulse, setTreeGrowthPulse] = useState<{ category: QuestCategory; key: number; questCode?: string } | null>(null)
@@ -252,7 +253,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     const status = getMoodCheckinStatus(questLogs)
     const questCode = status.doneThisSlot ? null : MOOD_CHECKIN_QUEST_CODE[status.slot]
 
-    if (questCode && API_MODE === 'live') {
+    if (questCode && !isMockMode()) {
       // backend สร้าง MoodEntry ให้เองในทรานแซกชันเดียวกับรางวัล — ไม่ POST /mood ซ้ำ แล้วรอ
       // moodEntries โหลดใหม่ให้เสร็จก่อนคืนค่า (กัน MoodGateScreen เด้งซ้ำ ดูคอมเมนต์ด้านล่าง)
       const { user, log } = await questApi.completeMoodCheckinQuest({ questCode, ...entry })

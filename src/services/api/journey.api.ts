@@ -1,8 +1,9 @@
-import { http, API_MODE, mockDelay } from '../http'
+import { http, isMockMode, mockDelay } from '../http'
 import { getDb, updateDb } from '../mock/mockDb'
 import { endOfTripDay, resolveJourneyStatus, calcMapTotalStepsTarget } from '../../config/journeyRules'
 import type { JourneyRecord } from '../../types.journey'
 import { getCachedMe } from './user.api'
+import { appStorage } from '../../utils/testerSession'
 
 /** true = เก็บทริปในเครื่อง (mockDb) แม้อยู่โหมด live — ใช้ได้ถ้าต้องต่อ backend รุ่นที่ยังไม่มี
  *  /api/journeys (backend branch feature/frontend-contract เพิ่มให้แล้ว จึงตั้งเป็น false) */
@@ -46,18 +47,18 @@ const PENDING_CLAIM_KEY = 'bloom:journey-pending-claim'
 
 function readPendingClaim(): JourneyRecord | null {
   try {
-    const raw = window.localStorage.getItem(PENDING_CLAIM_KEY)
+    const raw = appStorage.getItem(PENDING_CLAIM_KEY)
     return raw ? (JSON.parse(raw) as JourneyRecord) : null
   } catch { return null }
 }
 
 function rememberPendingClaim(journey: JourneyRecord) {
-  try { window.localStorage.setItem(PENDING_CLAIM_KEY, JSON.stringify(journey)) } catch { /* ไม่มี storage */ }
+  try { appStorage.setItem(PENDING_CLAIM_KEY, JSON.stringify(journey)) } catch { /* ไม่มี storage */ }
 }
 
 /** เรียกหลังกดรับรางวัลทริปแล้ว (finish เควส) */
 export function clearPendingJourneyClaim() {
-  try { window.localStorage.removeItem(PENDING_CLAIM_KEY) } catch { /* ไม่มี storage */ }
+  try { appStorage.removeItem(PENDING_CLAIM_KEY) } catch { /* ไม่มี storage */ }
 }
 
 /** ทริปที่กำลังเดิน หรือทริปที่จบแล้วแต่ยังไม่รับรางวัล (status ≠ IN_PROGRESS → หน้าเว็บโชว์หน้าสรุปผล) */
@@ -65,12 +66,12 @@ export async function getActiveJourney(): Promise<JourneyRecord | null> {
   const pending = readPendingClaim()
   if (pending) {
     // ของบัญชีอื่นที่เคยล็อกอินเครื่องนี้ — ทิ้ง ไม่โชว์รางวัลข้ามบัญชี
-    const currentUserId = JOURNEY_LOCAL_ONLY || API_MODE === 'mock' ? getDb().user.id : (await getCachedMe()).id
+    const currentUserId = JOURNEY_LOCAL_ONLY || isMockMode() ? getDb().user.id : (await getCachedMe()).id
     if (pending.userId === currentUserId) return pending
     clearPendingJourneyClaim()
   }
 
-  if (JOURNEY_LOCAL_ONLY || API_MODE === 'mock') {
+  if (JOURNEY_LOCAL_ONLY || isMockMode()) {
     await mockDelay(120)
     const db = getDb()
     if (!db.activeJourney || db.activeJourney.status !== 'IN_PROGRESS') return null
@@ -95,7 +96,7 @@ export async function getActiveJourney(): Promise<JourneyRecord | null> {
  *  IN_PROGRESS อยู่ ทำให้ POST /journeys ถัดไปโดน 409 JOURNEY_IN_PROGRESS ปิดเป็น TIME_UP โดยไม่ให้รางวัล */
 export async function abandonJourney(journeyId: string): Promise<void> {
   clearPendingJourneyClaim()
-  if (JOURNEY_LOCAL_ONLY || API_MODE === 'mock') {
+  if (JOURNEY_LOCAL_ONLY || isMockMode()) {
     await mockDelay(80)
     updateDb((d) => {
       if (d.activeJourney?.id === journeyId) d.activeJourney = { ...d.activeJourney, status: 'TIME_UP' }
@@ -106,7 +107,7 @@ export async function abandonJourney(journeyId: string): Promise<void> {
 }
 
 export async function startJourney(destinationMapId: string): Promise<JourneyRecord> {
-  if (JOURNEY_LOCAL_ONLY || API_MODE === 'mock') {
+  if (JOURNEY_LOCAL_ONLY || isMockMode()) {
     await mockDelay()
     const db = updateDb((d) => {
       d.activeJourney = createMockJourney(destinationMapId, d.user.id)
@@ -126,7 +127,7 @@ export async function addSteps(journeyId: string, steps: number): Promise<Journe
 }
 
 async function sendSteps(journeyId: string, steps: number): Promise<JourneyRecord> {
-  if (JOURNEY_LOCAL_ONLY || API_MODE === 'mock') {
+  if (JOURNEY_LOCAL_ONLY || isMockMode()) {
     await mockDelay()
     const db = updateDb((d) => {
       if (!d.activeJourney || d.activeJourney.id !== journeyId) return

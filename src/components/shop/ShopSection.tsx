@@ -15,6 +15,7 @@ import { ApiError } from '../../services/http'
 import { queryKeys } from '../../services/queryKeys'
 import { getShopItems, INSUFFICIENT_COINS_MESSAGE } from '../../services/api/shop.api'
 import { MOCK_SHOP_ITEMS, type MockShopItem } from '../../services/mock/mockData'
+import PageTour from '../tour/PageTour'
 
 const BG_28 = '#FFF9CC'
 const BG_29 = '#FFE566'
@@ -116,6 +117,7 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
     // [แก้ตามที่ระบุ] ทั้งหน้าร้านใช้ฟอนต์เดียวกับหน้า Welcome (--font-display) ปุ่มสืบทอดด้วย
     <div className="shop-page" style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--bg)', overflowY: 'auto', fontFamily: 'var(--font-display)' }}>
       <style>{`.shop-page button { font-family: inherit; }`}</style>
+      <PageTour tourId="shop" />
       {/* [เพิ่มตามที่ระบุ] ปุ่มปิด (กากบาท) มุมขวาบน — แบบเดียวกับหน้าโปรไฟล์/ตั้งค่า */}
       <button
         onClick={() => onClose?.()}
@@ -146,6 +148,7 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
 
         {/* [แก้ตามที่ระบุ — 2.4] แทนแท็บหมวดที่ตัดบรรทัดบนจอแคบ: จำนวนไอเทม + ปุ่มตัวกรอง (แบบเดียวกันทุกขนาดจอ)
             กดตัวกรอง → ตัวเลือก 3 หมวด (แสดงจำนวนของแต่ละหมวด) */}
+        <div data-tour="shop-filter">
         <CategoryFilter
           count={currentItems.length}
           options={CATEGORIES.map((cat) => ({ id: cat.id, label: cat.label, count: (shopItems[cat.id as keyof typeof shopItems] ?? []).length }))}
@@ -153,9 +156,10 @@ export default function ShopSection({ coins = 0, inventoryData = [], onBuy = () 
           onChange={setShopCategory}
           ariaLabel="เลือกหมวดสินค้า"
         />
+        </div>
 
         {/* Items grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 16 }}>
+        <div data-tour="shop-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 16 }}>
           {currentItems.map(item => {
             const owned = inventoryData.some(i => i.shopItemId === item.id)
             const equipped = inventoryData.some(i => i.shopItemId === item.id && i.isEquipped)
